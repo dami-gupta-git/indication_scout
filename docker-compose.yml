@@ -1,0 +1,19 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: scout
+      POSTGRES_USER: scout
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5438:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # Creates scout_test database on first container startup.
+      # The scout_test DB uses the same schema as scout but is
+      # used exclusively by integration tests so test data never
+      # contaminates the main database.
+      - ./docker/initdb:/docker-entrypoint-initdb.d
+
+volumes:
+  pgdata:
