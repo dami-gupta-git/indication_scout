@@ -10,10 +10,16 @@ Strategy: LLM normalize → verify with PubMed count → cache everything.
 import asyncio
 import json
 import logging
+from pathlib import Path
+from typing import TypedDict
 
 import httpx
 
-from indication_scout.constants import DEFAULT_CACHE_DIR, NCBI_BASE_URL
+from indication_scout.constants import (
+    BROADENING_BLOCKLIST,
+    DEFAULT_CACHE_DIR,
+    NCBI_BASE_URL,
+)
 from indication_scout.services.llm import (
     query_small_llm,
 )  # Adjust import path as needed
@@ -23,41 +29,12 @@ logger = logging.getLogger(__name__)
 
 MIN_RESULTS = 3  # Minimum PubMed hits to consider a term useful
 
-# Terms that are too generic to be useful as a broadened disease search term.
-# If the LLM fallback generalizes to one of these, we discard it and keep the
-# more specific first result.
-BROADENING_BLOCKLIST: frozenset[str] = frozenset(
-    {
-        "cancer",
-        "tumor",
-        "tumour",
-        "neoplasm",
-        "malignancy",
-        "disease",
-        "disorder",
-        "syndrome",
-        "condition",
-    }
-)
+_PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
-NORMALIZE_PROMPT = (
-    "Convert this disease term into a PubMed search term. "
-    "Remove subtypes, staging, etiology, and genetic qualifiers, but KEEP the organ or tissue specificity. "
-    "Do NOT generalize to a broader disease class (e.g. do not map 'lung neoplasm' to 'cancer'). "
-    "If the disease has a well-known common-name synonym, include both joined with OR.\n\n"
-    "Examples:\n"
-    "atopic eczema → eczema OR dermatitis\n"
-    "narcolepsy-cataplexy syndrome → narcolepsy\n"
-    "non-small cell lung carcinoma → lung cancer OR lung neoplasm\n"
-    "hereditary hemorrhagic telangiectasia → telangiectasia\n"
-    "myocardial infarction → heart attack OR myocardial infarction\n"
-    "smoking cessation → smoking OR nicotine dependence\n"
-    "portal hypertension → hypertension\n"
-    "renal tubular dysgenesis → kidney disease\n"
-    "hepatocellular carcinoma → liver cancer OR hepatocellular carcinoma\n\n"
-    "Return ONLY the term(s), nothing else.\n\n"
-    "Term: {raw_term}"
-)
+
+class MergeResult(TypedDict):
+    merge: dict[str, list[str]]
+    remove: list[str]
 
 
 # ── LLM Normalize ───────────────────────────────────────────────────────────
@@ -78,12 +55,41 @@ async def llm_normalize_disease(raw_term: str) -> str:
     if cached is not None:
         return cached
 
-    prompt = NORMALIZE_PROMPT.format(raw_term=raw_term)
+    prompt = (
+        (_PROMPTS_DIR / "normalize_disease.txt").read_text().format(raw_term=raw_term)
+    )
     response = await query_small_llm(prompt)
     normalized = response.strip().strip('"').strip("'")
 
     cache_set("disease_norm", {"raw_term": raw_term}, normalized, DEFAULT_CACHE_DIR)
     return normalized
+
+
+async def merge_duplicate_diseases(
+    diseases: list[str], drug_indications: list[str]
+) -> MergeResult:
+    prompt = (
+        (_PROMPTS_DIR / "merge_diseases.txt")
+        .read_text()
+        .format(disease_names=diseases, drug_indications=drug_indications)
+    )
+    response = await query_small_llm(prompt)
+    cleaned = response.strip()
+    # Strip markdown code fences if present
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("```", 2)[1]
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:]
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+    try:
+        return json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        logger.error(
+            "merge_duplicate_diseases: failed to parse LLM response: %s\nResponse was: %s",
+            e,
+            response,
+        )
+        return {"merge": {}, "remove": []}
 
 
 # ── PubMed Count ─────────────────────────────────────────────────────────────

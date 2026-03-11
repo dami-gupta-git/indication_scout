@@ -8,10 +8,7 @@ from indication_scout.markers import no_review
 from indication_scout.services.pubmed_query import (
     get_pubmed_query,
 )
-from indication_scout.services.retrieval import (
-    expand_search_terms,
-    get_disease_synonyms,
-)
+from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
 
@@ -106,11 +103,12 @@ async def test_get_pubmed_query_edge():
         assert disease_part.strip() != ""
         assert drug_part.strip() == "bupropion"
 
+
 # TODO delete
 @no_review
-async def test_get_single_disease_synonym():
+async def test_get_single_disease_synonym(test_cache_dir):
     disease = "type 2 diabetes nephropathy"
-    synonyms = await get_disease_synonyms(disease)
+    synonyms = await RetrievalService(test_cache_dir).get_disease_synonyms(disease)
 
     assert synonyms
 

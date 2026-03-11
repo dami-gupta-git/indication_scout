@@ -1,0 +1,64 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(find:*)",
+      "Bash(python3:*)",
+      "Bash(curl:*)",
+      "Bash(afplay:*)",
+      "Bash(chmod:*)",
+      "WebSearch",
+      "WebFetch(domain:open.fda.gov)",
+      "WebFetch(domain:api.fda.gov)",
+      "Bash(code /Users/dgupta/.claude/projects/-Users-dgupta-code-portfolio-IndicationScout-indication-scout/memory/MEMORY.md)",
+      "Bash(pytest tests/integration/ -v 2>&1)",
+      "Bash(grep -r \"get_top_reactions\\\\|get_events\" \"/Users/dgupta/code/portfolio/IndicationScout/indication_scout\" --include=\"*.py\" --include=\"*.md\" 2>/dev/null | head -20)",
+      "Bash(pytest tests/unit/ -v 2>&1)",
+      "Bash(pytest tests/integration/test_fda.py -v 2>&1)",
+      "Bash(grep:*)",
+      "Bash(.venv/bin/pip install:*)",
+      "WebFetch(domain:api.platform.opentargets.org)",
+      "WebFetch(domain:platform-docs.opentargets.org)",
+      "Bash(xargs ls -la)",
+      "Read(//Users/dgupta/.claude/**)",
+      "Bash(git -C /Users/dgupta/code/portfolio/IndicationScout/indication_scout log --oneline -15)",
+      "Bash(git -C /Users/dgupta/code/portfolio/IndicationScout/indication_scout log --oneline -10 --format=\"%h %s\")",
+      "Bash(git -C /Users/dgupta/code/portfolio/IndicationScout/indication_scout show --stat c5c256e 093e49b 73a5bf6)",
+      "Bash(git -C /Users/dgupta/code/portfolio/IndicationScout/indication_scout show --stat b335c45)",
+      "Bash(/Users/dgupta/code/portfolio/IndicationScout/indication_scout/PROJECT_STATE.md:*)",
+      "Bash(/Users/dgupta/code/portfolio/IndicationScout/indication_scout/SESSION.md:*)",
+      "Bash(for id in CHEMBL192 CHEMBL1201585 CHEMBL426)",
+      "Bash(do)",
+      "Bash(echo \"=== $id ===\")",
+      "Bash(done)",
+      "Bash(for id in CHEMBL2108724 CHEMBL1431)",
+      "Bash(for id in CHEMBL894 CHEMBL1201585 CHEMBL122911)",
+      "Bash(ls -la /Users/dgupta/code/portfolio/IndicationScout/indication_scout/session*.md)",
+      "Bash(ls /Users/dgupta/code/portfolio/IndicationScout/indication_scout/session_*.md)",
+      "WebFetch(domain:www.ebi.ac.uk)",
+      "Bash(/Users/dgupta/code/portfolio/IndicationScout/indication_scout/session_2026-02-28_18-46.md:*)"
+    ],
+    "deny": [],
+    "ask": [],
+    "additionalDirectories": [
+      "/Users/dgupta/.claude/projects/-Users-dgupta-code-portfolio-IndicationScout-indication-scout/memory",
+      "/Users/dgupta/.claude/agents",
+      "/Users/dgupta/code/portfolio/IndicationScout/indication_scout/.claude",
+      "/Users/dgupta/code/portfolio/IndicationScout/indication_scout/.claude/agents",
+      "/Users/dgupta/code/portfolio/IndicationScout/indication_scout/.claude/commands"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/context-80-alert.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

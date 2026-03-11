@@ -1,7 +1,7 @@
 """Shared fixtures for integration tests."""
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from indication_scout.config import get_settings
@@ -36,6 +36,41 @@ def db_session():
     yield session
     session.rollback()
     session.close()
+
+
+@pytest.fixture()
+def db_session_truncating():
+    """Like db_session, but truncates pubmed_abstracts on teardown instead of rolling back.
+
+    Use this for tests that call fetch_and_cache or insert_abstracts directly,
+    which call db.commit() and therefore cannot be undone via savepoint rollback.
+    The TRUNCATE runs in its own transaction and cleans up all rows unconditionally.
+
+    Prerequisites: same as db_session.
+    """
+    settings = get_settings()
+    if settings.test_database_url is None:
+        pytest.skip("TEST_DATABASE_URL not set — skipping DB integration test")
+
+    engine = create_engine(settings.test_database_url)
+    SessionLocal = sessionmaker(bind=engine)
+    session = SessionLocal()
+    session.execute(text("TRUNCATE TABLE pubmed_abstracts"))
+    session.commit()
+    yield session
+    session.execute(text("TRUNCATE TABLE pubmed_abstracts"))
+    session.commit()
+    session.close()
+
+
+@pytest.fixture()
+def test_cache_dir():
+    """Return TEST_CACHE_DIR for use in integration tests.
+
+    Centralises the cache directory decision so individual tests don't
+    need to import or reference TEST_CACHE_DIR directly.
+    """
+    return TEST_CACHE_DIR
 
 
 @pytest.fixture

@@ -31,7 +31,7 @@ def _get_model() -> SentenceTransformer:
     if _model is None:
         model_name = get_settings().embedding_model
         logger.info("Loading embedding model %s", model_name)
-        _model = SentenceTransformer(model_name)
+        _model = SentenceTransformer(model_name, local_files_only=True)
     return _model
 
 

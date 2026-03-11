@@ -6,7 +6,6 @@ import pytest
 
 from indication_scout.markers import _NoReview, is_no_review, no_review
 
-
 # ---------------------------------------------------------------------------
 # Decorator: functions
 # ---------------------------------------------------------------------------

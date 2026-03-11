@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from indication_scout.services.disease_normalizer import normalize_for_pubmed
+from indication_scout.services.disease_helper import normalize_for_pubmed
 
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 

@@ -4,12 +4,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Session Startup
 
-At the start of every session, read `PROJECT_STATE.md`, the most recent `session_*.md` file in the project root, and `README.md`.
+At the start of every session, read `PROJECT_STATE.md`, the most recent `session_*.md` file in the project root, `README.md`, and `docs/findings.md`.
+
+## Findings Workflow
+
+- When a non-obvious finding is confirmed (API behaviour, naming discrepancy, architectural decision, pattern, project rule), append it to `docs/findings.md` under the appropriate section with a date.
+- `docs/findings.md` is the single source of truth for findings, decisions, and patterns — not `MEMORY.md`.
 
 ## Session File Workflow
 
 - Session files are named `session_{datetime}.md` (e.g. `session_2026-02-28_14-31.md`) and live in the project root.
-- Append to the current session file throughout the session.
+- Append to the current session file throughout the session. See `skills/session.md` for when and how.
 
 ## Build & Development Commands
 
@@ -36,6 +41,8 @@ uvicorn indication_scout.api.main:app --reload
 # CLI
 scout find -d "metformin"
 ```
+## Testing
+When writing or modifying any test files, first read skills/testing.md
 
 ## Architecture
 
@@ -44,9 +51,9 @@ IndicationScout is an agentic drug repurposing system. A drug name goes in; coor
 ### Layered structure (`src/indication_scout/`)
 
 - **data_sources/** — Async API clients for external biomedical databases. Each extends `BaseClient` (async context manager with retry/backoff). Current clients: `OpenTargetsClient` (GraphQL), `ClinicalTrialsClient` (REST), `PubMedClient` (REST+XML), `ChEMBLClient`, `DrugBankClient`. Errors surface as `DataSourceError`.
-- **models/** — Pydantic `BaseModel` contracts between data sources and agents. Organized per source: `model_open_targets.py` (TargetData, DrugData and their nested models), `model_clinical_trials.py` (Trial, WhitespaceResult, ConditionLandscape, TerminatedTrial), `model_pubmed.py` (PubMedArticle). Agents never see raw API responses.
+- **models/** — Pydantic `BaseModel` contracts between data sources and agents. Organized per source: `model_open_targets.py` (TargetData, DrugData and their nested models), `model_clinical_trials.py` (Trial, WhitespaceResult, ConditionLandscape, TerminatedTrial), `model_pubmed_abstract.py` (PubmedAbstract), `model_chembl.py` (MoleculeData, ATCDescription), `model_drug_profile.py` (DrugProfile). Agents never see raw API responses.
 - **agents/** — AI agents that each own a slice of analysis. All extend `BaseAgent` (single `async run()` method). Agents: `orchestrator`, `literature`, `clinical_trials`, `mechanism`, `safety`. The `Orchestrator` coordinates the specialist agents.
-- **services/** — Business logic layer (LLM calls, embeddings, scoring). Currently scaffolded.
+- **services/** — Business logic layer. Implemented: `llm.py` (Anthropic SDK), `embeddings.py` (BioLORD-2023), `disease_normalizer.py` (LLM normalization), `pubmed_query.py` (query building), `retrieval.py` (RAG pipeline -- `synthesize` still stubbed).
 - **api/** — FastAPI app (`api/main.py`). Routes in `api/routes/`, request/response schemas in `api/schemas/`.
 - **config.py** — `pydantic_settings.BaseSettings` loaded from `.env`. Access via `get_settings()`.
 - **constants.py** — All magic numbers, URLs, and lookup maps.

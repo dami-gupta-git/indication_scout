@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 from indication_scout.constants import (
+    BROADENING_BLOCKLIST,
     CACHE_TTL,
     DEFAULT_CACHE_DIR,
     INTERACTION_TYPE_MAP,
@@ -21,6 +22,7 @@ from indication_scout.constants import (
     OPEN_TARGETS_PAGE_SIZE,
 )
 from indication_scout.markers import no_review
+from indication_scout.services.disease_helper import merge_duplicate_diseases
 from indication_scout.utils.cache import cache_get, cache_set
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
 from indication_scout.data_sources.chembl import ChEMBLClient
@@ -112,40 +114,107 @@ class OpenTargetsClient(BaseClient):
 
         return drug_data
 
-    @no_review
-    # TODO needs rework
-    async def get_drug_competitors(self, name: str) -> dict[str, set[str]]:
-        """Fetch phase-4 competitor drugs for bupropion, grouped by disease."""
-        name = name.lower()
-        drug = await self.get_drug(name)
+    async def get_drug_competitors(
+        self, name: str, drug_phase: int = 3
+    ) -> dict[str, set[str]]:
+        """Fetch competitor drugs for a given drug, grouped by disease."""
+        normalized_name = normalize_drug_name(name)
+
+        cache_params = {"drug_name": normalized_name, "drug_phase": drug_phase}
+        cached = cache_get("drug_competitors", cache_params, self.cache_dir)
+        if cached is not None:
+            return {disease: set(drugs) for disease, drugs in cached.items()}
+
+        drug = await self.get_drug(normalized_name)
         targets = drug.targets
 
-        siblings: dict[str, set[str]] = {}
+        siblings_with_phase: dict[str, dict[str, int]] = {}
 
-        for t in targets:
-            logger.info(t.mechanism_of_action)
-            summaries = await self.get_target_data_drug_summaries(t.target_id)
+        all_summaries = await asyncio.gather(
+            *[self.get_target_data_drug_summaries(t.target_id) for t in targets]
+        )
+        for t, summaries in zip(targets, all_summaries):
+            logger.debug(t.mechanism_of_action)
+            # TODO remove, for debugging
             # drugs = set([normalize_drug_name(s.drug_name.lower()) for s in summaries])
             # diseases = set([s.disease_name.lower() for s in summaries])
             for summary in summaries:
-                if summary.phase >= 3:
-                    disease = summary.disease_name
+                if summary.phase is not None and summary.phase >= drug_phase:
+                    disease = summary.disease_name.lower()
                     drug_name = normalize_drug_name(summary.drug_name)
-                    if disease in siblings:
-                        siblings[disease].add(drug_name)
-                    else:
-                        siblings[disease] = {drug_name}
+                    if disease not in siblings_with_phase:
+                        siblings_with_phase[disease] = {}
+                    existing = siblings_with_phase[disease].get(drug_name, 0)
+                    siblings_with_phase[disease][drug_name] = max(
+                        existing, summary.phase
+                    )
 
+        for key in list(siblings_with_phase):
+            drug_phases = siblings_with_phase[key]
+            if normalized_name in drug_phases:
+                if drug_phases[normalized_name] >= 4:
+                    del siblings_with_phase[key]
+
+        siblings: dict[str, set[str]] = {
+            disease: set(drugs.keys()) for disease, drugs in siblings_with_phase.items()
+        }
+
+        # Remove overly broad disease terms (e.g. "cancer", "carcinoma") that
+        # produce noisy, unfocused PubMed queries.
         for key in list(siblings):
-            val = siblings[key]
-            if name in val:
+            words = {w.lower() for w in key.split()}
+            if words <= BROADENING_BLOCKLIST:
                 del siblings[key]
 
-        sorted_data = dict(
+        sorted_siblings = dict(
             sorted(siblings.items(), key=lambda item: len(item[1]), reverse=True)
         )
-        top_10 = dict(list(sorted_data.items())[:10])
-        return top_10
+
+        indications = [
+            i.disease_name.lower() for i in drug.indications if i.max_phase >= 4
+        ]
+        drug_indications = list(set(indications))
+        top_40 = dict(list(sorted_siblings.items())[:40])
+        disease_names = list(top_40.keys())
+        result = await merge_duplicate_diseases(disease_names, drug_indications)
+
+        for name in result["remove"]:
+            if name.lower() in top_40:
+                del top_40[name.lower()]
+
+        # Combine sibling sets for merged diseases
+        removed = {n.lower() for n in result["remove"]}
+        for canonical, aliases in result["merge"].items():
+            canonical_lower = canonical.lower()
+            if canonical_lower in removed:
+                continue
+            aliases = [a.lower() for a in aliases]
+            combined = set()
+            for name in [canonical_lower] + aliases:
+                if name in removed:
+                    continue
+                if name in top_40:
+                    combined |= top_40[name]
+                    if name != canonical_lower:
+                        del top_40[name]
+            if combined:
+                top_40[canonical_lower] = combined
+
+        # Re-sort and take top 10
+        sorted_data = dict(
+            sorted(top_40.items(), key=lambda item: len(item[1]), reverse=True)
+        )
+        sorted_data_2 = dict(sorted(top_40.items(), key=lambda item: item[0]))
+        top_15 = dict(list(sorted_data.items())[:15])
+
+        cache_set(
+            "drug_competitors",
+            cache_params,
+            {disease: list(drugs) for disease, drugs in top_15.items()},
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return top_15
 
     async def get_drug_indications(self, drug_name: str) -> list[Indication]:
         drug = await self.get_drug(drug_name)

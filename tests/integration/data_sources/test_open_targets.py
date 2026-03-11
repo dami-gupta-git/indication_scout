@@ -5,6 +5,7 @@ import logging
 import pytest
 
 
+from indication_scout.constants import BROADENING_BLOCKLIST
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.markers import no_review
 
@@ -23,7 +24,8 @@ async def test_sildenafil_drug_data(open_targets_client):
     approved = [a for a in match if a.disease_id in drug.approved_disease_ids]
     logger.info(drug.indications)
 
-#TODO delete
+
+# TODO delete
 @no_review
 async def test_single_drug_data(open_targets_client):
     """Test fetching drug data and indications for semaglutide."""
@@ -170,6 +172,7 @@ async def test_special_characters_drug_name_raises_error(open_targets_client):
 
 
 # --- get_disease_synonyms ---
+
 
 # TODO delete
 @no_review
@@ -616,6 +619,44 @@ async def test_get_rich_drug_data_null_interactions(open_targets_client):
         assert isinstance(
             t.drug_summaries, list
         ), f"{t.symbol} drug_summaries is not a list"
+
+
+async def test_get_drug_competitors_bupropion(open_targets_client):
+    """get_drug_competitors returns candidate diseases with correct competitor drugs.
+
+    Bupropion acts on monoamine transporters (SLC6A2, SLC6A3, SLC6A4). Its sibling
+    drugs treat fatigue, fibromyalgia, pain, and drug dependence — all verified live
+    on 2026-03-10. Asserts:
+    - result is a non-empty dict
+    - known candidate diseases are present with expected sibling drugs
+    """
+    result = await open_targets_client.get_drug_competitors("bupropion")
+
+    assert isinstance(result, dict)
+    assert len(result) >= 1
+
+    # Fatigue: armodafinil, methylphenidate, modafinil all share monoamine targets
+    assert "fatigue" in result
+    assert {"armodafinil", "methylphenidate", "modafinil"}.issubset(result["fatigue"])
+
+    # Fibromyalgia: duloxetine, milnacipran, levomilnacipran (SNRI class on same targets)
+    assert "fibromyalgia" in result
+    assert {"duloxetine", "milnacipran", "levomilnacipran"}.issubset(
+        result["fibromyalgia"]
+    )
+
+async def test_empagliflozin_candidates(open_targets_client):
+    result = await open_targets_client.get_drug_competitors("empagliflozin")
+    diseases = set(result.keys())
+    # Core candidates that always have multiple siblings
+    assert "diabetic nephropathy" in diseases
+    assert "atrial fibrillation" in diseases
+    assert "myocardial infarction" in diseases
+    # Should be subtracted (Phase 4 approved)
+    assert "heart failure" not in diseases
+    assert "type 2 diabetes mellitus" not in diseases
+    # Correct count
+    assert len(result) == 15
 
 
 # TODO rework

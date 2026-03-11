@@ -6,13 +6,12 @@ PubMed keyword search returns many irrelevant papers. Searching `bupropion AND o
 papers that incidentally mention obesity — burying the papers about bupropion as an actual *treatment* for
 obesity.
 
-The RAG pipeline solves this by embedding and reranking retrieved abstracts so the Literature Agent
-receives the most relevant papers, not just keyword matches.
+The RAG pipeline solves this by embedding retrieved abstracts and running semantic search so the Literature Agent receives the most relevant papers, not just keyword matches.
 
 **Confirmed empirically with:**
 - Bupropion → obesity: papers about immunometabolic depression dominated results; the actual Contrave (naltrexone/bupropion) papers were buried
-- Sildenafil → diabetic nephropathy: needed reranking to separate PDE5-specific evidence from noisy non-selective PDE inhibitor literature
-- Baricitinib → myelofibrosis: needed reranking to distinguish JAK1/2 inhibition therapeutic context from general oncology mentions
+- Sildenafil → diabetic nephropathy: semantic search separates PDE5-specific evidence from noisy non-selective PDE inhibitor literature
+- Baricitinib → myelofibrosis: semantic search distinguishes JAK1/2 inhibition therapeutic context from general oncology mentions
 
 The steps are
 - Given a drug+disease , query an llm to get relevant terms
@@ -43,11 +42,11 @@ Should include - the mechanism, drug class, ATC codes, synonyms
    # profile.atc_codes, profile.atc_descriptions, profile.drug_type
    ```
 
-2. **Expand search terms** — given a drug+disease, query an LLM with the `DrugProfile` (mechanism, drug class, ATC codes, synonyms, target gene symbols) to generate diverse PubMed keyword queries. e.g. "Metformin + colorectal" -> `"metformin AND colorectal neoplasm"`, `"biguanide AND colorectal"`, `"metformin AND AMPK AND colon"`, ...
-3. **Fetch & cache** — hit PubMed E-utilities with each query (up to 500 PMIDs), fetch abstracts for any not already stored, embed with BioLORD-2023, store in pgvector
-4. **Semantic search** — embed the drug+disease query with BioLORD-2023, run cosine similarity over pgvector, return top 20 abstracts. Finds conceptually relevant papers even without exact keyword matches (e.g. "biguanide antineoplastic mechanisms" matches a metformin/cancer query)
-5. **Re-rank** — reduce top 20 → top 5 using a cross-encoder or LLM reranker
-6. **Augment + generate** — stuff the top 5 abstracts into a Claude prompt. Claude reads the actual retrieved papers, not training data. Output is a structured `EvidenceSummary` with PMIDs attached to every claim — every finding is traceable to a real paper
+2. **Normalize disease name** — convert raw Open Targets disease names (e.g. `"narcolepsy-cataplexy syndrome"`) into PubMed-friendly search terms (e.g. `"narcolepsy"`). Two-step Haiku strategy: normalize first, then verify with a PubMed count and broaden if results are too sparse. See `services/disease_normalizer.py`.
+3. **Expand search terms** — given a drug+disease, query an LLM with the `DrugProfile` (mechanism, drug class, ATC codes, synonyms, target gene symbols) to generate diverse PubMed keyword queries across 5 axes. e.g. "Metformin + colorectal" → `"metformin AND colorectal neoplasm"`, `"biguanide AND colorectal"`, `"metformin AND AMPK AND colon"`, ... (5–10 queries total)
+4. **Fetch & cache** — hit PubMed E-utilities with each query (up to 500 PMIDs), fetch abstracts for any not already stored, embed with BioLORD-2023, store in pgvector
+5. **Semantic search** — embed the drug+disease query with BioLORD-2023, run cosine similarity over pgvector, return top 5 abstracts (configurable via `top_k`). Finds conceptually relevant papers even without exact keyword matches (e.g. "biguanide antineoplastic mechanisms" matches a metformin/cancer query)
+6. **Synthesize** — stuff the top abstracts into a Claude prompt. Claude reads the actual retrieved papers, not training data. Output is a structured `EvidenceSummary` with PMIDs attached to every claim — every finding is traceable to a real paper
 
 ```
 PubMed E-utilities (keyword search)
@@ -62,8 +61,7 @@ PubMed E-utilities (keyword search)
          ▼
 ┌──────────────────┐
 │  semantic_search  │  Embed query with BioLORD-2023
-│                   │  Cosine similarity over pgvector → top 20
-│                   │  Re-rank → top 5 (cross-encoder or LLM)
+│                   │  Cosine similarity over pgvector → top 5
 └────────┬─────────┘
          │  top 5 abstracts (title + abstract + PMID)
          ▼
@@ -120,14 +118,14 @@ discovery logic (Path 1 / Path 2) — it improves the quality of evidence presen
 
 ## Validated Test Cases
 
-These drug-disease pairs confirmed that PubMed has signal but reranking is needed:
+These drug-disease pairs confirmed that PubMed keyword search has signal but semantic search is needed:
 
 | Drug | Candidate Disease | Issue Without RAG |
 |------|-------------------|-------------------|
 | Bupropion | Obesity | Depression papers mentioning obesity dominate; Contrave papers buried |
 | Bupropion | Narcolepsy | EFO name mismatch (`narcolepsy-cataplexy syndrome`) returned zero results |
 | Sildenafil | BPH | Confirmed signal (PMID 40678732, 38448685) but mixed with erectile dysfunction papers |
-| Sildenafil | Diabetic nephropathy | Needed reranking to separate PDE5-specific from non-selective PDE literature |
+| Sildenafil | Diabetic nephropathy | Semantic search separates PDE5-specific from non-selective PDE literature |
 | Baricitinib | Eczematoid dermatitis | EFO name doesn't match PubMed indexing (`atopic dermatitis`) |
 
 ---

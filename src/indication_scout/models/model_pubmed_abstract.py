@@ -7,7 +7,7 @@ class PubmedAbstract(BaseModel):
     """Parsed PubMed abstract data."""
 
     pmid: str = ""
-    title: str | None = None
+    title: str = ""
     abstract: str | None = None
     authors: list[str] = []
     journal: str | None = None

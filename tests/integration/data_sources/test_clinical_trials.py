@@ -169,7 +169,6 @@ async def test_search_trials(clinical_trials_client):
 
 async def test_search_trials_drug_only(clinical_trials_client):
     """Test search_trials returns trials for a drug without specifying condition."""
-    # Search for semaglutide trials across all conditions
     trials = await clinical_trials_client.search_trials(
         drug="semaglutide",
         max_results=300,
@@ -178,10 +177,23 @@ async def test_search_trials_drug_only(clinical_trials_client):
     # Semaglutide has many trials across diabetes, obesity, NASH, etc.
     assert len(trials) >= 20
 
-    # Find NCT04971785 - Gilead NASH trial with semaglutide
+    # Verify trials span multiple conditions (not just one indication)
+    all_conditions = set()
+    for trial in trials:
+        all_conditions.update(trial.conditions)
+    assert len(all_conditions) >= 10
+
+
+async def test_search_trials_nash_trial_fields(clinical_trials_client):
+    """Verify all Trial fields for NCT04971785 (Gilead NASH/semaglutide trial)."""
+    trials = await clinical_trials_client.search_trials(
+        drug="semaglutide",
+        condition="nonalcoholic steatohepatitis",
+        max_results=100,
+    )
+
     [nash_trial] = [t for t in trials if t.nct_id == "NCT04971785"]
 
-    # Verify all Trial fields with exact values
     assert nash_trial.nct_id == "NCT04971785"
     assert (
         nash_trial.title
@@ -200,7 +212,6 @@ async def test_search_trials_drug_only(clinical_trials_client):
     assert nash_trial.results_posted is True
     assert nash_trial.references == []
 
-    # Verify interventions - trial has 4 drug interventions including Semaglutide
     assert len(nash_trial.interventions) == 4
     [sema] = [
         i
@@ -209,18 +220,10 @@ async def test_search_trials_drug_only(clinical_trials_client):
     ]
     assert sema.intervention_type == "Drug"
 
-    # Verify primary_outcomes
     assert len(nash_trial.primary_outcomes) == 1
     assert nash_trial.primary_outcomes[0].measure.startswith(
         "Percentage of Participants Who Achieved"
     )
-
-    # Verify trials span multiple conditions (not just one indication)
-    all_conditions = set()
-    for trial in trials:
-        all_conditions.update(trial.conditions)
-    # Semaglutide is tested for obesity, NASH, diabetes, asthma, etc.
-    assert len(all_conditions) >= 10
 
 
 async def test_search_trials_condition_only(clinical_trials_client):

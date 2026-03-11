@@ -31,6 +31,7 @@ async def query_llm(prompt: str, system: str = "") -> str:
     response = await client.messages.create(
         model=_model,
         max_tokens=1024,
+        temperature=0,
         system=system or NOT_GIVEN,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -41,6 +42,7 @@ async def query_small_llm(prompt: str, system: str = "") -> str:
     response = await client.messages.create(
         model=_small_model,
         max_tokens=1024,
+        temperature=0,
         system=system or NOT_GIVEN,
         messages=[{"role": "user", "content": prompt}],
     )

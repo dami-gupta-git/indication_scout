@@ -5,12 +5,14 @@ import logging
 import pytest
 
 from indication_scout.markers import no_review
-from indication_scout.services.disease_normalizer import (
+from indication_scout.services.disease_helper import (
     BROADENING_BLOCKLIST,
+    merge_duplicate_diseases,
     normalize_for_pubmed,
 )
 
 logger = logging.getLogger(__name__)
+
 
 @no_review
 # Exclude from testing rules, TODO delete
@@ -19,6 +21,7 @@ async def test_single_disease_normalizer():
     drug = ""
     result = await normalize_for_pubmed(disease, drug)
     assert result
+
 
 @no_review
 # Exclude from testing rules, TODO delete
@@ -81,3 +84,35 @@ async def test_multiple_drug_disease_normalizer(disease, drug, required_keyword)
     assert any(
         required_keyword in t for t in result_terms
     ), f"Expected '{required_keyword}' in result terms {result_terms} for {drug} + {disease}"
+
+
+async def test_merge_duplicate_diseases():
+    result = await merge_duplicate_diseases(
+        [
+            "narcolepsy",
+            "narcolepsy-cataplexy syndrome",
+            "obesity",
+            "overweight body mass index status",
+        ],
+        ["type 2 diabetes mellitus"],
+    )
+
+    assert "merge" in result
+    assert "remove" in result
+
+    all_merged = []
+    for canonical, aliases in result["merge"].items():
+        all_merged.append({canonical} | set(aliases))
+
+    assert any(
+        {"narcolepsy", "narcolepsy-cataplexy syndrome"}.issubset(group)
+        for group in all_merged
+    ), f"Expected narcolepsy variants to be merged, got: {result['merge']}"
+
+    assert any(
+        {"obesity", "overweight body mass index status"}.issubset(group)
+        for group in all_merged
+    ), f"Expected obesity variants to be merged, got: {result['merge']}"
+
+    assert "narcolepsy" not in result["remove"]
+    assert "obesity" in result["remove"]

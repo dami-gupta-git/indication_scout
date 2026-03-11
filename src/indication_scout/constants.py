@@ -34,6 +34,7 @@ CLINICAL_TRIALS_RECENT_START_YEAR: str = "2024"
 NCBI_BASE_URL: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 PUBMED_SEARCH_URL: str = f"{NCBI_BASE_URL}/esearch.fcgi"
 PUBMED_FETCH_URL: str = f"{NCBI_BASE_URL}/efetch.fcgi"
+PUBMED_MAX_RESULTS: int = 200
 
 # -- Interaction type mapping (Open Targets) --------------------------------
 INTERACTION_TYPE_MAP: dict[str, str] = {
@@ -42,6 +43,22 @@ INTERACTION_TYPE_MAP: dict[str, str] = {
     "reactome": "enzymatic",
     "string": "functional",
 }
+
+# -- Overly broad disease terms (used for filtering in competitors and normalization) --
+BROADENING_BLOCKLIST: frozenset[str] = frozenset(
+    {
+        "cancer",
+        "carcinoma",
+        "tumor",
+        "tumour",
+        "neoplasm",
+        "malignancy",
+        "disease",
+        "disorder",
+        "syndrome",
+        "condition",
+    }
+)
 
 # -- Stop-reason keywords → category (ClinicalTrials.gov) ------------------
 STOP_KEYWORDS: dict[str, str] = {

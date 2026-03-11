@@ -146,7 +146,10 @@ class ClinicalTrialsClient(BaseClient):
         """
         # All three are independent — run concurrently
         exact_task = self.search_trials(
-            drug=drug, condition=condition, date_before=date_before, max_results=CLINICAL_TRIALS_WHITESPACE_EXACT_MAX
+            drug=drug,
+            condition=condition,
+            date_before=date_before,
+            max_results=CLINICAL_TRIALS_WHITESPACE_EXACT_MAX,
         )
         drug_count_task = self._count_trials(
             drug=drug, condition=None, date_before=date_before

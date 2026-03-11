@@ -1,13 +1,15 @@
-"""Unit tests for disease_normalizer blocklist logic."""
+"""Unit tests for disease_helper blocklist logic."""
 
+import json
 import logging
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from indication_scout.services.disease_normalizer import (
-    BROADENING_BLOCKLIST,
+from indication_scout.constants import BROADENING_BLOCKLIST
+from indication_scout.services.disease_helper import (
     llm_normalize_disease,
+    merge_duplicate_diseases,
     normalize_for_pubmed,
 )
 
@@ -42,7 +44,7 @@ logger = logging.getLogger(__name__)
 async def test_normalize_for_pubmed_returns_llm_output(raw_term, llm_output, expected):
     """normalize_for_pubmed passes LLM output through when it is not blocklisted."""
     with patch(
-        "indication_scout.services.disease_normalizer.llm_normalize_disease",
+        "indication_scout.services.disease_helper.llm_normalize_disease",
         new=AsyncMock(return_value=llm_output),
     ):
         result = await normalize_for_pubmed(raw_term, drug_name=None)
@@ -67,7 +69,7 @@ async def test_blocklist_rejects_overly_broad_initial_normalization(
 ):
     """If LLM returns only blocklisted terms, raw_term is returned unchanged."""
     with patch(
-        "indication_scout.services.disease_normalizer.llm_normalize_disease",
+        "indication_scout.services.disease_helper.llm_normalize_disease",
         new=AsyncMock(return_value=llm_output),
     ):
         result = await normalize_for_pubmed(raw_term, drug_name=None)
@@ -91,7 +93,7 @@ async def test_blocklist_rejects_overly_broad_initial_normalization(
 async def test_organ_specificity_preserved(raw_term, llm_output, forbidden_exact):
     """Result must retain organ context and not collapse to a bare blocklisted term."""
     with patch(
-        "indication_scout.services.disease_normalizer.llm_normalize_disease",
+        "indication_scout.services.disease_helper.llm_normalize_disease",
         new=AsyncMock(return_value=llm_output),
     ):
         result = await normalize_for_pubmed(raw_term, drug_name=None)
@@ -118,11 +120,11 @@ async def test_fallback_blocklist_rejects_overly_broad_broader_term():
 
     with (
         patch(
-            "indication_scout.services.disease_normalizer.llm_normalize_disease",
+            "indication_scout.services.disease_helper.llm_normalize_disease",
             new=mock_llm_normalize,
         ),
         patch(
-            "indication_scout.services.disease_normalizer.pubmed_count",
+            "indication_scout.services.disease_helper.pubmed_count",
             new=AsyncMock(return_value=0),  # force fallback path
         ),
     ):
@@ -146,11 +148,11 @@ async def test_fallback_accepted_when_not_blocklisted():
 
     with (
         patch(
-            "indication_scout.services.disease_normalizer.llm_normalize_disease",
+            "indication_scout.services.disease_helper.llm_normalize_disease",
             new=mock_llm_normalize,
         ),
         patch(
-            "indication_scout.services.disease_normalizer.pubmed_count",
+            "indication_scout.services.disease_helper.pubmed_count",
             new=AsyncMock(side_effect=[0, 10]),  # first: too few; second: enough
         ),
     ):
@@ -186,7 +188,7 @@ async def test_llm_normalize_disease_returns_cleaned_llm_output(
 ):
     """llm_normalize_disease strips quotes/whitespace and returns the LLM output."""
     with patch(
-        "indication_scout.services.disease_normalizer.query_small_llm",
+        "indication_scout.services.disease_helper.query_small_llm",
         new=AsyncMock(return_value=llm_response),
     ):
         result = await llm_normalize_disease(raw_term)
@@ -205,8 +207,44 @@ async def test_llm_normalize_disease_strips_llm_response(
 ):
     """Leading/trailing quotes and whitespace in the LLM response are stripped."""
     with patch(
-        "indication_scout.services.disease_normalizer.query_small_llm",
+        "indication_scout.services.disease_helper.query_small_llm",
         new=AsyncMock(return_value=llm_response),
     ):
         result = await llm_normalize_disease(raw_term)
         assert result == expected
+
+
+# ── merge_duplicate_diseases unit tests ──────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "llm_response",
+    [
+        '{"merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]}, "remove": []}',
+        '```json\n{"merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]}, "remove": []}\n```',
+        '```\n{"merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]}, "remove": []}\n```',
+    ],
+)
+async def test_merge_duplicate_diseases_parses_response_formats(llm_response):
+    """merge_duplicate_diseases handles raw JSON and markdown code fences."""
+    with patch(
+        "indication_scout.services.disease_helper.query_small_llm",
+        new=AsyncMock(return_value=llm_response),
+    ):
+        result = await merge_duplicate_diseases(
+            ["narcolepsy", "narcolepsy-cataplexy syndrome"], []
+        )
+        assert result == {
+            "merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]},
+            "remove": [],
+        }
+
+
+async def test_merge_duplicate_diseases_returns_fallback_on_invalid_json():
+    """merge_duplicate_diseases returns empty structure when LLM returns invalid JSON."""
+    with patch(
+        "indication_scout.services.disease_helper.query_small_llm",
+        new=AsyncMock(return_value="not valid json at all"),
+    ):
+        result = await merge_duplicate_diseases(["narcolepsy"], [])
+        assert result == {"merge": {}, "remove": []}

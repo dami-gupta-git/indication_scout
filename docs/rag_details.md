@@ -1,6 +1,6 @@
 # RAG Pipeline — Implementation Details
 
-See [rag.md](rag.md) for the conceptual overview and pipeline fit.
+See [rag_basics.md](rag_basics.md) for the conceptual overview and pipeline fit.
 
 ---
 
@@ -30,7 +30,8 @@ CREATE TABLE pubmed_abstracts (
 CREATE INDEX ON pubmed_abstracts USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = 100);
 
--- Track which drug-disease queries have been run
+-- Track which drug-disease queries have been run (not yet implemented --
+-- no ORM model or migration exists for this table)
 CREATE TABLE search_queries (
     id            SERIAL PRIMARY KEY,
     drug_name     TEXT NOT NULL,
@@ -78,43 +79,45 @@ Encode therapeutic intent, not just keywords:
 
 ## 3. Stage Specifications
 
-**Stage 1 — `fetch_and_cache(queries: list[str]) -> list[str]`**
+**Stage 1 — `fetch_and_cache(queries: list[str], db: Session) -> list[str]`**
 
 ```
 For each PubMed keyword query:
-  1. Search PubMed E-utilities → up to 500 PMIDs
+  1. Search PubMed E-utilities → up to 200 PMIDs (PUBMED_MAX_RESULTS constant)
   2. Filter to PMIDs not already in pgvector
   3. Fetch abstracts for new PMIDs (batch)
-  4. Embed each abstract with BioLORD-2023
-  5. Store (pmid, title, abstract, authors, journal, pub_date, embedding) in pgvector
-  6. Return full list of PMIDs (cached + newly added)
+  4. Discard abstract-less articles (letters, editorials) — no text to embed
+  5. Embed each remaining abstract with BioLORD-2023
+  6. Store (pmid, title, abstract, authors, journal, pub_date, embedding) in pgvector
+  7. Return full list of PMIDs (cached + newly added)
 ```
 
-**Stage 2 — `semantic_search(disease: str, drug: str, top_k: int = 20) -> list[dict]`**
+**Note:** Not every returned PMID has a row in `pubmed_abstracts`. Articles without an abstract are excluded before insert. Callers that pass this list to `semantic_search` will see those PMIDs silently skipped by the `WHERE pmid = ANY(:pmids)` clause, which is intentional.
+
+**Stage 2 — `semantic_search(disease: str, drug: str, pmids: list[str], db: Session, top_k: int = 5) -> list[dict]`**
 
 ```
 1. Build therapeutic query: "Evidence for {drug} as a treatment for {disease}, ..."
 2. Embed query with BioLORD-2023
-3. Run cosine similarity search over pgvector
-4. Return top_k abstracts ranked by similarity score
+3. Format query vector as canonical pgvector string: "[v1,v2,...,v768]"
+4. Run cosine similarity search over pgvector, scoped to the provided PMIDs:
+   - Inner query: compute 1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
+   - WHERE pmid = ANY(:pmids) restricts to the current drug-disease PMID set
+   - Outer query: ORDER BY similarity DESC, LIMIT top_k
+5. Return top_k abstracts as dicts with pmid, title, abstract, similarity
 ```
 
-**Stage 3 — Re-rank (top 20 → top 5)**
+**Stage 3 — `synthesize(drug, disease, top_abstracts) -> EvidenceSummary`**
 
-After `semantic_search` returns 20 candidates, a re-ranker reduces to 5. Cross-encoder or LLM-based
-reranker (TBD). Top 5 are passed to the Literature Agent.
-
-**Stage 4 — `synthesize(drug, disease, top_5_abstracts) -> EvidenceSummary`**
-
-Top 5 abstracts are stuffed into a Claude prompt. Claude reads the actual retrieved papers — not training
-data. Output is a structured `EvidenceSummary` with PMIDs attached to every claim.
+Top abstracts from `semantic_search` (default 5) are stuffed into a Claude prompt. Claude reads the actual retrieved papers — not training data. Output is a structured `EvidenceSummary` with PMIDs attached to every claim.
 
 ```python
 EvidenceSummary(
     summary: str,
     study_count: int,
     study_types: list[str],
-    strength: str,
+    strength: Literal["strong", "moderate", "weak", "none"],
+    has_adverse_effects: bool,
     key_findings: list[str],
     supporting_pmids: list[str],
 )
@@ -133,7 +136,7 @@ Converts raw Open Targets disease names (e.g. `"narcolepsy-cataplexy syndrome"`)
 **Two-step LLM strategy:**
 
 1. **Normalize** — Haiku prompt strips subtypes, staging, etiology, and genetic qualifiers while preserving organ specificity. If the disease has a well-known synonym, both are returned joined with `OR` (e.g. `"eczema OR dermatitis"`).
-2. **Verify** — If a `drug_name` is provided, the normalized term is verified with a PubMed count (`drug AND disease`). If the count is below `MIN_RESULTS` (3), a second Haiku call generalises to a broader category. The broader term is used only if it also has `>= MIN_RESULTS` hits and does not collapse to an over-generic term in `BROADENING_BLOCKLIST` (e.g. `"cancer"`, `"disease"`, `"syndrome"`).
+2. **Verify** — If a `drug_name` is provided, the normalized term is verified with a PubMed count (`drug AND disease`). If the count is below `MIN_RESULTS` (3), a second Haiku call generalises to a broader category. The broader term is used only if it also has `>= MIN_RESULTS` hits and does not collapse to an over-generic term in `BROADENING_BLOCKLIST` (defined in `constants.py`; e.g. `"cancer"`, `"carcinoma"`, `"disease"`, `"syndrome"`).
 
 **File-based cache (`_cache/`, 5-day TTL):**
 
@@ -158,7 +161,7 @@ services:
       POSTGRES_USER: scout
       POSTGRES_PASSWORD: ${DB_PASSWORD}
     ports:
-      - "5432:5432"
+      - "5438:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -166,35 +169,15 @@ volumes:
   pgdata:
 ```
 
----
-
-## 6. Sprint Mapping
-
-| Task | Sprint | Status |
-|------|--------|--------|
-| Docker + pgvector setup | Sprint 1 | Not started |
-| Abstract caching schema | Sprint 1 | Complete (SQLAlchemy ORM in `sqlalchemy/pubmed_abstracts.py`) |
-| BioLORD-2023 embedding integration | Sprint 1 | Complete (`services/embeddings.py`, lazy singleton) |
-| `fetch_and_cache` implementation | Sprint 1 | Partial (steps 1-3 done: `get_stored_pmids`, `fetch_new_abstracts`; steps 4-7 pending: embed, insert, wire) |
-| `semantic_search` implementation | Sprint 1-2 | Not started |
-| Re-ranking function | Sprint 2 | Not started |
-| `expand_search_terms` implementation | Sprint 2 | Complete (`services/retrieval.py`, 5-axis LLM generation with caching) |
-| Disease name normalization (Haiku) | Sprint 2 | Complete (`services/disease_normalizer.py`, two-step LLM with blocklist) |
-| `synthesize` / Literature Agent integration | Sprint 2 | Not started |
-| Full pipeline wiring | Sprint 2-3 | Not started |
-
----
-
-## 7. Key Design Decisions
+## 6. Key Design Decisions
 
 1. **pgvector over dedicated vector DB** — simplicity; dataset is small enough (~10k-50k abstracts)
 2. **BioLORD-2023 for embeddings** — trained on UMLS + SNOMED-CT + biomedical definitions; sentence-level embedding model; state-of-the-art on biomedical similarity benchmarks; 768-dim vectors
 3. **SentenceTransformer loading** — standard interface; BioLORD-2023 is a SentenceTransformer-compatible model
 4. **Therapeutic query framing** — embed intent ("evidence for X as treatment for Y") not just keywords; enables conceptual matches
 5. **Fetch → embed → store at ingest time** — embeddings computed once and cached; semantic search only needs to embed the query
-6. **500 PMIDs per keyword query** — wider initial retrieval net; semantic search + re-rank handle noise reduction
-7. **Two-stage reduction (20 → 5)** — semantic search casts a wide net; re-ranker applies precision filter before the LLM
-8. **Grounded generation with PMIDs** — Claude synthesises from retrieved documents, not training weights; every claim in `EvidenceSummary` is traceable to a real paper
-9. **Cache-first retrieval** — avoid redundant PubMed API calls and re-embedding
-10. **LLM disease name normalization** — cheap Haiku calls instead of building a synonym dictionary or ontology traversal
-11. **`DrugProfile` for query expansion** — flat LLM-facing projection of `RichDrugData` (name, synonyms, target gene symbols, mechanisms, ATC codes/descriptions, drug type) inform better PubMed queries than drug name alone
+6. **200 PMIDs per keyword query** (`PUBMED_MAX_RESULTS`) — wider initial retrieval net; semantic search handles noise reduction; reduced from 500 to limit embedding time on cold cache
+7. **Grounded generation with PMIDs** — Claude synthesises from retrieved documents, not training weights; every claim in `EvidenceSummary` is traceable to a real paper
+8. **Cache-first retrieval** — avoid redundant PubMed API calls and re-embedding
+9. **LLM disease name normalization** — cheap Haiku calls instead of building a synonym dictionary or ontology traversal
+10. **`DrugProfile` for query expansion** — flat LLM-facing projection of `RichDrugData` (name, synonyms, target gene symbols, mechanisms, ATC codes/descriptions, drug type) inform better PubMed queries than drug name alone

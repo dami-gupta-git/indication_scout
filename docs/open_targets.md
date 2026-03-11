@@ -109,7 +109,7 @@ Additional methods:
 | Method | Returns |
 |--------|---------|
 | `get_drug_indications(drug_name)` | `list[Indication]` — all indications for a drug (calls `get_drug` internally) |
-| `get_drug_competitors(name)` | `dict[str, set[str]]` — top 10 diseases with phase 3+ competitor drugs, grouped by disease name |
+| `get_drug_competitors(name)` | `dict[str, set[str]]` — top 10 diseases with phase 3+ competitor drugs, grouped by disease name. Filters out diseases whose name contains any `BROADENING_BLOCKLIST` word (word-level match) before ranking. |
 | `get_drug_target_competitors(drug_name)` | `dict[str, list[DrugSummary]]` — all drugs acting on each of the drug's targets, keyed by target symbol |
 | `get_disease_drugs(disease_id)` | `list[DrugSummary]` — all drugs for a disease, deduplicated by drug_id |
 | `get_disease_synonyms(disease_name)` | `DiseaseSynonyms` — exact, related, narrow, and broad synonyms for a disease |

@@ -1,0 +1,22 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//Users/dgupta/.claude/plans/**)",
+      "Bash(source:*)",
+      "Bash(alembic current:*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"$CLAUDE_PROJECT_DIR/scripts/session.py\" startup",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -48,6 +48,7 @@ dependencies = [
     "psycopg2-binary>=2.9",
     "pgvector>=0.3.0",
     "sentence-transformers>=3.0.0",
+    "deepeval>=3.4.3",
 ]
 
 [project.optional-dependencies]

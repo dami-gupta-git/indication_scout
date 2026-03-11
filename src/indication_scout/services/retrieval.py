@@ -1,13 +1,15 @@
 """Retrieval service: PubMed fetch/embed/cache and semantic search via pgvector."""
 
+import json
 import logging
 from pathlib import Path
+from typing import TypedDict
 
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
-from indication_scout.constants import CACHE_TTL, DEFAULT_CACHE_DIR
+from indication_scout.constants import CACHE_TTL, PUBMED_MAX_RESULTS
 from indication_scout.data_sources.chembl import ChEMBLClient
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.data_sources.pubmed import PubMedClient
@@ -15,7 +17,8 @@ from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
 from indication_scout.services.embeddings import embed
-from indication_scout.services.llm import parse_llm_response, query_small_llm
+from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.services.llm import parse_llm_response, query_llm, query_small_llm
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
@@ -23,277 +26,446 @@ logger = logging.getLogger(__name__)
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 
-async def build_drug_profile(drug_name: str) -> DrugProfile:
-    """Fetch drug + target data from Open Targets, enrich with ATC descriptions from ChEMBL,
-    and return a DrugProfile ready for use in search term expansion.
+class AbstractResult(TypedDict):
+    pmid: str
+    title: str
+    abstract: str
+    similarity: float
 
-    Args:
-        drug_name: Common drug name (e.g. "metformin").
 
-    Returns:
-        DrugProfile with all fields populated. atc_descriptions will be [] if the drug
-        has no ATC classifications.
+class RetrievalService:
+    """Stateful retrieval service bound to a specific cache directory.
+
+    Instantiate with the appropriate cache_dir for the calling context
+    (e.g. DEFAULT_CACHE_DIR for production, TEST_CACHE_DIR for tests).
     """
-    async with OpenTargetsClient() as open_targets_client:
-        rich = await open_targets_client.get_rich_drug_data(drug_name)
 
-    atc_descriptions = []
-    if rich.drug.atc_classifications:
-        async with ChEMBLClient() as chembl_client:
-            for code in rich.drug.atc_classifications:
-                atc_descriptions.append(await chembl_client.get_atc_description(code))
+    def __init__(self, cache_dir: Path) -> None:
+        self.cache_dir = cache_dir
+        cache_dir.mkdir(parents=True, exist_ok=True)
 
-    return DrugProfile.from_rich_drug_data(rich, atc_descriptions)
+    async def get_drug_competitors(self, drug_name: str) -> dict[str, set[str]]:
+        """Fetch top disease indications and their competitor drugs from Open Targets.
 
+        Args:
+            drug_name: Common drug name (e.g. "empagliflozin").
 
-def get_stored_pmids(pmids: list[str], db: Session) -> set[str]:
-    """Return the subset of the given PMIDs that already exist in pubmed_abstracts.
+        Returns:
+            Dict mapping disease name to set of competitor drug names.
+        """
+        async with OpenTargetsClient(cache_dir=self.cache_dir) as client:
+            return await client.get_drug_competitors(drug_name)
 
-    Used by fetch_and_cache to avoid re-fetching and re-embedding abstracts that
-    are already in pgvector. A single bulk SELECT is used rather than one query
-    per PMID to keep DB round-trips to a minimum.
+    async def build_drug_profile(self, drug_name: str) -> DrugProfile:
+        """Fetch drug + target data from Open Targets, enrich with ATC descriptions from ChEMBL,
+        and return a DrugProfile ready for use in search term expansion.
 
-    Args:
-        pmids: Candidate PMIDs to check.
-        db: Active SQLAlchemy session.
+        Args:
+            drug_name: Common drug name (e.g. "metformin").
 
-    Returns:
-        Set of PMIDs that are present in the pubmed_abstracts table.
-    """
-    if not pmids:
-        return set()
+        Returns:
+            DrugProfile with all fields populated. atc_descriptions will be [] if the drug
+            has no ATC classifications.
+        """
+        async with OpenTargetsClient(cache_dir=self.cache_dir) as open_targets_client:
+            rich = await open_targets_client.get_rich_drug_data(drug_name)
 
-    rows = db.execute(
-        text("SELECT pmid FROM pubmed_abstracts WHERE pmid = ANY(:pmids)"),
-        {"pmids": pmids},
-    ).fetchall()
+        atc_descriptions = []
+        if rich.drug.atc_classifications:
+            async with ChEMBLClient() as chembl_client:
+                for code in rich.drug.atc_classifications:
+                    atc_descriptions.append(await chembl_client.get_atc_description(code))
 
-    return {row[0] for row in rows}
+        return DrugProfile.from_rich_drug_data(rich, atc_descriptions)
 
+    def get_stored_pmids(self, pmids: list[str], db: Session) -> set[str]:
+        """Return the subset of the given PMIDs that already exist in pubmed_abstracts.
 
-async def fetch_new_abstracts(
-    all_pmids: list[str], stored_pmids: set[str]
-) -> list[PubmedAbstract]:
-    """Fetch PubMed abstracts for PMIDs not already in the database.
+        Used by fetch_and_cache to avoid re-fetching and re-embedding abstracts that
+        are already in pgvector. A single bulk SELECT is used rather than one query
+        per PMID to keep DB round-trips to a minimum.
 
-    Computes the set difference between all_pmids and stored_pmids, then
-    calls PubMedClient.fetch_abstracts on only the new ones. If there are
-    no new PMIDs the network call is skipped entirely.
+        Args:
+            pmids: Candidate PMIDs to check.
+            db: Active SQLAlchemy session.
 
-    Args:
-        all_pmids: Full list of PMIDs from a PubMed search result.
-        stored_pmids: PMIDs already present in pubmed_abstracts (from get_stored_pmids).
+        Returns:
+            Set of PMIDs that are present in the pubmed_abstracts table.
+        """
+        if not pmids:
+            return set()
 
-    Returns:
-        List of PubmedAbstract objects for each newly fetched PMID.
-        Empty list if all PMIDs were already stored.
-    """
-    new_pmids = [p for p in all_pmids if p not in stored_pmids]
-    if not new_pmids:
-        logger.debug("All %d PMIDs already stored; skipping fetch", len(all_pmids))
-        return []
+        rows = db.execute(
+            text("SELECT pmid FROM pubmed_abstracts WHERE pmid = ANY(:pmids)"),
+            {"pmids": pmids},
+        ).fetchall()
 
-    logger.debug("Fetching %d new abstracts from PubMed", len(new_pmids))
-    async with PubMedClient() as client:
+        return {row[0] for row in rows}
+
+    async def fetch_new_abstracts(
+        self, all_pmids: list[str], stored_pmids: set[str], client: PubMedClient
+    ) -> list[PubmedAbstract]:
+        """Fetch PubMed abstracts for PMIDs not already in the database.
+
+        Computes the set difference between all_pmids and stored_pmids, then
+        calls client.fetch_abstracts on only the new ones. If there are
+        no new PMIDs the network call is skipped entirely.
+
+        Args:
+            all_pmids: Full list of PMIDs from a PubMed search result.
+            stored_pmids: PMIDs already present in pubmed_abstracts (from get_stored_pmids).
+            client: Open PubMedClient session to reuse (owned by the caller).
+
+        Returns:
+            List of PubmedAbstract objects for each newly fetched PMID.
+            Empty list if all PMIDs were already stored.
+        """
+        new_pmids = [p for p in all_pmids if p not in stored_pmids]
+        if not new_pmids:
+            logger.debug("All %d PMIDs already stored; skipping fetch", len(all_pmids))
+            return []
+
+        logger.debug("Fetching %d new abstracts from PubMed", len(new_pmids))
         return await client.fetch_abstracts(new_pmids)
 
+    def embed_abstracts(
+        self,
+        abstracts: list[PubmedAbstract],
+    ) -> list[tuple[PubmedAbstract, list[float]]]:
+        """Embed a list of PubMed abstracts using BioLORD-2023.
 
-def embed_abstracts(
-    abstracts: list[PubmedAbstract],
-) -> list[tuple[PubmedAbstract, list[float]]]:
-    """Embed a list of PubMed abstracts using BioLORD-2023.
+        Builds embed text as "<title>. <abstract>" for each abstract and calls
+        embed() in a single batch. Returns (abstract, vector) pairs aligned by index.
 
-    Builds embed text as "<title>. <abstract>" for each abstract and calls
-    embed() in a single batch. Returns (abstract, vector) pairs aligned by index.
+        Args:
+            abstracts: Abstracts to embed.
 
-    Args:
-        abstracts: Abstracts to embed.
+        Returns:
+            List of (PubmedAbstract, embedding vector) pairs in the same order as input.
+            Empty list if abstracts is empty (embed() is not called).
+        """
+        if not abstracts:
+            return []
 
-    Returns:
-        List of (PubmedAbstract, embedding vector) pairs in the same order as input.
-        Empty list if abstracts is empty (embed() is not called).
-    """
-    if not abstracts:
-        return []
+        texts = [f"{a.title}. {a.abstract or ''}" for a in abstracts]
+        vectors = embed(texts)
+        return list(zip(abstracts, vectors))
 
-    texts = [f"{a.title}. {a.abstract or ''}" for a in abstracts]
-    vectors = embed(texts)
-    return list(zip(abstracts, vectors))
+    def insert_abstracts(
+        self,
+        pairs: list[tuple[PubmedAbstract, list[float]]],
+        db: Session,
+    ) -> None:
+        """Bulk-insert (abstract, embedding) pairs into pubmed_abstracts.
 
+        Uses INSERT ... ON CONFLICT DO NOTHING so re-running with already-stored
+        PMIDs is safe and idempotent. Does nothing when pairs is empty.
 
-def insert_abstracts(
-    pairs: list[tuple[PubmedAbstract, list[float]]],
-    db: Session,
-) -> None:
-    """Bulk-insert (abstract, embedding) pairs into pubmed_abstracts.
+        Args:
+            pairs: Output of embed_abstracts — (PubmedAbstract, vector) tuples.
+            db: Active SQLAlchemy session.
+        """
+        if not pairs:
+            return
 
-    Uses INSERT ... ON CONFLICT DO NOTHING so re-running with already-stored
-    PMIDs is safe and idempotent. Does nothing when pairs is empty.
+        rows = [
+            {
+                "pmid": abstract.pmid,
+                "title": abstract.title,
+                "abstract": abstract.abstract,
+                "authors": abstract.authors or [],
+                "journal": abstract.journal,
+                "pub_date": abstract.pub_date,
+                "mesh_terms": abstract.mesh_terms or [],
+                "embedding": vector,
+            }
+            for abstract, vector in pairs
+        ]
 
-    Args:
-        pairs: Output of embed_abstracts — (PubmedAbstract, vector) tuples.
-        db: Active SQLAlchemy session.
-    """
-    if not pairs:
-        return
-
-    rows = [
-        {
-            "pmid": abstract.pmid,
-            "title": abstract.title or "",
-            "abstract": abstract.abstract,
-            "authors": abstract.authors or [],
-            "journal": abstract.journal,
-            "pub_date": abstract.pub_date,
-            "mesh_terms": abstract.mesh_terms or [],
-            "embedding": vector,
-        }
-        for abstract, vector in pairs
-    ]
-
-    stmt = insert(PubmedAbstracts).values(rows).on_conflict_do_nothing(index_elements=["pmid"])
-    db.execute(stmt)
-    db.commit()
-    logger.debug("Inserted %d abstracts into pubmed_abstracts", len(rows))
-
-
-async def fetch_and_cache(queries: list[str], db: Session) -> list[str]:
-    """Hit PubMed for each query, fetch new abstracts, embed, cache in pgvector.
-
-    For each keyword query:
-      1. Search PubMed → up to 500 PMIDs
-      2. Filter to PMIDs not already in pgvector
-      3. Fetch abstracts for new PMIDs
-      4. Embed each abstract with BioLORD-2023
-      5. Bulk INSERT into pgvector (ON CONFLICT DO NOTHING)
-
-    Returns the deduplicated union of all PMIDs across all queries.
-
-    Args:
-        queries: PubMed keyword queries (e.g. from expand_search_terms).
-        db: Active SQLAlchemy session.
-
-    Returns:
-        Deduplicated list of all PMIDs (cached + newly inserted).
-    """
-    all_pmids: list[str] = []
-
-    async with PubMedClient() as client:
-        for query in queries:
-            pmids = await client.search(query, max_results=500)
-            stored = get_stored_pmids(pmids, db)
-            new_abstracts = await fetch_new_abstracts(pmids, stored)
-            pairs = embed_abstracts(new_abstracts)
-            insert_abstracts(pairs, db)
-            all_pmids.extend(pmids)
-
-    return list(dict.fromkeys(all_pmids))
-
-
-async def semantic_search(disease: str, drug: str, top_k: int = 20) -> list[dict]:
-    """Create a query from drug + disease, embed it, search pgvector, return ranked abstracts.
-    [
-        {"pmid": "29734553", "title": "Metformin suppresses colorectal...", "abstract": "...", "similarity": 0.89},
-        {"pmid": "31245678", "title": "AMPK activation in colon...", "abstract": "...", "similarity": 0.85},
-        {"pmid": "30198432", "title": "Biguanide compounds inhibit...", "abstract": "...", "similarity": 0.82},
-    ...
-    ]
-    """
-    raise NotImplementedError
-
-
-def synthesize(drug: str, disease: str, top_5_abstracts: list[str]) -> dict:
-    """get back a structured evidence summary with PMIDs
-    Summarize the evidence for Metformin treating colorectal cancer based on these papers" and it returns a structured summary
-     — study count, study types, strength assessment, key findings, and the PMIDs it drew from.
-    That evidence summary is the final output of the RAG pipeline for one drug-disease pair.
-    """
-    raise NotImplementedError
-
-
-async def extract_organ_term(disease_name: str) -> str:
-    """Return the primary organ or tissue for a disease name via a small LLM call."""
-    cached = cache_get("organ_term", {"disease_name": disease_name}, DEFAULT_CACHE_DIR)
-    if cached is not None:
-        logger.debug("Cache hit for organ_term: %s", disease_name)
-        return cached
-
-    template = (_PROMPTS_DIR / "extract_organ_term.txt").read_text()
-    prompt = template.format(disease_name=disease_name)
-    result = await query_small_llm(prompt)
-    organ_term = result.strip()
-
-    cache_set(
-        "organ_term",
-        {"disease_name": disease_name},
-        organ_term,
-        DEFAULT_CACHE_DIR,
-        ttl=CACHE_TTL,
-    )
-    logger.debug("Extracted organ term '%s' for disease '%s'", organ_term, disease_name)
-    return organ_term
-
-
-async def expand_search_terms(
-    drug_name: str, disease_name: str, drug_profile: DrugProfile
-) -> list[str]:
-    """Use LLM to generate diverse PubMed search queries from a drug-disease pair."""
-    cached = cache_get(
-        "expand_search_terms",
-        {"drug_name": drug_name, "disease_name": disease_name},
-        DEFAULT_CACHE_DIR,
-    )
-    if cached is not None:
-        logger.debug(
-            "Cache hit for expand_search_terms: %s / %s", drug_name, disease_name
+        stmt = (
+            insert(PubmedAbstracts)
+            .values(rows)
+            .on_conflict_do_nothing(index_elements=["pmid"])
         )
-        return cached
+        db.execute(stmt)
+        db.commit()
+        logger.debug("Inserted %d abstracts into pubmed_abstracts", len(rows))
 
-    organ_term = await extract_organ_term(disease_name)
+    async def fetch_and_cache(self, queries: list[str], db: Session) -> list[str]:
+        """Hit PubMed for each query, fetch new abstracts, embed, cache in pgvector.
 
-    template = (_PROMPTS_DIR / "expand_search_terms.txt").read_text()
-    prompt = template.format(
-        drug_name=drug_name,
-        disease_name=disease_name,
-        organ_term=organ_term,
-        synonyms=", ".join(drug_profile.synonyms),
-        target_gene_symbols=", ".join(drug_profile.target_gene_symbols),
-        mechanisms_of_action=", ".join(drug_profile.mechanisms_of_action),
-        atc_codes=", ".join(drug_profile.atc_codes),
-        atc_descriptions=", ".join(drug_profile.atc_descriptions),
-        drug_type=drug_profile.drug_type,
-    )
+        For each keyword query:
+          1. Search PubMed → up to 500 PMIDs
+          2. Filter to PMIDs not already in pgvector
+          3. Fetch abstracts for new PMIDs
+          4. Embed each abstract with BioLORD-2023
+          5. Bulk INSERT into pgvector (ON CONFLICT DO NOTHING)
 
-    text = await query_small_llm(prompt)
-    raw: list[str] = parse_llm_response(text)
+        Returns the deduplicated union of all PMIDs across all queries.
 
-    # Case-normalised dedup: lowercase+strip as key, preserve original casing
-    seen: dict[str, str] = {}
-    for term in raw:
-        key = term.lower().strip()
-        if key not in seen:
-            seen[key] = term
-    deduped = list(seen.values())
+        Args:
+            queries: PubMed keyword queries (e.g. from expand_search_terms).
+            db: Active SQLAlchemy session.
 
-    cache_set(
-        "expand_search_terms",
-        {"drug_name": drug_name, "disease_name": disease_name},
-        deduped,
-        DEFAULT_CACHE_DIR,
-        ttl=CACHE_TTL,
-    )
-    logger.debug(
-        "expand_search_terms returned %d queries for %s / %s",
-        len(deduped),
-        drug_name,
-        disease_name,
-    )
-    return deduped
+        Returns:
+            Deduplicated list of all PMIDs returned by PubMed search across all queries.
+            Note: not every returned PMID has a row in pubmed_abstracts — articles without
+            an abstract (letters, editorials) are excluded from the vector store. Callers
+            that pass this list to semantic_search will see those PMIDs silently skipped
+            by the WHERE pmid = ANY(:pmids) clause, which is intentional and correct.
+        """
+        all_pmids: list[str] = []
 
+        async with PubMedClient(cache_dir=self.cache_dir) as client:
+            for query in queries:
+                # For this query, gets upto 500 pmids
+                pmids = await client.search(query, max_results=PUBMED_MAX_RESULTS)
 
-async def get_disease_synonyms(disease: str) -> list[str]:
-    template = (_PROMPTS_DIR / "disease_synonyms.txt").read_text()
-    prompt = template.format(disease=disease)
+                # Check what pmids are already in the db
+                stored = self.get_stored_pmids(pmids, db)
 
-    text = await query_small_llm(prompt)
-    return parse_llm_response(text)
+                # For pmids not in db, get the abstracts from pubmed
+                new_abstracts = await self.fetch_new_abstracts(pmids, stored, client)
+
+                # Articles with no abstract (letters, editorials) are excluded —
+                # they have no text to embed meaningfully.
+                abstracts_with_text = [a for a in new_abstracts if a.abstract]
+
+                # create embeddings - embed abstracts returns a tuple
+                # fields from actual abstract, and the embedding
+                pairs = self.embed_abstracts(abstracts_with_text)
+
+                # put the new abstract/embedding in the ab
+                self.insert_abstracts(pairs, db)
+
+                # all pmids, whether inserted or no
+                all_pmids.extend(pmids)
+
+        return list(dict.fromkeys(all_pmids))
+
+    async def semantic_search(
+        self, disease: str, drug: str, pmids: list[str], db: Session, top_k: int = 5
+    ) -> list[AbstractResult]:
+        """Embed a drug-disease query and return the top-k most similar abstracts from pgvector.
+
+        Constructs a natural-language query from drug and disease (e.g. "Evidence for metformin
+        as a treatment for colorectal cancer..."), embeds it with BioLORD-2023, then runs a
+        cosine similarity search restricted to the given PMIDs.
+
+        Args:
+            disease: Target indication (e.g. "colorectal cancer").
+            drug: Drug name (e.g. "metformin").
+            pmids: Candidate PMIDs to search within (typically from fetch_and_cache).
+                Example: ["29734553", "31245678", "30198432"]
+            db: Active SQLAlchemy session.
+            top_k: Maximum number of results to return (default 5).
+
+        Returns:
+            List of dicts ranked by descending similarity, e.g.:
+            [{"pmid": "29734553", "title": "Metformin suppresses colorectal...", "abstract": "...", "similarity": 0.89}, ...]
+        """
+        query_string = (
+            f"Evidence for {drug} as a treatment for {disease}, "
+            "including clinical trials, efficacy data, mechanism of action, "
+            "and preclinical studies"
+        )
+        query_vector = embed([query_string])[0]
+
+        rows = db.execute(
+            text("""
+                SELECT pmid, title, abstract, similarity
+                FROM (
+                    SELECT pmid, title, abstract,
+                           1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
+                    FROM pubmed_abstracts
+                    WHERE pmid = ANY(:pmids)
+                ) sub
+                ORDER BY similarity DESC
+                LIMIT :top_k
+            """),
+            {
+                "query_vec": "[" + ",".join(str(x) for x in query_vector) + "]",
+                "pmids": pmids,
+                "top_k": top_k,
+            },
+        ).fetchall()
+
+        return [
+            {
+                "pmid": row[0],
+                "title": row[1],
+                "abstract": row[2],
+                "similarity": float(row[3]),
+            }
+            for row in rows
+        ]
+
+    async def synthesize(
+        self, drug: str, disease: str, top_abstracts: list[AbstractResult]
+    ) -> EvidenceSummary:
+        """Summarize PubMed evidence for a drug-disease pair using an LLM.
+
+        Formats the top abstracts from semantic_search into a prompt, calls the LLM,
+        and parses the JSON response into an EvidenceSummary.
+
+        Args:
+            drug: Drug name (e.g. "metformin").
+            disease: Candidate disease (e.g. "colorectal cancer").
+            top_abstracts: Output of semantic_search — list of dicts with keys
+                "pmid", "title", "abstract", "similarity".
+
+        Returns:
+            EvidenceSummary with all fields populated from the LLM response.
+        """
+        formatted = "\n\n".join(
+            f"PMID: {r['pmid']}\nTitle: {r['title']}\nAbstract: {r['abstract']}"
+            for r in top_abstracts
+        )
+
+        template = (_PROMPTS_DIR / "synthesize.txt").read_text()
+        prompt = template.format(drug_name=drug, disease_name=disease, abstracts=formatted)
+
+        response = await query_llm(prompt)
+        # Strip markdown code fences if present (```json ... ``` or ``` ... ```)
+        stripped = response.strip()
+        if stripped.startswith("```"):
+            stripped = stripped.split("```", 2)[1]
+            if stripped.startswith("json"):
+                stripped = stripped[4:].lstrip()
+            stripped = stripped.rsplit("```", 1)[0].strip()
+        try:
+            data = json.loads(stripped)
+        except json.JSONDecodeError as e:
+            logger.error(
+                "synthesize: failed to parse LLM response: %s\nResponse was: %s",
+                e,
+                response,
+            )
+            raise
+        return EvidenceSummary(**data)
+
+    async def extract_organ_term(self, disease_name: str) -> str:
+        """Return the primary organ or tissue for a disease name via a small LLM call."""
+        cached = cache_get("organ_term", {"disease_name": disease_name}, self.cache_dir)
+        if cached is not None:
+            logger.debug("Cache hit for organ_term: %s", disease_name)
+            return cached
+
+        template = (_PROMPTS_DIR / "extract_organ_term.txt").read_text()
+        prompt = template.format(disease_name=disease_name)
+        result = await query_small_llm(prompt)
+        organ_term = result.strip()
+
+        cache_set(
+            "organ_term",
+            {"disease_name": disease_name},
+            organ_term,
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+        logger.debug("Extracted organ term '%s' for disease '%s'", organ_term, disease_name)
+        return organ_term
+
+    async def expand_search_terms(
+        self, drug_name: str, disease_name: str, drug_profile: DrugProfile
+    ) -> list[str]:
+        """Use LLM to generate diverse PubMed search queries from a drug-disease pair.
+
+        Combines the drug's synonyms, gene targets, mechanisms of action, and ATC
+        classifications with the organ term extracted from the disease name to produce
+        a broad set of complementary PubMed queries. Results are cached by drug/disease
+        pair and deduplicated (case-insensitive) before return.
+
+        Args:
+            drug_name: Common drug name (e.g. "metformin").
+            disease_name: Target indication (e.g. "colorectal cancer").
+            drug_profile: DrugProfile built from Open Targets + ChEMBL data.
+
+        Returns:
+            Deduplicated list of PubMed keyword queries ready to pass to fetch_and_cache.
+
+        Examples:
+            >>> # metformin × colorectal cancer might return:
+            >>> [
+            ...     "metformin colorectal cancer",
+            ...     "metformin colon tumor",
+            ...     "AMPK colorectal cancer",
+            ...     "biguanide colon neoplasm",
+            ...     "metformin PRKAB1 cancer",
+            ... ]
+
+            >>> # semaglutide × non-alcoholic steatohepatitis might return:
+            >>> [
+            ...     "semaglutide NASH",
+            ...     "GLP-1 receptor agonist liver fibrosis",
+            ...     "semaglutide non-alcoholic fatty liver disease",
+            ...     "ozempic hepatic steatosis",
+            ...     "GLP1R liver inflammation",
+            ... ]
+        """
+        cached = cache_get(
+            "expand_search_terms",
+            {"drug_name": drug_name, "disease_name": disease_name},
+            self.cache_dir,
+        )
+        if cached is not None:
+            logger.debug(
+                "Cache hit for expand_search_terms: %s / %s", drug_name, disease_name
+            )
+            return cached
+
+        organ_term = await self.extract_organ_term(disease_name)
+
+        template = (_PROMPTS_DIR / "expand_search_terms.txt").read_text()
+        prompt = template.format(
+            drug_name=drug_name,
+            disease_name=disease_name,
+            organ_term=organ_term,
+            synonyms=", ".join(drug_profile.synonyms),
+            target_gene_symbols=", ".join(drug_profile.target_gene_symbols),
+            mechanisms_of_action=", ".join(drug_profile.mechanisms_of_action),
+            atc_codes=", ".join(drug_profile.atc_codes),
+            atc_descriptions=", ".join(drug_profile.atc_descriptions),
+            drug_type=drug_profile.drug_type,
+        )
+
+        llm_output = await query_small_llm(prompt)
+        raw: list[str] = parse_llm_response(llm_output)
+
+        # Case-normalised dedup: lowercase+strip as key, preserve original casing
+        seen: dict[str, str] = {}
+        for term in raw:
+            key = term.lower().strip()
+            if key not in seen:
+                seen[key] = term
+        deduped = list(seen.values())
+
+        cache_set(
+            "expand_search_terms",
+            {"drug_name": drug_name, "disease_name": disease_name},
+            deduped,
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+        logger.debug(
+            "expand_search_terms returned %d queries for %s / %s",
+            len(deduped),
+            drug_name,
+            disease_name,
+        )
+        return deduped
+
+    async def get_disease_synonyms(self, disease: str) -> list[str]:
+        """Return alternate names for a disease via LLM.
+
+        Args:
+            disease: Disease name (e.g. "colorectal cancer").
+
+        Returns:
+            List of synonyms (e.g. ["colon cancer", "bowel cancer", "CRC"]).
+        """
+        template = (_PROMPTS_DIR / "disease_synonyms.txt").read_text()
+        prompt = template.format(disease=disease)
+
+        llm_output = await query_small_llm(prompt)
+        return parse_llm_response(llm_output)

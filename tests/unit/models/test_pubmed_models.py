@@ -18,7 +18,9 @@ def test_pubmed_abstract_coerce_nones_converts_null_lists_to_empty():
 
 
 def test_pubmed_abstract_coerce_nones_preserves_genuine_nones():
-    """PubmedAbstract fields with default=None must stay None when passed None."""
+    """PubmedAbstract fields with default=None must stay None when passed None.
+    title has default="" so None is coerced to "".
+    """
     abstract = PubmedAbstract(
         pmid="12345678",
         title=None,
@@ -27,7 +29,7 @@ def test_pubmed_abstract_coerce_nones_preserves_genuine_nones():
         pub_date=None,
     )
 
-    assert abstract.title is None
+    assert abstract.title == ""
     assert abstract.abstract is None
     assert abstract.journal is None
     assert abstract.pub_date is None

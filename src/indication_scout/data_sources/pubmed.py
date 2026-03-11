@@ -9,12 +9,17 @@ Three methods:
 
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET
 from datetime import date
 from pathlib import Path
 from typing import Any
 
-from indication_scout.constants import DEFAULT_CACHE_DIR, PUBMED_FETCH_URL, PUBMED_SEARCH_URL
+from indication_scout.constants import (
+    DEFAULT_CACHE_DIR,
+    PUBMED_FETCH_URL,
+    PUBMED_SEARCH_URL,
+)
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
 from indication_scout.utils.cache import cache_get, cache_set
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
@@ -108,6 +113,10 @@ class PubMedClient(BaseClient):
     def _parse_pubmed_xml(self, xml_text: str) -> list[PubmedAbstract]:
         """Parse PubMed XML response into PubmedAbstract objects."""
         articles = []
+
+        # Strip control characters that are invalid in XML 1.0 (U+0000–U+001F,
+        # excluding the three characters XML permits: tab, newline, carriage-return).
+        xml_text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", xml_text)
 
         try:
             root = ET.fromstring(xml_text)
