@@ -8,15 +8,17 @@ For detailed implementation specs, schema definitions, and design rationale, see
 
 ## Architecture
 
-The pipeline is implemented as the `RetrievalService` class in `services/retrieval.py`, orchestrated by `runners/rag_runner.py`. It processes a drug across its top 15 disease indications from Open Targets.
+The pipeline is implemented as the `RetrievalService` class in `services/retrieval.py`, orchestrated by `runners/rag_runner.py`. It processes a drug across its top 15 disease indications. `RetrievalService.get_drug_competitors()` fetches raw competitor data from `OpenTargetsClient` (which returns `CompetitorRawData`), uses an LLM call (`merge_duplicate_diseases`) to deduplicate disease names, removes overly broad terms, sorts by competitor count, and slices to the top 15.
 
 ```
 Drug name
   |
   v
-get_drug_competitors  -->  15 disease indications
-  |
-build_drug_profile    -->  DrugProfile (name, synonyms, targets, mechanisms, ATC)
+RetrievalService.get_drug_competitors  -->  raw data from OpenTargetsClient
+  |                                          + LLM merge/dedup
+  |                                          + sort + top-15 slice
+  v
+RetrievalService.build_drug_profile    -->  DrugProfile (name, synonyms, targets, mechanisms, ATC)
   |
   v
 For each disease:

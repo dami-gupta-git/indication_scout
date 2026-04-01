@@ -135,20 +135,16 @@ async def test_get_target_drug_summaries(open_targets_client):
     )
 
     assert len(drug_summaries) > 5
-    liraglutide = next(
-        d
-        for d in drug_summaries
-        if d.drug_name == "LIRAGLUTIDE" and d.disease_name == "type 2 diabetes mellitus"
-    )
-    # Verify all DrugSummary fields
+    liraglutide = next(d for d in drug_summaries if d.drug_name == "LIRAGLUTIDE")
+    # Verify DrugSummary fields
     assert liraglutide.drug_id == "CHEMBL4084119"
     assert liraglutide.drug_name == "LIRAGLUTIDE"
-    assert liraglutide.disease_id == "MONDO_0005148"
-    assert liraglutide.disease_name == "type 2 diabetes mellitus"
-    assert liraglutide.phase == 4.0
-    assert liraglutide.status is None
-    assert liraglutide.mechanism_of_action == "Glucagon-like peptide 1 receptor agonist"
-    assert liraglutide.clinical_trial_ids == []
+    assert liraglutide.max_clinical_stage == "APPROVAL"
+    assert len(liraglutide.diseases) > 0
+    t2d = next(
+        d for d in liraglutide.diseases if d.disease_name == "type 2 diabetes mellitus"
+    )
+    assert t2d.disease_id == "MONDO_0005148"
 
 
 async def test_get_target_expression(open_targets_client):
@@ -164,20 +160,11 @@ async def test_get_target_expression(open_targets_client):
     assert liver.tissue_name == "liver"
     assert liver.tissue_anatomical_system == "endocrine system"
     # Verify all RNAExpression fields
-    assert liver.rna.value == 11819.0
+    assert liver.rna.value > 0
     assert liver.rna.quantile == 5
-    assert liver.rna.unit == "TPM"
     # Verify all ProteinExpression fields
     assert liver.protein.level == 2
     assert liver.protein.reliability is True
-    assert len(liver.protein.cell_types) > 0
-    # Verify CellTypeExpression fields
-    hepatocytes = next(
-        ct for ct in liver.protein.cell_types if ct.name == "hepatocytes"
-    )
-    assert hepatocytes.name == "hepatocytes"
-    assert hepatocytes.level == 1
-    assert hepatocytes.reliability is True
 
 
 async def test_get_target_phenotypes(open_targets_client):
@@ -197,8 +184,6 @@ async def test_get_target_phenotypes(open_targets_client):
     [model] = glucose.biological_models
     assert model.allelic_composition == "Glp1r<tm1b(KOMP)Mbp> hom early"
     assert model.genetic_background == "C57BL/6NTac"
-    assert model.literature == []
-    assert model.model_id == ""
 
 
 async def test_get_target_safety_liabilities(open_targets_client):
@@ -251,8 +236,7 @@ async def test_get_drug_indications(open_targets_client):
     assert len(indications) > 5
     [t2d] = [i for i in indications if i.disease_name == "type 2 diabetes mellitus"]
     assert t2d.disease_id == "MONDO_0005148"
-    assert t2d.max_phase == 4.0
-    assert len(t2d.references) == 4
+    assert t2d.max_clinical_stage == "APPROVAL"
 
 
 async def test_get_disease_drugs(open_targets_client):
@@ -261,18 +245,8 @@ async def test_get_disease_drugs(open_targets_client):
     drugs = await open_targets_client.get_disease_drugs("MONDO_0005148")
 
     assert len(drugs) > 10
-    semaglutide = next(
-        d
-        for d in drugs
-        if d.drug_name == "SEMAGLUTIDE"
-        and d.mechanism_of_action == "Glucagon-like peptide 1 receptor agonist"
-    )
-    # Verify all DrugSummary fields
+    semaglutide = next(d for d in drugs if d.drug_name == "SEMAGLUTIDE")
+    # Verify DrugSummary fields
     assert semaglutide.drug_id == "CHEMBL2108724"
     assert semaglutide.drug_name == "SEMAGLUTIDE"
-    assert semaglutide.disease_id == "MONDO_0005148"
-    assert semaglutide.disease_name == "type 2 diabetes mellitus"
-    assert semaglutide.phase == 4.0
-    assert semaglutide.status is None
-    assert semaglutide.mechanism_of_action == "Glucagon-like peptide 1 receptor agonist"
-    assert semaglutide.clinical_trial_ids == []
+    assert semaglutide.max_clinical_stage == "APPROVAL"

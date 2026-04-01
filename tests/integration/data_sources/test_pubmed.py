@@ -44,11 +44,11 @@ async def test_fetch_articles_parses_correctly(pubmed_client):
     """Test fetch_articles returns parsed PubmedAbstract objects."""
     # First search for a known article
     pmids = await pubmed_client.search(
-        "semaglutide obesity clinical trial", max_results=5
+        "semaglutide obesity clinical trial"
     )
     articles = await pubmed_client.fetch_abstracts(pmids)
 
-    assert len(articles) == 5
+    assert len(articles) >= 5
     [article] = [a for a in articles if a.pmid == "41664890"]
 
     assert article.pmid.isdigit()

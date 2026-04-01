@@ -45,8 +45,7 @@ def rich_metformin(atc_metformin) -> RichDrugData:
         synonyms=["Glucophage", "Glucophage"],  # intentional duplicate
         trade_names=["Fortamet", "Glucophage"],  # overlap with synonyms
         drug_type="Small molecule",
-        is_approved=True,
-        max_clinical_phase=4.0,
+        maximum_clinical_stage="APPROVAL",
         atc_classifications=["A10BA02"],
         targets=[
             DrugTarget(
@@ -183,7 +182,9 @@ async def test_extract_organ_term_returns_cached_result(tmp_path):
         "indication_scout.services.retrieval.query_small_llm",
         new=AsyncMock(),
     ) as mock_llm:
-        result = await RetrievalService(tmp_path).extract_organ_term("colorectal cancer")
+        result = await RetrievalService(tmp_path).extract_organ_term(
+            "colorectal cancer"
+        )
 
     assert result == "colon"
     mock_llm.assert_not_called()
@@ -386,7 +387,9 @@ async def test_build_drug_profile_returns_profile(svc, rich_metformin, atc_metfo
     assert profile.drug_type == "Small molecule"
 
 
-async def test_build_drug_profile_fetches_atc_per_code(svc, rich_metformin, atc_metformin):
+async def test_build_drug_profile_fetches_atc_per_code(
+    svc, rich_metformin, atc_metformin
+):
     """get_atc_description is called once per ATC code on the drug."""
     mock_open_targets = AsyncMock()
     mock_open_targets.__aenter__ = AsyncMock(return_value=mock_open_targets)
@@ -572,15 +575,15 @@ def _make_abstract(pmid: str, title: str, abstract: str | None) -> PubmedAbstrac
     return PubmedAbstract(pmid=pmid, title=title, abstract=abstract)
 
 
-def test_embed_abstracts_texts_contain_title_and_abstract(svc):
-    """embed() is called with '<title>. <abstract>' for each abstract."""
+async def test_embed_abstracts_texts_contain_title_and_abstract(svc):
+    """embed_async() is called with '<title>. <abstract>' for each abstract."""
     abstracts = [_make_abstract("1", "My Title", "My abstract text.")]
     mock_vectors = [[0.1] * 768]
 
     with patch(
-        "indication_scout.services.retrieval.embed", return_value=mock_vectors
+        "indication_scout.services.retrieval.embed_async", return_value=mock_vectors
     ) as mock_embed:
-        result = svc.embed_abstracts(abstracts)
+        result = await svc.embed_abstracts(abstracts)
 
     mock_embed.assert_called_once_with(["My Title. My abstract text."])
     assert len(result) == 1
@@ -588,30 +591,30 @@ def test_embed_abstracts_texts_contain_title_and_abstract(svc):
     assert result[0][1] == mock_vectors[0]
 
 
-def test_embed_abstracts_none_abstract_produces_title_dot_space(svc):
+async def test_embed_abstracts_none_abstract_produces_title_dot_space(svc):
     """An abstract of None produces '<title>. ' without crashing."""
     abstracts = [_make_abstract("2", "Only Title", None)]
     mock_vectors = [[0.2] * 768]
 
     with patch(
-        "indication_scout.services.retrieval.embed", return_value=mock_vectors
+        "indication_scout.services.retrieval.embed_async", return_value=mock_vectors
     ) as mock_embed:
-        result = svc.embed_abstracts(abstracts)
+        result = await svc.embed_abstracts(abstracts)
 
     mock_embed.assert_called_once_with(["Only Title. "])
     assert result[0][0].pmid == "2"
 
 
-def test_embed_abstracts_empty_input_skips_embed(svc):
-    """Empty input returns [] without calling embed()."""
-    with patch("indication_scout.services.retrieval.embed") as mock_embed:
-        result = svc.embed_abstracts([])
+async def test_embed_abstracts_empty_input_skips_embed(svc):
+    """Empty input returns [] without calling embed_async()."""
+    with patch("indication_scout.services.retrieval.embed_async") as mock_embed:
+        result = await svc.embed_abstracts([])
 
     mock_embed.assert_not_called()
     assert result == []
 
 
-def test_embed_abstracts_vectors_align_to_abstracts_by_index(svc):
+async def test_embed_abstracts_vectors_align_to_abstracts_by_index(svc):
     """Each abstract is paired with the vector at the same index."""
     abstracts = [
         _make_abstract("10", "Title A", "Abstract A"),
@@ -620,8 +623,10 @@ def test_embed_abstracts_vectors_align_to_abstracts_by_index(svc):
     ]
     mock_vectors = [[float(i)] * 768 for i in range(3)]
 
-    with patch("indication_scout.services.retrieval.embed", return_value=mock_vectors):
-        result = svc.embed_abstracts(abstracts)
+    with patch(
+        "indication_scout.services.retrieval.embed_async", return_value=mock_vectors
+    ):
+        result = await svc.embed_abstracts(abstracts)
 
     assert len(result) == 3
     for i, (abstract, vector) in enumerate(result):
@@ -727,7 +732,7 @@ async def test_fetch_and_cache_returns_deduped_pmids(svc):
         patch(
             "indication_scout.services.retrieval.PubMedClient", return_value=mock_client
         ),
-        patch("indication_scout.services.retrieval.embed", return_value=[]),
+        patch("indication_scout.services.retrieval.embed_async", return_value=[]),
         patch("indication_scout.services.retrieval.insert"),
     ):
         result = await svc.fetch_and_cache(["query1", "query2"], mock_db)
@@ -802,7 +807,9 @@ async def test_semantic_search_returns_ranked_dicts(svc):
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
-    with patch("indication_scout.services.retrieval.embed", return_value=[mock_vector]):
+    with patch(
+        "indication_scout.services.retrieval.embed_async", return_value=[mock_vector]
+    ):
         result = await svc.semantic_search(
             "colorectal cancer", "metformin", ["111", "222"], mock_db
         )
@@ -832,7 +839,9 @@ async def test_semantic_search_embeds_therapeutic_query(svc):
         captured["texts"] = texts
         return [mock_vector]
 
-    with patch("indication_scout.services.retrieval.embed", side_effect=capture_embed):
+    with patch(
+        "indication_scout.services.retrieval.embed_async", side_effect=capture_embed
+    ):
         await svc.semantic_search("obesity", "bupropion", ["111"], mock_db)
 
     assert len(captured["texts"]) == 1
@@ -846,7 +855,9 @@ async def test_semantic_search_passes_pmids_to_query(svc):
     mock_vector = [0.1] * 768
     pmids = ["111", "222", "333"]
 
-    with patch("indication_scout.services.retrieval.embed", return_value=[mock_vector]):
+    with patch(
+        "indication_scout.services.retrieval.embed_async", return_value=[mock_vector]
+    ):
         await svc.semantic_search("diabetes", "metformin", pmids, mock_db)
 
     call_kwargs = mock_db.execute.call_args
@@ -859,7 +870,9 @@ async def test_semantic_search_respects_top_k(svc):
     mock_db = _make_db_with_rows([])
     mock_vector = [0.1] * 768
 
-    with patch("indication_scout.services.retrieval.embed", return_value=[mock_vector]):
+    with patch(
+        "indication_scout.services.retrieval.embed_async", return_value=[mock_vector]
+    ):
         await svc.semantic_search("diabetes", "metformin", ["111"], mock_db, top_k=5)
 
     call_kwargs = mock_db.execute.call_args
@@ -875,11 +888,74 @@ async def test_semantic_search_similarity_is_float(svc):
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
-    with patch("indication_scout.services.retrieval.embed", return_value=[mock_vector]):
+    with patch(
+        "indication_scout.services.retrieval.embed_async", return_value=[mock_vector]
+    ):
         result = await svc.semantic_search("diabetes", "metformin", ["111"], mock_db)
 
     assert isinstance(result[0]["similarity"], float)
     assert result[0]["similarity"] == float(Decimal("0.8765"))
+
+
+@pytest.mark.skip(reason="wandb logging is currently commented out in retrieval.py")
+async def test_semantic_search_logs_wandb_table_when_run_active(svc):
+    """When wandb.run is active, wandb.log is called with a Table and scalar metrics."""
+    db_rows = [
+        ("111", "Title A", "Abstract A", 0.92),
+        ("222", "Title B", "Abstract B", 0.85),
+    ]
+    mock_db = _make_db_with_rows(db_rows)
+    mock_vector = [0.1] * 768
+    logged = {}
+
+    mock_table = MagicMock()
+    mock_run = MagicMock()
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[mock_vector],
+        ),
+        patch("indication_scout.services.retrieval.wandb.run", mock_run),
+        patch(
+            "indication_scout.services.retrieval.wandb.Table", return_value=mock_table
+        ),
+        patch(
+            "indication_scout.services.retrieval.wandb.log",
+            side_effect=lambda d: logged.update(d),
+        ),
+    ):
+        await svc.semantic_search(
+            "colorectal cancer", "metformin", ["111", "222"], mock_db
+        )
+
+    assert logged["semantic_search/colorectal_cancer/candidate_pmids"] == 2
+    assert logged["semantic_search/colorectal_cancer/results_returned"] == 2
+    assert logged["semantic_search/colorectal_cancer/top_similarity"] == 0.92
+    assert "metformin" in logged["semantic_search/colorectal_cancer/query"]
+    assert "colorectal cancer" in logged["semantic_search/colorectal_cancer/query"]
+    assert logged["semantic_search/colorectal_cancer/results_table"] is mock_table
+    assert mock_table.add_data.call_count == 2
+    mock_table.add_data.assert_any_call("111", "Title A", 0.92)
+    mock_table.add_data.assert_any_call("222", "Title B", 0.85)
+
+
+async def test_semantic_search_skips_wandb_log_when_no_run(svc):
+    """When wandb.run is None, wandb.log is never called."""
+    mock_db = _make_db_with_rows([("111", "Title A", "Abstract A", 0.92)])
+    mock_vector = [0.1] * 768
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[mock_vector],
+        ),
+        patch("indication_scout.services.retrieval.wandb.run", None),
+        patch("indication_scout.services.retrieval.wandb.log") as mock_log,
+    ):
+        await svc.semantic_search("colorectal cancer", "metformin", ["111"], mock_db)
+
+    mock_log.assert_not_called()
 
 
 # --- synthesize ---
@@ -942,7 +1018,9 @@ async def test_synthesize_strips_markdown_fences(svc):
         "indication_scout.services.retrieval.query_llm",
         new=AsyncMock(return_value=fenced),
     ):
-        result = await svc.synthesize("metformin", "colorectal cancer", _SAMPLE_ABSTRACTS)
+        result = await svc.synthesize(
+            "metformin", "colorectal cancer", _SAMPLE_ABSTRACTS
+        )
 
     assert result.strength == "moderate"
     assert result.supporting_pmids == ["11111111", "22222222"]
@@ -954,7 +1032,9 @@ async def test_synthesize_parses_llm_response(svc):
         "indication_scout.services.retrieval.query_llm",
         new=AsyncMock(return_value=_SAMPLE_LLM_RESPONSE),
     ):
-        result = await svc.synthesize("metformin", "colorectal cancer", _SAMPLE_ABSTRACTS)
+        result = await svc.synthesize(
+            "metformin", "colorectal cancer", _SAMPLE_ABSTRACTS
+        )
 
     assert isinstance(result, EvidenceSummary)
     assert result.summary == "Two studies support metformin for colorectal cancer."
@@ -978,3 +1058,194 @@ async def test_synthesize_raises_on_invalid_json(svc):
         with pytest.raises(json.JSONDecodeError):
             await svc.synthesize("metformin", "colorectal cancer", _SAMPLE_ABSTRACTS)
 
+
+# --- get_drug_competitors ---
+
+
+def _make_open_targets_mock(raw: dict) -> AsyncMock:
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.get_drug_competitors = AsyncMock(return_value=raw)
+    return mock_client
+
+
+async def _passthrough_normalize_batch(terms: list[str]) -> dict[str, str]:
+    """Stub for llm_normalize_disease_batch that returns each term unchanged."""
+    return {term: term for term in terms}
+
+
+async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
+    """When an alias appears in both merge values and remove, its data must not be merged in."""
+    raw = {
+        "diseases": {
+            "narcolepsy": {"competitor_a"},
+            "narcolepsy-cataplexy syndrome": {"competitor_b"},
+        },
+        "drug_indications": [],
+    }
+    merge_result = {
+        "merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]},
+        "remove": ["narcolepsy-cataplexy syndrome"],
+    }
+    mock_client = _make_open_targets_mock(raw)
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.OpenTargetsClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "indication_scout.services.retrieval.llm_normalize_disease_batch",
+            new=_passthrough_normalize_batch,
+        ),
+        patch(
+            "indication_scout.services.retrieval.merge_duplicate_diseases",
+            new=AsyncMock(return_value=merge_result),
+        ),
+    ):
+        result = await RetrievalService(tmp_path).get_drug_competitors("testdrug")
+
+    assert "narcolepsy-cataplexy syndrome" not in result
+    assert "narcolepsy" in result
+    assert result["narcolepsy"] == {"competitor_a"}
+
+
+async def test_get_drug_competitors_returns_cached(tmp_path):
+    """When a cache entry exists, the client and LLM are not called."""
+    from indication_scout.utils.cache import cache_set
+
+    cached = {"depression": ["competitor_a"]}
+    cache_set("drug_competitors", {"drug_name": "testdrug"}, cached, tmp_path)
+
+    mock_client = AsyncMock()
+    with patch(
+        "indication_scout.services.retrieval.OpenTargetsClient",
+        return_value=mock_client,
+    ):
+        result = await RetrievalService(tmp_path).get_drug_competitors("testdrug")
+
+    assert result == {"depression": {"competitor_a"}}
+    mock_client.__aenter__.assert_not_called()
+
+
+# --- _normalize_disease_groups ---
+
+
+async def test_normalize_disease_groups_merges_by_normalized_name(tmp_path):
+    """Diseases that normalize to the same string are merged with drug sets unioned."""
+    diseases = {
+        "breast cancer": {"drug_a", "drug_b"},
+        "breast neoplasm": {"drug_c"},
+        "colorectal cancer": {"drug_d"},
+    }
+
+    async def mock_normalize_batch(terms: list[str]) -> dict[str, str]:
+        mapping = {
+            "breast cancer": "breast cancer",
+            "breast neoplasm": "breast cancer",
+            "colorectal cancer": "colorectal cancer",
+        }
+        return {term: mapping[term] for term in terms}
+
+    with patch(
+        "indication_scout.services.retrieval.llm_normalize_disease_batch",
+        new=mock_normalize_batch,
+    ):
+        result = await RetrievalService(tmp_path)._normalize_disease_groups(diseases)
+
+    assert len(result) == 2
+    assert result["breast cancer"] == {"drug_a", "drug_b", "drug_c"}
+    assert result["colorectal cancer"] == {"drug_d"}
+
+
+async def test_normalize_disease_groups_uses_first_term_before_or(tmp_path):
+    """When llm_normalize_disease returns 'X OR Y', only the first term is used as key."""
+    diseases = {
+        "hepatocellular carcinoma": {"drug_a"},
+        "liver cancer": {"drug_b"},
+    }
+
+    async def mock_normalize_batch(terms: list[str]) -> dict[str, str]:
+        mapping = {
+            "hepatocellular carcinoma": "liver cancer OR hepatocellular carcinoma",
+            "liver cancer": "liver cancer",
+        }
+        return {term: mapping[term] for term in terms}
+
+    with patch(
+        "indication_scout.services.retrieval.llm_normalize_disease_batch",
+        new=mock_normalize_batch,
+    ):
+        result = await RetrievalService(tmp_path)._normalize_disease_groups(diseases)
+
+    assert len(result) == 1
+    assert result["liver cancer"] == {"drug_a", "drug_b"}
+
+
+async def test_normalize_disease_groups_calls_batch_not_per_term(tmp_path):
+    """_normalize_disease_groups calls llm_normalize_disease_batch once with all terms,
+    not once per disease (i.e. does not call the single-term variant)."""
+    diseases = {
+        "breast cancer": {"drug_a"},
+        "colorectal cancer": {"drug_b"},
+        "type 2 diabetes": {"drug_c"},
+    }
+
+    mock_batch = AsyncMock(
+        return_value={term: term for term in diseases}
+    )
+
+    with patch(
+        "indication_scout.services.retrieval.llm_normalize_disease_batch",
+        new=mock_batch,
+    ):
+        await RetrievalService(tmp_path)._normalize_disease_groups(diseases)
+
+    mock_batch.assert_awaited_once()
+    called_terms = set(mock_batch.call_args[0][0])
+    assert called_terms == {"breast cancer", "colorectal cancer", "type 2 diabetes"}
+
+
+# --- run_rag — batch normalisation ---
+
+
+async def test_run_rag_batch_normalisation_called_once(tmp_path):
+    """run_rag triggers exactly one llm_normalize_disease_batch call covering all diseases.
+
+    get_drug_competitors → _normalize_disease_groups batches all disease names into a
+    single LLM call. This asserts the batch is called once with all terms rather than
+    once per disease (N calls).
+    """
+    raw = {
+        "diseases": {
+            "type 2 diabetes": {"competitor_a"},
+            "obesity": {"competitor_b"},
+            "heart failure": {"competitor_c"},
+        },
+        "drug_indications": [],
+    }
+    mock_ot_client = AsyncMock()
+    mock_ot_client.__aenter__ = AsyncMock(return_value=mock_ot_client)
+    mock_ot_client.__aexit__ = AsyncMock(return_value=None)
+    mock_ot_client.get_drug_competitors = AsyncMock(return_value=raw)
+
+    mock_batch = AsyncMock(
+        return_value={term: term for term in raw["diseases"]}
+    )
+
+    with patch(
+        "indication_scout.services.retrieval.OpenTargetsClient",
+        return_value=mock_ot_client,
+    ), patch(
+        "indication_scout.services.retrieval.llm_normalize_disease_batch",
+        new=mock_batch,
+    ), patch(
+        "indication_scout.services.retrieval.merge_duplicate_diseases",
+        new=AsyncMock(return_value={"merge": {}, "remove": []}),
+    ):
+        await RetrievalService(tmp_path).get_drug_competitors("metformin")
+
+    mock_batch.assert_awaited_once()
+    called_terms = set(mock_batch.call_args[0][0])
+    assert called_terms == {"type 2 diabetes", "obesity", "heart failure"}

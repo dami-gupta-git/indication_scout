@@ -1,22 +1,14 @@
-# IndicationScout — Agents
+# Agent Architecture
 
-## Overview
+This document describes the agent layer of IndicationScout: how agents are structured, how they call tools, and how to add new ones.
 
-IndicationScout uses a multi-agent architecture where specialist agents each own a slice of the drug repurposing analysis. A central Orchestrator coordinates them, routing data through the pipeline and assembling the final report.
-
-All agents extend `BaseAgent` and expose a single async entry point:
-
-```python
-async def run(self, input_data: dict[str, Any]) -> dict[str, Any]
-```
-
-**Current status:** All agents are planned/stubbed. Data source clients (Open Targets, ClinicalTrials.gov, PubMed, openFDA) are fully implemented and tested.
-
----
+For the overall system architecture see [ARCHITECTURE.md](../ARCHITECTURE.md).
 
 ## BaseAgent
 
-**File:** [src/indication_scout/agents/base.py](../src/indication_scout/agents/base.py)
+**File**: `src/indication_scout/agents/base.py`
+
+All agents extend `BaseAgent`, which defines a single async interface:
 
 ```python
 class BaseAgent(ABC):
@@ -25,223 +17,265 @@ class BaseAgent(ABC):
         ...
 ```
 
-All agents are async, accept a shared state dict, and return an updated state dict. This interface is kept minimal to allow flexible state passing through the pipeline.
+- Input and output are both plain dicts. The output dict contains a single key whose value is a typed Pydantic model.
+- Agents are stateless -- instantiate and call `run()`.
 
----
+## File Layout
 
-## Agent Catalogue
+Each agent is split across three files:
 
-### Orchestrator
+| File | Purpose |
+|------|---------|
+| `agents/<name>.py` | Agent class, system prompt, `run()` method, `_parse_result()` |
+| `agents/<name>_tools.py` | `@tool` wrappers around data source client methods |
+| `agents/<name>_model.py` | Agent-specific output Pydantic model |
 
-**File:** [src/indication_scout/agents/orchestrator.py](../src/indication_scout/agents/orchestrator.py)
+Data source models (e.g. `Trial`, `WhitespaceResult`, `IndicationLandscape`) live in `models/` and are referenced by the agent output model -- never duplicated.
 
-Coordinates all specialist agents in a deterministic sequence. Responsible for:
+## ClinicalTrialsAgent
 
-- Accepting a drug name as input
-- Calling the Drug Profile Agent to resolve the drug and fetch its profile
-- Fanning out to the Discovery Agent (both paths in parallel)
-- Iterating over top-N candidates and gathering literature and clinical trial evidence
-- Invoking the Report Generator to produce the final Markdown output
-- Collecting and surfacing errors from downstream agents
+### Agent class
 
-**Planned flow:**
+**File**: `src/indication_scout/agents/clinical_trials.py`
 
-```
-drug_name
-    │
-    ▼
-Drug Profile Agent     ← resolves drug name, fetches targets and indications
-    │
-    ▼ (if drug found)
-Discovery Agent        ← runs Path 1 and Path 2, merges and ranks candidates
-    │
-    ▼ (for each top-N candidate)
-┌─────────────────────────────────┐
-│ Literature Agent                │  ← PubMed search + RAG rerank
-│ Clinical Trials Agent           │  ← ClinicalTrials.gov evidence
-└─────────────────────────────────┘
-    │
-    ▼
-Report Generator       ← synthesises Markdown report
+```python
+class ClinicalTrialsAgent(BaseAgent):
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]:
 ```
 
-**State (TypedDict):**
+**Input** (`input_data` dict):
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `drug_name` | `str` | Input drug name |
-| `drug` | `dict \| None` | Serialised drug profile |
-| `candidates` | `list[dict]` | Merged repurposing candidates |
-| `literature` | `dict[str, dict]` | EFO ID → abstracts + count |
-| `trials` | `dict[str, dict]` | EFO ID → trial count, phases, status |
-| `current_step` | `str` | Pipeline position for error context |
-| `errors` | `list[str]` | Non-fatal errors accumulated |
-| `report` | `str \| None` | Final Markdown output |
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `drug_name` | `str` | Yes | Drug to investigate |
+| `disease_name` | `str` | Yes | Target indication |
+| `date_before` | `date` | No | Temporal holdout cutoff |
 
-State uses plain dicts (not Pydantic models) to satisfy LangGraph's serialisation requirement.
+**Output**: `{"clinical_trials_output": ClinicalTrialsOutput}`
 
----
+**LLM**: `settings.big_llm_model` via `ChatAnthropic` from `langchain_anthropic`. Temperature 0, max_tokens 4096.
 
-### LiteratureAgent
+**Agent creation**:
 
-**File:** [src/indication_scout/agents/literature.py](../src/indication_scout/agents/literature.py)
-
-Searches PubMed for evidence linking a drug to a candidate indication and reranks results using vector similarity (RAG).
-
-**Responsibilities:**
-- Query PubMedClient with `drug_name + disease_name` search terms
-- Fetch and parse abstracts via `PubMedClient.fetch_articles()`
-- Embed abstracts and store in pgvector
-- At retrieval time, embed the therapeutic query and rerank by cosine similarity
-- Return the top-K most relevant abstracts to the Orchestrator
-
-**Data source:** `PubMedClient` → `PubMedArticle` models
-
-**Why RAG matters here:**
-A raw PubMed search for *bupropion + obesity* returns mostly depression papers that mention obesity in passing. RAG surfaces papers specifically about Contrave (naltrexone/bupropion) for weight management — the clinically relevant signal.
-
----
-
-### ClinicalTrialsAgent
-
-**File:** [src/indication_scout/agents/clinical_trials.py](../src/indication_scout/agents/clinical_trials.py)
-
-Searches ClinicalTrials.gov for drug–disease trial evidence.
-
-**Responsibilities:**
-- Call `ClinicalTrialsClient.search_trials()` for each candidate
-- Detect whitespace opportunities via `detect_whitespace()`
-- Classify terminated trials via `get_terminated_trials()`
-- Summarise trial landscape: phase distribution, active vs. completed, enrolment size
-- Return structured evidence per candidate indication
-
-**Data source:** `ClinicalTrialsClient` → `Trial`, `WhitespaceResult`, `ConditionLandscape`, `TerminatedTrial` models
-
----
-
-### MechanismAgent
-
-**File:** [src/indication_scout/agents/mechanism.py](../src/indication_scout/agents/mechanism.py)
-
-Analyses the drug's mechanism of action to assess biological plausibility for candidate indications.
-
-**Planned responsibilities:**
-- Retrieve target–pathway information from Open Targets
-- Identify pathway overlap between the drug's known targets and the candidate disease's implicated biology
-- Score mechanistic plausibility per candidate
-
-**Data source:** `OpenTargetsClient` → `TargetData`, `Association` models
-
----
-
-### SafetyAgent
-
-**File:** [src/indication_scout/agents/safety.py](../src/indication_scout/agents/safety.py)
-
-Analyses the drug's safety profile to flag risks for candidate indications.
-
-**Planned responsibilities:**
-- Query openFDA FAERS for adverse event counts and reaction profiles
-- Flag adverse reactions that would be contraindicated for the candidate population
-- Surface serious adverse events (SAEs) from clinical trial data
-- Return a structured safety summary per candidate
-
-**Data source:** `FDAClient` → `FAERSEvent`, `FAERSReactionCount` models
-
----
-
-## Discovery Paths
-
-The Discovery Agent implements two independent search strategies. Candidates found by both paths are ranked highest.
-
-### Path 1 — Target-Disease Associations
-
-```
-Drug → known targets → associated diseases (via Open Targets)
+```python
+agent = create_agent(model=llm, tools=tools, system_prompt=SYSTEM_PROMPT)
 ```
 
-For each of the drug's molecular targets, query Open Targets `associatedDiseases` to find diseases with biological evidence (genetic, pathway, literature) implicating that target. This surfaces mechanistically grounded candidates even without prior clinical use.
+Uses `langchain.agents.create_agent` to build a ReAct agent. The agent is invoked with:
 
-### Path 2 — Drug Class Analogy
-
+```python
+result = await agent.ainvoke(
+    {"messages": [{"role": "user", "content": user_message}]},
+    config={"recursion_limit": MAX_TOOL_ROUNDS},  # MAX_TOOL_ROUNDS = 10
+)
 ```
-Drug → known targets → sibling drugs on same targets → sibling drug indications
+
+**System prompt branching strategy** -- the LLM decides tool order:
+
+1. Always start with `detect_whitespace`
+2. If trials exist: `search_trials` then `get_landscape`
+3. If whitespace (no trials): `get_terminated` then `get_landscape`
+4. If terminated trials show safety/efficacy failures: may skip `get_landscape`
+
+The LLM ends with a 2-3 sentence natural language assessment.
+
+**Result parsing and collation**: The static method `_parse_result()` walks the full message history from `agent.ainvoke()` and collates multi-tool results into a single typed output:
+
+- Iterates all messages, identifying `ToolMessage` objects by checking for a `.name` attribute
+- Each tool's response is matched by name to a dedicated slot on `ClinicalTrialsOutput`: `detect_whitespace` → `whitespace`, `search_trials` → `trials`, `get_landscape` → `landscape`, `get_terminated` → `terminated`
+- There is no merging across tools — each tool populates its own field. If a tool wasn't called, its field stays at the default (empty list or `None`)
+- If the same tool is called twice, the second response overwrites the first (the loop doesn't accumulate). This is acceptable because the system prompt guides the LLM to call each tool once
+- The last `AIMessage` (no `.name` attribute) is extracted as the summary. Handles both string content and list-of-blocks content formats
+- Returns a `ClinicalTrialsOutput` instance with all pieces assembled
+
+### Tools
+
+**File**: `src/indication_scout/agents/clinical_trials_tools.py`
+
+Entry point: `build_clinical_trials_tools(date_before: date | None = None) -> list`
+
+Returns four LangChain `@tool` functions. The `date_before` parameter is captured via closure so it flows to every client call without being exposed as a tool parameter to the LLM.
+
+| Tool | Arguments | Client Method | Returns |
+|------|-----------|--------------|---------|
+| `detect_whitespace` | `drug: str, indication: str` | `ClinicalTrialsClient.detect_whitespace()` | `WhitespaceResult.model_dump()` |
+| `search_trials` | `drug: str, indication: str` | `ClinicalTrialsClient.search_trials()` | `[Trial.model_dump(), ...]` |
+| `get_landscape` | `indication: str` | `ClinicalTrialsClient.get_landscape(top_n=10)` | `IndicationLandscape.model_dump()` |
+| `get_terminated` | `query: str` | `ClinicalTrialsClient.get_terminated()` | `[TerminatedTrial.model_dump(), ...]` |
+
+Design rules:
+
+- Tools accept primitive types (strings) so the LLM can provide arguments directly.
+- Tools return dicts via `model_dump()` because LangChain serializes tool return values into the message history as JSON for the LLM to read — Pydantic objects aren't directly serializable in that context. The `_parse_result()` method then reconstructs typed Pydantic models from those dicts on the other side: `Client returns Pydantic → tool calls .model_dump() → LLM sees dict → _parse_result reconstructs Pydantic`.
+- Each tool creates its own client session: `async with ClinicalTrialsClient() as client:`.
+- `get_landscape` passes `top_n=10` to keep the response within manageable LLM context.
+
+### Output model
+
+**File**: `src/indication_scout/agents/clinical_trials_model.py`
+
+```python
+class ClinicalTrialsOutput(BaseModel):
+    trials: list[Trial] = []
+    whitespace: WhitespaceResult | None = None
+    landscape: IndicationLandscape | None = None
+    terminated: list[TerminatedTrial] = []
+    summary: str = ""
 ```
 
-For each target, query Open Targets `knownDrugs` to find other drugs that act on the same target. Collect those sibling drugs' approved indications. This surfaces candidates supported by existing clinical translation — if a sibling drug is already approved for an indication, the repurposing hypothesis has prior clinical validation.
+- References models from `models/model_clinical_trials.py`.
+- Has the `coerce_nones` model validator.
+- Fields are None/empty when the agent chose not to call the corresponding tool. This is expected behavior, not an error.
 
-### Merge and Rank
+### Data source models
 
-| Signal | Weight |
-|--------|--------|
-| Found by both paths | Highest |
-| Open Targets biology score | Secondary |
-| Number of sibling drugs with indication | Tertiary |
+**File**: `src/indication_scout/models/model_clinical_trials.py`
 
-Candidates are deduplicated by EFO disease ID, tagged with which path(s) surfaced them, and ranked by this composite signal. The top-N (planned: 10) proceed to the evidence-gathering phase.
+These are the contracts between `ClinicalTrialsClient` and the agents. All have the `coerce_nones` validator.
 
----
+**Trial-level models**:
+
+| Model | Key fields |
+|-------|------------|
+| `Intervention` | `intervention_type`, `intervention_name`, `description` |
+| `PrimaryOutcome` | `measure`, `time_frame` |
+| `Trial` | `nct_id`, `title`, `brief_summary`, `phase`, `overall_status`, `why_stopped`, `indications`, `interventions` (list[Intervention]), `sponsor`, `enrollment`, `start_date`, `completion_date`, `primary_outcomes` (list[PrimaryOutcome]), `references` |
+
+**Whitespace models**:
+
+| Model | Key fields |
+|-------|------------|
+| `IndicationDrug` | `nct_id`, `drug_name`, `indication`, `phase`, `status`. Has `from_trial()` classmethod. |
+| `WhitespaceResult` | `is_whitespace`, `no_data`, `exact_match_count`, `drug_only_trials`, `indication_only_trials`, `indication_drugs` (list[IndicationDrug]) |
+
+**Landscape models**:
+
+| Model | Key fields |
+|-------|------------|
+| `CompetitorEntry` | `sponsor`, `drug_name`, `drug_type`, `max_phase`, `trial_count` (int), `statuses` (set[str]), `total_enrollment` (int) |
+| `RecentStart` | `nct_id`, `sponsor`, `drug`, `phase` |
+| `IndicationLandscape` | `total_trial_count`, `competitors` (list[CompetitorEntry]), `phase_distribution` (dict[str, int]), `recent_starts` (list[RecentStart]) |
+
+**Terminated trial models**:
+
+| Model | Key fields |
+|-------|------------|
+| `TerminatedTrial` | `nct_id`, `title`, `drug_name`, `indication`, `phase`, `why_stopped`, `stop_category` (safety/efficacy/business/enrollment/other/unknown), `enrollment`, `sponsor`, `start_date`, `termination_date`, `references` |
 
 ## Data Flow
 
 ```
-CLI / API
-    │  drug_name
-    ▼
-Orchestrator
-    │
-    ├── OpenTargetsClient ──────→ DrugData, TargetData, Association
-    │   (drug profile + discovery)
-    │
-    ├── PubMedClient ───────────→ PubMedArticle
-    │   (literature evidence)
-    │
-    ├── ClinicalTrialsClient ───→ Trial, WhitespaceResult, ConditionLandscape, TerminatedTrial
-    │   (trial evidence)
-    │
-    └── FDAClient ─────────────→ FAERSEvent, FAERSReactionCount
-        (safety evidence)
-              │
-              ▼
-        Pydantic models (models/)
-              │
-              ▼
-        Agent state (dicts)
-              │
-              ▼
-        Markdown report
+ClinicalTrialsAgent.run(input_data)
+    |
+    +-- build_clinical_trials_tools(date_before)   # creates 4 @tool functions
+    +-- ChatAnthropic(model=big_llm_model)           # LLM for tool-calling decisions
+    +-- create_agent(model, tools, system_prompt)   # LangChain ReAct agent
+    |
+    +-- agent.ainvoke(messages)                     # ReAct loop begins
+    |       |
+    |       +-- LLM decides: call detect_whitespace
+    |       |       +-- ClinicalTrialsClient.detect_whitespace()
+    |       |       +-- returns WhitespaceResult.model_dump()
+    |       |
+    |       +-- LLM decides: call search_trials or get_terminated
+    |       |       +-- ClinicalTrialsClient method
+    |       |       +-- returns list of model_dump() dicts
+    |       |
+    |       +-- LLM decides: call get_landscape (or skip)
+    |       |       +-- ClinicalTrialsClient.get_landscape(top_n=10)
+    |       |       +-- returns IndicationLandscape.model_dump()
+    |       |
+    |       +-- LLM produces final text summary
+    |       +-- stop_reason: end_turn
+    |
+    +-- _parse_result(result)
+    |       +-- walks message history
+    |       +-- ToolMessages -> reconstructs Pydantic models from dicts
+    |       +-- last AIMessage -> summary text
+    |       +-- returns ClinicalTrialsOutput
+    |
+    +-- returns {"clinical_trials_output": ClinicalTrialsOutput}
 ```
 
-Data source clients return validated Pydantic models. Agents consume these models and write results into the shared state dict. No raw API responses cross module boundaries.
+## How to Call
 
----
+```python
+from indication_scout.agents.clinical_trials import ClinicalTrialsAgent
+from datetime import date
 
-## Validated Test Drugs
+agent = ClinicalTrialsAgent()
+result = await agent.run({
+    "drug_name": "semaglutide",
+    "disease_name": "NASH",
+    "date_before": date(2023, 1, 1),  # optional
+})
+output = result["clinical_trials_output"]  # ClinicalTrialsOutput
 
-The agent pipeline will be evaluated against 10 ground-truth repurposings with known outcomes:
+# Access structured data
+output.trials          # list[Trial]
+output.whitespace      # WhitespaceResult | None
+output.landscape       # IndicationLandscape | None
+output.terminated      # list[TerminatedTrial]
+output.summary         # str -- natural language assessment
+```
 
-| Drug | Original Indication | Known Repurposing | Primary Path |
-|------|--------------------|--------------------|--------------|
-| Baricitinib | Rheumatoid arthritis | Alopecia areata, atopic dermatitis | Path 2 |
-| Imatinib | CML | GIST | Path 2 |
-| Sildenafil | Erectile dysfunction | Pulmonary arterial hypertension | Path 2 |
-| Bupropion | Depression | Smoking cessation, ADHD | Path 2 |
-| Thalidomide | Sedative | Multiple myeloma | Path 2 |
-| Rituximab | Lymphoma | Rheumatoid arthritis | Path 2 |
-| Duloxetine | Depression | Chronic pain, fibromyalgia | Path 2 |
-| Metformin | Type 2 diabetes | PCOS | Path 2 |
-| Colchicine | Gout | Cardiovascular prevention | Path 2 |
-| Empagliflozin | Type 2 diabetes | Heart failure | Path 2 |
+## Dependencies
 
-Success metrics: **Recall@10** (known repurposing in top-10 candidates) and **MRR** (mean reciprocal rank).
+```toml
+"langchain-core>=1.2.23"
+"langchain>=1.2.13"
+"langchain-anthropic>=0.3.0"
+```
 
----
+## Test Layout
 
-## Implementation Roadmap
+```
+tests/
++-- unit/agents/
+|   +-- test_clinical_trials_tools.py    # mocked client, verifies each tool returns correct dicts
+|   +-- test_clinical_trials_agent.py    # tests _parse_result with fake message histories
++-- integration/agents/
+    +-- test_clinical_trials_tools.py    # hits real ClinicalTrials.gov API
+    +-- test_clinical_trials_agent.py    # hits real ClinicalTrials.gov + Anthropic APIs
+```
 
-| Sprint | Focus | Agents |
-|--------|-------|--------|
-| Sprint 1 | RAG pipeline + Path 2 validation | LiteratureAgent (embedding/retrieval) |
-| Sprint 2 | All agents as LangGraph tools | All specialist agents |
-| Sprint 3 | ReAct orchestrator + report generation | Orchestrator |
-| Sprint 4 | Evaluation + Streamlit UI | All (integration) |
+**Unit tests** mock `ClinicalTrialsClient` and verify:
+
+- Each tool returns `model_dump()` dicts with correct structure
+- `date_before` flows through the closure to client calls
+- `_parse_result` correctly reconstructs Pydantic models from message history
+
+**Integration tests** verify end-to-end:
+
+- Tools return correct data from real API
+- Agent produces correct structured output for known drug-disease pairs
+- Agent handles nonexistent drugs/diseases gracefully
+
+## Adding a New Agent
+
+To add a new agent (e.g. `LiteratureAgent`):
+
+1. **Create `agents/literature_model.py`** -- output Pydantic model referencing models from `models/`. Include `coerce_nones` validator.
+2. **Create `agents/literature_tools.py`** -- `build_literature_tools()` returning a list of `@tool` functions wrapping data source client methods. Tools accept primitives, return dicts via `model_dump()`. Each tool manages its own client session.
+3. **Create `agents/literature.py`** -- agent class extending `BaseAgent`. Includes system prompt, `run()` method using `create_agent` and `ainvoke`, and a `_parse_result` static method that walks message history to reconstruct the typed output model.
+4. **Add unit tests** in `tests/unit/agents/test_literature_*.py`.
+5. **Add integration tests** in `tests/integration/agents/test_literature_*.py`.
+
+Key patterns to follow:
+
+- Tools accept primitive types, return dicts via `model_dump()`
+- Tools create their own client sessions (`async with Client() as c:`)
+- Use closures to capture config that the LLM should not see (e.g. `date_before`)
+- `_parse_result` walks message history to reconstruct typed output from `ToolMessage` objects
+- Output model fields default to None/empty for tools that were not called
+- All Pydantic models that ingest external data include the `coerce_nones` validator
+
+## Agent Catalogue
+
+| Agent | File | Status | LLM | Data Source |
+|-------|------|--------|-----|-------------|
+| ClinicalTrialsAgent | `agents/clinical_trials.py` | Implemented | big_llm_model | ClinicalTrialsClient |
+| LiteratureAgent | `agents/literature.py` | Planned | TBD | RetrievalService (PubMed + pgvector) |
+| MechanismAgent | `agents/mechanism.py` | Planned | TBD | OpenTargetsClient |
+| SafetyAgent | `agents/safety.py` | Planned | TBD | FDAClient |
+| Orchestrator | `agents/orchestrator.py` | Planned | Sonnet | Coordinates all agents |

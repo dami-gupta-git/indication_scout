@@ -32,6 +32,19 @@ from indication_scout.data_sources.clinical_trials import (
         ("Sponsor business decision", "business"),
         ("Funding withdrawn", "business"),
         ("Commercial considerations", "business"),
+        # Negation - safety keyword negated
+        ("no safety concerns observed", "other"),
+        ("unrelated to adverse events", "other"),
+        # Negation - efficacy keyword negated
+        ("Stopped, not due to efficacy concerns", "other"),
+        ("No efficacy issues were observed", "other"),
+        ("no lack of efficacy", "other"),
+        # New safety keywords
+        ("safety signal detected in interim review", "safety"),
+        ("safety concern raised by DSMB", "safety"),
+        ("FDA issued a clinical hold", "safety"),
+        # New efficacy keyword
+        ("no significant difference between arms", "efficacy"),
         # Other - no matching keywords
         ("COVID-19 pandemic impact", "other"),
         ("Protocol amendment required", "other"),

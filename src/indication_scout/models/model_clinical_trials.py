@@ -52,16 +52,13 @@ class Trial(BaseModel):
     phase: str = ""  # "Phase 1", "Phase 2", "Phase 1/Phase 2", etc.
     overall_status: str = ""  # "Recruiting", "Completed", "Terminated", etc.
     why_stopped: str | None = None  # free text, only for Terminated/Withdrawn/Suspended
-    conditions: list[str] = []
+    indications: list[str] = []
     interventions: list[Intervention] = []
     sponsor: str = ""
-    collaborators: list[str] = []
     enrollment: int | None = None
     start_date: str | None = None
     completion_date: str | None = None
-    study_type: str = "Interventional"
     primary_outcomes: list[PrimaryOutcome] = []
-    results_posted: bool | None = None
     references: list[str] = []  # PMIDs
 
     @model_validator(mode="before")
@@ -78,12 +75,12 @@ class Trial(BaseModel):
 # ------------------------------------------------------------------
 
 
-class ConditionDrug(BaseModel):
-    """A drug being tested for the same condition (when whitespace exists)."""
+class IndicationDrug(BaseModel):
+    """A drug being tested for the same indication (when whitespace exists)."""
 
     nct_id: str = ""
     drug_name: str = ""
-    condition: str = ""
+    indication: str = ""
     phase: str = ""
     status: str = ""
 
@@ -95,15 +92,27 @@ class ConditionDrug(BaseModel):
                 values[field_name] = field_info.default
         return values
 
+    @classmethod
+    def from_trial(cls, trial: Trial, drug_name: str) -> "IndicationDrug":
+        """Build an IndicationDrug from a Trial and its primary drug name."""
+        return cls(
+            nct_id=trial.nct_id,
+            drug_name=drug_name,
+            indication=trial.indications[0] if trial.indications else "",
+            phase=trial.phase,
+            status=trial.overall_status,
+        )
+
 
 class WhitespaceResult(BaseModel):
-    """Result of whitespace detection — is this drug-condition pair unexplored?"""
+    """Result of whitespace detection — is this drug-indication pair unexplored?"""
 
     is_whitespace: bool | None = None
+    no_data: bool | None = None
     exact_match_count: int | None = None
     drug_only_trials: int | None = None
-    condition_only_trials: int | None = None
-    condition_drugs: list[ConditionDrug] = []
+    indication_only_trials: int | None = None
+    indication_drugs: list[IndicationDrug] = []
 
     @model_validator(mode="before")
     @classmethod
@@ -126,10 +135,9 @@ class CompetitorEntry(BaseModel):
     drug_name: str = ""
     drug_type: str | None = None
     max_phase: str = ""
-    trial_count: int | None = None
+    trial_count: int = 0
     statuses: set[str] = set()
-    total_enrollment: int | None = None
-    most_recent_start: str | None = None
+    total_enrollment: int = 0
 
     @model_validator(mode="before")
     @classmethod
@@ -141,7 +149,7 @@ class CompetitorEntry(BaseModel):
 
 
 class RecentStart(BaseModel):
-    """A trial that started recently in a condition's landscape."""
+    """A trial that started recently in an indication's landscape."""
 
     nct_id: str = ""
     sponsor: str = ""
@@ -157,8 +165,8 @@ class RecentStart(BaseModel):
         return values
 
 
-class ConditionLandscape(BaseModel):
-    """Full competitive landscape for a condition."""
+class IndicationLandscape(BaseModel):
+    """Full competitive landscape for an indication."""
 
     total_trial_count: int | None = None
     competitors: list[CompetitorEntry] = []
@@ -185,7 +193,7 @@ class TerminatedTrial(BaseModel):
     nct_id: str = ""
     title: str = ""
     drug_name: str | None = None
-    condition: str | None = None
+    indication: str | None = None
     phase: str | None = None
     why_stopped: str | None = None
     stop_category: str | None = (

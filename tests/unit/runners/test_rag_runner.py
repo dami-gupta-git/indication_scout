@@ -91,7 +91,9 @@ async def test_run_rag_returns_evidence_per_disease(
         synthesize_side_effect=[evidence_colorectal, evidence_breast],
     )
 
-    with patch("indication_scout.runners.rag_runner.RetrievalService", return_value=mock_svc):
+    with patch(
+        "indication_scout.runners.rag_runner.RetrievalService", return_value=mock_svc
+    ):
         results = await run_rag("metformin", mock_db)
 
     assert set(results.keys()) == {"colorectal cancer", "breast cancer"}
@@ -99,7 +101,9 @@ async def test_run_rag_returns_evidence_per_disease(
     assert results["breast cancer"] is evidence_breast
 
 
-async def test_run_rag_passes_drug_profile_to_expand_search_terms(mock_db, drug_profile):
+async def test_run_rag_passes_drug_profile_to_expand_search_terms(
+    mock_db, drug_profile
+):
     """expand_search_terms receives the DrugProfile returned by build_drug_profile."""
     top_indications = {"colorectal cancer": {"aspirin"}}
     evidence = EvidenceSummary()
@@ -113,7 +117,9 @@ async def test_run_rag_passes_drug_profile_to_expand_search_terms(mock_db, drug_
         synthesize_side_effect=[evidence],
     )
 
-    with patch("indication_scout.runners.rag_runner.RetrievalService", return_value=mock_svc):
+    with patch(
+        "indication_scout.runners.rag_runner.RetrievalService", return_value=mock_svc
+    ):
         await run_rag("metformin", mock_db)
 
     mock_svc.expand_search_terms.assert_called_once_with(
@@ -136,7 +142,9 @@ async def test_run_rag_passes_pmids_to_semantic_search(mock_db, drug_profile):
         synthesize_side_effect=[evidence],
     )
 
-    with patch("indication_scout.runners.rag_runner.RetrievalService", return_value=mock_svc):
+    with patch(
+        "indication_scout.runners.rag_runner.RetrievalService", return_value=mock_svc
+    ):
         await run_rag("metformin", mock_db)
 
     mock_svc.semantic_search.assert_called_once_with(
@@ -147,7 +155,9 @@ async def test_run_rag_passes_pmids_to_semantic_search(mock_db, drug_profile):
 async def test_run_rag_passes_top_abstracts_to_synthesize(mock_db, drug_profile):
     """synthesize receives the abstract list returned by semantic_search."""
     top_indications = {"colorectal cancer": {"aspirin"}}
-    top_abstracts = [{"pmid": "11111111", "title": "T", "abstract": "A", "similarity": 0.9}]
+    top_abstracts = [
+        {"pmid": "11111111", "title": "T", "abstract": "A", "similarity": 0.9}
+    ]
     evidence = EvidenceSummary()
 
     mock_svc = _make_mock_svc(
@@ -159,7 +169,9 @@ async def test_run_rag_passes_top_abstracts_to_synthesize(mock_db, drug_profile)
         synthesize_side_effect=[evidence],
     )
 
-    with patch("indication_scout.runners.rag_runner.RetrievalService", return_value=mock_svc):
+    with patch(
+        "indication_scout.runners.rag_runner.RetrievalService", return_value=mock_svc
+    ):
         await run_rag("metformin", mock_db)
 
     mock_svc.synthesize.assert_called_once_with(

@@ -225,11 +225,30 @@ class GeneticConstraint(BaseModel):
     """GnomAD loss-of-function intolerance score."""
 
     constraint_type: str = ""  # "syn", "mis", "lof"
-    oe: float | None = None  # observed/expected
+    exp: float | None = None
+    obs: float | None = None
+    oe: float | None = None
     oe_lower: float | None = None
     oe_upper: float | None = None
     score: float | None = None
     upper_bin: int | None = None  # 0 = most constrained, 5 = least
+    upper_bin6: int | None = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class ClinicalDisease(BaseModel):
+    """A disease entry from drugAndClinicalCandidates diseases list."""
+
+    disease_from_source: str = ""
+    disease_id: str | None = None  # None when disease is null in API
+    disease_name: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -241,22 +260,19 @@ class GeneticConstraint(BaseModel):
 
 
 class DrugSummary(BaseModel):
-    """A drug known to act on this target, with indication and phase info.
+    """A drug from drugAndClinicalCandidates on a target or disease.
 
     Target-centric view of a drug — lives inside TargetData.drug_summaries.
-    Inverse of DrugData: if get_target("GLP1R") returns a TargetData, its
-    drug_summaries will include semaglutide, liraglutide, etc. The shared key
-    with DrugData is drug_id (ChEMBL ID).
+    One row per drug, with a list of diseases (unlike the old flat structure
+    which had one row per drug+disease pair).
     """
 
+    id: str = ""  # hash ID from API
     drug_id: str = ""  # ChEMBL ID
     drug_name: str = ""
-    disease_id: str = ""
-    disease_name: str = ""
-    phase: float | None = None
-    status: str | None = None
-    mechanism_of_action: str = ""
-    clinical_trial_ids: list[str] = []  # NCT IDs
+    drug_type: str | None = None
+    max_clinical_stage: str | None = None  # APPROVAL, PHASE_3, etc.
+    diseases: list[ClinicalDisease] = []
 
     @model_validator(mode="before")
     @classmethod
@@ -360,10 +376,10 @@ class DrugWarning(BaseModel):
 class Indication(BaseModel):
     """An approved or investigational indication for a drug."""
 
+    id: str = ""
     disease_id: str = ""
     disease_name: str = ""
-    max_phase: float | None = None  # 0-4
-    references: list[dict] = []
+    max_clinical_stage: str | None = None  # APPROVAL, PHASE_3, PHASE_2, etc.
 
     @model_validator(mode="before")
     @classmethod
@@ -378,9 +394,7 @@ class DrugData(BaseModel):
     """Everything Open Targets knows about a drug. Populated once by get_drug().
 
     Drug-centric view — queried by drug name. Contains the drug's targets,
-    indications, warnings, and adverse events. Inverse of DrugSummary: a drug's
-    targets list the same relationships that TargetData.drug_summaries captures
-    from the target side. Shared key with DrugSummary is chembl_id / drug_id.
+    indications, warnings, and adverse events.
     Mechanism of action is not a top-level field; access it via targets[i].mechanism_of_action.
     """
 
@@ -389,9 +403,7 @@ class DrugData(BaseModel):
     synonyms: list[str] = []
     trade_names: list[str] = []
     drug_type: str | None = None
-    is_approved: bool | None = None
-    max_clinical_phase: float | None = None
-    year_first_approved: int | None = None
+    maximum_clinical_stage: str | None = None  # APPROVAL, PHASE_3, etc.
     warnings: list[DrugWarning] = []
     indications: list[Indication] = []
     targets: list[DrugTarget] = []
@@ -409,11 +421,9 @@ class DrugData(BaseModel):
 
     @property
     def approved_disease_ids(self) -> set[str]:
-        """Disease IDs with phase 4 / approved status — for filtering."""
+        """Disease IDs with approved status — for filtering."""
         return {
-            i.disease_id
-            for i in self.indications
-            if i.max_phase is not None and i.max_phase >= 4
+            i.disease_id for i in self.indications if i.max_clinical_stage == "APPROVAL"
         }
 
     @property

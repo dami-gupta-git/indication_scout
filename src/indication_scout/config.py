@@ -22,10 +22,12 @@ class Settings(BaseSettings):
     anthropic_api_key: str = ""
     ncbi_api_key: str = ""
     openfda_api_key: str = ""
+    wandb_api_key: str = ""
 
     # LLM Settings
     llm_model: str = "claude-sonnet-4-6"
     small_llm_model: str = "claude-haiku-4-5-20251001"
+    big_llm_model: str = "claude-opus-4-6"
     embedding_model: str = "FremyCompany/BioLORD-2023"
 
     # App Settings

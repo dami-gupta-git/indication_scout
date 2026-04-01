@@ -1,24 +1,102 @@
 """End-to-end RAG pipeline runner for drug repurposing evidence retrieval."""
 
+from __future__ import annotations
+
 import asyncio
 import logging
 import time
 from pathlib import Path
 
+import wandb
 from sqlalchemy.orm import Session
 
-from indication_scout.constants import DEFAULT_CACHE_DIR
+from indication_scout.models.model_drug_profile import DrugProfile
+
+from indication_scout.constants import (
+    DEFAULT_CACHE_DIR,
+    RAG_DISEASE_CONCURRENCY,
+    RAG_LLM_CONCURRENCY,
+    RAG_PUBMED_CONCURRENCY,
+)
 from indication_scout.db.session import get_db
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.retrieval import RetrievalService
+from indication_scout.utils.wandb_utils import wandb_run
 
 logger = logging.getLogger(__name__)
 
 
+async def _process_disease(
+    disease: str,
+    drug_name: str,
+    drug_profile: DrugProfile,
+    svc: RetrievalService,
+    db: Session,
+    sem_llm: asyncio.Semaphore,
+    sem_pubmed: asyncio.Semaphore,
+) -> tuple[str, EvidenceSummary]:
+    """Run the RAG pipeline for a single disease indication.
+
+    Acquires per-resource semaphores to limit concurrent access to
+    rate-limited APIs and the shared embedding model.
+    """
+    logger.info("run_rag: processing disease '%s'", disease)
+
+    t0 = time.perf_counter()
+    async with sem_llm:
+        queries = await svc.expand_search_terms(drug_name, disease, drug_profile)
+    logger.info(
+        "run_rag: expand_search_terms took %.2fs, %d queries for '%s'",
+        time.perf_counter() - t0,
+        len(queries),
+        disease,
+    )
+
+    t0 = time.perf_counter()
+    async with sem_pubmed:
+        pmids = await svc.fetch_and_cache(queries, db)
+    logger.info(
+        "run_rag: fetch_and_cache took %.2fs, %d PMIDs for '%s'",
+        time.perf_counter() - t0,
+        len(pmids),
+        disease,
+    )
+
+    t0 = time.perf_counter()
+    top_abstracts = await svc.semantic_search(disease, drug_name, pmids, db)
+    logger.info(
+        "run_rag: semantic_search took %.2fs, %d abstracts for '%s'",
+        time.perf_counter() - t0,
+        len(top_abstracts),
+        disease,
+    )
+
+    t0 = time.perf_counter()
+    async with sem_llm:
+        evidence = await svc.synthesize(drug_name, disease, top_abstracts)
+    logger.info(
+        "run_rag: synthesize took %.2fs, strength=%s for '%s'",
+        time.perf_counter() - t0,
+        evidence.strength,
+        disease,
+    )
+
+    logger.info("  Strength: %s", evidence.strength)
+    logger.info("  Adverse: %s", evidence.has_adverse_effects)
+    logger.info("  Summary: %s...", evidence.summary[:100])
+
+    return disease, evidence
+
+
+# @wandb_run(project="indication-scout")
 async def run_rag(
     drug_name: str, db: Session, cache_dir: Path = DEFAULT_CACHE_DIR
 ) -> dict[str, EvidenceSummary]:
     """Run the full RAG pipeline for a drug across its top competitor indications.
+
+    Disease indications are processed concurrently (up to RAG_DISEASE_CONCURRENCY
+    at a time), with per-resource semaphores gating access to the LLM API and
+    PubMed API to stay within rate limits.
 
     Steps for each disease indication:
       1. get_drug_competitors  — fetch top 15 disease indications from Open Targets
@@ -54,52 +132,23 @@ async def run_rag(
         len(drug_profile.target_gene_symbols),
     )
 
-    results: dict[str, EvidenceSummary] = {}
+    sem_disease = asyncio.Semaphore(RAG_DISEASE_CONCURRENCY)
+    sem_llm = asyncio.Semaphore(RAG_LLM_CONCURRENCY)
+    sem_pubmed = asyncio.Semaphore(RAG_PUBMED_CONCURRENCY)
 
-    for disease in top_15:
-        logger.info("run_rag: processing disease '%s'", disease)
+    async def _bounded(disease: str) -> tuple[str, EvidenceSummary]:
+        async with sem_disease:
+            return await _process_disease(
+                disease, drug_name, drug_profile, svc, db, sem_llm, sem_pubmed
+            )
 
-        t0 = time.perf_counter()
-        queries = await svc.expand_search_terms(drug_name, disease, drug_profile)
-        logger.info(
-            "run_rag: expand_search_terms took %.2fs, %d queries for '%s'",
-            time.perf_counter() - t0,
-            len(queries),
-            disease,
-        )
+    pairs = await asyncio.gather(*[_bounded(disease) for disease in top_15])
 
-        t0 = time.perf_counter()
-        pmids = await svc.fetch_and_cache(queries, db)
-        logger.info(
-            "run_rag: fetch_and_cache took %.2fs, %d PMIDs for '%s'",
-            time.perf_counter() - t0,
-            len(pmids),
-            disease,
-        )
+    results: dict[str, EvidenceSummary] = dict(pairs)
 
-        t0 = time.perf_counter()
-        top_abstracts = await svc.semantic_search(disease, drug_name, pmids, db)
-        logger.info(
-            "run_rag: semantic_search took %.2fs, %d abstracts for '%s'",
-            time.perf_counter() - t0,
-            len(top_abstracts),
-            disease,
-        )
-
-        t0 = time.perf_counter()
-        evidence = await svc.synthesize(drug_name, disease, top_abstracts)
-        logger.info(
-            "run_rag: synthesize took %.2fs, strength=%s for '%s'",
-            time.perf_counter() - t0,
-            evidence.strength,
-            disease,
-        )
-
-        results[disease] = evidence
-
-        logger.info("  Strength: %s", evidence.strength)
-        logger.info("  Adverse: %s", evidence.has_adverse_effects)
-        logger.info("  Summary: %s...", evidence.summary[:100])
+    # searches_table = wandb.Table(columns=["drug", "disease", "avg_similarity"]) if wandb.run else None
+    # if wandb.run and searches_table is not None:
+    #     wandb.log({"searches": searches_table})
 
     ranking = {"strong": 3, "moderate": 2, "weak": 1, "none": 0}
     sorted_results = sorted(
@@ -120,7 +169,7 @@ if __name__ == "__main__":
     async def _main() -> None:
         db = next(get_db())
         try:
-            results = await run_rag("empagliflozin", db)
+            results = await run_rag("duloxetine", db)
             for disease, evidence in results.items():
                 logger.info("\n=== %s ===", disease)
                 logger.info(evidence.model_dump_json(indent=2))

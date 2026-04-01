@@ -2,13 +2,14 @@
 
 import json
 import logging
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
 
 from indication_scout.constants import BROADENING_BLOCKLIST
 from indication_scout.services.disease_helper import (
     llm_normalize_disease,
+    llm_normalize_disease_batch,
     merge_duplicate_diseases,
     normalize_for_pubmed,
 )
@@ -248,3 +249,115 @@ async def test_merge_duplicate_diseases_returns_fallback_on_invalid_json():
     ):
         result = await merge_duplicate_diseases(["narcolepsy"], [])
         assert result == {"merge": {}, "remove": []}
+
+
+# ── llm_normalize_disease_batch unit tests ───────────────────────────────────
+
+
+async def test_batch_all_cached_no_llm_call():
+    """If all terms are cached, no LLM call is made and cached values are returned."""
+    cache_values = {
+        "narcolepsy-cataplexy syndrome": "narcolepsy",
+        "type 2 diabetes mellitus": "type 2 diabetes",
+    }
+
+    def fake_cache_get(namespace, params, cache_dir):
+        return cache_values.get(params["raw_term"])
+
+    with patch(
+        "indication_scout.services.disease_helper.cache_get",
+        side_effect=fake_cache_get,
+    ), patch(
+        "indication_scout.services.disease_helper.query_small_llm",
+    ) as mock_llm:
+        result = await llm_normalize_disease_batch(
+            ["narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"]
+        )
+
+    mock_llm.assert_not_called()
+    assert result == {
+        "narcolepsy-cataplexy syndrome": "narcolepsy",
+        "type 2 diabetes mellitus": "type 2 diabetes",
+    }
+
+
+async def test_batch_only_cache_misses_sent_to_llm():
+    """Only the terms not in cache are included in the LLM batch call."""
+    cache_values = {"type 2 diabetes mellitus": "type 2 diabetes"}
+    llm_response = json.dumps({"narcolepsy-cataplexy syndrome": "narcolepsy"})
+
+    def fake_cache_get(namespace, params, cache_dir):
+        return cache_values.get(params["raw_term"])
+
+    with patch(
+        "indication_scout.services.disease_helper.cache_get",
+        side_effect=fake_cache_get,
+    ), patch(
+        "indication_scout.services.disease_helper.cache_set",
+    ), patch(
+        "indication_scout.services.disease_helper.query_small_llm",
+        new=AsyncMock(return_value=llm_response),
+    ) as mock_llm:
+        result = await llm_normalize_disease_batch(
+            ["narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"]
+        )
+
+    # LLM was called once with only the uncached term
+    mock_llm.assert_awaited_once()
+    prompt_arg = mock_llm.call_args[0][0]
+    assert "narcolepsy-cataplexy syndrome" in prompt_arg
+    assert "type 2 diabetes mellitus" not in prompt_arg
+
+    assert result == {
+        "narcolepsy-cataplexy syndrome": "narcolepsy",
+        "type 2 diabetes mellitus": "type 2 diabetes",
+    }
+
+
+async def test_batch_results_cached_individually():
+    """After the LLM batch call, each result is written to cache individually."""
+    llm_response = json.dumps({
+        "narcolepsy-cataplexy syndrome": "narcolepsy",
+        "type 2 diabetes mellitus": "type 2 diabetes",
+    })
+
+    with patch(
+        "indication_scout.services.disease_helper.cache_get",
+        return_value=None,
+    ), patch(
+        "indication_scout.services.disease_helper.cache_set",
+    ) as mock_cache_set, patch(
+        "indication_scout.services.disease_helper.query_small_llm",
+        new=AsyncMock(return_value=llm_response),
+    ):
+        await llm_normalize_disease_batch(
+            ["narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"]
+        )
+
+    assert mock_cache_set.call_count == 2
+    cached_keys = {c.args[1]["raw_term"] for c in mock_cache_set.call_args_list}
+    assert cached_keys == {"narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"}
+
+
+async def test_batch_returned_keys_match_all_input_terms():
+    """Returned dict contains every input term as a key, whether cached or not."""
+    cache_values = {"type 2 diabetes mellitus": "type 2 diabetes"}
+    llm_response = json.dumps({"narcolepsy-cataplexy syndrome": "narcolepsy"})
+
+    def fake_cache_get(namespace, params, cache_dir):
+        return cache_values.get(params["raw_term"])
+
+    with patch(
+        "indication_scout.services.disease_helper.cache_get",
+        side_effect=fake_cache_get,
+    ), patch(
+        "indication_scout.services.disease_helper.cache_set",
+    ), patch(
+        "indication_scout.services.disease_helper.query_small_llm",
+        new=AsyncMock(return_value=llm_response),
+    ):
+        result = await llm_normalize_disease_batch(
+            ["narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"]
+        )
+
+    assert set(result.keys()) == {"narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"}

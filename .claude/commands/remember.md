@@ -1,27 +1,15 @@
-Find the most recent session_*.md file in /Users/dgupta/code/portfolio/IndicationScout/indication_scout/ using Glob. Then append a new session continuation section to it using the Edit tool (do NOT read the file first — append only).
+Do the following two steps in order:
 
-The section should follow this exact format:
+## Step 1 — Update findings.md
+If there have been any major bugs or technical or doman decisions in this session,
+write to this file.
 
-```
----
+## Step 2 — Update the session file
 
-## Session Continuation ({today's date and approximate time})
+Read `skills/session.md` using the Read tool, then follow its format and rules
+to write a session continuation block to the current session file.
+Base the summary on the conversation history.
 
-### What Was Worked On
+## Step 3 — Update PROJECT_STATE.md
 
-- <bullet points summarizing what was done this session>
-
-### Decisions Made
-
-- <bullet points for key decisions>
-
-### Pain Points / Errors Found
-
-- <bullet points, or "None.">
-
-### Next Steps Agreed On
-
-<numbered list>
-```
-
-Base the summary on the conversation history. Be concise but complete.
+Invoke the `project-state-updater` agent to append a snapshot to `PROJECT_STATE.md`.

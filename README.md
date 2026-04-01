@@ -109,7 +109,7 @@ src/indication_scout/
 ├── models/          # Pydantic data contracts (model_open_targets, model_clinical_trials, model_pubmed_abstract, model_chembl, model_drug_profile, model_evidence_summary)
 ├── prompts/         # LLM prompt templates (extract_organ_term, expand_search_terms, disease_synonyms, synthesize)
 ├── runners/         # Pipeline runners (rag_runner.py) and exploration scripts (pubmed_runner.py)
-├── services/        # Business logic -- LLM calls (llm.py, parse_llm_response), embeddings (embeddings.py), disease normalization (disease_normalizer.py), PubMed query building (pubmed_query.py), RAG pipeline (retrieval.py -- fetch_and_cache, semantic_search, synthesize)
+├── services/        # Business logic -- LLM calls (llm.py, parse_llm_response), embeddings (embeddings.py), disease normalization (disease_helper.py), PubMed query building (pubmed_query.py), RAG pipeline (retrieval.py -- fetch_and_cache, semantic_search, synthesize)
 ├── sqlalchemy/      # SQLAlchemy ORM models (pubmed_abstracts with pgvector embedding)
 ├── utils/           # Shared file-based cache utility (cache_key, cache_get, cache_set)
 ├── config.py        # Settings via pydantic-settings, loaded from .env

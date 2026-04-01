@@ -13,6 +13,7 @@ The model is lazy-loaded on first call to embed() and reused for the lifetime
 of the process — loading takes ~10s and uses ~500MB RAM, so we only do it once.
 """
 
+import asyncio
 import logging
 
 from sentence_transformers import SentenceTransformer
@@ -23,6 +24,9 @@ logger = logging.getLogger(__name__)
 
 # Module-level singleton. None until the first call to embed().
 _model: SentenceTransformer | None = None
+
+# Serialises concurrent calls to model.encode() which is not thread-safe.
+_embed_lock = asyncio.Lock()
 
 
 def _get_model() -> SentenceTransformer:
@@ -55,3 +59,19 @@ def embed(texts: list[str]) -> list[list[float]]:
     # floats so the vectors can be stored directly via SQLAlchemy/pgvector.
     vectors = model.encode(texts, convert_to_numpy=True)
     return [v.tolist() for v in vectors]
+
+
+async def embed_async(texts: list[str]) -> list[list[float]]:
+    """Async-safe wrapper around embed().
+
+    Acquires _embed_lock so that concurrent callers (e.g. parallel disease
+    iterations in run_rag) do not race on the shared SentenceTransformer model.
+
+    Args:
+        texts: Same as embed().
+
+    Returns:
+        Same as embed().
+    """
+    async with _embed_lock:
+        return embed(texts)

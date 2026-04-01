@@ -7,7 +7,7 @@ Usage:
 
 Rules:
 - Session files are named session_{datetime}.md in the project root.
-- Appending to a file older than 30 minutes rotates it to session_bak/ first.
+- Appending to a file exceeding 20 KB rotates it to session_bak/ first.
 - session_bak/ retains the 5 most recent files; older ones are deleted.
 """
 
@@ -15,14 +15,14 @@ import argparse
 import logging
 import shutil
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 SESSION_BAK = PROJECT_ROOT / "session_bak"
-MAX_AGE_MINUTES = 20
+MAX_SIZE_BYTES = 20 * 1024  # 20 KB
 MAX_BAK_FILES = 5
 
 
@@ -62,9 +62,8 @@ def _new_session_file() -> Path:
     return path
 
 
-def _is_too_old(path: Path) -> bool:
-    mtime = datetime.fromtimestamp(path.stat().st_mtime)
-    return datetime.now() - mtime > timedelta(minutes=MAX_AGE_MINUTES)
+def _is_too_large(path: Path) -> bool:
+    return path.stat().st_size >= MAX_SIZE_BYTES
 
 
 def get_or_create_session() -> Path:
@@ -72,7 +71,7 @@ def get_or_create_session() -> Path:
     current = _current_session_file()
     if current is None:
         return _new_session_file()
-    if _is_too_old(current):
+    if _is_too_large(current):
         _rotate(current)
         return _new_session_file()
     return current

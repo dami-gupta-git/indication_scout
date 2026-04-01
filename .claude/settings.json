@@ -3,7 +3,15 @@
     "allow": [
       "Read(//Users/dgupta/.claude/plans/**)",
       "Bash(source:*)",
-      "Bash(alembic current:*)"
+      "Bash(alembic current:*)",
+      "Bash(git -C /Users/dgupta/code/portfolio/IndicationScout/indication_scout check-ignore -v .claude/agents/code-reviewer.md)",
+      "Bash(git -C /Users/dgupta/code/portfolio/IndicationScout/indication_scout add -f .claude/)",
+      "Bash(*)",
+      "Edit(*)",
+      "Write(*)"
+    ],
+    "additionalDirectories": [
+      "/Users/dgupta/code/portfolio/IndicationScout/indication_scout/.claude/skills"
     ]
   },
   "hooks": {

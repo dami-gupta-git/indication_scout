@@ -1,8 +1,15 @@
 """Shared fixtures for integration tests."""
 
 import pytest
+from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+
+
+@pytest.fixture(autouse=True, scope="session")
+def load_env() -> None:
+    """Load .env so API keys are available to all integration tests."""
+    load_dotenv()
 
 from indication_scout.config import get_settings
 from indication_scout.constants import TEST_CACHE_DIR

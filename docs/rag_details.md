@@ -129,7 +129,7 @@ Send a `DrugProfile` (flat LLM-facing projection of `RichDrugData` -- name, syno
 
 ---
 
-## 4. Disease Name Normalizer (`services/disease_normalizer.py`)
+## 4. Disease Name Normalizer (`services/disease_helper.py`)
 
 Converts raw Open Targets disease names (e.g. `"narcolepsy-cataplexy syndrome"`) into PubMed-friendly search terms (e.g. `"narcolepsy"`) before they are passed to `get_pubmed_query`.
 
@@ -146,6 +146,8 @@ Converts raw Open Targets disease names (e.g. `"narcolepsy-cataplexy syndrome"`)
 | `pubmed_count` | full query string | PubMed result count (int) |
 
 Both the `drug AND disease` and `drug AND broader` PubMed counts are cached under `pubmed_count` using their respective query strings as keys. Same SHA-256-keyed JSON format and `CACHE_TTL` constant as the Open Targets client.
+
+**Pre-merge normalization in the competitor pipeline:** Before `merge_duplicate_diseases` runs, `RetrievalService._normalize_disease_groups()` (in `services/retrieval.py`, line 54) calls `llm_normalize_disease` for every disease name in the raw competitor data and merges groups that collapse to the same normalized key. This reduces LLM noise before the merge step.
 
 ---
 

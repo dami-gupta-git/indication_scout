@@ -5,10 +5,10 @@ from unittest.mock import AsyncMock, patch
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.models.model_open_targets import (
+    ClinicalDisease,
     DrugData,
     DrugSummary,
     DrugTarget,
-    Indication,
 )
 
 # --- OpenTargetsClient configuration ---
@@ -24,11 +24,11 @@ def test_default_config():
     assert client.cache_dir == DEFAULT_CACHE_DIR
 
 
-# --- get_drug_competitors: None phase guard ---
+# --- get_drug_competitors: None stage guard ---
 
 
-async def test_get_drug_competitors_skips_summary_with_none_phase(tmp_path):
-    """Summaries with phase=None must be skipped without raising TypeError."""
+async def test_get_drug_competitors_skips_summary_with_none_stage(tmp_path):
+    """Summaries with max_clinical_stage=None must be skipped without raising TypeError."""
     drug = DrugData(
         chembl_id="CHEMBL1",
         name="testdrug",
@@ -36,54 +36,17 @@ async def test_get_drug_competitors_skips_summary_with_none_phase(tmp_path):
         indications=[],
     )
     summaries = [
-        DrugSummary(drug_name="competitor_a", disease_name="depression", phase=3),
-        DrugSummary(drug_name="competitor_b", disease_name="anxiety", phase=None),
-    ]
-
-    client = OpenTargetsClient(cache_dir=tmp_path)
-    with (
-        patch.object(client, "get_drug", new=AsyncMock(return_value=drug)),
-        patch.object(
-            client,
-            "get_target_data_drug_summaries",
-            new=AsyncMock(return_value=summaries),
+        DrugSummary(
+            drug_name="competitor_a",
+            max_clinical_stage="PHASE_3",
+            diseases=[ClinicalDisease(disease_name="depression")],
         ),
-        patch(
-            "indication_scout.data_sources.open_targets.merge_duplicate_diseases",
-            new=AsyncMock(return_value={"merge": {}, "remove": []}),
-        ),
-    ):
-        result = await client.get_drug_competitors("testdrug", drug_phase=3)
-
-    # anxiety (phase=None) must be absent; depression (phase=3) must be present
-    assert "anxiety" not in result
-    assert "depression" in result
-
-
-# --- get_drug_competitors: alias-in-removed edge case ---
-
-
-async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
-    """When an alias appears in both merge values and remove, its data must not be merged in."""
-    drug = DrugData(
-        chembl_id="CHEMBL1",
-        name="testdrug",
-        targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
-        indications=[],
-    )
-    summaries = [
-        DrugSummary(drug_name="competitor_a", disease_name="narcolepsy", phase=3),
         DrugSummary(
             drug_name="competitor_b",
-            disease_name="narcolepsy-cataplexy syndrome",
-            phase=3,
+            max_clinical_stage=None,
+            diseases=[ClinicalDisease(disease_name="anxiety")],
         ),
     ]
-    # LLM says: merge narcolepsy-cataplexy into narcolepsy, but also remove narcolepsy-cataplexy
-    merge_result = {
-        "merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]},
-        "remove": ["narcolepsy-cataplexy syndrome"],
-    }
 
     client = OpenTargetsClient(cache_dir=tmp_path)
     with (
@@ -93,15 +56,101 @@ async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
             "get_target_data_drug_summaries",
             new=AsyncMock(return_value=summaries),
         ),
-        patch(
-            "indication_scout.data_sources.open_targets.merge_duplicate_diseases",
-            new=AsyncMock(return_value=merge_result),
+    ):
+        result = await client.get_drug_competitors("testdrug", min_stage="PHASE_3")
+
+    # anxiety (stage=None) must be absent; depression (PHASE_3) must be present
+    assert "anxiety" not in result["diseases"]
+    assert "depression" in result["diseases"]
+
+
+# --- get_drug_competitors: raw diseases returned ---
+
+
+async def test_get_drug_competitors_returns_raw_diseases(tmp_path):
+    """get_drug_competitors returns CompetitorRawData with unmerged diseases and indications."""
+    drug = DrugData(
+        chembl_id="CHEMBL1",
+        name="testdrug",
+        targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
+        indications=[],
+    )
+    summaries = [
+        DrugSummary(
+            drug_name="competitor_a",
+            max_clinical_stage="PHASE_3",
+            diseases=[ClinicalDisease(disease_name="narcolepsy")],
+        ),
+        DrugSummary(
+            drug_name="competitor_b",
+            max_clinical_stage="PHASE_3",
+            diseases=[ClinicalDisease(disease_name="narcolepsy-cataplexy syndrome")],
+        ),
+    ]
+
+    client = OpenTargetsClient(cache_dir=tmp_path)
+    with (
+        patch.object(client, "get_drug", new=AsyncMock(return_value=drug)),
+        patch.object(
+            client,
+            "get_target_data_drug_summaries",
+            new=AsyncMock(return_value=summaries),
         ),
     ):
-        result = await client.get_drug_competitors("testdrug", drug_phase=3)
+        result = await client.get_drug_competitors("testdrug", min_stage="PHASE_3")
 
-    # narcolepsy-cataplexy syndrome must not appear (removed)
-    assert "narcolepsy-cataplexy syndrome" not in result
-    # narcolepsy must appear with only competitor_a (alias data must not bleed in)
-    assert "narcolepsy" in result
-    assert result["narcolepsy"] == {"competitor_a"}
+    assert "narcolepsy" in result["diseases"]
+    assert "narcolepsy-cataplexy syndrome" in result["diseases"]
+    assert result["drug_indications"] == []
+
+
+async def test_get_drug_competitors_groups_by_disease_id(tmp_path):
+    """Diseases sharing the same disease_id collapse to a single key."""
+    drug = DrugData(
+        chembl_id="CHEMBL1",
+        name="testdrug",
+        targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
+        indications=[],
+    )
+    summaries = [
+        DrugSummary(
+            drug_name="competitor_a",
+            max_clinical_stage="PHASE_3",
+            diseases=[
+                ClinicalDisease(
+                    disease_from_source="type 2 diabetes",
+                    disease_id="MONDO_0005148",
+                    disease_name="type 2 diabetes mellitus",
+                ),
+            ],
+        ),
+        DrugSummary(
+            drug_name="competitor_b",
+            max_clinical_stage="PHASE_3",
+            diseases=[
+                ClinicalDisease(
+                    disease_from_source="diabetes mellitus, type 2",
+                    disease_id="MONDO_0005148",
+                    disease_name="diabetes mellitus",
+                ),
+            ],
+        ),
+    ]
+
+    client = OpenTargetsClient(cache_dir=tmp_path)
+    with (
+        patch.object(client, "get_drug", new=AsyncMock(return_value=drug)),
+        patch.object(
+            client,
+            "get_target_data_drug_summaries",
+            new=AsyncMock(return_value=summaries),
+        ),
+    ):
+        result = await client.get_drug_competitors("testdrug", min_stage="PHASE_3")
+
+    assert len(result["diseases"]) == 1
+    assert "type 2 diabetes mellitus" in result["diseases"]
+    assert result["diseases"]["type 2 diabetes mellitus"] == {
+        "competitor_a",
+        "competitor_b",
+    }

@@ -1,8 +1,8 @@
 ---
 name: project-state-updater
-description: Updates PROJECT_STATE.md with a fresh, accurate summary of the project. Use when the user runs /memory, asks to update project state, or wants to snapshot project state before clearing context.
+description: Appends a dated snapshot to PROJECT_STATE.md based on the most recent session file. Invoked by /remember.
 tools: Read, Grep, Glob, Bash
-model: sonnet
+model: haiku
 ---
 
 You are a project memory curator for the IndicationScout codebase. Your job is to append a new snapshot section to `PROJECT_STATE.md`.

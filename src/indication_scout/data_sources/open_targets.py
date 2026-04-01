@@ -11,18 +11,18 @@ Plus convenience accessors for specific target data slices.
 import asyncio
 import logging
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
+    CLINICAL_STAGE_RANK,
     DEFAULT_CACHE_DIR,
     INTERACTION_TYPE_MAP,
     OPEN_TARGETS_BASE_URL,
     OPEN_TARGETS_PAGE_SIZE,
 )
 from indication_scout.markers import no_review
-from indication_scout.services.disease_helper import merge_duplicate_diseases
 from indication_scout.utils.cache import cache_get, cache_set
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
 from indication_scout.data_sources.chembl import ChEMBLClient
@@ -32,6 +32,7 @@ from indication_scout.models.model_open_targets import (
     Association,
     Pathway,
     Interaction,
+    ClinicalDisease,
     DrugSummary,
     TissueExpression,
     MousePhenotype,
@@ -53,6 +54,11 @@ from indication_scout.models.model_open_targets import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+class CompetitorRawData(TypedDict):
+    diseases: dict[str, set[str]]
+    drug_indications: list[str]
 
 
 class OpenTargetsClient(BaseClient):
@@ -97,7 +103,10 @@ class OpenTargetsClient(BaseClient):
             )
 
         if isinstance(drug_data, BaseException):
-            raise drug_data
+            raise DataSourceError(
+                self._source_name,
+                f"Failed to fetch drug data for '{chembl_id}': {drug_data}",
+            )
 
         if isinstance(molecule, BaseException):
             logger.warning("ChEMBL ATC lookup failed for %s: %s", chembl_id, molecule)
@@ -115,48 +124,71 @@ class OpenTargetsClient(BaseClient):
         return drug_data
 
     async def get_drug_competitors(
-        self, name: str, drug_phase: int = 3
-    ) -> dict[str, set[str]]:
+        self, name: str, min_stage: str = "PHASE_3"
+    ) -> CompetitorRawData:
         """Fetch competitor drugs for a given drug, grouped by disease."""
         normalized_name = normalize_drug_name(name)
+        min_rank = CLINICAL_STAGE_RANK.get(min_stage, 0)
 
-        cache_params = {"drug_name": normalized_name, "drug_phase": drug_phase}
+        cache_params = {"drug_name": normalized_name, "min_stage": min_stage}
         cached = cache_get("drug_competitors", cache_params, self.cache_dir)
         if cached is not None:
-            return {disease: set(drugs) for disease, drugs in cached.items()}
+            return CompetitorRawData(
+                diseases={
+                    disease: set(drugs) for disease, drugs in cached["diseases"].items()
+                },
+                drug_indications=cached["drug_indications"],
+            )
 
         drug = await self.get_drug(normalized_name)
         targets = drug.targets
 
-        siblings_with_phase: dict[str, dict[str, int]] = {}
+        # Build set of approved indication names to exclude from repurposing candidates.
+        approved_indications: set[str] = {
+            i.disease_name.lower()
+            for i in drug.indications
+            if i.max_clinical_stage == "APPROVAL" and i.disease_name is not None
+        }
+
+        siblings_with_stage: dict[str, dict[str, int]] = {}
+        id_to_canonical: dict[str, str] = {}
 
         all_summaries = await asyncio.gather(
             *[self.get_target_data_drug_summaries(t.target_id) for t in targets]
         )
         for t, summaries in zip(targets, all_summaries):
             logger.debug(t.mechanism_of_action)
-            # TODO remove, for debugging
-            # drugs = set([normalize_drug_name(s.drug_name.lower()) for s in summaries])
-            # diseases = set([s.disease_name.lower() for s in summaries])
             for summary in summaries:
-                if summary.phase is not None and summary.phase >= drug_phase:
-                    disease = summary.disease_name.lower()
+                stage_rank = CLINICAL_STAGE_RANK.get(
+                    summary.max_clinical_stage or "", 0
+                )
+                if stage_rank >= min_rank:
                     drug_name = normalize_drug_name(summary.drug_name)
-                    if disease not in siblings_with_phase:
-                        siblings_with_phase[disease] = {}
-                    existing = siblings_with_phase[disease].get(drug_name, 0)
-                    siblings_with_phase[disease][drug_name] = max(
-                        existing, summary.phase
-                    )
+                    # if drug_name == normalized_name:
+                    #     continue
+                    for cd in summary.diseases:
+                        if cd.disease_name is None:
+                            continue
+                        if cd.disease_id and cd.disease_id in id_to_canonical:
+                            disease = id_to_canonical[cd.disease_id]
+                        else:
+                            disease = cd.disease_name.lower()
+                            if cd.disease_id:
+                                id_to_canonical[cd.disease_id] = disease
+                        if disease not in siblings_with_stage:
+                            siblings_with_stage[disease] = {}
+                        existing = siblings_with_stage[disease].get(drug_name, 0)
+                        siblings_with_stage[disease][drug_name] = max(
+                            existing, stage_rank
+                        )
 
-        for key in list(siblings_with_phase):
-            drug_phases = siblings_with_phase[key]
-            if normalized_name in drug_phases:
-                if drug_phases[normalized_name] >= 4:
-                    del siblings_with_phase[key]
+        # Remove diseases that are already approved indications for this drug.
+        for key in list(siblings_with_stage):
+            if key in approved_indications:
+                del siblings_with_stage[key]
 
         siblings: dict[str, set[str]] = {
-            disease: set(drugs.keys()) for disease, drugs in siblings_with_phase.items()
+            disease: set(drugs.keys()) for disease, drugs in siblings_with_stage.items()
         }
 
         # Remove overly broad disease terms (e.g. "cancer", "carcinoma") that
@@ -170,51 +202,23 @@ class OpenTargetsClient(BaseClient):
             sorted(siblings.items(), key=lambda item: len(item[1]), reverse=True)
         )
 
-        indications = [
-            i.disease_name.lower() for i in drug.indications if i.max_phase >= 4
-        ]
-        drug_indications = list(set(indications))
+        drug_indications = list(approved_indications)
         top_40 = dict(list(sorted_siblings.items())[:40])
-        disease_names = list(top_40.keys())
-        result = await merge_duplicate_diseases(disease_names, drug_indications)
 
-        for name in result["remove"]:
-            if name.lower() in top_40:
-                del top_40[name.lower()]
-
-        # Combine sibling sets for merged diseases
-        removed = {n.lower() for n in result["remove"]}
-        for canonical, aliases in result["merge"].items():
-            canonical_lower = canonical.lower()
-            if canonical_lower in removed:
-                continue
-            aliases = [a.lower() for a in aliases]
-            combined = set()
-            for name in [canonical_lower] + aliases:
-                if name in removed:
-                    continue
-                if name in top_40:
-                    combined |= top_40[name]
-                    if name != canonical_lower:
-                        del top_40[name]
-            if combined:
-                top_40[canonical_lower] = combined
-
-        # Re-sort and take top 10
-        sorted_data = dict(
-            sorted(top_40.items(), key=lambda item: len(item[1]), reverse=True)
-        )
-        sorted_data_2 = dict(sorted(top_40.items(), key=lambda item: item[0]))
-        top_15 = dict(list(sorted_data.items())[:15])
+        result = CompetitorRawData(diseases=top_40, drug_indications=drug_indications)
 
         cache_set(
             "drug_competitors",
             cache_params,
-            {disease: list(drugs) for disease, drugs in top_15.items()},
+            {
+                "diseases": {d: list(drugs) for d, drugs in top_40.items()},
+                "drug_indications": drug_indications,
+            },
             self.cache_dir,
             ttl=CACHE_TTL,
         )
-        return top_15
+
+        return result
 
     async def get_drug_indications(self, drug_name: str) -> list[Indication]:
         drug = await self.get_drug(drug_name)
@@ -226,7 +230,7 @@ class OpenTargetsClient(BaseClient):
         """For each target of a drug, fetch all drugs acting on that target.
 
         Returns a dict mapping target symbol (e.g. "GLP1R") to the list of
-        DrugSummary objects from Open Targets' knownDrugs for that target.
+        DrugSummary objects from Open Targets' drugAndClinicalCandidates for that target.
         """
         drug = await self.get_drug(drug_name)
         result: dict[str, list[DrugSummary]] = {}
@@ -306,7 +310,7 @@ class OpenTargetsClient(BaseClient):
             return [DrugSummary.model_validate(d) for d in cached]
 
         data = await self._graphql(
-            self.BASE_URL, DISEASE_DRUGS_QUERY, {"id": disease_id, "size": 200}
+            self.BASE_URL, DISEASE_DRUGS_QUERY, {"id": disease_id}
         )
         result = self._parse_disease_drugs(data["data"])
 
@@ -488,10 +492,10 @@ class OpenTargetsClient(BaseClient):
 
         indications = [
             Indication(
+                id=row.get("id", ""),
                 disease_id=row["disease"]["id"],
                 disease_name=row["disease"]["name"],
-                max_phase=row["maxPhaseForIndication"],
-                references=row.get("references", []),
+                max_clinical_stage=row.get("maxClinicalStage"),
             )
             for row in (raw.get("indications") or {}).get("rows", [])
         ]
@@ -507,9 +511,7 @@ class OpenTargetsClient(BaseClient):
             synonyms=raw.get("synonyms", []),
             trade_names=raw.get("tradeNames", []),
             drug_type=raw.get("drugType"),
-            is_approved=raw.get("isApproved"),
-            max_clinical_phase=raw.get("maximumClinicalTrialPhase"),
-            year_first_approved=raw.get("yearOfFirstApproval"),
+            maximum_clinical_stage=raw.get("maximumClinicalStage"),
             warnings=warnings,
             indications=indications,
             targets=targets,
@@ -535,7 +537,7 @@ class OpenTargetsClient(BaseClient):
             ],
             drug_summaries=[
                 self._parse_drug_summary(d)
-                for d in (raw.get("knownDrugs") or {}).get("rows", [])
+                for d in (raw.get("drugAndClinicalCandidates") or {}).get("rows", [])
             ],
             expressions=[self._parse_expression(e) for e in raw.get("expressions", [])],
             mouse_phenotypes=[
@@ -583,15 +585,22 @@ class OpenTargetsClient(BaseClient):
         )
 
     def _parse_drug_summary(self, raw: dict) -> DrugSummary:
+        drug = raw.get("drug") or {}
+        diseases = [
+            ClinicalDisease(
+                disease_from_source=d.get("diseaseFromSource", ""),
+                disease_id=(d.get("disease") or {}).get("id"),
+                disease_name=(d.get("disease") or {}).get("name"),
+            )
+            for d in raw.get("diseases", [])
+        ]
         return DrugSummary(
-            drug_id=raw.get("drugId", ""),
-            drug_name=raw.get("prefName", ""),
-            disease_id=raw.get("diseaseId", ""),
-            disease_name=raw.get("label", ""),
-            phase=raw.get("phase", 0),
-            status=raw.get("status"),
-            mechanism_of_action=raw.get("mechanismOfAction", ""),
-            clinical_trial_ids=raw.get("ctIds", []),
+            id=raw.get("id", ""),
+            drug_id=drug.get("id", ""),
+            drug_name=drug.get("name", ""),
+            drug_type=drug.get("drugType"),
+            max_clinical_stage=raw.get("maxClinicalStage"),
+            diseases=diseases,
         )
 
     def _parse_expression(self, raw: dict) -> TissueExpression:
@@ -671,24 +680,21 @@ class OpenTargetsClient(BaseClient):
     def _parse_constraint(self, raw: dict) -> GeneticConstraint:
         return GeneticConstraint(
             constraint_type=raw["constraintType"],
+            exp=raw.get("exp"),
+            obs=raw.get("obs"),
             oe=raw.get("oe"),
             oe_lower=raw.get("oeLower"),
             oe_upper=raw.get("oeUpper"),
             score=raw.get("score"),
             upper_bin=raw.get("upperBin"),
+            upper_bin6=raw.get("upperBin6"),
         )
 
     def _parse_disease_drugs(self, data: dict) -> list[DrugSummary]:
-        """Parse and deduplicate disease drugs — one entry per drug, highest phase wins."""
+        """Parse disease drugs — one entry per drug."""
         disease = data.get("disease") or {}
-        rows = disease.get("knownDrugs", {}).get("rows", [])
-
-        by_drug: dict[str, DrugSummary] = {}
-        for row in rows:
-            drug = self._parse_drug_summary(row)
-            if drug.drug_id not in by_drug or drug.phase > by_drug[drug.drug_id].phase:
-                by_drug[drug.drug_id] = drug
-        return list(by_drug.values())
+        rows = (disease.get("drugAndClinicalCandidates") or {}).get("rows", [])
+        return [self._parse_drug_summary(row) for row in rows]
 
 
 # ------------------------------------------------------------------
@@ -715,7 +721,7 @@ DRUG_QUERY = """
 query($id: String!) {
     drug(chemblId: $id) {
         id name synonyms tradeNames drugType
-        isApproved maximumClinicalTrialPhase yearOfFirstApproval
+        maximumClinicalStage
 
         mechanismsOfAction {
             rows {
@@ -725,11 +731,15 @@ query($id: String!) {
         }
 
         indications {
-            approvedIndications
             rows {
-                maxPhaseForIndication
+                id maxClinicalStage
                 disease { id name }
-                references { source ids }
+                clinicalReports {
+                    id source clinicalStage hasExpertReview
+                    title type trialOverallStatus trialLiterature
+                    drugs { drugFromSource drug { id name } }
+                    diseases { diseaseFromSource disease { id name } }
+                }
             }
         }
 
@@ -772,10 +782,25 @@ query($id: String!) {
             }
         }
 
-        knownDrugs(size: 200) {
+        drugAndClinicalCandidates {
             rows {
-                drugId prefName diseaseId label
-                phase status mechanismOfAction ctIds
+                id maxClinicalStage
+                drug {
+                    id name drugType
+                    mechanismsOfAction {
+                        rows {
+                            mechanismOfAction actionType
+                            targets { id approvedSymbol }
+                        }
+                    }
+                }
+                diseases { diseaseFromSource disease { id name } }
+                clinicalReports {
+                    id source clinicalStage hasExpertReview
+                    title type trialOverallStatus trialLiterature
+                    drugs { drugFromSource drug { id name } }
+                    diseases { diseaseFromSource disease { id name } }
+                }
             }
         }
 
@@ -835,13 +860,26 @@ query($id: String!, $index: Int!, $size: Int!) {
 """
 
 DISEASE_DRUGS_QUERY = """
-query($id: String!, $size: Int!) {
+query($id: String!) {
     disease(efoId: $id) {
-        knownDrugs(size: $size) {
+        drugAndClinicalCandidates {
             rows {
-                drugId prefName targetId approvedSymbol
-                diseaseId label phase status
-                mechanismOfAction ctIds
+                id maxClinicalStage
+                drug {
+                    id name drugType
+                    mechanismsOfAction {
+                        rows {
+                            mechanismOfAction actionType
+                            targets { id approvedSymbol }
+                        }
+                    }
+                }
+                clinicalReports {
+                    id source clinicalStage hasExpertReview
+                    title type trialOverallStatus trialLiterature
+                    drugs { drugFromSource drug { id name } }
+                    diseases { diseaseFromSource disease { id name } }
+                }
             }
         }
     }

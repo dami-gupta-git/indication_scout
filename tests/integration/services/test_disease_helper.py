@@ -1,13 +1,16 @@
 """Integration tests for services/disease_normalizer."""
 
 import logging
+from unittest.mock import patch, AsyncMock
 
 import pytest
 
 from indication_scout.markers import no_review
 from indication_scout.services.disease_helper import (
     BROADENING_BLOCKLIST,
+    llm_normalize_disease_batch,
     merge_duplicate_diseases,
+    normalize_batch,
     normalize_for_pubmed,
 )
 
@@ -116,3 +119,57 @@ async def test_merge_duplicate_diseases():
 
     assert "narcolepsy" not in result["remove"]
     assert "obesity" in result["remove"]
+
+
+async def test_llm_normalize_disease_batch_returns_correct_forms(tmp_path):
+    """llm_normalize_disease_batch returns correct normalised forms for known disease terms.
+
+    Uses a tmp_path cache so this test is isolated from production cache state.
+    Run once, observe the output, then fill in the expected values below.
+    """
+    with patch("indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path):
+        result = await llm_normalize_disease_batch(
+            ["type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"]
+        )
+
+    assert set(result.keys()) == {"type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"}
+    assert result["type 2 diabetes mellitus"] == "type 2 diabetes OR diabetes mellitus"
+    assert result["narcolepsy-cataplexy syndrome"] == "narcolepsy"
+
+
+async def test_llm_normalize_disease_batch_second_call_uses_cache(tmp_path):
+    """Second call for the same terms returns from cache with no LLM call."""
+    with patch("indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path):
+        # Prime the cache
+        await llm_normalize_disease_batch(
+            ["type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"]
+        )
+
+        # Second call — LLM must not be invoked
+        with patch(
+            "indication_scout.services.disease_helper.query_small_llm",
+            new=AsyncMock(side_effect=AssertionError("LLM called on second request")),
+        ):
+            result = await llm_normalize_disease_batch(
+                ["type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"]
+            )
+
+    assert set(result.keys()) == {"type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"}
+
+
+async def test_normalize_batch_returns_pubmed_friendly_term(test_cache_dir):
+    """normalize_batch returns a PubMed-friendly term for a known disease.
+
+    Uses metformin + type 2 diabetes — a well-studied pair with thousands of
+    PubMed results — to confirm the normalised term yields at least MIN_RESULTS hits.
+    """
+    from indication_scout.services.disease_helper import MIN_RESULTS, pubmed_count
+
+    result = await normalize_batch(["type 2 diabetes mellitus"], drug_name="metformin")
+
+    assert "type 2 diabetes mellitus" in result
+    normalized = result["type 2 diabetes mellitus"]
+    assert normalized  # non-empty
+
+    count = await pubmed_count(f"metformin AND ({normalized})")
+    assert count >= MIN_RESULTS

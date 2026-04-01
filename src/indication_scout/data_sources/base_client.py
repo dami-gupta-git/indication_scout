@@ -75,8 +75,9 @@ class BaseClient(ABC):
         params: dict[str, Any] | None = None,
         json_body: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        as_text: bool = False,
     ) -> Any:
-        """Make HTTP request with retry. Returns parsed JSON or raises DataSourceError."""
+        """Make HTTP request with retry. Returns parsed JSON, raw text, or raises DataSourceError."""
         last_error: Exception | None = None
 
         for attempt in range(self.max_retries + 1):
@@ -92,14 +93,13 @@ class BaseClient(ABC):
 
                 # Retry on 429/5xx
                 if resp.status in {429, 500, 502, 503, 504}:
-                    last_error = DataSourceError(
-                        self._source_name, f"HTTP {resp.status}", resp.status
-                    )
                     if attempt < self.max_retries:
                         delay = min(2**attempt, 30)
                         await asyncio.sleep(delay)
                         continue
-                    raise last_error
+                    raise DataSourceError(
+                        self._source_name, f"HTTP {resp.status}", resp.status
+                    )
 
                 if resp.status >= 400:
                     body = await resp.text()
@@ -109,7 +109,7 @@ class BaseClient(ABC):
                         resp.status,
                     )
 
-                return await resp.json()
+                return await resp.text() if as_text else await resp.json()
 
             except asyncio.TimeoutError:
                 last_error = DataSourceError(self._source_name, "Request timeout")
@@ -144,40 +144,4 @@ class BaseClient(ABC):
 
     async def _rest_get_xml(self, url: str, params: dict[str, Any]) -> str:
         """REST GET that returns XML text instead of JSON."""
-        last_error: Exception | None = None
-
-        for attempt in range(self.max_retries + 1):
-            try:
-                session = await self._get_session()
-                resp = await session.get(url, params=params)
-
-                if resp.status in {429, 500, 502, 503, 504}:
-                    last_error = DataSourceError(
-                        self._source_name, f"HTTP {resp.status}", resp.status
-                    )
-                    if attempt < self.max_retries:
-                        await asyncio.sleep(min(2**attempt, 30))
-                        continue
-                    raise last_error
-
-                if resp.status >= 400:
-                    body = await resp.text()
-                    raise DataSourceError(
-                        self._source_name,
-                        f"HTTP {resp.status}: {body[:200]}",
-                        resp.status,
-                    )
-
-                return await resp.text()
-
-            except asyncio.TimeoutError:
-                last_error = DataSourceError(self._source_name, "Request timeout")
-            except aiohttp.ClientError as e:
-                last_error = DataSourceError(
-                    self._source_name, f"Connection error: {e}"
-                )
-
-            if attempt < self.max_retries:
-                await asyncio.sleep(min(2**attempt, 30))
-
-        raise last_error or DataSourceError(self._source_name, "Unknown error")
+        return await self._request("GET", url, params=params, as_text=True)

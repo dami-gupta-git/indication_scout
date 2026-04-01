@@ -44,6 +44,7 @@ You manage these core documentation files:
 6. **README.md** — Project overview, quick start, and essential information for new developers.
 7. **README_DETAILS.md** — Comprehensive project documentation including detailed setup, configuration, API reference, troubleshooting.
 8. **SKILLS.md** — Skills available to the project, their purposes, and how they integrate with agents and workflows.
+9. **claude_code_tooling.md** - This contains information for all local agents, skills, hooks, scripts, and slash commands used in tooling Claude Code.
 
 Additional `_DETAILS.md` variants (e.g., `ARCHITECTURE_DETAILS.md`, `PLAN_DETAILS.md`) may be created when the user requests them or when the plain version would become too verbose.
 

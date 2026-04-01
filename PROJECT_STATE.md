@@ -28,9 +28,9 @@ IndicationScout is an agentic drug repurposing system. A drug name goes in; coor
 | `agents/mechanism.py` | Stub | `run()` raises `NotImplementedError` |
 | `agents/safety.py` | Stub | `run()` raises `NotImplementedError` |
 | `services/llm.py` | Complete | `query_llm`, `query_small_llm`, and `parse_llm_response` via Anthropic SDK |
-| `services/disease_normalizer.py` | Complete | LLM normalization; blocklist guard; PubMed count verification; file-based cache for both LLM results and PubMed counts |
+| `services/disease_helper.py` | Complete | LLM normalization; blocklist guard; PubMed count verification; file-based cache for both LLM results and PubMed counts |
 | `services/pubmed_query.py` | Complete | Builds PubMed queries by normalizing disease name and combining with drug name |
-| `services/retrieval.py` | Complete | `build_drug_profile`, `get_disease_synonyms`, `extract_organ_term`, `expand_search_terms`, `get_stored_pmids`, `fetch_new_abstracts`, `embed_abstracts`, `insert_abstracts`, `fetch_and_cache`, `semantic_search`, `synthesize` all implemented |
+| `services/retrieval.py` | Complete | `build_drug_profile`, `get_disease_synonyms`, `extract_organ_term`, `expand_search_terms`, `get_stored_pmids`, `fetch_new_abstracts`, `embed_abstracts`, `insert_abstracts`, `fetch_and_cache`, `semantic_search`, `synthesize`, `_normalize_disease_groups`, `get_drug_competitors` all implemented; `_normalize_disease_groups` normalizes disease names via `llm_normalize_disease` before the merge step; `get_drug_competitors` orchestrates raw fetch, normalization, LLM merge, sort, and top-10 slicing |
 | `sqlalchemy/pubmed_abstracts.py` | Complete | SQLAlchemy ORM model with pgvector embedding column (768 dims) |
 | `db/session.py` | Complete | SQLAlchemy session factory; `get_db()` dependency |
 | `api/main.py` | Partial | FastAPI app with `/health` endpoint only; `api/routes/` and `api/schemas/` subdirs contain only `__init__.py` |
@@ -58,7 +58,7 @@ Orchestrator (agents/orchestrator.py)  — stub
     |
 Specialist agents: literature, clinical_trials, mechanism, safety  — all stubs
     |
-Services layer: llm.py, disease_normalizer.py, pubmed_query.py, retrieval.py
+Services layer: llm.py, disease_helper.py, pubmed_query.py, retrieval.py
     |
 Data source clients: OpenTargetsClient, ClinicalTrialsClient, PubMedClient, ChEMBLClient
     |
@@ -75,7 +75,7 @@ The database layer (PostgreSQL + pgvector) is used for caching PubMed abstracts 
 |------|---------|
 | `src/indication_scout/data_sources/open_targets.py` | Most complex client; GraphQL queries are defined as module-level strings at the bottom of the file |
 | `src/indication_scout/data_sources/clinical_trials.py` | `detect_whitespace()` runs 3 concurrent API calls; `get_landscape()` aggregates trials into a competitive map |
-| `src/indication_scout/services/disease_normalizer.py` | LLM-driven disease term normalization; two-step strategy (normalize then verify/broaden); uses `cache_get`/`cache_set` from `utils/cache.py` |
+| `src/indication_scout/services/disease_helper.py` | LLM-driven disease term normalization; two-step strategy (normalize then verify/broaden); uses `cache_get`/`cache_set` from `utils/cache.py` |
 | `src/indication_scout/services/retrieval.py` | RAG pipeline; Stage 0 (`expand_search_terms`, `extract_organ_term`), Stage 1 (`fetch_and_cache`, `embed_abstracts`, `insert_abstracts`, `get_stored_pmids`, `fetch_new_abstracts`), Stage 2 (`semantic_search`), and Stage 3 (`synthesize`) all implemented |
 | `src/indication_scout/models/model_drug_profile.py` | `DrugProfile` — flat LLM-facing projection of `RichDrugData`; built via `from_rich_drug_data(rich, atc_descriptions)` |
 | `src/indication_scout/prompts/` | All LLM prompt templates; `extract_organ_term.txt`, `expand_search_terms.txt`, `disease_synonyms.txt`, `synthesize.txt` |
@@ -218,3 +218,175 @@ The database layer (PostgreSQL + pgvector) is used for caching PubMed abstracts 
 
 ### Known Issues / Caveats Added
 - Old `rag_runner.py` was calling removed module-level functions (`build_drug_profile`, `expand_search_terms`, etc.); refactor to service class eliminated the runtime `NameError`.
+
+---
+
+## Update (2026-03-11)
+
+### Implementation Status Changes
+- `data_sources/pubmed.py` — Complete. Fixed PubMed date filter bug: split merged `datetype_maxdate` param into two correct params `datetype=pdat` and `maxdate=YYYY/MM/DD` in both `search()` and `get_count()` methods.
+- `data_sources/open_targets.py` — Complete. Architectural fix: moved merge/remove/sort/cache logic out of `get_drug_competitors` and into `RetrievalService`; client now returns raw `CompetitorRawData` TypedDict without LLM calls.
+- `services/retrieval.py` — Complete. Added `get_drug_competitors()` method that owns full pipeline (merge via `merge_duplicate_diseases` LLM call, remove/sort, cache keyed by drug_name).
+- `tests/unit/data_sources/test_open_targets_client.py` — Complete. Removed patches for `merge_duplicate_diseases`, updated assertions to check `result["diseases"]`.
+- `tests/unit/services/test_retrieval.py` — Complete. Added two new unit tests: alias-in-removed edge case and cache hit path for `get_drug_competitors()`.
+- `docs/findings.md` — Complete. Appended two findings: PubMed date filter bug and `get_drug_competitors` layering fix.
+
+### New Patterns / Decisions
+- Client layer must never call the LLM; LLM calls belong in services layer.
+- `drug_indications` must be passed alongside raw diseases because `merge_duplicate_diseases` needs it as context for the LLM prompt.
+- Cache for `drug_competitors` lives in the service (keyed by `drug_name`), not the client — service owns the full merge+cache pipeline.
+
+### Known Issues / Caveats Added
+- `disease_helper.py` still uses `httpx` in `pubmed_count()` while the rest of the codebase uses `aiohttp` via `BaseClient` — no retry/backoff, inconsistency noted but not addressed.
+- `sorted_data_2` on `open_targets.py` line 217 is assigned but never used — pre-existing dead code left in place.
+
+
+## Update (2026-03-14)
+
+### Implementation Status Changes
+- `pyproject.toml` — Complete. Added `wandb` as a runtime dependency.
+- `config.py` — Complete. Added `wandb_api_key` field (fixed pre-existing typo `wand_api_key`).
+- `services/retrieval.py` `semantic_search()` — Complete. Added W&B logging: logs a `wandb.Table` with pmid, title, similarity per disease; scalar metrics namespaced as `semantic_search/{disease_key}/...` with spaces replaced by underscores.
+- `runners/rag_runner.py` — Complete. Applied `@wandb_run(project='indication-scout')` decorator; removed inline `wandb.init` / `wandb.finish` calls.
+- `utils/wandb_utils.py` — Complete. New utility module with `@wandb_run(project, tracked_param)` decorator for wrapping async functions in W&B run lifecycle (init/finish); extracts tracked param value via `inspect.signature`.
+- `tests/unit/services/test_retrieval.py` — Complete. Added two unit tests: `test_semantic_search_logs_wandb_table_when_run_active` and `test_semantic_search_skips_wandb_log_when_no_run`.
+
+### New Patterns / Decisions
+- W&B init/finish belongs in the pipeline entry point (`rag_runner`), not inside the service layer.
+- Decorator approach (`@wandb_run`) chosen over inline calls for reusability across future pipeline runners.
+- Metric keys namespaced as `semantic_search/{disease_key}/...`; spaces in disease names replaced with underscores to avoid W&B UI rendering issues.
+- `tracked_param` chosen as the generic decorator argument name (not `drug_param`) for future flexibility across different runners and tracked parameters.
+
+### Known Issues / Caveats Added
+- `OpenTargetsClient.get_drug_competitors` cache-hit path (line 133) returns old flat shape `{disease: set(drugs)}` instead of `CompetitorRawData` — caused `KeyError` on `raw["diseases"]` at runtime; resolved by deleting stale cache.
+- `config.py` typo `wand_api_key` instead of `wandb_api_key` caused pydantic `ValidationError` blocking all unit tests at session start.
+- W&B table keys with spaces in disease names caused "No rows to display" in UI — fixed by replacing spaces with underscores in metric keys.
+
+
+---
+
+## Update (2026-03-29)
+
+### Implementation Status Changes
+- `agents/clinical_trials.py` — Partial → Complete. Implemented `ClinicalTrialsAgent` using LangChain ReAct pattern with system prompt and `_parse_result()` method to reconstruct Pydantic models from LLM message history.
+- `agents/clinical_trials_tools.py` — Partial → Complete. Created `build_clinical_trials_tools(date_before)` factory returning 4 `@tool` wrappers (`detect_whitespace`, `search_trials`, `get_landscape`, `get_terminated`) with date_before captured via closure.
+- `agents/clinical_trials_model.py` — Stub → Complete. New file defining `ClinicalTrialsOutput` Pydantic model referencing models from `models/model_clinical_trials.py`.
+- `tests/unit/agents/test_clinical_trials_tools.py` — Partial → Complete. Adapted to `build_clinical_trials_tools()` factory pattern; added `date_before` passthrough test.
+- `tests/unit/agents/test_clinical_trials_agent.py` — Stub → Complete. New file with 5 unit tests covering `_parse_result` paths (whitespace, active trials, minimal, empty, block content).
+- `tests/integration/agents/test_clinical_trials_agent.py` — Stub → Complete. New file with 3 end-to-end integration tests (whitespace, active trials, no data).
+- `tests/integration/agents/test_clinical_trials_tools.py` — Partial → Complete. Adapted to factory pattern.
+- `docs/agents.md` — Stub → Complete. Full architecture doc covering file layout, classes, tools, models, data flow, how to call, and how to add new agents.
+- `config.py` — Partial → Complete. Added missing type annotation to `big_llm_model` field (was `PydanticUserError`).
+- `pyproject.toml` — Complete. Added `langchain-anthropic>=0.3.0` to runtime dependencies.
+
+### New Patterns / Decisions
+- 3-file-per-agent pattern: `<name>.py` (agent class), `<name>_tools.py` (tool factory), `<name>_model.py` (output Pydantic model).
+- Tools use closure pattern for `date_before` (and other parameters) rather than exposing as tool parameters — keeps LLM context clean.
+- `get_landscape` passes `top_n=10` to keep LLM context manageable.
+- LangChain `create_agent` uses parameter `system_prompt` (not `prompt`) — silent failure if wrong.
+- Agent LLM set to Opus (`settings.big_llm_model`) instead of Haiku for this complex agent; `max_tokens` bumped from 1024 to 4096 for ReAct loop headroom.
+- Tool responses currently use full `model_dump()` — identified as open issue requiring context-size optimization.
+
+### Known Issues / Caveats Added
+- Tool response payloads can be very large (e.g. 200 trials in `get_landscape`), wasteful for LLM context — needs slimming to condensed dicts for LLM while preserving full data for downstream.
+- All 283 unit tests pass; integration tests may vary with real API data.
+
+## Update (2026-03-29)
+
+### Implementation Status Changes
+- `models/model_clinical_trials.py` — Complete. Trimmed `Trial` model: removed `collaborators`, `study_type`, `results_posted` fields not consumed by agents. Trimmed `TerminatedTrial` model from 12 fields to 6: kept `nct_id`, `drug_name`, `indication`, `phase`, `why_stopped`, `stop_category`; removed `title`, `enrollment`, `sponsor`, `start_date`, `termination_date`, `references`.
+- `data_sources/clinical_trials.py` — Complete. Updated `_parse_trial()` to remove parsing for deleted `Trial` fields; updated `_parse_terminated_trial()` to match slimmed `TerminatedTrial` model.
+- `agents/clinical_trials.py` — Complete. Fixed `_parse_result()` bug: `AIMessage.name = None` (not absent), changed `hasattr` check to `getattr(msg, 'name', None)`; fixed tool response parsing to handle JSON strings via `json.loads()` fallback; added model_dump serialization boundary documentation.
+- `tests/unit/models/test_clinical_trials_models.py` — Complete. Removed assertions for deleted fields from fixtures and test functions.
+- `tests/integration/data_sources/test_clinical_trials.py` — Complete. Removed assertions for deleted fields from 4 test functions.
+- `tests/unit/agents/test_clinical_trials_tools.py` — Complete. Removed deleted fields from `Trial` construction and assertions.
+- `tests/unit/agents/test_clinical_trials_agent.py` — Complete. Removed deleted fields from test data dicts and `TerminatedTrial` assertions.
+- `tests/integration/agents/test_clinical_trials_tools.py` — Complete. Removed deleted fields from assertions.
+- `docs/agents.md` — Complete. Updated with model_dump serialization boundary explanation; added multi-tool collation details explaining slot-per-tool overwrite behavior; corrected `get_landscape` parameter name from `condition` to `indication`.
+
+### New Patterns / Decisions
+- Model trimming pattern: fetch all data from APIs (stay broad), but Pydantic models retain only fields consumed by agents/services — reduces LLM token cost via `model_dump()` serialization. Same principle applied to `DrugProfile` (projection of `RichDrugData`).
+- `TerminatedTrial` only needs 6 fields for LLM red-flag assessment — full details not needed.
+- `model_dump()` is a serialization boundary: Pydantic → dict for LLM → reconstruct Pydantic in `_parse_result()`. Agents must guard against JSON strings in tool responses (LangChain may stringify).
+- Multi-tool collation: agent result dict slots are per-tool (no merging); second call to same tool overwrites first result.
+- `Intervention` model retained on `Trial` for now (still needed by `_primary_drug()` helper) — open question whether to flatten into `drug_name`/`drug_type` fields.
+- Cycled agent LLM through Opus → Sonnet → Haiku → Sonnet → Opus for user comparison testing; final model choice pending.
+
+### Known Issues / Caveats Added
+- `AIMessage.name = None` vs `hasattr` was a subtle bug — unit tests passed (SimpleNamespace has no `.name`) but integration tests failed (real AIMessage has `.name = None`).
+- `get_terminated` returns 100 results with a single broad `query` string — if LLM passes just the drug name, gets all terminated trials across all indications instead of target disease only. Needs more context in tool input.
+- 59 unit tests pass after model trimming; integration tests depend on final agent LLM model choice.
+
+
+## Update (2026-03-29)
+
+### Implementation Status Changes
+- `agents/clinical_trials.py` — Stub → Complete. Implemented using LangChain ReAct pattern; `_parse_result()` reconstructs Pydantic models from message history; fixed `AIMessage.name = None` vs `hasattr` bug and JSON string parsing fallback for tool responses.
+- `agents/clinical_trials_tools.py` — Partial → Complete. Factory `build_clinical_trials_tools(date_before)` returns 4 LangChain `@tool` wrappers with date_before captured via closure; adapted to support Opus/Sonnet/Haiku testing cycles.
+- `agents/clinical_trials_model.py` — Stub → Complete. `ClinicalTrialsOutput` model referencing `WhitespaceResult`, `ConditionLandscape`, `TerminatedTrial` from data source models.
+- `models/model_clinical_trials.py` — Complete. Trimmed `Trial` model: removed `collaborators`, `study_type`, `results_posted` (not used by agents/services). Trimmed `TerminatedTrial` from 12 → 6 fields: kept `nct_id`, `drug_name`, `indication`, `phase`, `why_stopped`, `stop_category`; removed `title`, `enrollment`, `sponsor`, `start_date`, `termination_date`, `references`.
+- `data_sources/clinical_trials.py` — Complete. Updated `_parse_trial()` and `_parse_terminated_trial()` to match model changes; removed field assignments for deleted columns.
+- `tests/unit/agents/test_clinical_trials_tools.py` — Complete. Updated for factory pattern; parametrized assertions; added `date_before` passthrough coverage.
+- `tests/unit/agents/test_clinical_trials_agent.py` — Stub → Complete. 5 tests covering `_parse_result` paths: whitespace detection, active trials merging, minimal valid output, empty result, block content presence.
+- `tests/integration/agents/test_clinical_trials_agent.py` — Stub → Complete. 3 end-to-end integration tests: whitespace scenario, active trials scenario, no data returns empty.
+- `tests/integration/agents/test_clinical_trials_tools.py` — Complete. Updated for factory pattern; parametrized test coverage.
+- `tests/unit/models/test_clinical_trials_models.py` — Complete. Removed assertions for deleted `Trial` fields; updated `TerminatedTrial` fixtures.
+- `tests/integration/data_sources/test_clinical_trials.py` — Complete. Removed deleted field assertions from 4 test functions.
+- `docs/agents.md` — Stub → Complete. Full architecture guide: 3-file-per-agent pattern, LangChain ReAct flow, `model_dump()` serialization boundary, multi-tool collation (slot-per-tool, no merging), tool result parsing, how to add new agents.
+- `config.py` — Complete. Fixed missing type annotation on `big_llm_model` field (was `PydanticUserError`).
+- `pyproject.toml` — Complete. Added `langchain-anthropic>=0.3.0` to runtime deps; `max_tokens` bumped 1024 → 4096 for agent headroom.
+
+### New Patterns / Decisions
+- 3-file-per-agent pattern is now standard: `<name>.py` (agent), `<name>_tools.py` (tools factory), `<name>_model.py` (output model).
+- Model trimming pattern applied: data sources fetch broad API data; Pydantic models retain only fields consumed by agents/services to reduce LLM token cost on `model_dump()`.
+- Tools use closure pattern for `date_before` and other parameters; parameters not exposed as tool inputs to keep LLM context clean.
+- `_parse_result()` reconstructs Pydantic from message history: `AIMessage.name = None` (not absent), tool responses may be JSON strings requiring `json.loads()` fallback.
+- `get_landscape` slices to `top_n=10` trials; agent LLM set to Opus (not Haiku) for complex reasoning.
+- Multi-tool collation pattern: slot-per-tool in result dict; second call to same tool overwrites first (no merging logic).
+
+### Known Issues / Caveats Added
+- `get_terminated` API returns 100 results per broad `query`; LLM passing drug name alone retrieves all terminated trials across all indications instead of target disease — no indication-specific filtering applied.
+- Tool `model_dump()` payloads are large (200+ trials); LLM context cost identified but not yet optimized (condensed dicts for LLM vs full data for downstream still open).
+- LLM model choice (Opus vs Sonnet vs Haiku for agent) was cycling during session for quality comparison; final choice pending user evaluation.
+
+
+---
+
+## Update (2026-03-29)
+
+### Implementation Status Changes
+- `models/model_clinical_trials.py` — Complete. Removed unused fields from `Trial` (`collaborators`, `study_type`, `results_posted`) and `TerminatedTrial` (`title`, `enrollment`, `sponsor`, `start_date`, `termination_date`, `references`). `TerminatedTrial` now contains only 6 essential fields: `nct_id`, `drug_name`, `indication`, `phase`, `why_stopped`, `stop_category`.
+- `data_sources/clinical_trials.py` — Complete. Updated `_parse_trial()` and `_parse_terminated_trial()` parsing logic to remove assignments for deleted fields.
+- `agents/clinical_trials.py` — Complete. Fixed subtle `AIMessage.name` bug (property is `None`, not absent); changed `hasattr` to `getattr(msg, 'name', None)`. Added JSON string fallback parsing for tool responses (`json.loads()` before type checks). Updated `docs/agents.md` with `model_dump()` serialization boundary and multi-tool collation explanation (slot-per-tool, no merging).
+- All test files updated to remove assertions/fixtures for deleted fields across unit and integration test suites (7 test files modified, 59 tests pass).
+
+### New Patterns / Decisions
+- Model trimming applied to `TerminatedTrial`: LLM red-flag assessment requires only 6 fields; full dataset fetched from API but Pydantic model projects down to what agents actually consume.
+- `AIMessage.name = None` requires defensive `getattr()` — unit tests using `SimpleNamespace` passed but integration tests with real `AIMessage` failed with `hasattr` approach.
+- Tool response parsing must handle JSON string stringification from LangChain: added `json.loads()` fallback before `isinstance` checks.
+
+### Known Issues / Caveats Added
+- `Intervention` model still on `Trial` (needed by `_primary_drug()` helper) — open question whether to flatten into scalar `drug_name`/`drug_type` fields for consistency with trimmed model philosophy.
+- `get_terminated` broad query + LLM context issue remains: tool may retrieve all terminated trials across all indications if LLM passes only drug name without indication context.
+
+---
+
+## Update (2026-03-29)
+
+### Implementation Status Changes
+- `runners/rag_runner.py` — Complete. Parallelized disease-loop processing using `asyncio.gather` with three semaphores (`RAG_DISEASE_CONCURRENCY=4`, `RAG_LLM_CONCURRENCY=4`, `RAG_PUBMED_CONCURRENCY=3`). Extracted `_process_disease()` helper for per-disease pipeline encapsulation.
+- `constants.py` — Complete. Added three new concurrency limit constants for RAG pipeline parallelization.
+- `services/embeddings.py` — Complete. Implemented async `embed_async()` wrapper with `asyncio.Lock` to serialize access to shared `SentenceTransformer` singleton; made `RetrievalService.embed_abstracts()` async.
+- `services/retrieval.py` — Complete. Updated `semantic_search()` to use new `embed_async()` instead of sync `embed`.
+- All unit tests for `retrieval.py` — Complete. Updated mock targets from `retrieval.embed` to `retrieval.embed_async`; made test functions async.
+- Integration test for embeddings — Complete. Updated to await now-async `embed_abstracts()` call.
+
+### New Patterns / Decisions
+- Parallelization strategy: cross-disease parallelism is preferred axis (4 diseases in parallel) since per-disease pipeline steps are inherently sequential.
+- Three-semaphore design enforces rate limits: disease-level limits overall concurrency, LLM semaphore prevents Anthropic rate limits, PubMed semaphore respects NCBI.
+- Embedding lock (not semaphore): `SentenceTransformer` model is a non-thread-safe global singleton — `asyncio.Lock` ensures only 1 concurrent `model.encode()`.
+- Concurrency constants live in `constants.py` for easy tuning; tuned empirically from 2/2/2 up to 4/4/3.
+
+### Known Issues / Caveats Added
+- `SentenceTransformer` model lacks native async support — required wrapper with `asyncio.Lock` for safe concurrent access.
+- After making `embed_abstracts()` async, all callers and mocks must be updated; transitional cache invalidation needed if deploying to running systems.

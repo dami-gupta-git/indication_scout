@@ -15,6 +15,7 @@ from datetime import date
 from pathlib import Path
 from typing import Any
 
+from indication_scout.config import get_settings
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     PUBMED_FETCH_URL,
@@ -36,10 +37,17 @@ class PubMedClient(BaseClient):
         self.cache_dir = cache_dir
         if cache_dir:
             cache_dir.mkdir(parents=True, exist_ok=True)
+        self._api_key: str = get_settings().ncbi_api_key
 
     @property
     def _source_name(self) -> str:
         return "pubmed"
+
+    def _inject_api_key(self, params: dict[str, Any]) -> dict[str, Any]:
+        """Add the NCBI api_key to request params if configured."""
+        if self._api_key:
+            params["api_key"] = self._api_key
+        return params
 
     async def search(
         self, query: str, max_results: int = 50, date_before: date | None = None
@@ -61,9 +69,10 @@ class PubMedClient(BaseClient):
             "retmode": "json",
         }
         if date_before:
-            params["datetype_maxdate"] = date_before.strftime("%Y-%m-%d")
+            params["datetype"] = "pdat"
+            params["maxdate"] = date_before.strftime("%Y/%m/%d")
 
-        data = await self._rest_get(self.SEARCH_URL, params)
+        data = await self._rest_get(self.SEARCH_URL, self._inject_api_key(params))
         pmids: list[str] = data.get("esearchresult", {}).get("idlist", [])
 
         cache_set("pubmed_search", cache_params, pmids, self.cache_dir)
@@ -71,16 +80,17 @@ class PubMedClient(BaseClient):
 
     async def get_count(self, query: str, date_before: date | None = None) -> int:
         """Quick count of results without fetching full records."""
-        params = {
+        params: dict[str, Any] = {
             "db": "pubmed",
             "term": query,
             "retmax": 0,
             "retmode": "json",
         }
         if date_before:
-            params["datetype_maxdate"] = date_before.strftime("%Y-%m-%d")
+            params["datetype"] = "pdat"
+            params["maxdate"] = date_before.strftime("%Y/%m/%d")
 
-        data = await self._rest_get(self.SEARCH_URL, params)
+        data = await self._rest_get(self.SEARCH_URL, self._inject_api_key(params))
 
         count_str = data.get("esearchresult", {}).get("count", "0")
         return int(count_str)
@@ -96,14 +106,16 @@ class PubMedClient(BaseClient):
 
         for i in range(0, len(pmids), batch_size):
             batch = pmids[i : i + batch_size]
-            params = {
+            params: dict[str, Any] = {
                 "db": "pubmed",
                 "id": ",".join(batch),
                 "retmode": "xml",
                 "rettype": "abstract",
             }
 
-            xml_text = await self._rest_get_xml(self.FETCH_URL, params)
+            xml_text = await self._rest_get_xml(
+                self.FETCH_URL, self._inject_api_key(params)
+            )
 
             articles = self._parse_pubmed_xml(xml_text)
             all_articles.extend(articles)

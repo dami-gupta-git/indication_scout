@@ -13,16 +13,13 @@ import logging
 from pathlib import Path
 from typing import TypedDict
 
-import httpx
-
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     DEFAULT_CACHE_DIR,
-    NCBI_BASE_URL,
 )
-from indication_scout.services.llm import (
-    query_small_llm,
-)  # Adjust import path as needed
+from indication_scout.data_sources.base_client import DataSourceError
+from indication_scout.data_sources.pubmed import PubMedClient
+from indication_scout.services.llm import query_small_llm
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
@@ -65,6 +62,77 @@ async def llm_normalize_disease(raw_term: str) -> str:
     return normalized
 
 
+async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
+    """Normalize multiple disease terms in a single LLM call.
+
+    Checks cache for each term first, batches only the cache misses into one
+    LLM call, then caches the new results individually.
+
+    Args:
+        raw_terms: List of raw disease terms to normalize.
+
+    Returns:
+        Dict mapping each raw term to its normalized form.
+    """
+    results: dict[str, str] = {}
+    uncached: list[str] = []
+
+    for term in raw_terms:
+        cached = cache_get("disease_norm", {"raw_term": term}, DEFAULT_CACHE_DIR)
+        if cached is not None:
+            results[term] = cached
+        else:
+            uncached.append(term)
+
+    if not uncached:
+        return results
+
+    prompt = (
+        (_PROMPTS_DIR / "normalize_disease_batch.txt")
+        .read_text()
+        .format(raw_terms=json.dumps(uncached))
+    )
+    response = await query_small_llm(prompt)
+    cleaned = response.strip()
+    if cleaned.startswith("```"):
+        cleaned = cleaned.split("```", 2)[1]
+        if cleaned.startswith("json"):
+            cleaned = cleaned[4:]
+        cleaned = cleaned.rsplit("```", 1)[0].strip()
+
+    try:
+        batch_results: dict[str, str] = json.loads(cleaned)
+    except json.JSONDecodeError as e:
+        logger.error(
+            "llm_normalize_disease_batch: failed to parse LLM response: %s\n"
+            "Response was: %s",
+            e,
+            response,
+        )
+        # Fall back to individual calls for the uncached terms
+        individual = await asyncio.gather(
+            *[llm_normalize_disease(term) for term in uncached]
+        )
+        for term, normalized in zip(uncached, individual):
+            results[term] = normalized
+        return results
+
+    for term in uncached:
+        normalized = batch_results.get(term)
+        if normalized is None:
+            logger.warning(
+                "Batch normalization missing term '%s', falling back to individual call",
+                term,
+            )
+            normalized = await llm_normalize_disease(term)
+        else:
+            normalized = normalized.strip().strip('"').strip("'")
+            cache_set("disease_norm", {"raw_term": term}, normalized, DEFAULT_CACHE_DIR)
+        results[term] = normalized
+
+    return results
+
+
 async def merge_duplicate_diseases(
     diseases: list[str], drug_indications: list[str]
 ) -> MergeResult:
@@ -101,24 +169,13 @@ async def pubmed_count(query: str) -> int:
     if cached is not None:
         return cached
 
-    url = f"{NCBI_BASE_URL}/esearch.fcgi"
-    params = {
-        "db": "pubmed",
-        "term": query,
-        "retmode": "json",
-        "retmax": 0,
-    }
+    try:
+        async with PubMedClient(cache_dir=DEFAULT_CACHE_DIR) as client:
+            count = await client.get_count(query)
+    except DataSourceError as e:
+        logger.warning("PubMed count failed for '%s': %s", query, e)
+        return 0
 
-    async with httpx.AsyncClient(timeout=10.0) as client:
-        try:
-            resp = await client.get(url, params=params)
-            resp.raise_for_status()
-            data = resp.json()
-        except (httpx.HTTPError, json.JSONDecodeError) as e:
-            logger.warning(f"PubMed count failed for '{query}': {e}")
-            return 0
-
-    count = int(data.get("esearchresult", {}).get("count", 0))
     cache_set("pubmed_count", {"query": query}, count, DEFAULT_CACHE_DIR)
     return count
 

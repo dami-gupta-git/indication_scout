@@ -52,7 +52,7 @@ from indication_scout.data_sources.open_targets import OpenTargetsClient
 | `get_rich_drug_data(name)` | Fetch drug + all target data in parallel | `RichDrugData` |
 | `get_target_data(target_id)` | Fetch target data by Ensembl ID | `TargetData` |
 | `get_drug_indications(name)` | All indications for a drug | `list[Indication]` |
-| `get_drug_competitors(name)` | Top 10 diseases with phase 3+ competitor drugs | `dict[str, set[str]]` |
+| `get_drug_competitors(name)` | Raw competitor data: diseases with phase 3+ drugs + drug indications list | `CompetitorRawData` (TypedDict with `diseases: dict[str, set[str]]` and `drug_indications: list[str]`). The top-15 slicing, LLM dedup, and caching happen in `RetrievalService.get_drug_competitors()`, not in the client. |
 | `get_drug_target_competitors(name)` | All drugs acting on each of the drug's targets | `dict[str, list[DrugSummary]]` |
 | `get_disease_drugs(disease_id)` | Get drugs for a disease, deduplicated by drug_id | `list[DrugSummary]` |
 | `get_disease_synonyms(disease_name)` | Exact, related, narrow, and broad synonyms | `DiseaseSynonyms` |

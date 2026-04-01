@@ -278,7 +278,7 @@ async def test_embed_abstracts_returns_768_dim_vectors(test_cache_dir):
 
     assert len(abstracts) == 1
 
-    result = RetrievalService(test_cache_dir).embed_abstracts(abstracts)
+    result = await RetrievalService(test_cache_dir).embed_abstracts(abstracts)
 
     assert len(result) == 1
     abstract, vector = result[0]
@@ -329,7 +329,9 @@ async def test_fetch_new_abstracts_skips_stored_pmid(test_cache_dir):
     all_pmids = ["10000001", _KNOWN_NEW_PMID]
 
     async with PubMedClient(cache_dir=test_cache_dir) as client:
-        abstracts = await RetrievalService(test_cache_dir).fetch_new_abstracts(all_pmids, stored, client)
+        abstracts = await RetrievalService(test_cache_dir).fetch_new_abstracts(
+            all_pmids, stored, client
+        )
 
     assert len(abstracts) == 1
     assert abstracts[0].pmid == _KNOWN_NEW_PMID
@@ -345,7 +347,9 @@ async def test_fetch_new_abstracts_all_stored_skips_network(test_cache_dir):
     all_pmids = ["10000001", "10000002"]
 
     async with PubMedClient(cache_dir=test_cache_dir) as client:
-        abstracts = await RetrievalService(test_cache_dir).fetch_new_abstracts(all_pmids, stored, client)
+        abstracts = await RetrievalService(test_cache_dir).fetch_new_abstracts(
+            all_pmids, stored, client
+        )
 
     assert abstracts == []
 
@@ -391,7 +395,9 @@ _OVERLAP_PMIDS = {
 }
 
 
-async def test_fetch_and_cache_inserts_rows_and_returns_pmids(db_session_truncating, test_cache_dir):
+async def test_fetch_and_cache_inserts_rows_and_returns_pmids(
+    db_session_truncating, test_cache_dir
+):
     """fetch_and_cache fetches abstracts, embeds them, and persists rows to pubmed_abstracts.
 
     Uses a single stable PubMed query with a known small result set. Verifies:
@@ -399,7 +405,9 @@ async def test_fetch_and_cache_inserts_rows_and_returns_pmids(db_session_truncat
     - each returned PMID has a row in pubmed_abstracts with a non-null embedding
     - no duplicate PMIDs in the result
     """
-    pmids = await RetrievalService(test_cache_dir).fetch_and_cache([_FETCH_AND_CACHE_QUERY], db_session_truncating)
+    pmids = await RetrievalService(test_cache_dir).fetch_and_cache(
+        [_FETCH_AND_CACHE_QUERY], db_session_truncating
+    )
 
     assert _FETCH_AND_CACHE_PMIDS.issubset(set(pmids))
     assert len(pmids) == len(set(pmids))
@@ -414,7 +422,9 @@ async def test_fetch_and_cache_inserts_rows_and_returns_pmids(db_session_truncat
         assert embedding is not None, f"embedding is null for pmid {pmid}"
 
 
-async def test_fetch_and_cache_deduplicates_overlapping_queries(db_session_truncating, test_cache_dir):
+async def test_fetch_and_cache_deduplicates_overlapping_queries(
+    db_session_truncating, test_cache_dir
+):
     """PMIDs returned by two overlapping queries appear exactly once in the result.
 
     Query A (metformin AND colorectal cancer) and Query B (metformin AND AMPK AND colon)
@@ -423,7 +433,9 @@ async def test_fetch_and_cache_deduplicates_overlapping_queries(db_session_trunc
     - no duplicate PMIDs in the result list
     - the 25 known overlap PMIDs are each present exactly once
     """
-    pmids = await RetrievalService(test_cache_dir).fetch_and_cache([_QUERY_A, _QUERY_B], db_session_truncating)
+    pmids = await RetrievalService(test_cache_dir).fetch_and_cache(
+        [_QUERY_A, _QUERY_B], db_session_truncating
+    )
 
     assert all(p.isdigit() for p in pmids)
     assert len(pmids) == len(set(pmids))
@@ -452,16 +464,34 @@ async def test_fetch_and_cache_is_idempotent(db_session_truncating, test_cache_d
 
     assert count_after_second == count_after_first
 
+
 # Landmark PMIDs should always be in pgvector and rank highly
 async def test_empareg_in_results(svc, db_session_truncating):
-    pmids = await svc.fetch_and_cache(["empagliflozin AND myocardial infarction"], db_session_truncating)
-    top_15 = await svc.semantic_search("myocardial infarction", "empagliflozin", pmids, db_session_truncating, top_k=15)
+    pmids = await svc.fetch_and_cache(
+        ["empagliflozin AND myocardial infarction"], db_session_truncating
+    )
+    top_15 = await svc.semantic_search(
+        "myocardial infarction", "empagliflozin", pmids, db_session_truncating, top_k=15
+    )
     result_pmids = [r["pmid"] for r in top_15]
     assert "38587237" in result_pmids  # EMPACT-MI
 
+
 async def test_recovery_in_results(svc, db_session_truncating):
-    pmids = await svc.fetch_and_cache(["empagliflozin AND severe acute respiratory syndrome", "empagliflozin AND SARS"], db_session_truncating)
-    top_5 = await svc.semantic_search("severe acute respiratory syndrome", "empagliflozin", pmids, db_session_truncating, top_k=5)
+    pmids = await svc.fetch_and_cache(
+        [
+            "empagliflozin AND severe acute respiratory syndrome",
+            "empagliflozin AND SARS",
+        ],
+        db_session_truncating,
+    )
+    top_5 = await svc.semantic_search(
+        "severe acute respiratory syndrome",
+        "empagliflozin",
+        pmids,
+        db_session_truncating,
+        top_k=5,
+    )
     result_pmids = [r["pmid"] for r in top_5]
     assert "37865101" in result_pmids  # RECOVERY trial
 
@@ -485,6 +515,7 @@ async def test_semantic_search_returns_relevant_results(svc, db_session_truncati
         "empagliflozin" in r["title"].lower() or "sglt2" in r["title"].lower()
         for r in results
     )
+
 
 async def test_semantic_search_empagliflozin_nephropathy(svc, db_session_truncating):
     """Semantic search should return relevant abstracts ranked by similarity."""
@@ -525,7 +556,10 @@ async def test_synthesize_negative_candidate(svc, db_session_truncating):
     queries = ["empagliflozin AND COVID-19", "empagliflozin AND SARS"]
     pmids = await svc.fetch_and_cache(queries, db_session_truncating)
     top_5 = await svc.semantic_search(
-        "severe acute respiratory syndrome", "empagliflozin", pmids, db_session_truncating
+        "severe acute respiratory syndrome",
+        "empagliflozin",
+        pmids,
+        db_session_truncating,
     )
 
     result = await svc.synthesize(

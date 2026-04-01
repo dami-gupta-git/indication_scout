@@ -1,9 +1,12 @@
 """Retrieval service: PubMed fetch/embed/cache and semantic search via pgvector."""
 
+import asyncio
 import json
 import logging
 from pathlib import Path
 from typing import TypedDict
+
+import wandb
 
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
@@ -11,12 +14,19 @@ from sqlalchemy.orm import Session
 
 from indication_scout.constants import CACHE_TTL, PUBMED_MAX_RESULTS
 from indication_scout.data_sources.chembl import ChEMBLClient
-from indication_scout.data_sources.open_targets import OpenTargetsClient
+from indication_scout.data_sources.open_targets import (
+    CompetitorRawData,
+    OpenTargetsClient,
+)
+from indication_scout.services.disease_helper import (
+    llm_normalize_disease_batch,
+    merge_duplicate_diseases,
+)
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
-from indication_scout.services.embeddings import embed
+from indication_scout.services.embeddings import embed_async
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.llm import parse_llm_response, query_llm, query_small_llm
 from indication_scout.utils.cache import cache_get, cache_set
@@ -44,8 +54,35 @@ class RetrievalService:
         self.cache_dir = cache_dir
         cache_dir.mkdir(parents=True, exist_ok=True)
 
+    async def _normalize_disease_groups(
+        self, diseases: dict[str, set[str]]
+    ) -> dict[str, set[str]]:
+        """Normalize disease names via LLM and merge groups that collapse to the same key.
+
+        Args:
+            diseases: Dict mapping disease name to set of competitor drug names.
+
+        Returns:
+            Dict with normalized disease names as keys and unioned drug sets.
+        """
+        original_names = list(diseases.keys())
+        norm_map = await llm_normalize_disease_batch(original_names)
+
+        merged: dict[str, set[str]] = {}
+        for original in original_names:
+            normalized = norm_map[original]
+            key = normalized.split(" OR ")[0].strip().lower()
+            if key in merged:
+                merged[key] |= diseases[original]
+            else:
+                merged[key] = set(diseases[original])
+        return merged
+
     async def get_drug_competitors(self, drug_name: str) -> dict[str, set[str]]:
         """Fetch top disease indications and their competitor drugs from Open Targets.
+
+        Fetches raw competitor data from the client, then uses an LLM to merge
+        duplicate disease names and remove overly broad terms before returning.
 
         Args:
             drug_name: Common drug name (e.g. "empagliflozin").
@@ -53,8 +90,59 @@ class RetrievalService:
         Returns:
             Dict mapping disease name to set of competitor drug names.
         """
+        cache_params = {"drug_name": drug_name}
+        cached = cache_get("drug_competitors", cache_params, self.cache_dir)
+        if cached is not None and len(cached) > 0:
+            return {disease: set(drugs) for disease, drugs in cached.items()}
+
         async with OpenTargetsClient(cache_dir=self.cache_dir) as client:
-            return await client.get_drug_competitors(drug_name)
+            raw: CompetitorRawData = await client.get_drug_competitors(drug_name)
+
+        top_40 = await self._normalize_disease_groups(raw["diseases"])
+        drug_indications = raw["drug_indications"]
+        disease_names = list(top_40.keys())
+        merge_result = await merge_duplicate_diseases(disease_names, drug_indications)
+
+        for disease in merge_result["remove"]:
+            if disease.lower() in top_40:
+                del top_40[disease.lower()]
+
+        removed = {n.lower() for n in merge_result["remove"]}
+        for canonical, aliases in merge_result["merge"].items():
+            canonical_lower = canonical.lower()
+            aliases_lower = [a.lower() for a in aliases]
+            all_names = [canonical_lower] + aliases_lower
+
+            if canonical_lower in removed:
+                surviving = [n for n in aliases_lower if n not in removed]
+                if not surviving:
+                    continue
+                canonical_lower = surviving[0]
+
+            combined: set[str] = set()
+            for disease in all_names:
+                if disease in removed:
+                    continue
+                if disease in top_40:
+                    combined |= top_40[disease]
+                    if disease != canonical_lower:
+                        del top_40[disease]
+            if combined:
+                top_40[canonical_lower] = combined
+
+        sorted_data = dict(
+            sorted(top_40.items(), key=lambda item: len(item[1]), reverse=True)
+        )
+        top_15 = dict(list(sorted_data.items())[:10])
+
+        cache_set(
+            "drug_competitors",
+            cache_params,
+            {disease: list(drugs) for disease, drugs in top_15.items()},
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return top_15
 
     async def build_drug_profile(self, drug_name: str) -> DrugProfile:
         """Fetch drug + target data from Open Targets, enrich with ATC descriptions from ChEMBL,
@@ -74,7 +162,9 @@ class RetrievalService:
         if rich.drug.atc_classifications:
             async with ChEMBLClient() as chembl_client:
                 for code in rich.drug.atc_classifications:
-                    atc_descriptions.append(await chembl_client.get_atc_description(code))
+                    atc_descriptions.append(
+                        await chembl_client.get_atc_description(code)
+                    )
 
         return DrugProfile.from_rich_drug_data(rich, atc_descriptions)
 
@@ -128,14 +218,14 @@ class RetrievalService:
         logger.debug("Fetching %d new abstracts from PubMed", len(new_pmids))
         return await client.fetch_abstracts(new_pmids)
 
-    def embed_abstracts(
+    async def embed_abstracts(
         self,
         abstracts: list[PubmedAbstract],
     ) -> list[tuple[PubmedAbstract, list[float]]]:
         """Embed a list of PubMed abstracts using BioLORD-2023.
 
         Builds embed text as "<title>. <abstract>" for each abstract and calls
-        embed() in a single batch. Returns (abstract, vector) pairs aligned by index.
+        embed_async() in a single batch. Returns (abstract, vector) pairs aligned by index.
 
         Args:
             abstracts: Abstracts to embed.
@@ -148,7 +238,7 @@ class RetrievalService:
             return []
 
         texts = [f"{a.title}. {a.abstract or ''}" for a in abstracts]
-        vectors = embed(texts)
+        vectors = await embed_async(texts)
         return list(zip(abstracts, vectors))
 
     def insert_abstracts(
@@ -192,14 +282,14 @@ class RetrievalService:
         logger.debug("Inserted %d abstracts into pubmed_abstracts", len(rows))
 
     async def fetch_and_cache(self, queries: list[str], db: Session) -> list[str]:
-        """Hit PubMed for each query, fetch new abstracts, embed, cache in pgvector.
+        """Hit PubMed for all queries concurrently, fetch new abstracts, embed in one batch, cache in pgvector.
 
-        For each keyword query:
-          1. Search PubMed → up to 500 PMIDs
-          2. Filter to PMIDs not already in pgvector
-          3. Fetch abstracts for new PMIDs
-          4. Embed each abstract with BioLORD-2023
-          5. Bulk INSERT into pgvector (ON CONFLICT DO NOTHING)
+        Steps:
+          1. Search PubMed concurrently for all queries → deduplicated PMIDs
+          2. Single bulk check against pgvector for already-stored PMIDs
+          3. Single fetch for all new abstracts
+          4. Single embed call with BioLORD-2023
+          5. Single bulk INSERT into pgvector (ON CONFLICT DO NOTHING)
 
         Returns the deduplicated union of all PMIDs across all queries.
 
@@ -214,50 +304,51 @@ class RetrievalService:
             that pass this list to semantic_search will see those PMIDs silently skipped
             by the WHERE pmid = ANY(:pmids) clause, which is intentional and correct.
         """
-        all_pmids: list[str] = []
-
         async with PubMedClient(cache_dir=self.cache_dir) as client:
-            for query in queries:
-                # For this query, gets upto 500 pmids
-                pmids = await client.search(query, max_results=PUBMED_MAX_RESULTS)
+            # 1. Search all queries concurrently
+            search_results = await asyncio.gather(
+                *[
+                    client.search(query, max_results=PUBMED_MAX_RESULTS)
+                    for query in queries
+                ]
+            )
 
-                # Check what pmids are already in the db
-                stored = self.get_stored_pmids(pmids, db)
+            # Flatten and deduplicate while preserving first-seen order
+            all_pmids: list[str] = list(
+                dict.fromkeys(pmid for pmids in search_results for pmid in pmids)
+            )
 
-                # For pmids not in db, get the abstracts from pubmed
-                new_abstracts = await self.fetch_new_abstracts(pmids, stored, client)
+            # 2. Single bulk check against pgvector
+            stored = self.get_stored_pmids(all_pmids, db)
 
-                # Articles with no abstract (letters, editorials) are excluded —
-                # they have no text to embed meaningfully.
-                abstracts_with_text = [a for a in new_abstracts if a.abstract]
+            # 3. Single fetch for all new abstracts
+            new_abstracts = await self.fetch_new_abstracts(all_pmids, stored, client)
 
-                # create embeddings - embed abstracts returns a tuple
-                # fields from actual abstract, and the embedding
-                pairs = self.embed_abstracts(abstracts_with_text)
+        # Articles with no abstract (letters, editorials) are excluded —
+        # they have no text to embed meaningfully.
+        abstracts_with_text = [a for a in new_abstracts if a.abstract]
 
-                # put the new abstract/embedding in the ab
-                self.insert_abstracts(pairs, db)
+        # 4. Single embed call for the entire batch
+        pairs = await self.embed_abstracts(abstracts_with_text)
 
-                # all pmids, whether inserted or no
-                all_pmids.extend(pmids)
+        # 5. Single bulk insert
+        self.insert_abstracts(pairs, db)
 
-        return list(dict.fromkeys(all_pmids))
+        return all_pmids
 
     async def semantic_search(
         self, disease: str, drug: str, pmids: list[str], db: Session, top_k: int = 5
     ) -> list[AbstractResult]:
-        """Embed a drug-disease query and return the top-k most similar abstracts from pgvector.
+        """For a given drug, disease, and list of PMIDs, return top-k most similar abstracts from pgvector
 
         Constructs a natural-language query from drug and disease (e.g. "Evidence for metformin
         as a treatment for colorectal cancer..."), embeds it with BioLORD-2023, then runs a
         cosine similarity search restricted to the given PMIDs.
 
         Args:
-            disease: Target indication (e.g. "colorectal cancer").
-            drug: Drug name (e.g. "metformin").
-            pmids: Candidate PMIDs to search within (typically from fetch_and_cache).
-                Example: ["29734553", "31245678", "30198432"]
-            db: Active SQLAlchemy session.
+            disease: e.g. "colorectal cancer"
+            drug: e.g. "metformin"
+            pmids: e.g. ["29734553", "31245678", "30198432"]
             top_k: Maximum number of results to return (default 5).
 
         Returns:
@@ -269,7 +360,7 @@ class RetrievalService:
             "including clinical trials, efficacy data, mechanism of action, "
             "and preclinical studies"
         )
-        query_vector = embed([query_string])[0]
+        query_vector = (await embed_async([query_string]))[0]
 
         rows = db.execute(
             text("""
@@ -290,7 +381,7 @@ class RetrievalService:
             },
         ).fetchall()
 
-        return [
+        results = [
             {
                 "pmid": row[0],
                 "title": row[1],
@@ -299,6 +390,33 @@ class RetrievalService:
             }
             for row in rows
         ]
+        avg_similarity = (
+            sum(r["similarity"] for r in results) / len(results) if results else 0.0
+        )
+
+        if wandb.run:
+            pass
+            # disease_key = disease.replace(" ", "_")
+            # table = wandb.Table(columns=["pmid", "title", "similarity"])
+            # for r in results:
+            #     table.add_data(r["pmid"], r["title"], r["similarity"])
+            # wandb.log({
+            #     f"semantic_search/{disease_key}/query": query_string,
+            #     f"semantic_search/{disease_key}/candidate_pmids": len(pmids),
+            #     f"semantic_search/{disease_key}/results_returned": len(results),
+            #     f"semantic_search/{disease_key}/top_similarity": results[0]["similarity"] if results else None,
+            #     f"semantic_search/{disease_key}/results_table": table,
+            # })
+            # wandb.log({
+            #     "disease": disease,
+            #     "drug": drug,
+            #     "avg_similarity_score": avg_similarity,
+            # })
+            # table = wandb.Table(columns=["drug", "disease", "avg_similarity"])
+            # table.add_data(drug, disease, avg_similarity)
+            # wandb.log({"searches": table})
+
+        return results
 
     async def synthesize(
         self, drug: str, disease: str, top_abstracts: list[AbstractResult]
@@ -323,7 +441,9 @@ class RetrievalService:
         )
 
         template = (_PROMPTS_DIR / "synthesize.txt").read_text()
-        prompt = template.format(drug_name=drug, disease_name=disease, abstracts=formatted)
+        prompt = template.format(
+            drug_name=drug, disease_name=disease, abstracts=formatted
+        )
 
         response = await query_llm(prompt)
         # Strip markdown code fences if present (```json ... ``` or ``` ... ```)
@@ -363,7 +483,9 @@ class RetrievalService:
             self.cache_dir,
             ttl=CACHE_TTL,
         )
-        logger.debug("Extracted organ term '%s' for disease '%s'", organ_term, disease_name)
+        logger.debug(
+            "Extracted organ term '%s' for disease '%s'", organ_term, disease_name
+        )
         return organ_term
 
     async def expand_search_terms(

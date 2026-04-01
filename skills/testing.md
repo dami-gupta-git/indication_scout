@@ -19,6 +19,7 @@ Write tests as plain functions (def test_...), not inside classes. Do not use cl
 - Tests should be organized into subdirectories that reflect the file being tested.
 - When testing a specific function, when the test code is exactly the same, but only the input-output is different, prefer 
 to use pytest.mark.parametrize, instead of separate same tests. However, at a time there should be no more than 5 input-output entries at a time.
+- For integration tests, set up a conftest.py
 - For code changes that affect LLM behavior, add or update tests at the smallest reasonable unit (e.g. prompt builders, service-layer helpers) instead of relying only on end-to-end tests.
 - Before suggesting a refactor, first:
   - Identify the current behavior and entry points it affects (CLI, Streamlit, services).
@@ -32,6 +33,7 @@ to use pytest.mark.parametrize, instead of separate same tests. However, at a ti
 - If test coverage is missing in a changed area, propose minimal, focused tests that validate the new or modified behavior.
 - If expected values for an integration test are not already known (from existing tests, docs, or data you've provided), you MUST stop and ask for them. 
 Writing the test with placeholder/weak assertions and asking later is not acceptable.
+- Do not add extra or superfluous tests - tokens are expensive.
 
 ## CRITICAL -  Test Assertions
 - Check ALL fields for the object being tested, not just a subset.
