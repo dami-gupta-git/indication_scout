@@ -29,8 +29,15 @@ _model: SentenceTransformer | None = None
 _embed_lock = asyncio.Lock()
 
 
+_model_lock = asyncio.Lock()
+
+
 def _get_model() -> SentenceTransformer:
-    """Return the singleton model, instantiating it on first call."""
+    """Return the singleton model, instantiating it on first call.
+
+    Not safe to call concurrently — use embed_async() which holds _model_lock
+    across both model initialisation and encode().
+    """
     global _model
     if _model is None:
         model_name = get_settings().embedding_model
@@ -64,8 +71,8 @@ def embed(texts: list[str]) -> list[list[float]]:
 async def embed_async(texts: list[str]) -> list[list[float]]:
     """Async-safe wrapper around embed().
 
-    Acquires _embed_lock so that concurrent callers (e.g. parallel disease
-    iterations in run_rag) do not race on the shared SentenceTransformer model.
+    Acquires _model_lock so that concurrent callers (e.g. parallel disease
+    iterations in run_rag) do not race during model initialisation or encode().
 
     Args:
         texts: Same as embed().
@@ -73,5 +80,5 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
     Returns:
         Same as embed().
     """
-    async with _embed_lock:
+    async with _model_lock:
         return embed(texts)

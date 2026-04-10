@@ -24,6 +24,87 @@ def test_default_config():
     assert client.cache_dir == DEFAULT_CACHE_DIR
 
 
+# --- _parse_drug_data: mechanism_of_action ---
+
+
+def test_parse_drug_data_mechanisms_of_action(tmp_path):
+    """_parse_drug_data builds one MechanismOfAction per row, grouping all targets for that row."""
+    raw = {
+        "id": "CHEMBL1234",
+        "name": "TESTDRUG",
+        "synonyms": [],
+        "tradeNames": [],
+        "drugType": "Small molecule",
+        "maximumClinicalStage": "PHASE_2",
+        "mechanismsOfAction": {
+            "rows": [
+                {
+                    "mechanismOfAction": "Kinase inhibitor",
+                    "actionType": "INHIBITOR",
+                    "targets": [
+                        {"id": "ENSG00000001", "approvedSymbol": "TGT1"},
+                        {"id": "ENSG00000002", "approvedSymbol": "TGT2"},
+                    ],
+                },
+                {
+                    "mechanismOfAction": "Receptor modulator",
+                    "actionType": "MODULATOR",
+                    "targets": [
+                        {"id": "ENSG00000003", "approvedSymbol": "TGT3"},
+                    ],
+                },
+            ]
+        },
+        "indications": {"rows": []},
+        "drugWarnings": [],
+        "adverseEvents": {"rows": [], "criticalValue": None},
+    }
+
+    client = OpenTargetsClient(cache_dir=tmp_path)
+    result = client._parse_drug_data(raw)
+
+    assert len(result.mechanisms_of_action) == 2
+
+    moa0 = result.mechanisms_of_action[0]
+    assert moa0.mechanism_of_action == "Kinase inhibitor"
+    assert moa0.action_type == "INHIBITOR"
+    assert moa0.target_ids == ["ENSG00000001", "ENSG00000002"]
+    assert moa0.target_symbols == ["TGT1", "TGT2"]
+
+    moa1 = result.mechanisms_of_action[1]
+    assert moa1.mechanism_of_action == "Receptor modulator"
+    assert moa1.action_type == "MODULATOR"
+    assert moa1.target_ids == ["ENSG00000003"]
+    assert moa1.target_symbols == ["TGT3"]
+
+    assert len(result.targets) == 3
+    assert result.targets[0].mechanism_of_action == "Kinase inhibitor"
+    assert result.targets[1].mechanism_of_action == "Kinase inhibitor"
+    assert result.targets[2].mechanism_of_action == "Receptor modulator"
+
+
+def test_parse_drug_data_mechanisms_of_action_empty_when_no_moa(tmp_path):
+    """_parse_drug_data sets mechanisms_of_action to [] when mechanismsOfAction is absent."""
+    raw = {
+        "id": "CHEMBL1234",
+        "name": "TESTDRUG",
+        "synonyms": [],
+        "tradeNames": [],
+        "drugType": "Small molecule",
+        "maximumClinicalStage": None,
+        "mechanismsOfAction": None,
+        "indications": {"rows": []},
+        "drugWarnings": [],
+        "adverseEvents": {"rows": [], "criticalValue": None},
+    }
+
+    client = OpenTargetsClient(cache_dir=tmp_path)
+    result = client._parse_drug_data(raw)
+
+    assert result.mechanisms_of_action == []
+    assert result.targets == []
+
+
 # --- get_drug_competitors: None stage guard ---
 
 

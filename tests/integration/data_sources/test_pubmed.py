@@ -43,9 +43,7 @@ async def test_get_count_returns_total(pubmed_client):
 async def test_fetch_articles_parses_correctly(pubmed_client):
     """Test fetch_articles returns parsed PubmedAbstract objects."""
     # First search for a known article
-    pmids = await pubmed_client.search(
-        "semaglutide obesity clinical trial"
-    )
+    pmids = await pubmed_client.search("semaglutide obesity clinical trial")
     articles = await pubmed_client.fetch_abstracts(pmids)
 
     assert len(articles) >= 5

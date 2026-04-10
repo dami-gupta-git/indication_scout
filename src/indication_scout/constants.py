@@ -33,12 +33,14 @@ CLINICAL_TRIALS_WHITESPACE_PHASE_FILTER: str = "(PHASE2 OR PHASE3 OR PHASE4)"
 CLINICAL_TRIALS_WHITESPACE_TOP_DRUGS: int = 50
 CLINICAL_TRIALS_RECENT_START_YEAR: str = "2024"
 CLINICAL_TRIALS_LANDSCAPE_MAX_TRIALS: int = 50
-CLINICAL_TRIALS_TERMINATED_DRUG_PAGE_SIZE: int = 20
+CLINICAL_TRIALS_TERMINATED_DRUG_PAGE_SIZE: int = 50
+CLINICAL_TRIALS_RECURSION_LIMIT: int = 15
 
 # -- PubMed / NCBI ----------------------------------------------------------
 NCBI_BASE_URL: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 PUBMED_SEARCH_URL: str = f"{NCBI_BASE_URL}/esearch.fcgi"
 PUBMED_FETCH_URL: str = f"{NCBI_BASE_URL}/efetch.fcgi"
+PUBMED_SUMMARY_URL: str = f"{NCBI_BASE_URL}/esummary.fcgi"
 PUBMED_MAX_RESULTS: int = 200
 
 # -- RAG pipeline concurrency -----------------------------------------------
@@ -84,7 +86,7 @@ BROADENING_BLOCKLIST: frozenset[str] = frozenset(
         "disorder",
         "syndrome",
         "indication",
-        "pain"
+        "pain",
     }
 )
 
@@ -114,3 +116,22 @@ STOP_KEYWORDS: dict[str, str] = {
 }
 
 NEGATION_PREFIXES: list[str] = ["no ", "not ", "unrelated to ", "without ", "non-"]
+
+# -- Vaccine name keywords (for landscape competitor filtering) -------------
+# Biologicals whose names match any of these substrings are classified as
+# vaccines and excluded from the competitive landscape — they are not
+# mechanism competitors for small-molecule or biologic drugs.
+VACCINE_NAME_KEYWORDS: frozenset[str] = frozenset(
+    {
+        "vaccine",
+        "vax",
+        "immuniz",
+        "immunis",
+        "toxoid",
+        "vacuna",
+    }
+)
+
+MECHANISM_SIGNAL_KEYS: frozenset[str] = frozenset({"genetic_association", "literature", "affected_pathway"})
+MECHANISM_SIGNAL_THRESHOLD: float = 0.4
+MECHANISM_ASSOCIATIONS_CAP: int = 10

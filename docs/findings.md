@@ -94,6 +94,19 @@ Each entry is dated and categorized.
 - After the layering fix in commit `3719cdb`, `OpenTargetsClient.get_drug_competitors` cache-hit path returned `{disease: set(drugs)}` (old flat shape) instead of `CompetitorRawData`. `RetrievalService` then failed with `KeyError` on `raw["diseases"]`.
 - Decision: do not silently fix the shape mismatch — user deleted stale cache entries to resolve. The broken cache-hit return path (`line 133`) remains and will raise `KeyError` if a stale cache entry is hit again. Raising is the desired behaviour.
 
+### LangGraph agent architecture: module-per-agent pattern (2026-04-05)
+- Each agent lives in its own subpackage: `agents/<name>/` containing `<name>_agent.py` (graph builder), `<name>_tools.py` (`@tool` wrappers), `<name>_state.py` (LangGraph state), `<name>_output.py` (final output model).
+- `build_<name>_graph(llm, ...)` returns a compiled `StateGraph`. Callers pass config (e.g. `db`, `drug_profile`, `date_before`) as arguments to the builder, not as state fields — these are captured via closure into the tools.
+- `db` and `drug_profile` must never be stored in LangGraph state — LangGraph may try to serialize/checkpoint state. Pass them via closure in `build_<name>_tools(db, drug_profile, ...)`.
+- Tools are built once at graph construction time (`tools = build_<name>_tools(...)`), not per-node call. `model_with_tools = llm.bind_tools(tools)` and `tool_node = ToolNode(tools)` are also constructed once.
+- `recursion_limit` goes in `graph.ainvoke(..., config={"recursion_limit": N})`, not in `workflow.compile()` — `compile()` does not accept it.
+- `date_before` in `ClinicalTrialsAgent` filters on **trial start date before the cutoff** (`AREA[StartDate]RANGE[MIN, {date_str}]`). Trials that started after the cutoff are excluded.
+
+### LangGraph assemble_node: extracting summary from message history (2026-04-05)
+- The final AI summary is the last `AIMessage` that appears **after** the last `ToolMessage` in the history. Earlier AI messages are tool-calling steps, not summaries.
+- Claude returns `content` as a plain `str` when making no tool calls (final summary), and as a `list` of blocks (with `type: "text"` and `type: "tool_use"`) when mixing text with tool calls.
+- Pattern: find `last_tool_index` by scanning forward, then scan backward for the first `AIMessage` at index > `last_tool_index`.
+
 ### Agent architecture: 3-file-per-agent pattern (2026-03-29)
 - Each agent is split across three files: `agents/<name>.py` (agent class + system prompt), `agents/<name>_tools.py` (`@tool` wrappers), `agents/<name>_model.py` (output Pydantic model).
 - Tools use closures to capture config (e.g. `date_before`) that shouldn't be LLM-visible. Tools accept primitives, return dicts via `model_dump()`.

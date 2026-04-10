@@ -1,90 +1,163 @@
-"""Unit tests for ClinicalTrialsAgent._parse_result."""
+"""Unit tests for run_clinical_trials_agent output assembly.
+
+The agent itself (create_react_agent) is not invoked — we mock agent.ainvoke
+to return a fixed message history and verify that run_clinical_trials_agent
+correctly extracts artifacts and the narrative summary into a ClinicalTrialsOutput.
+"""
 
 import logging
-from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from langchain_core.messages import HumanMessage, ToolMessage
 
-from indication_scout.agents.clinical_trials import ClinicalTrialsAgent
+from indication_scout.agents.clinical_trials.clinical_trials_agent import (
+    run_clinical_trials_agent,
+)
+from indication_scout.agents.clinical_trials.clinical_trials_output import (
+    ClinicalTrialsOutput,
+)
+from indication_scout.models.model_clinical_trials import (
+    CompetitorEntry,
+    IndicationDrug,
+    IndicationLandscape,
+    Intervention,
+    PrimaryOutcome,
+    RecentStart,
+    TerminatedTrial,
+    Trial,
+    WhitespaceResult,
+)
 
 logger = logging.getLogger(__name__)
 
-
 # ------------------------------------------------------------------
-# Helpers: fake message objects matching langchain's message protocol
-# ------------------------------------------------------------------
-
-
-def _tool_msg(name: str, content):
-    """Simulate a ToolMessage with .name and .content."""
-    return SimpleNamespace(name=name, content=content)
-
-
-def _ai_msg(content):
-    """Simulate an AIMessage with .content and no .name."""
-    return SimpleNamespace(content=content)
-
-
-# ------------------------------------------------------------------
-# _parse_result: whitespace path
+# Shared test data
 # ------------------------------------------------------------------
 
+WHITESPACE = WhitespaceResult(
+    is_whitespace=True,
+    no_data=False,
+    exact_match_count=0,
+    drug_only_trials=120,
+    indication_only_trials=250,
+    indication_drugs=[
+        IndicationDrug(
+            nct_id="NCT00652457",
+            drug_name="Memantine",
+            indication="Huntington's Disease",
+            phase="Phase 4",
+            status="COMPLETED",
+        )
+    ],
+)
 
-def test_parse_result_whitespace_path():
-    """Agent called detect_whitespace + get_terminated + get_landscape."""
-    whitespace_data = {
-        "is_whitespace": True,
-        "no_data": False,
-        "exact_match_count": 0,
-        "drug_only_trials": 120,
-        "indication_only_trials": 250,
-        "indication_drugs": [
-            {
-                "nct_id": "NCT00652457",
-                "drug_name": "Memantine",
-                "indication": "Huntington's Disease",
-                "phase": "Phase 4",
-                "status": "COMPLETED",
-            }
+LANDSCAPE = IndicationLandscape(
+    total_trial_count=30,
+    competitors=[
+        CompetitorEntry(
+            sponsor="Acme Pharma",
+            drug_name="SomeDrug",
+            drug_type="Drug",
+            max_phase="Phase 3",
+            trial_count=2,
+            statuses={"COMPLETED"},
+            total_enrollment=400,
+        )
+    ],
+    phase_distribution={"Phase 2": 10, "Phase 3": 5},
+    recent_starts=[
+        RecentStart(
+            nct_id="NCT09999999",
+            sponsor="NewCo",
+            drug="NewDrug",
+            phase="Phase 2",
+        )
+    ],
+)
+
+TRIALS = [
+    Trial(
+        nct_id="NCT02970942",
+        title="Riluzole ALS Trial",
+        brief_summary="Testing riluzole in ALS.",
+        phase="Phase 2",
+        overall_status="COMPLETED",
+        why_stopped=None,
+        indications=["ALS"],
+        interventions=[
+            Intervention(
+                intervention_type="Drug",
+                intervention_name="Riluzole",
+                description="Daily oral dose",
+            )
         ],
-    }
+        sponsor="Sponsor Inc",
+        enrollment=100,
+        start_date="2015-01-01",
+        completion_date="2018-01-01",
+        primary_outcomes=[PrimaryOutcome(measure="Survival", time_frame="18 months")],
+        references=["12345678"],
+    )
+]
 
-    terminated_data = [
-        {
-            "nct_id": "NCT01234567",
-            "drug_name": "SomeDrug",
-            "indication": "Huntington's Disease",
-            "phase": "Phase 2",
-            "why_stopped": "Lack of efficacy",
-            "stop_category": "efficacy",
-        }
+TERMINATED = [
+    TerminatedTrial(
+        nct_id="NCT01234567",
+        title="Failed Trial",
+        drug_name="SomeDrug",
+        indication="Huntington's Disease",
+        phase="Phase 2",
+        why_stopped="Lack of efficacy",
+        stop_category="efficacy",
+        enrollment=50,
+        sponsor="Sponsor Inc",
+        start_date="2010-01-01",
+        termination_date="2012-06-01",
+    )
+]
+
+NARRATIVE = (
+    "No trials exist for this drug-disease pair. One prior efficacy failure found."
+)
+
+
+def _make_agent(messages: list) -> MagicMock:
+    agent = MagicMock()
+    agent.ainvoke = AsyncMock(return_value={"messages": messages})
+    return agent
+
+
+def _tool_msg(name: str, artifact) -> ToolMessage:
+    return ToolMessage(
+        content=f"result of {name}",
+        artifact=artifact,
+        name=name,
+        tool_call_id=f"id_{name}",
+    )
+
+
+# ------------------------------------------------------------------
+# Whitespace path: whitespace + terminated + landscape, no trials
+# ------------------------------------------------------------------
+
+
+async def test_run_clinical_trials_agent_whitespace_path():
+    """Assembles whitespace, terminated, and landscape correctly; trials stays empty."""
+    messages = [
+        HumanMessage(content="Analyze somedrug in huntingtons"),
+        _tool_msg("detect_whitespace", WHITESPACE),
+        _tool_msg("get_terminated", TERMINATED),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("finalize_analysis", NARRATIVE),
     ]
+    agent = _make_agent(messages)
 
-    landscape_data = {
-        "total_trial_count": 30,
-        "competitors": [],
-        "phase_distribution": {"Phase 2": 10, "Phase 3": 5},
-        "recent_starts": [],
-    }
+    output = await run_clinical_trials_agent(agent, "somedrug", "huntingtons")
 
-    summary_text = "No trials exist for this drug-disease pair. One prior attempt failed for efficacy."
+    assert isinstance(output, ClinicalTrialsOutput)
 
-    result = {
-        "messages": [
-            _ai_msg("Let me check whitespace first."),
-            _tool_msg("detect_whitespace", whitespace_data),
-            _ai_msg("Whitespace found. Checking terminated trials."),
-            _tool_msg("get_terminated", terminated_data),
-            _ai_msg("Found a failure. Checking landscape."),
-            _tool_msg("get_landscape", landscape_data),
-            _ai_msg(summary_text),
-        ]
-    }
-
-    output = ClinicalTrialsAgent._parse_result(result)
-
-    # Whitespace
+    # whitespace
     assert output.whitespace is not None
     assert output.whitespace.is_whitespace is True
     assert output.whitespace.no_data is False
@@ -98,7 +171,7 @@ def test_parse_result_whitespace_path():
     assert output.whitespace.indication_drugs[0].phase == "Phase 4"
     assert output.whitespace.indication_drugs[0].status == "COMPLETED"
 
-    # Terminated
+    # terminated
     assert len(output.terminated) == 1
     assert output.terminated[0].nct_id == "NCT01234567"
     assert output.terminated[0].drug_name == "SomeDrug"
@@ -106,253 +179,138 @@ def test_parse_result_whitespace_path():
     assert output.terminated[0].phase == "Phase 2"
     assert output.terminated[0].why_stopped == "Lack of efficacy"
     assert output.terminated[0].stop_category == "efficacy"
+    assert output.terminated[0].enrollment == 50
+    assert output.terminated[0].sponsor == "Sponsor Inc"
 
-    # Landscape
+    # landscape
     assert output.landscape is not None
     assert output.landscape.total_trial_count == 30
-    assert output.landscape.competitors == []
     assert output.landscape.phase_distribution == {"Phase 2": 10, "Phase 3": 5}
-    assert output.landscape.recent_starts == []
+    assert len(output.landscape.competitors) == 1
+    assert output.landscape.competitors[0].drug_name == "SomeDrug"
+    assert output.landscape.competitors[0].max_phase == "Phase 3"
+    assert output.landscape.competitors[0].total_enrollment == 400
+    assert len(output.landscape.recent_starts) == 1
+    assert output.landscape.recent_starts[0].nct_id == "NCT09999999"
 
-    # No trials called
+    # trials empty
     assert output.trials == []
 
-    # Summary
-    assert output.summary == summary_text
+    # summary
+    assert output.summary == NARRATIVE
 
 
 # ------------------------------------------------------------------
-# _parse_result: active trials path
+# Active trials path: whitespace + trials + landscape, no terminated
 # ------------------------------------------------------------------
 
 
-def test_parse_result_active_trials_path():
-    """Agent called detect_whitespace + search_trials + get_landscape."""
-    whitespace_data = {
-        "is_whitespace": False,
-        "no_data": False,
-        "exact_match_count": 5,
-        "drug_only_trials": 200,
-        "indication_only_trials": 1000,
-        "indication_drugs": [],
-    }
-
-    trials_data = [
-        {
-            "nct_id": "NCT02970942",
-            "title": "Semaglutide NASH Trial",
-            "brief_summary": "Testing semaglutide in NASH",
-            "phase": "Phase 2",
-            "overall_status": "COMPLETED",
-            "why_stopped": None,
-            "indications": ["NASH"],
-            "interventions": [
-                {
-                    "intervention_type": "Drug",
-                    "intervention_name": "Semaglutide",
-                    "description": "Once weekly injection",
-                }
-            ],
-            "sponsor": "Novo Nordisk",
-            "enrollment": 320,
-            "start_date": "2017-03-01",
-            "completion_date": "2020-06-01",
-            "primary_outcomes": [
-                {"measure": "NASH resolution", "time_frame": "72 weeks"}
-            ],
-            "references": ["33185364"],
-        }
+async def test_run_clinical_trials_agent_active_trials_path():
+    """Assembles trials and landscape correctly; terminated stays empty."""
+    active_whitespace = WhitespaceResult(
+        is_whitespace=False,
+        no_data=False,
+        exact_match_count=5,
+        drug_only_trials=200,
+        indication_only_trials=1000,
+        indication_drugs=[],
+    )
+    messages = [
+        HumanMessage(content="Analyze riluzole in als"),
+        _tool_msg("detect_whitespace", active_whitespace),
+        _tool_msg("search_trials", TRIALS),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("finalize_analysis", "5 trials found. ALS space is moderately active."),
     ]
+    agent = _make_agent(messages)
 
-    landscape_data = {
-        "total_trial_count": 47,
-        "competitors": [
-            {
-                "sponsor": "Madrigal Pharmaceuticals",
-                "drug_name": "Resmetirom",
-                "drug_type": "Drug",
-                "max_phase": "Phase 3",
-                "trial_count": 3,
-                "statuses": ["COMPLETED", "RECRUITING"],
-                "total_enrollment": 2000,
-            }
-        ],
-        "phase_distribution": {"Phase 2": 25, "Phase 3": 12},
-        "recent_starts": [],
-    }
+    output = await run_clinical_trials_agent(agent, "riluzole", "als")
 
-    summary_text = "5 trials exist. NASH is a crowded space with 47 active trials."
-
-    result = {
-        "messages": [
-            _ai_msg("Checking whitespace."),
-            _tool_msg("detect_whitespace", whitespace_data),
-            _ai_msg("Trials exist. Fetching details."),
-            _tool_msg("search_trials", trials_data),
-            _ai_msg("Got trial details. Checking landscape."),
-            _tool_msg("get_landscape", landscape_data),
-            _ai_msg(summary_text),
-        ]
-    }
-
-    output = ClinicalTrialsAgent._parse_result(result)
-
-    # Whitespace
     assert output.whitespace is not None
     assert output.whitespace.is_whitespace is False
     assert output.whitespace.exact_match_count == 5
-
-    # Trials
-    assert len(output.trials) == 1
-    assert output.trials[0].nct_id == "NCT02970942"
-    assert output.trials[0].title == "Semaglutide NASH Trial"
-    assert output.trials[0].brief_summary == "Testing semaglutide in NASH"
-    assert output.trials[0].phase == "Phase 2"
-    assert output.trials[0].overall_status == "COMPLETED"
-    assert output.trials[0].why_stopped is None
-    assert output.trials[0].indications == ["NASH"]
-    assert len(output.trials[0].interventions) == 1
-    assert output.trials[0].interventions[0].intervention_name == "Semaglutide"
-    assert output.trials[0].sponsor == "Novo Nordisk"
-    assert output.trials[0].enrollment == 320
-    assert output.trials[0].references == ["33185364"]
-
-    # Landscape
-    assert output.landscape is not None
-    assert output.landscape.total_trial_count == 47
-    assert len(output.landscape.competitors) == 1
-    assert output.landscape.competitors[0].drug_name == "Resmetirom"
-    assert output.landscape.competitors[0].sponsor == "Madrigal Pharmaceuticals"
-    assert output.landscape.competitors[0].max_phase == "Phase 3"
-
-    # No terminated
-    assert output.terminated == []
-
-    # Summary
-    assert output.summary == summary_text
-
-
-# ------------------------------------------------------------------
-# _parse_result: minimal — only whitespace called
-# ------------------------------------------------------------------
-
-
-def test_parse_result_minimal():
-    """Agent only called detect_whitespace and returned a summary."""
-    whitespace_data = {
-        "is_whitespace": True,
-        "no_data": True,
-        "exact_match_count": 0,
-        "drug_only_trials": 0,
-        "indication_only_trials": 0,
-        "indication_drugs": [],
-    }
-
-    summary_text = "No data found for this drug or disease."
-
-    result = {
-        "messages": [
-            _ai_msg("Let me check."),
-            _tool_msg("detect_whitespace", whitespace_data),
-            _ai_msg(summary_text),
-        ]
-    }
-
-    output = ClinicalTrialsAgent._parse_result(result)
-
-    assert output.whitespace is not None
-    assert output.whitespace.is_whitespace is True
-    assert output.whitespace.no_data is True
-    assert output.whitespace.exact_match_count == 0
-    assert output.whitespace.drug_only_trials == 0
-    assert output.whitespace.indication_only_trials == 0
     assert output.whitespace.indication_drugs == []
-    assert output.trials == []
-    assert output.landscape is None
+
+    assert len(output.trials) == 1
+    trial = output.trials[0]
+    assert trial.nct_id == "NCT02970942"
+    assert trial.title == "Riluzole ALS Trial"
+    assert trial.brief_summary == "Testing riluzole in ALS."
+    assert trial.phase == "Phase 2"
+    assert trial.overall_status == "COMPLETED"
+    assert trial.why_stopped is None
+    assert trial.indications == ["ALS"]
+    assert len(trial.interventions) == 1
+    assert trial.interventions[0].intervention_type == "Drug"
+    assert trial.interventions[0].intervention_name == "Riluzole"
+    assert trial.interventions[0].description == "Daily oral dose"
+    assert trial.sponsor == "Sponsor Inc"
+    assert trial.enrollment == 100
+    assert trial.start_date == "2015-01-01"
+    assert trial.completion_date == "2018-01-01"
+    assert len(trial.primary_outcomes) == 1
+    assert trial.primary_outcomes[0].measure == "Survival"
+    assert trial.primary_outcomes[0].time_frame == "18 months"
+    assert trial.references == ["12345678"]
+
+    assert output.landscape is not None
+    assert output.landscape.total_trial_count == 30
+
     assert output.terminated == []
-    assert output.summary == summary_text
+    assert output.summary == "5 trials found. ALS space is moderately active."
 
 
 # ------------------------------------------------------------------
-# _parse_result: empty messages
+# Summary extraction: comes from finalize_analysis artifact
 # ------------------------------------------------------------------
 
 
-def test_parse_result_empty_messages():
-    """Handles empty message list gracefully."""
-    output = ClinicalTrialsAgent._parse_result({"messages": []})
+async def test_run_clinical_trials_agent_summary_from_finalize_analysis():
+    """The narrative summary is taken from the finalize_analysis ToolMessage artifact."""
+    final_narrative = "Final summary from finalize_analysis."
+    messages = [
+        HumanMessage(content="Analyze somedrug in huntingtons"),
+        _tool_msg("detect_whitespace", WHITESPACE),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("finalize_analysis", final_narrative),
+    ]
+    agent = _make_agent(messages)
 
-    assert output.whitespace is None
-    assert output.trials == []
-    assert output.landscape is None
-    assert output.terminated == []
-    assert output.summary == ""
+    output = await run_clinical_trials_agent(agent, "somedrug", "huntingtons")
 
-
-# ------------------------------------------------------------------
-# _parse_result: AI message with list-of-blocks content
-# ------------------------------------------------------------------
-
-
-def test_parse_result_ai_message_block_content():
-    """Handles AIMessage where content is a list of text blocks."""
-    result = {
-        "messages": [
-            _ai_msg(
-                [
-                    {"type": "text", "text": "First part."},
-                    {"type": "text", "text": "Second part."},
-                ]
-            ),
-        ]
-    }
-
-    output = ClinicalTrialsAgent._parse_result(result)
-
-    assert output.summary == "First part.\nSecond part."
+    assert output.summary == final_narrative
 
 
 # ------------------------------------------------------------------
-# run(): input normalisation — drug_name and disease_name are lowercased
+# Partial runs — missing tools leave defaults
 # ------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "drug_input, disease_input, expected_drug, expected_disease",
+    "present_tools,missing_field,expected_default",
     [
-        ("Metformin", "Type 2 Diabetes", "metformin", "type 2 diabetes"),
-        ("SEMAGLUTIDE", "OBESITY", "semaglutide", "obesity"),
-        ("Trastuzumab", "HER2-Positive Breast Cancer", "trastuzumab", "her2-positive breast cancer"),
-        ("aspirin", "heart disease", "aspirin", "heart disease"),
+        (["search_trials", "get_landscape", "get_terminated"], "whitespace", None),
+        (["detect_whitespace", "get_landscape", "get_terminated"], "trials", []),
+        (["detect_whitespace", "search_trials", "get_terminated"], "landscape", None),
+        (["detect_whitespace", "search_trials", "get_landscape"], "terminated", []),
     ],
 )
-async def test_run_lowercases_drug_and_disease(
-    drug_input, disease_input, expected_drug, expected_disease
+async def test_run_clinical_trials_agent_missing_tool_leaves_default(
+    present_tools, missing_field, expected_default
 ):
-    """ClinicalTrialsAgent.run() lowercases drug_name and disease_name before use."""
-    fake_agent_result = {
-        "messages": [
-            _ai_msg("No notable findings."),
-        ]
+    """When a tool's ToolMessage is absent, the corresponding output field stays at its default."""
+    artifact_map = {
+        "detect_whitespace": WHITESPACE,
+        "search_trials": TRIALS,
+        "get_landscape": LANDSCAPE,
+        "get_terminated": TERMINATED,
     }
+    messages = [HumanMessage(content="Analyze somedrug in huntingtons")]
+    for name in present_tools:
+        messages.append(_tool_msg(name, artifact_map[name]))
+    messages.append(_tool_msg("finalize_analysis", NARRATIVE))
 
-    mock_agent = AsyncMock()
-    mock_agent.ainvoke = AsyncMock(return_value=fake_agent_result)
+    agent = _make_agent(messages)
+    output = await run_clinical_trials_agent(agent, "somedrug", "huntingtons")
 
-    with patch(
-        "indication_scout.agents.clinical_trials.create_agent",
-        return_value=mock_agent,
-    ), patch(
-        "indication_scout.agents.clinical_trials.build_clinical_trials_tools",
-        return_value=[],
-    ), patch(
-        "indication_scout.agents.clinical_trials.ChatAnthropic",
-        return_value=MagicMock(),
-    ):
-        agent = ClinicalTrialsAgent()
-        await agent.run({"drug_name": drug_input, "disease_name": disease_input})
-
-    call_args = mock_agent.ainvoke.call_args
-    user_message = call_args[0][0]["messages"][0]["content"]
-    assert expected_drug in user_message
-    assert expected_disease in user_message
+    assert getattr(output, missing_field) == expected_default

@@ -16,7 +16,7 @@ from indication_scout.models.model_open_targets import (
     TargetData,
 )
 from indication_scout.models.model_evidence_summary import EvidenceSummary
-from indication_scout.services.retrieval import RetrievalService
+from indication_scout.services.retrieval import AbstractResult, RetrievalService
 
 # --- Fixtures ---
 
@@ -763,9 +763,15 @@ async def test_fetch_and_cache_calls_search_per_query(svc):
     assert mock_client.search.call_count == 3
     from indication_scout.constants import PUBMED_MAX_RESULTS
 
-    mock_client.search.assert_any_call("q1", max_results=PUBMED_MAX_RESULTS)
-    mock_client.search.assert_any_call("q2", max_results=PUBMED_MAX_RESULTS)
-    mock_client.search.assert_any_call("q3", max_results=PUBMED_MAX_RESULTS)
+    mock_client.search.assert_any_call(
+        "q1", max_results=PUBMED_MAX_RESULTS, date_before=None
+    )
+    mock_client.search.assert_any_call(
+        "q2", max_results=PUBMED_MAX_RESULTS, date_before=None
+    )
+    mock_client.search.assert_any_call(
+        "q3", max_results=PUBMED_MAX_RESULTS, date_before=None
+    )
 
 
 async def test_fetch_and_cache_empty_queries_returns_empty(svc):
@@ -815,18 +821,14 @@ async def test_semantic_search_returns_ranked_dicts(svc):
         )
 
     assert len(result) == 2
-    assert result[0] == {
-        "pmid": "111",
-        "title": "Title A",
-        "abstract": "Abstract A",
-        "similarity": 0.92,
-    }
-    assert result[1] == {
-        "pmid": "222",
-        "title": "Title B",
-        "abstract": "Abstract B",
-        "similarity": 0.85,
-    }
+    assert result[0].pmid == "111"
+    assert result[0].title == "Title A"
+    assert result[0].abstract == "Abstract A"
+    assert result[0].similarity == 0.92
+    assert result[1].pmid == "222"
+    assert result[1].title == "Title B"
+    assert result[1].abstract == "Abstract B"
+    assert result[1].similarity == 0.85
 
 
 async def test_semantic_search_embeds_therapeutic_query(svc):
@@ -893,8 +895,8 @@ async def test_semantic_search_similarity_is_float(svc):
     ):
         result = await svc.semantic_search("diabetes", "metformin", ["111"], mock_db)
 
-    assert isinstance(result[0]["similarity"], float)
-    assert result[0]["similarity"] == float(Decimal("0.8765"))
+    assert isinstance(result[0].similarity, float)
+    assert result[0].similarity == float(Decimal("0.8765"))
 
 
 @pytest.mark.skip(reason="wandb logging is currently commented out in retrieval.py")
@@ -961,18 +963,18 @@ async def test_semantic_search_skips_wandb_log_when_no_run(svc):
 # --- synthesize ---
 
 _SAMPLE_ABSTRACTS = [
-    {
-        "pmid": "11111111",
-        "title": "Metformin reduces colorectal cancer risk",
-        "abstract": "This RCT showed significant reduction in CRC incidence.",
-        "similarity": 0.95,
-    },
-    {
-        "pmid": "22222222",
-        "title": "AMPK activation and colon cancer",
-        "abstract": "Preclinical data demonstrating AMPK-mediated apoptosis.",
-        "similarity": 0.88,
-    },
+    AbstractResult(
+        pmid="11111111",
+        title="Metformin reduces colorectal cancer risk",
+        abstract="This RCT showed significant reduction in CRC incidence.",
+        similarity=0.95,
+    ),
+    AbstractResult(
+        pmid="22222222",
+        title="AMPK activation and colon cancer",
+        abstract="Preclinical data demonstrating AMPK-mediated apoptosis.",
+        similarity=0.88,
+    ),
 ]
 
 _SAMPLE_LLM_RESPONSE = json.dumps(
@@ -1192,9 +1194,7 @@ async def test_normalize_disease_groups_calls_batch_not_per_term(tmp_path):
         "type 2 diabetes": {"drug_c"},
     }
 
-    mock_batch = AsyncMock(
-        return_value={term: term for term in diseases}
-    )
+    mock_batch = AsyncMock(return_value={term: term for term in diseases})
 
     with patch(
         "indication_scout.services.retrieval.llm_normalize_disease_batch",
@@ -1230,19 +1230,21 @@ async def test_run_rag_batch_normalisation_called_once(tmp_path):
     mock_ot_client.__aexit__ = AsyncMock(return_value=None)
     mock_ot_client.get_drug_competitors = AsyncMock(return_value=raw)
 
-    mock_batch = AsyncMock(
-        return_value={term: term for term in raw["diseases"]}
-    )
+    mock_batch = AsyncMock(return_value={term: term for term in raw["diseases"]})
 
-    with patch(
-        "indication_scout.services.retrieval.OpenTargetsClient",
-        return_value=mock_ot_client,
-    ), patch(
-        "indication_scout.services.retrieval.llm_normalize_disease_batch",
-        new=mock_batch,
-    ), patch(
-        "indication_scout.services.retrieval.merge_duplicate_diseases",
-        new=AsyncMock(return_value={"merge": {}, "remove": []}),
+    with (
+        patch(
+            "indication_scout.services.retrieval.OpenTargetsClient",
+            return_value=mock_ot_client,
+        ),
+        patch(
+            "indication_scout.services.retrieval.llm_normalize_disease_batch",
+            new=mock_batch,
+        ),
+        patch(
+            "indication_scout.services.retrieval.merge_duplicate_diseases",
+            new=AsyncMock(return_value={"merge": {}, "remove": []}),
+        ),
     ):
         await RetrievalService(tmp_path).get_drug_competitors("metformin")
 

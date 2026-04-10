@@ -9,7 +9,9 @@ from indication_scout.models.model_clinical_trials import (
 )
 
 
-def _make_study(nct_id: str, why_stopped: str | None, intervention_name: str = "Drug A") -> dict:
+def _make_study(
+    nct_id: str, why_stopped: str | None, intervention_name: str = "Drug A"
+) -> dict:
     """Minimal study dict that _parse_trial can handle."""
     return {
         "protocolSection": {
@@ -42,10 +44,12 @@ async def test_get_terminated_drug_query_filters_to_safety_efficacy_only(tmp_pat
     Business and enrollment terminations from the drug query are dropped as noise.
     """
     drug_studies = [
-        _make_study("NCT00000001", "Serious adverse events observed"),   # safety
+        _make_study("NCT00000001", "Serious adverse events observed"),  # safety
         _make_study("NCT00000002", "Lack of efficacy in interim analysis"),  # efficacy
-        _make_study("NCT00000003", "Strategic decision by sponsor"),      # business — dropped
-        _make_study("NCT00000004", "Insufficient enrollment"),            # enrollment — dropped
+        _make_study(
+            "NCT00000003", "Strategic decision by sponsor"
+        ),  # business — dropped
+        _make_study("NCT00000004", "Insufficient enrollment"),  # enrollment — dropped
     ]
     indication_studies = []
 
@@ -53,16 +57,18 @@ async def test_get_terminated_drug_query_filters_to_safety_efficacy_only(tmp_pat
     with patch.object(
         client,
         "_rest_get",
-        new=AsyncMock(side_effect=[
-            {"studies": drug_studies},
-            {"studies": indication_studies},
-        ]),
+        new=AsyncMock(
+            side_effect=[
+                {"studies": drug_studies},
+                {"studies": indication_studies},
+            ]
+        ),
     ):
         results = await client.get_terminated("testdrug", "testindication")
 
     nct_ids = {t.nct_id for t in results}
-    assert "NCT00000001" in nct_ids   # safety — kept
-    assert "NCT00000002" in nct_ids   # efficacy — kept
+    assert "NCT00000001" in nct_ids  # safety — kept
+    assert "NCT00000002" in nct_ids  # efficacy — kept
     assert "NCT00000003" not in nct_ids  # business — dropped
     assert "NCT00000004" not in nct_ids  # enrollment — dropped
 
@@ -72,19 +78,21 @@ async def test_get_terminated_indication_query_not_filtered(tmp_path):
     drug_studies = []
     indication_studies = [
         _make_study("NCT00000010", "Serious adverse events observed"),  # safety
-        _make_study("NCT00000011", "Strategic decision by sponsor"),    # business
-        _make_study("NCT00000012", "Insufficient enrollment"),          # enrollment
-        _make_study("NCT00000013", None),                               # unknown
+        _make_study("NCT00000011", "Strategic decision by sponsor"),  # business
+        _make_study("NCT00000012", "Insufficient enrollment"),  # enrollment
+        _make_study("NCT00000013", None),  # unknown
     ]
 
     client = ClinicalTrialsClient()
     with patch.object(
         client,
         "_rest_get",
-        new=AsyncMock(side_effect=[
-            {"studies": drug_studies},
-            {"studies": indication_studies},
-        ]),
+        new=AsyncMock(
+            side_effect=[
+                {"studies": drug_studies},
+                {"studies": indication_studies},
+            ]
+        ),
     ):
         results = await client.get_terminated("testdrug", "testindication")
 
@@ -103,10 +111,12 @@ async def test_get_terminated_deduplicates_by_nct_id(tmp_path):
     with patch.object(
         client,
         "_rest_get",
-        new=AsyncMock(side_effect=[
-            {"studies": [shared_study]},   # drug query
-            {"studies": [shared_study]},   # indication query
-        ]),
+        new=AsyncMock(
+            side_effect=[
+                {"studies": [shared_study]},  # drug query
+                {"studies": [shared_study]},  # indication query
+            ]
+        ),
     ):
         results = await client.get_terminated("testdrug", "testindication")
 
@@ -128,12 +138,16 @@ async def test_get_terminated_max_results_caps_indication_not_drug(tmp_path):
     with patch.object(
         client,
         "_rest_get",
-        new=AsyncMock(side_effect=[
-            {"studies": drug_studies},
-            {"studies": indication_studies},
-        ]),
+        new=AsyncMock(
+            side_effect=[
+                {"studies": drug_studies},
+                {"studies": indication_studies},
+            ]
+        ),
     ):
-        results = await client.get_terminated("testdrug", "testindication", max_results=3)
+        results = await client.get_terminated(
+            "testdrug", "testindication", max_results=3
+        )
 
     drug_ids = {t.nct_id for t in results if t.nct_id.startswith("NCT9")}
     indication_ids = {t.nct_id for t in results if t.nct_id.startswith("NCT8")}
@@ -149,7 +163,9 @@ async def test_get_terminated_max_results_caps_indication_not_drug(tmp_path):
 # ------------------------------------------------------------------
 
 
-def _make_drug_trial(nct_id: str, phase: str = "Phase 2", enrollment: int = 100) -> Trial:
+def _make_drug_trial(
+    nct_id: str, phase: str = "Phase 2", enrollment: int = 100
+) -> Trial:
     """Minimal Trial with a Drug intervention for landscape aggregation."""
     return Trial(
         nct_id=nct_id,
@@ -182,15 +198,18 @@ async def test_get_landscape_calls_fetch_and_count():
     fake_trials = [_make_drug_trial("NCT00000001")]
 
     client = ClinicalTrialsClient()
-    with patch.object(
-        client,
-        "_fetch_all_indication_trials",
-        new=AsyncMock(return_value=fake_trials),
-    ) as mock_fetch, patch.object(
-        client,
-        "_count_trials",
-        new=AsyncMock(return_value=330),
-    ) as mock_count:
+    with (
+        patch.object(
+            client,
+            "_fetch_all_indication_trials",
+            new=AsyncMock(return_value=fake_trials),
+        ) as mock_fetch,
+        patch.object(
+            client,
+            "_count_trials",
+            new=AsyncMock(return_value=330),
+        ) as mock_count,
+    ):
         result = await client.get_landscape("gastroparesis")
 
     mock_fetch.assert_awaited_once()

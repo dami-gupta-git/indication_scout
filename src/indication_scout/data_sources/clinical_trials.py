@@ -20,15 +20,15 @@ from indication_scout.constants import (
     CLINICAL_TRIALS_LANDSCAPE_MAX_TRIALS,
     CLINICAL_TRIALS_RECENT_START_YEAR,
     CLINICAL_TRIALS_TERMINATED_DRUG_PAGE_SIZE,
-    CLINICAL_TRIALS_WHITESPACE_INDICATION_MAX,
     CLINICAL_TRIALS_WHITESPACE_EXACT_MAX,
+    CLINICAL_TRIALS_WHITESPACE_INDICATION_MAX,
     CLINICAL_TRIALS_WHITESPACE_PHASE_FILTER,
     CLINICAL_TRIALS_WHITESPACE_TOP_DRUGS,
     NEGATION_PREFIXES,
     STOP_KEYWORDS,
+    VACCINE_NAME_KEYWORDS,
 )
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
-
 from indication_scout.models.model_clinical_trials import (
     CompetitorEntry,
     IndicationDrug,
@@ -50,9 +50,13 @@ def _classify_stop_reason(why_stopped: str | None) -> str:
     for keyword, category in STOP_KEYWORDS.items():
         if keyword in lower:
             idx = lower.index(keyword)
-            prefix = lower[max(0, idx - 20):idx]
+            prefix = lower[max(0, idx - 20) : idx]
             if any(neg in prefix for neg in NEGATION_PREFIXES):
-                neg_end = max(prefix.rfind(neg) + len(neg) for neg in NEGATION_PREFIXES if neg in prefix)
+                neg_end = max(
+                    prefix.rfind(neg) + len(neg)
+                    for neg in NEGATION_PREFIXES
+                    if neg in prefix
+                )
                 between = prefix[neg_end:]
                 if not any(sep in between for sep in (",", "-", ".", ";")):
                     continue
@@ -99,6 +103,7 @@ class ClinicalTrialsClient(BaseClient):
         date_before: date | None = None,
         phase_filter: str | None = None,
         max_results: int = 200,
+        sort: str | None = None,
     ) -> list[Trial]:
         """Search for trials matching drug and optional indication."""
         return await self._paginated_search(
@@ -107,6 +112,7 @@ class ClinicalTrialsClient(BaseClient):
             date_before=date_before,
             phase_filter=phase_filter,
             max_results=max_results,
+            sort=sort,
         )
 
     # ------------------------------------------------------------------
@@ -217,9 +223,10 @@ class ClinicalTrialsClient(BaseClient):
     ) -> IndicationLandscape:
         """Competitive landscape for an indication — drug/biologic trials, grouped by sponsor + drug.
 
-        Fetches all trials for the indication, then filters client-side to
-        intervention_type in ("Drug", "Biological") only. Ranks competitors
-        by phase then enrollment. Returns top_n competitors.
+        Fetches trials for the indication sorted by most recent start date,
+        then filters client-side to Drug/Biological interventions (vaccines
+        excluded). Ranks competitors by max phase, then most recent start date.
+        Returns top_n competitors after filtering.
         """
         trials, total_count = await asyncio.gather(
             self._fetch_all_indication_trials(
@@ -227,9 +234,11 @@ class ClinicalTrialsClient(BaseClient):
                 date_before=date_before,
                 phase_filter="(EARLY_PHASE1 OR PHASE1 OR PHASE2 OR PHASE3 OR PHASE4)",
                 max_results=CLINICAL_TRIALS_LANDSCAPE_MAX_TRIALS,
-                sort="EnrollmentCount:desc",
+                sort="StartDate:desc",
             ),
-            self._count_trials(drug=None, indication=indication, date_before=date_before),
+            self._count_trials(
+                drug=None, indication=indication, date_before=date_before
+            ),
         )
 
         return self._aggregate_landscape(trials, total_count=total_count, top_n=top_n)
@@ -244,6 +253,7 @@ class ClinicalTrialsClient(BaseClient):
         indication: str,
         date_before: date | None = None,
         max_results: int = 20,
+        sort: str | None = None,
     ) -> list[TerminatedTrial]:
         """Terminated trials for a drug and indication.
 
@@ -259,12 +269,14 @@ class ClinicalTrialsClient(BaseClient):
             drug=drug,
             date_before=date_before,
             status_filter="TERMINATED",
+            sort=sort,
         )
         drug_params["pageSize"] = CLINICAL_TRIALS_TERMINATED_DRUG_PAGE_SIZE
         indication_params = self._build_search_params(
             indication=indication,
             date_before=date_before,
             status_filter="TERMINATED",
+            sort=sort,
         )
         drug_data, indication_data = await asyncio.gather(
             self._rest_get(self.BASE_URL, drug_params),
@@ -273,18 +285,15 @@ class ClinicalTrialsClient(BaseClient):
 
         # Drug query: only safety/efficacy terminations are meaningful signal
         drug_results = [
-            self._parse_terminated_trial(s)
-            for s in drug_data.get("studies", [])
+            self._parse_terminated_trial(s) for s in drug_data.get("studies", [])
         ]
         drug_results = [
-            t for t in drug_results
-            if t.stop_category in {"safety", "efficacy"}
+            t for t in drug_results if t.stop_category in {"safety", "efficacy"}
         ]
 
         # Indication query: all terminations up to max_results
         indication_results = [
-            self._parse_terminated_trial(s)
-            for s in indication_data.get("studies", [])
+            self._parse_terminated_trial(s) for s in indication_data.get("studies", [])
         ][:max_results]
 
         seen: set[str] = set()
@@ -390,11 +399,11 @@ class ClinicalTrialsClient(BaseClient):
         if extra_term:
             params["query.term"] = extra_term
 
-        # Temporal holdout: restrict to trials posted before cutoff
+        # Temporal holdout: restrict to trials that started before cutoff
         if date_before:
             date_str = date_before.strftime("%Y-%m-%d")
             term = params.get("query.term", "")
-            date_filter = f"AREA[StudyFirstPostDate]RANGE[MIN, {date_str}]"
+            date_filter = f"AREA[StartDate]RANGE[MIN, {date_str}]"
             params["query.term"] = (
                 f"{term} {date_filter}".strip() if term else date_filter
             )
@@ -530,8 +539,10 @@ class ClinicalTrialsClient(BaseClient):
     ) -> IndicationLandscape:
         """Group trials by sponsor + drug into a competitive landscape.
 
-        Filters to Drug/Biological interventions only. Ranks competitors
-        by max phase (descending), then total enrollment (descending).
+        Filters to Drug/Biological interventions only; excludes vaccines
+        (detected by name keywords — they are not mechanism competitors).
+        Ranks by max phase (descending), then most recent start date
+        (descending) as tiebreaker. Applies top_n cap after filtering.
         """
         phase_dist: dict[str, int] = {}
         recent_starts: list[RecentStart] = []
@@ -543,10 +554,14 @@ class ClinicalTrialsClient(BaseClient):
             if drug_name == "Unknown":
                 continue
 
-            # Phase counts (all drug trials)
+            # Exclude vaccines — they are not mechanism competitors
+            if drug_type == "Biological" and self._is_vaccine(drug_name):
+                continue
+
+            # Phase counts (all drug/biologic trials after vaccine filter)
             phase_dist[t.phase] = phase_dist.get(t.phase, 0) + 1
 
-            # Recent starts (last 2 years)
+            # Recent starts
             if t.start_date and t.start_date >= CLINICAL_TRIALS_RECENT_START_YEAR:
                 recent_starts.append(
                     RecentStart(
@@ -569,6 +584,7 @@ class ClinicalTrialsClient(BaseClient):
                     trial_count=0,
                     statuses=set(),
                     total_enrollment=0,
+                    most_recent_start=None,
                 )
 
             entry = competitors[key]
@@ -579,10 +595,22 @@ class ClinicalTrialsClient(BaseClient):
             if self._phase_rank(t.phase) > self._phase_rank(entry.max_phase):
                 entry.max_phase = t.phase
 
-        # Rank: highest phase first, then largest enrollment
+            # Track most recent start date for recency tiebreaker
+            if t.start_date and (
+                entry.most_recent_start is None
+                or t.start_date > entry.most_recent_start
+            ):
+                entry.most_recent_start = t.start_date
+
+        # Rank: highest phase first, then most recent start date (later = better).
+        # most_recent_start may be None — treat as earliest possible date so
+        # competitors with no start date sort last within a phase tier.
         ranked = sorted(
             competitors.values(),
-            key=lambda c: (self._phase_rank(c.max_phase), c.total_enrollment),
+            key=lambda c: (
+                self._phase_rank(c.max_phase),
+                c.most_recent_start or "",
+            ),
             reverse=True,
         )
 
@@ -632,6 +660,16 @@ class ClinicalTrialsClient(BaseClient):
             if interv.intervention_type in ("Drug", "Biological"):
                 return interv.intervention_name, interv.intervention_type
         return "Unknown", None
+
+    @staticmethod
+    def _is_vaccine(drug_name: str) -> bool:
+        """Return True if the drug name matches known vaccine name keywords.
+
+        Used to exclude vaccine biologics from the competitive landscape —
+        they are prevention-focused and not mechanism competitors for drugs.
+        """
+        name_lower = drug_name.lower()
+        return any(kw in name_lower for kw in VACCINE_NAME_KEYWORDS)
 
     @staticmethod
     def _phase_rank(phase: str) -> int:

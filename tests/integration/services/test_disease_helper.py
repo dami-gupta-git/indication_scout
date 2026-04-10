@@ -132,7 +132,10 @@ async def test_llm_normalize_disease_batch_returns_correct_forms(tmp_path):
             ["type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"]
         )
 
-    assert set(result.keys()) == {"type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"}
+    assert set(result.keys()) == {
+        "type 2 diabetes mellitus",
+        "narcolepsy-cataplexy syndrome",
+    }
     assert result["type 2 diabetes mellitus"] == "type 2 diabetes OR diabetes mellitus"
     assert result["narcolepsy-cataplexy syndrome"] == "narcolepsy"
 
@@ -154,7 +157,10 @@ async def test_llm_normalize_disease_batch_second_call_uses_cache(tmp_path):
                 ["type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"]
             )
 
-    assert set(result.keys()) == {"type 2 diabetes mellitus", "narcolepsy-cataplexy syndrome"}
+    assert set(result.keys()) == {
+        "type 2 diabetes mellitus",
+        "narcolepsy-cataplexy syndrome",
+    }
 
 
 async def test_normalize_batch_returns_pubmed_friendly_term(test_cache_dir):

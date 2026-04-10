@@ -138,6 +138,7 @@ class CompetitorEntry(BaseModel):
     trial_count: int = 0
     statuses: set[str] = set()
     total_enrollment: int = 0
+    most_recent_start: str | None = None  # ISO date of latest trial start
 
     @model_validator(mode="before")
     @classmethod

@@ -11,6 +11,7 @@ def load_env() -> None:
     """Load .env so API keys are available to all integration tests."""
     load_dotenv()
 
+
 from indication_scout.config import get_settings
 from indication_scout.constants import TEST_CACHE_DIR
 from indication_scout.data_sources.chembl import ChEMBLClient
@@ -110,3 +111,16 @@ async def clinical_trials_client():
     c = ClinicalTrialsClient()
     yield c
     await c.close()
+
+
+@pytest.fixture
+def clinical_trials_graph():
+    """Reusable fixture for the ClinicalTrialsAgent graph."""
+    """NOTE if you need to set your cutoff date, do not use this fixture"""
+    from langchain_anthropic import ChatAnthropic
+    from for_me.clinical_trials.v3_langgraph.clinical_trials_agent import (
+        build_clinical_trials_graph,
+    )
+
+    llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
+    return build_clinical_trials_graph(llm, max_search_results=30)

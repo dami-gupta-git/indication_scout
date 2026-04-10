@@ -44,6 +44,7 @@ from indication_scout.models.model_open_targets import (
     BiologicalModel,
     DrugData,
     DrugTarget,
+    MechanismOfAction,
     ProteinExpression,
     DrugWarning,
     Indication,
@@ -467,13 +468,24 @@ class OpenTargetsClient(BaseClient):
 
     def _parse_drug_data(self, raw: dict) -> DrugData:
         targets = []
+        mechanisms_of_action = []
         for row in (raw.get("mechanismsOfAction") or {}).get("rows", []):
-            for t in row.get("targets", []):
+            moa = row["mechanismOfAction"]
+            row_targets = row.get("targets", [])
+            mechanisms_of_action.append(
+                MechanismOfAction(
+                    mechanism_of_action=moa,
+                    action_type=row.get("actionType"),
+                    target_ids=[t["id"] for t in row_targets],
+                    target_symbols=[t["approvedSymbol"] for t in row_targets],
+                )
+            )
+            for t in row_targets:
                 targets.append(
                     DrugTarget(
                         target_id=t["id"],
                         target_symbol=t["approvedSymbol"],
-                        mechanism_of_action=row["mechanismOfAction"],
+                        mechanism_of_action=moa,
                         action_type=row.get("actionType"),
                     )
                 )
@@ -512,6 +524,7 @@ class OpenTargetsClient(BaseClient):
             trade_names=raw.get("tradeNames", []),
             drug_type=raw.get("drugType"),
             maximum_clinical_stage=raw.get("maximumClinicalStage"),
+            mechanisms_of_action=mechanisms_of_action,
             warnings=warnings,
             indications=indications,
             targets=targets,

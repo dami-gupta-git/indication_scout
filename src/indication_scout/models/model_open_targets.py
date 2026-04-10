@@ -312,6 +312,27 @@ class TargetData(BaseModel):
 # ------------------------------------------------------------------
 
 
+class MechanismOfAction(BaseModel):
+    """One mechanismsOfAction row from the Open Targets drug entity.
+
+    Groups the action type, the human-readable mechanism string, and all
+    targets that share this mechanism into a single object.
+    """
+
+    mechanism_of_action: str = ""
+    action_type: str | None = None  # INHIBITOR, AGONIST, ANTAGONIST, etc.
+    target_ids: list[str] = []
+    target_symbols: list[str] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
 class DrugTarget(BaseModel):
     """A target linked to a drug via mechanism of action."""
 
@@ -404,6 +425,7 @@ class DrugData(BaseModel):
     trade_names: list[str] = []
     drug_type: str | None = None
     maximum_clinical_stage: str | None = None  # APPROVAL, PHASE_3, etc.
+    mechanisms_of_action: list[MechanismOfAction] = []
     warnings: list[DrugWarning] = []
     indications: list[Indication] = []
     targets: list[DrugTarget] = []

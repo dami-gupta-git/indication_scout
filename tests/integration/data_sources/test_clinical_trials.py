@@ -16,10 +16,9 @@ logger = logging.getLogger(__name__)
 async def test_get_landscape(clinical_trials_client):
     """Test get_landscape returns competitive landscape for an indication.
 
-    get_landscape filters to intervention_type in ("Drug", "Biological") only,
-    groups by sponsor + drug, and ranks by phase (desc) then enrollment (desc).
+    get_landscape filters to Drug/Biological interventions, excludes vaccines,
+    groups by sponsor + drug, and ranks by phase (desc) then most_recent_start (desc).
     """
-    # Use a smaller, more stable indication for predictable results
     landscape = await clinical_trials_client.get_landscape("gastroparesis", top_n=10)
 
     # Verify IndicationLandscape.total_trial_count - gastroparesis has ~300+ trials
@@ -31,7 +30,7 @@ async def test_get_landscape(clinical_trials_client):
     # Verify IndicationLandscape.phase_distribution
     assert 10 < landscape.phase_distribution["Phase 2"] < 100
     assert 5 < landscape.phase_distribution["Phase 3"] < 50
-    assert 1 < landscape.phase_distribution["Phase 4"] < 30
+    assert 1 < landscape.phase_distribution["Phase 4"] < 10
 
     # Verify IndicationLandscape.recent_starts - find a known 2024+ trial
     assert len(landscape.recent_starts) >= 1
@@ -41,22 +40,43 @@ async def test_get_landscape(clinical_trials_client):
     assert tradipitant.drug == "Tradipitant"
     assert tradipitant.phase == "Phase 3"
 
-    # Find Chinese University of Hong Kong with Esomeprazole - top ranked competitor
-    [cuhk] = [
+    # --- Ranking: phase first, then most_recent_start descending ---
+    # Phase 4 competitors must all appear before Phase 3 competitors
+    phases = [c.max_phase for c in landscape.competitors]
+    phase_4_indices = [i for i, p in enumerate(phases) if p == "Phase 4"]
+    phase_3_indices = [i for i, p in enumerate(phases) if p == "Phase 3"]
+    assert phase_4_indices, "Expected at least one Phase 4 competitor in top 10"
+    assert phase_3_indices, "Expected at least one Phase 3 competitor in top 10"
+    assert max(phase_4_indices) < min(phase_3_indices)
+
+    # Within Phase 4, competitors are ordered by most_recent_start descending
+    phase_4_competitors = [c for c in landscape.competitors if c.max_phase == "Phase 4"]
+    starts = [c.most_recent_start for c in phase_4_competitors]
+    assert starts == sorted(starts, reverse=True)
+
+    # --- Vaccine exclusion ---
+    # No competitor name should match vaccine keywords
+    for c in landscape.competitors:
+        name_lower = c.drug_name.lower()
+        assert "vaccine" not in name_lower
+        assert "vax" not in name_lower
+        assert "immuniz" not in name_lower
+
+    # --- most_recent_start field is populated ---
+    # Find Vanda Pharmaceuticals / Tradipitant (Phase 3, two trials, most recent 2024-01-09)
+    [tradipitant_comp] = [
         c
         for c in landscape.competitors
-        if c.sponsor == "Chinese University of Hong Kong"
-        and c.drug_name == "Esomeprazole"
+        if c.sponsor == "Vanda Pharmaceuticals" and c.drug_name == "Tradipitant"
     ]
-
-    # Verify all CompetitorEntry fields
-    assert cuhk.sponsor == "Chinese University of Hong Kong"
-    assert cuhk.drug_name == "Esomeprazole"
-    assert cuhk.drug_type == "Drug"
-    assert cuhk.max_phase == "Phase 4"
-    assert cuhk.trial_count == 1
-    assert cuhk.statuses == {"COMPLETED"}
-    assert cuhk.total_enrollment == 155
+    assert tradipitant_comp.sponsor == "Vanda Pharmaceuticals"
+    assert tradipitant_comp.drug_name == "Tradipitant"
+    assert tradipitant_comp.drug_type == "Drug"
+    assert tradipitant_comp.max_phase == "Phase 3"
+    assert tradipitant_comp.trial_count == 2
+    assert tradipitant_comp.statuses == {"COMPLETED", "RECRUITING"}
+    assert tradipitant_comp.total_enrollment == 1092
+    assert tradipitant_comp.most_recent_start == "2024-01-09"
 
 
 # TODO remove
@@ -299,10 +319,9 @@ async def test_get_terminated(clinical_trials_client):
 
     assert len(trials) >= 1
 
-    # NCT02499705 — safety termination from overweight indication query
-    # "2 out of 3 participants had clinically elevated fasting insulin"
-    [safety_trial] = [t for t in trials if t.nct_id == "NCT02499705"]
-    assert safety_trial.stop_category == "safety"
+
+    [business_trial] = [t for t in trials if t.nct_id == "NCT00394212"]
+    assert business_trial.stop_category == "business"
 
 
 async def test_detect_whitespace(clinical_trials_client):
@@ -437,7 +456,9 @@ async def test_get_landscape_nonexistent_indication_returns_empty(
 async def test_get_terminated_nonexistent_query_returns_empty(clinical_trials_client):
     """Test that nonexistent drug and indication returns empty list."""
     trials = await clinical_trials_client.get_terminated(
-        "xyzzy_not_a_real_term_12345", "xyzzy_not_a_real_indication_12345", max_results=10
+        "xyzzy_not_a_real_term_12345",
+        "xyzzy_not_a_real_indication_12345",
+        max_results=10,
     )
 
     assert trials == []

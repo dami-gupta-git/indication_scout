@@ -11,7 +11,7 @@ from __future__ import annotations
 
 import re
 import xml.etree.ElementTree as ET
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -20,6 +20,7 @@ from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     PUBMED_FETCH_URL,
     PUBMED_SEARCH_URL,
+    PUBMED_SUMMARY_URL,
 )
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
 from indication_scout.utils.cache import cache_get, cache_set
@@ -31,6 +32,7 @@ class PubMedClient(BaseClient):
 
     SEARCH_URL = PUBMED_SEARCH_URL
     FETCH_URL = PUBMED_FETCH_URL
+    SUMMARY_URL = PUBMED_SUMMARY_URL
 
     def __init__(self, cache_dir: Path = DEFAULT_CACHE_DIR) -> None:
         super().__init__()
@@ -53,10 +55,11 @@ class PubMedClient(BaseClient):
         self, query: str, max_results: int = 50, date_before: date | None = None
     ) -> list[str]:
         """Search PubMed and return list of PMIDs."""
+        effective_maxdate = (date_before - timedelta(days=1)) if date_before else None
         cache_params: dict[str, Any] = {
             "query": query,
             "max_results": max_results,
-            "date_before": date_before,
+            "date_before": effective_maxdate,
         }
         cached = cache_get("pubmed_search", cache_params, self.cache_dir)
         if cached is not None:
@@ -68,12 +71,16 @@ class PubMedClient(BaseClient):
             "retmax": max_results,
             "retmode": "json",
         }
-        if date_before:
+        if effective_maxdate:
             params["datetype"] = "pdat"
-            params["maxdate"] = date_before.strftime("%Y/%m/%d")
+            params["mindate"] = "1900/01/01"
+            params["maxdate"] = effective_maxdate.strftime("%Y/%m/%d")
 
         data = await self._rest_get(self.SEARCH_URL, self._inject_api_key(params))
         pmids: list[str] = data.get("esearchresult", {}).get("idlist", [])
+
+        if date_before and pmids:
+            pmids = await self._filter_pmids_by_date(pmids, date_before)
 
         cache_set("pubmed_search", cache_params, pmids, self.cache_dir)
         return pmids
@@ -88,12 +95,47 @@ class PubMedClient(BaseClient):
         }
         if date_before:
             params["datetype"] = "pdat"
-            params["maxdate"] = date_before.strftime("%Y/%m/%d")
+            params["mindate"] = "1900/01/01"
+            params["maxdate"] = (date_before - timedelta(days=1)).strftime("%Y/%m/%d")
 
         data = await self._rest_get(self.SEARCH_URL, self._inject_api_key(params))
 
         count_str = data.get("esearchresult", {}).get("count", "0")
         return int(count_str)
+
+    async def _filter_pmids_by_date(
+        self, pmids: list[str], date_before: date, batch_size: int = 200
+    ) -> list[str]:
+        """Remove PMIDs whose sortpubdate is on or after date_before.
+
+        Uses esummary to fetch publication dates cheaply (no abstract text).
+        PubMed's maxdate filter is not strictly respected, so this is a
+        post-search guard.
+        """
+        kept: list[str] = []
+        for i in range(0, len(pmids), batch_size):
+            batch = pmids[i : i + batch_size]
+            params: dict[str, Any] = {
+                "db": "pubmed",
+                "id": ",".join(batch),
+                "retmode": "json",
+            }
+            data = await self._rest_get(self.SUMMARY_URL, self._inject_api_key(params))
+            result = data.get("result", {})
+            for pmid in batch:
+                summary = result.get(pmid, {})
+                sortpubdate: str = summary.get("sortpubdate", "")
+                if not sortpubdate:
+                    kept.append(pmid)
+                    continue
+                try:
+                    pub_date = date.fromisoformat(sortpubdate[:10].replace("/", "-"))
+                except ValueError:
+                    kept.append(pmid)
+                    continue
+                if pub_date < date_before:
+                    kept.append(pmid)
+        return kept
 
     async def fetch_abstracts(
         self, pmids: list[str], batch_size: int = 100

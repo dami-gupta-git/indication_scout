@@ -3,10 +3,11 @@
 import asyncio
 import json
 import logging
+from datetime import date
 from pathlib import Path
-from typing import TypedDict
 
 import wandb
+from pydantic import BaseModel
 
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
@@ -36,7 +37,7 @@ logger = logging.getLogger(__name__)
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 
-class AbstractResult(TypedDict):
+class AbstractResult(BaseModel):
     pmid: str
     title: str
     abstract: str
@@ -133,7 +134,7 @@ class RetrievalService:
         sorted_data = dict(
             sorted(top_40.items(), key=lambda item: len(item[1]), reverse=True)
         )
-        top_15 = dict(list(sorted_data.items())[:10])
+        top_15 = dict(list(sorted_data.items())[:15])
 
         cache_set(
             "drug_competitors",
@@ -281,7 +282,13 @@ class RetrievalService:
         db.commit()
         logger.debug("Inserted %d abstracts into pubmed_abstracts", len(rows))
 
-    async def fetch_and_cache(self, queries: list[str], db: Session) -> list[str]:
+    async def fetch_and_cache(
+        self,
+        queries: list[str],
+        db: Session,
+        date_before: date | None = None,
+        max_results: int | None = None,
+    ) -> list[str]:
         """Hit PubMed for all queries concurrently, fetch new abstracts, embed in one batch, cache in pgvector.
 
         Steps:
@@ -296,6 +303,9 @@ class RetrievalService:
         Args:
             queries: PubMed keyword queries (e.g. from expand_search_terms).
             db: Active SQLAlchemy session.
+            date_before: Optional temporal holdout cutoff; only articles published
+                before this date are returned by PubMed search.
+            max_results: Maximum number of PubMed results to fetch per query. Defaults to PUBMED_MAX_RESULTS.
 
         Returns:
             Deduplicated list of all PMIDs returned by PubMed search across all queries.
@@ -304,11 +314,18 @@ class RetrievalService:
             that pass this list to semantic_search will see those PMIDs silently skipped
             by the WHERE pmid = ANY(:pmids) clause, which is intentional and correct.
         """
+        effective_max_results = (
+            max_results if max_results is not None else PUBMED_MAX_RESULTS
+        )
         async with PubMedClient(cache_dir=self.cache_dir) as client:
             # 1. Search all queries concurrently
             search_results = await asyncio.gather(
                 *[
-                    client.search(query, max_results=PUBMED_MAX_RESULTS)
+                    client.search(
+                        query,
+                        max_results=effective_max_results,
+                        date_before=date_before,
+                    )
                     for query in queries
                 ]
             )
@@ -382,39 +399,17 @@ class RetrievalService:
         ).fetchall()
 
         results = [
-            {
-                "pmid": row[0],
-                "title": row[1],
-                "abstract": row[2],
-                "similarity": float(row[3]),
-            }
+            AbstractResult(
+                pmid=row[0],
+                title=row[1],
+                abstract=row[2],
+                similarity=float(row[3]),
+            )
             for row in rows
         ]
         avg_similarity = (
-            sum(r["similarity"] for r in results) / len(results) if results else 0.0
+            sum(r.similarity for r in results) / len(results) if results else 0.0
         )
-
-        if wandb.run:
-            pass
-            # disease_key = disease.replace(" ", "_")
-            # table = wandb.Table(columns=["pmid", "title", "similarity"])
-            # for r in results:
-            #     table.add_data(r["pmid"], r["title"], r["similarity"])
-            # wandb.log({
-            #     f"semantic_search/{disease_key}/query": query_string,
-            #     f"semantic_search/{disease_key}/candidate_pmids": len(pmids),
-            #     f"semantic_search/{disease_key}/results_returned": len(results),
-            #     f"semantic_search/{disease_key}/top_similarity": results[0]["similarity"] if results else None,
-            #     f"semantic_search/{disease_key}/results_table": table,
-            # })
-            # wandb.log({
-            #     "disease": disease,
-            #     "drug": drug,
-            #     "avg_similarity_score": avg_similarity,
-            # })
-            # table = wandb.Table(columns=["drug", "disease", "avg_similarity"])
-            # table.add_data(drug, disease, avg_similarity)
-            # wandb.log({"searches": table})
 
         return results
 
@@ -436,7 +431,7 @@ class RetrievalService:
             EvidenceSummary with all fields populated from the LLM response.
         """
         formatted = "\n\n".join(
-            f"PMID: {r['pmid']}\nTitle: {r['title']}\nAbstract: {r['abstract']}"
+            f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
             for r in top_abstracts
         )
 

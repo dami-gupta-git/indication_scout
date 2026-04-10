@@ -264,12 +264,15 @@ async def test_batch_all_cached_no_llm_call():
     def fake_cache_get(namespace, params, cache_dir):
         return cache_values.get(params["raw_term"])
 
-    with patch(
-        "indication_scout.services.disease_helper.cache_get",
-        side_effect=fake_cache_get,
-    ), patch(
-        "indication_scout.services.disease_helper.query_small_llm",
-    ) as mock_llm:
+    with (
+        patch(
+            "indication_scout.services.disease_helper.cache_get",
+            side_effect=fake_cache_get,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.query_small_llm",
+        ) as mock_llm,
+    ):
         result = await llm_normalize_disease_batch(
             ["narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"]
         )
@@ -289,15 +292,19 @@ async def test_batch_only_cache_misses_sent_to_llm():
     def fake_cache_get(namespace, params, cache_dir):
         return cache_values.get(params["raw_term"])
 
-    with patch(
-        "indication_scout.services.disease_helper.cache_get",
-        side_effect=fake_cache_get,
-    ), patch(
-        "indication_scout.services.disease_helper.cache_set",
-    ), patch(
-        "indication_scout.services.disease_helper.query_small_llm",
-        new=AsyncMock(return_value=llm_response),
-    ) as mock_llm:
+    with (
+        patch(
+            "indication_scout.services.disease_helper.cache_get",
+            side_effect=fake_cache_get,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.cache_set",
+        ),
+        patch(
+            "indication_scout.services.disease_helper.query_small_llm",
+            new=AsyncMock(return_value=llm_response),
+        ) as mock_llm,
+    ):
         result = await llm_normalize_disease_batch(
             ["narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"]
         )
@@ -316,19 +323,25 @@ async def test_batch_only_cache_misses_sent_to_llm():
 
 async def test_batch_results_cached_individually():
     """After the LLM batch call, each result is written to cache individually."""
-    llm_response = json.dumps({
-        "narcolepsy-cataplexy syndrome": "narcolepsy",
-        "type 2 diabetes mellitus": "type 2 diabetes",
-    })
+    llm_response = json.dumps(
+        {
+            "narcolepsy-cataplexy syndrome": "narcolepsy",
+            "type 2 diabetes mellitus": "type 2 diabetes",
+        }
+    )
 
-    with patch(
-        "indication_scout.services.disease_helper.cache_get",
-        return_value=None,
-    ), patch(
-        "indication_scout.services.disease_helper.cache_set",
-    ) as mock_cache_set, patch(
-        "indication_scout.services.disease_helper.query_small_llm",
-        new=AsyncMock(return_value=llm_response),
+    with (
+        patch(
+            "indication_scout.services.disease_helper.cache_get",
+            return_value=None,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.cache_set",
+        ) as mock_cache_set,
+        patch(
+            "indication_scout.services.disease_helper.query_small_llm",
+            new=AsyncMock(return_value=llm_response),
+        ),
     ):
         await llm_normalize_disease_batch(
             ["narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"]
@@ -347,17 +360,24 @@ async def test_batch_returned_keys_match_all_input_terms():
     def fake_cache_get(namespace, params, cache_dir):
         return cache_values.get(params["raw_term"])
 
-    with patch(
-        "indication_scout.services.disease_helper.cache_get",
-        side_effect=fake_cache_get,
-    ), patch(
-        "indication_scout.services.disease_helper.cache_set",
-    ), patch(
-        "indication_scout.services.disease_helper.query_small_llm",
-        new=AsyncMock(return_value=llm_response),
+    with (
+        patch(
+            "indication_scout.services.disease_helper.cache_get",
+            side_effect=fake_cache_get,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.cache_set",
+        ),
+        patch(
+            "indication_scout.services.disease_helper.query_small_llm",
+            new=AsyncMock(return_value=llm_response),
+        ),
     ):
         result = await llm_normalize_disease_batch(
             ["narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"]
         )
 
-    assert set(result.keys()) == {"narcolepsy-cataplexy syndrome", "type 2 diabetes mellitus"}
+    assert set(result.keys()) == {
+        "narcolepsy-cataplexy syndrome",
+        "type 2 diabetes mellitus",
+    }

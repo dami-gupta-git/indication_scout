@@ -4,12 +4,22 @@ An agentic system for discovering drug repurposing opportunities.
 
 ## Overview
 
-IndicationScout uses multiple AI agents to analyze drugs and identify potential new therapeutic indications by aggregating evidence from:
+IndicationScout is an agentic drug repurposing system. A drug name goes in; coordinated AI agents query multiple biomedical data sources and produce a repurposing report.
 
-- Scientific literature (PubMed)
-- Clinical trials (ClinicalTrials.gov)
-- Drug databases (DrugBank, ChEMBL, Open Targets)
-- Mechanism of action analysis
+A **Supervisor** agent orchestrates three specialist sub-agents:
+
+- **Literature agent** — Queries PubMed via EUtils, then runs a RAG pipeline: fetch abstracts, embed with BioLORD-2023, semantic search, and LLM-based synthesis of evidence for each candidate disease.
+- **Clinical Trials agent** — Queries ClinicalTrials.gov v2 (REST) to detect whitespace (indications with no active trials), search for relevant trials, map the competitive landscape, and surface terminated trials.
+- **Mechanism agent** — Queries Open Targets target-level data (GraphQL) to retrieve disease associations with evidence scores and Reactome pathway annotations.
+
+The Supervisor first calls `find_candidates` (Open Targets competitor analysis) and `analyze_mechanism` in parallel, then delegates to the Literature and Clinical Trials agents per candidate disease.
+
+Data sources:
+
+- Open Targets (GraphQL) — drug targets, disease associations, competitor drugs
+- ClinicalTrials.gov (REST v2) — trial search, whitespace detection, competitive landscape
+- PubMed (NCBI EUtils) — literature retrieval and abstract indexing
+- ChEMBL — molecule metadata and ATC classifications
 
 ## Installation
 
@@ -58,11 +68,27 @@ Required environment variables:
 
 The project requires a PostgreSQL database with the `pgvector` extension for storing PubMed abstract embeddings. See `docs/rag_details.md` for the Docker setup.
 
-### Database Migrations
+### Database Setup
+
+Start the database container:
 
 ```bash
-alembic upgrade head
+docker compose up -d
 ```
+
+Then apply migrations to both the main and test databases:
+
+```bash
+# Main database
+alembic upgrade head
+
+# Test database (used by integration tests)
+DATABASE_URL=postgresql+psycopg2://scout:<password>@localhost:5438/scout_test alembic upgrade head
+```
+
+Replace `<password>` with the value of `DB_PASSWORD` from your `.env` file.
+
+> **Note:** After deleting Docker volumes (`docker compose down -v`), you must re-run both migration commands — the schema is not persisted.
 
 ## Usage
 
@@ -100,9 +126,14 @@ mypy src/                           # type checking
 
 ```
 src/indication_scout/
-├── agents/          # AI agents (orchestrator, literature, clinical_trials, mechanism, safety) -- all stubs
+├── agents/          # AI agents
+│   ├── supervisor/      # Supervisor agent (orchestrates sub-agents) — supervisor_agent.py, supervisor_tools.py, supervisor_output.py
+│   ├── literature/      # Literature agent (PubMed RAG) — literature_agent.py, literature_tools.py, literature_output.py
+│   ├── clinical_trials/ # Clinical Trials agent (ClinicalTrials.gov) — clinical_trials_agent.py, clinical_trials_tools.py, clinical_trials_output.py
+│   ├── mechanism/       # Mechanism agent (Open Targets targets) — mechanism_agent.py, mechanism_tools.py, mechanism_output.py
+│   └── orchestrator.py  # Stub (not yet implemented)
 ├── api/             # FastAPI application (main.py, routes/, schemas/) -- /health endpoint only
-├── data_sources/    # Async API clients (OpenTargets, ClinicalTrials.gov, PubMed, ChEMBL, DrugBank)
+├── data_sources/    # Async API clients (OpenTargets, ClinicalTrials.gov, PubMed, ChEMBL, DrugBank stub)
 ├── db/              # SQLAlchemy session factory and declarative base
 ├── helpers/         # Utility functions (drug name normalization)
 ├── markers.py       # Code review exclusion markers (@no_review decorator)
@@ -119,6 +150,7 @@ src/indication_scout/
 ## Known Limitations
 
 - **Abstract-only indexing**: PubMed articles without an abstract (letters, editorials, conference summaries) are excluded from the vector store and will not appear in semantic search results. Only articles with a non-empty abstract are embedded and cached.
+- **Incomplete Open Targets approval data**: Open Targets does not record all approved indications for every drug. Approved indications missing from Open Targets will not be filtered from repurposing candidates and may appear as false positives. For example, tofacitinib's ulcerative colitis and ankylosing spondylitis approvals are absent from Open Targets, causing them to appear as repurposing candidates.
 
 ### Citations
 Open Targets: Ochoa, D. et al. (2023). The next-generation Open Targets Platform: reimagined, redesigned, rebuilt. 

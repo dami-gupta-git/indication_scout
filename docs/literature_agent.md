@@ -1,165 +1,161 @@
-# LiteratureAgent
+# Literature Agent
 
-## Purpose
-
-`LiteratureAgent` finds and synthesizes PubMed evidence for a drug-disease pair. Given a drug name and a candidate indication, it returns an `EvidenceSummary` describing the strength, volume, and nature of published evidence.
-
-It is a **tool-using agent**: rather than executing a fixed retrieval sequence, it runs a tool-use loop against the Anthropic API and decides which `RetrievalService` methods to call, in what order, and whether to retry or broaden the search based on intermediate results.
-
-**File:** [src/indication_scout/agents/literature.py](../src/indication_scout/agents/literature.py)
+Assesses published PubMed evidence for a drug-disease pair. Returns a structured
+`EvidenceSummary` (strength, study count, key findings, PMIDs) and the full list of
+PMIDs retrieved during the run.
 
 ---
 
-## Inputs and Outputs
+## Architecture
 
-**Input (`input_data`):**
+```
+LiteratureAgent.run()
+    +-- build_literature_tools()  <-- wraps RetrievalService methods
+    +-- LangChain ReAct agent (ChatAnthropic + tools)
+         +-- expand_search_terms(drug_name, disease_name)
+         +-- fetch_and_cache(queries)
+         +-- semantic_search(drug_name, disease_name, pmids)
+         +-- synthesize(drug_name, disease_name, abstracts)
+    +-- _parse_result()  <-- extracts EvidenceSummary + PMIDs from message history
+```
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `drug_name` | `str` | Common drug name (e.g. `"metformin"`) |
-| `disease_name` | `str` | Candidate indication (e.g. `"colorectal cancer"`) |
-| `drug_profile` | `DrugProfile` | Pre-built drug profile (synonyms, targets, MOA, ATC codes) |
+### Files
 
-**Output:**
+| File | Role |
+|---|---|
+| `agents/literature_agent.py` | Agent orchestration, system prompt, result parsing |
+| `agents/literature_tools.py` | LangChain `@tool` wrappers around `RetrievalService` |
+| `services/retrieval.py` | `RetrievalService` -- executes all four tool operations |
+| `models/model_evidence_summary.py` | `EvidenceSummary` -- the structured output model |
+| `models/model_drug_profile.py` | `DrugProfile` -- input to query expansion |
 
-| Key | Type | Description |
-|-----|------|-------------|
-| `evidence_summary` | `EvidenceSummary` | Synthesized evidence (strength, study count, key findings, PMIDs) |
-| `pmids_retrieved` | `list[str]` | All PMIDs fetched and cached during the run |
+---
+
+## Entry Point
+
+```python
+class LiteratureAgent(BaseAgent):
+    async def run(self, input_data: dict[str, Any]) -> dict[str, Any]
+```
+
+**Input:**
+
+| Key | Type | Required |
+|---|---|---|
+| `drug_name` | `str` | Yes |
+| `disease_name` | `str` | Yes |
+| `drug_profile` | `DrugProfile` | Yes -- pre-built drug profile (synonyms, targets, MOA, ATC codes) |
+| `db` | `Session` | Yes -- active SQLAlchemy session connected to pgvector DB |
+| `date_before` | `date \| None` | No -- temporal holdout cutoff |
+
+Both names are lowercased before use. `drug_profile` and `db` are captured via closure
+at tool build time, so the LLM never sees them as tool parameters. `date_before` is
+similarly captured and applied to `fetch_and_cache`.
+
+**Output:** `{"evidence_summary": EvidenceSummary | None, "pmids_retrieved": list[str]}`
+
+---
+
+## ReAct Loop
+
+The agent uses `langchain.agents.create_agent` with `temperature=0`, `max_tokens=4096`,
+and a `RECURSION_LIMIT` of 10. The LLM model is `DEFAULT_LLM_MODEL` (`claude-sonnet-4-6`).
+
+The system prompt instructs a fixed call sequence with no branching:
+
+1. `expand_search_terms` -- generate PubMed queries
+2. `fetch_and_cache` -- run queries, embed abstracts, store in pgvector
+3. `semantic_search` -- retrieve top-k abstracts by similarity
+4. `synthesize` -- produce structured EvidenceSummary
+
+If no evidence is found, `synthesize` is still called and returns `strength: "none"`.
+The agent ends with a plain-text confirmation that synthesis is complete.
 
 ---
 
 ## Tools
 
-The agent exposes four tools, each wrapping a `RetrievalService` method:
+Tools are thin async wrappers around `RetrievalService` methods, defined in
+`agents/literature_tools.py`. Built via `build_literature_tools(drug_profile, db, date_before)`.
 
-### `expand_search_terms`
+The `drug_profile`, `db`, and `date_before` parameters are captured via closure so they
+flow to every service call without being exposed as tool parameters to the LLM. A single
+`RetrievalService(DEFAULT_CACHE_DIR)` instance is shared across all tools in a run.
 
-Generates diverse PubMed keyword queries for the drug-disease pair using the drug profile (synonyms, gene targets, MOA, ATC codes, organ term).
+### `expand_search_terms(drug_name, disease_name) -> list[str]`
 
-```json
-{
-  "name": "expand_search_terms",
-  "input_schema": {
-    "drug_name": "string",
-    "disease_name": "string"
-  }
-}
-```
+Generates 5-10 diverse PubMed keyword queries using the drug profile (synonyms, targets,
+MOA, ATC codes). Queries span 5 axes: drug name, drug class+organ, mechanism+organ,
+target gene, synonym.
 
-Returns: `list[str]` — 5–10 PubMed queries.
+Calls `RetrievalService.expand_search_terms()`.
 
----
+### `fetch_and_cache(queries) -> dict`
 
-### `fetch_and_cache`
+Runs PubMed searches for each query, embeds abstracts with BioLORD-2023, and stores
+them in pgvector. Returns `{"pmid_count": int, "pmids": list[str]}`.
 
-Runs PubMed searches for the given queries, embeds abstracts with BioLORD-2023, and stores them in pgvector. Returns the deduplicated union of all PMIDs found.
+Calls `RetrievalService.fetch_and_cache()`. The `date_before` cutoff is applied here
+via closure.
 
-```json
-{
-  "name": "fetch_and_cache",
-  "input_schema": {
-    "queries": ["string"]
-  }
-}
-```
+### `semantic_search(drug_name, disease_name, pmids, top_k=5) -> list[dict]`
 
-Returns: `{ "pmid_count": int, "pmids": ["string"] }`
+Retrieves the top-k abstracts from pgvector most similar to the drug-disease query,
+restricted to the supplied PMIDs.
 
-The agent uses `pmid_count` to decide whether to broaden search terms and retry.
+Calls `RetrievalService.semantic_search()`.
 
----
+### `synthesize(drug_name, disease_name, abstracts) -> dict`
 
-### `semantic_search`
+Passes retrieved abstracts to the LLM and returns a structured `EvidenceSummary` via
+`model_dump()`. Fields: `strength`, `study_count`, `study_types`, `key_findings`,
+`has_adverse_effects`, `supporting_pmids`, `summary`.
 
-Embeds a query string from the drug-disease pair and retrieves the top-k most similar abstracts from pgvector, restricted to the supplied PMIDs.
-
-```json
-{
-  "name": "semantic_search",
-  "input_schema": {
-    "pmids": ["string"],
-    "top_k": "integer (default 5)"
-  }
-}
-```
-
-Returns: `list[AbstractResult]` — ranked by cosine similarity, each with `pmid`, `title`, `abstract`, `similarity`.
-
-The agent uses similarity scores to decide whether the retrieved abstracts are relevant enough to synthesize, or whether different queries are needed.
+Calls `RetrievalService.synthesize()`.
 
 ---
 
-### `synthesize`
+## Result Parsing
 
-Passes the retrieved abstracts to an LLM prompt and returns a structured `EvidenceSummary`.
+`_parse_result()` walks the agent's message history after `ainvoke()` completes:
 
-```json
-{
-  "name": "synthesize",
-  "input_schema": {
-    "abstracts": [{ "pmid": "string", "title": "string", "abstract": "string", "similarity": "float" }]
-  }
-}
-```
+- Messages with a `.name` attribute are tool responses. Content is JSON-decoded if it
+  arrives as a string (LangChain may stringify tool return values).
+- `synthesize` tool response is deserialized into `EvidenceSummary`.
+- `fetch_and_cache` tool response provides the PMID list. PMIDs are deduplicated with
+  `dict.fromkeys()` for order preservation.
+- Returns `{"evidence_summary": EvidenceSummary | None, "pmids_retrieved": list[str]}`.
 
-Returns: `EvidenceSummary` — `summary`, `study_count`, `study_types`, `strength` (`"strong"` / `"moderate"` / `"weak"` / `"none"`), `has_adverse_effects`, `key_findings`, `supporting_pmids`.
+If `synthesize` was never called (e.g., recursion limit hit), `evidence_summary` is `None`.
 
 ---
 
-## Decision Logic
+## Data Models
 
-The system prompt encodes the branching strategy. The LLM owns these decisions:
+### `EvidenceSummary`
 
-**Low hit count:** If `fetch_and_cache` returns fewer than ~20 PMIDs, call `expand_search_terms` again with a broader disease term (e.g. generalize `"non-alcoholic steatohepatitis"` → `"liver disease"`) before proceeding to semantic search.
+**File:** `models/model_evidence_summary.py`
 
-**Low similarity:** If `semantic_search` returns abstracts with all similarity scores below ~0.6, the evidence pool may be off-target. Try alternative queries (e.g. drug class + organ term instead of drug name + disease name) before calling `synthesize`.
+| Field | Type | Description |
+|---|---|---|
+| `summary` | `str` | Natural language synthesis of the evidence |
+| `study_count` | `int` | Number of studies assessed |
+| `study_types` | `list[str]` | Types of studies found (e.g., RCT, case report) |
+| `strength` | `Literal["strong", "moderate", "weak", "none"]` | Overall evidence strength |
+| `has_adverse_effects` | `bool` | Whether adverse effects were reported |
+| `key_findings` | `list[str]` | Summary bullet points |
+| `supporting_pmids` | `list[str]` | PMIDs supporting the findings |
 
-**Sufficient evidence:** Once the agent has high-similarity abstracts in hand, call `synthesize` and return. Do not continue fetching.
+Has the `coerce_nones` model validator. Also has a `coerce_pmids_to_str` field validator
+that converts any non-string PMID values to strings.
 
-**No evidence found:** If multiple query strategies return empty or very low similarity, call `synthesize` with whatever is available. The prompt instructs the LLM to return `strength: "none"` rather than fabricating signal.
+### `DrugProfile`
 
----
+**File:** `models/model_drug_profile.py`
 
-## Tool-Use Loop
-
-```
-User message: "Find literature evidence for {drug} in {disease}."
-    │
-    ▼
-LLM call (with tools)
-    │
-    ├── tool_use: expand_search_terms → queries
-    │
-    ▼
-LLM call (tool_result appended)
-    │
-    ├── tool_use: fetch_and_cache(queries) → pmid_count
-    │       if pmid_count < threshold:
-    │           tool_use: expand_search_terms (broader) → retry
-    │
-    ▼
-LLM call (tool_result appended)
-    │
-    ├── tool_use: semantic_search(pmids) → abstracts + similarity scores
-    │       if all scores < threshold:
-    │           tool_use: fetch_and_cache (different queries) → retry semantic_search
-    │
-    ▼
-LLM call (tool_result appended)
-    │
-    ├── tool_use: synthesize(abstracts) → EvidenceSummary
-    │
-    ▼
-LLM call (tool_result appended)
-    │
-    stop_reason: "end_turn"
-    │
-    ▼
-Return EvidenceSummary
-```
-
-The loop runs until `stop_reason == "end_turn"`. A max-iterations guard prevents runaway loops.
+Flat LLM-facing projection of `RichDrugData`. Key fields: `name`, `synonyms`,
+`target_gene_symbols`, `mechanisms_of_action`, `atc_codes`, `atc_descriptions`, `drug_type`.
+Built upstream via `DrugProfile.from_rich_drug_data()` or `RetrievalService.build_drug_profile()`.
 
 ---
 
@@ -167,34 +163,33 @@ The loop runs until `stop_reason == "end_turn"`. A max-iterations guard prevents
 
 | Component | Role |
 |-----------|------|
-| `RetrievalService` | Executes all four tool operations; unchanged by this agent |
-| `DrugProfile` | Provides synonyms, targets, MOA, ATC codes for query expansion |
-| `EvidenceSummary` | Output model (`models/model_evidence_summary.py`) |
-| `services/llm.py` | Needs a `query_llm_with_tools()` function that supports the Anthropic `tools` parameter |
-| `AsyncAnthropic` client | Tool-use loop is driven directly against the Anthropic messages API |
+| `RetrievalService` | Executes all four tool operations (query expansion, fetch, search, synthesis) |
+| `DrugProfile` | Provides drug context for query expansion |
+| `EvidenceSummary` | Output model |
+| `SQLAlchemy Session` | pgvector DB access for abstract storage and retrieval |
+| `BioLORD-2023` | Embedding model used by `fetch_and_cache` and `semantic_search` |
 
 ---
 
-## Comparison to the Current RAG Runner
+## Differences from ClinicalTrialsAgent
 
-The current `run_rag()` in [runners/rag_runner.py](../src/indication_scout/runners/rag_runner.py) calls `RetrievalService` methods in a fixed sequence for every disease, regardless of hit counts or similarity scores.
-
-| Behaviour | `run_rag()` | `LiteratureAgent` |
-|-----------|-------------|-------------------|
-| Query strategy | Fixed 5–10 LLM-generated queries, always | LLM decides; can retry with broader/different terms |
-| Low PMID count | Proceeds anyway | LLM can broaden disease term and re-fetch |
-| Low similarity | Returns whatever top-5 are | LLM can try different queries before synthesizing |
-| Termination | Processes all 15 diseases identically | LLM calls `synthesize` when it judges evidence sufficient |
-| Control flow | Hardcoded in Python | Encoded in system prompt |
-
-`RetrievalService` is unchanged — it becomes the tool execution backend for the agent.
+| Aspect | ClinicalTrialsAgent | LiteratureAgent |
+|--------|-------------------|-----------------|
+| Data source | `ClinicalTrialsClient` (REST API) | `RetrievalService` (PubMed + pgvector RAG) |
+| Tool branching | LLM decides tool order based on whitespace | Fixed sequence, no branching |
+| Output model | `ClinicalTrialsOutput` (5 fields, multi-tool) | Flat dict with `EvidenceSummary` + PMID list |
+| Output model file | Separate `agents/clinical_trials_model.py` | No separate model file -- uses `EvidenceSummary` from `models/` |
+| Additional inputs | `date_before` only | `drug_profile`, `db`, `date_before` |
+| LLM | `settings.big_llm_model` | `DEFAULT_LLM_MODEL` (`claude-sonnet-4-6`) |
+| Recursion limit | 15 | 10 |
 
 ---
 
-## What Needs to Be Built
+## Test Layout
 
-- [ ] `query_llm_with_tools()` in `services/llm.py` — wraps `client.messages.create` with `tools` parameter
-- [ ] Tool definitions (JSON schema) for the four tools above
-- [ ] `LiteratureAgent.run()` — tool-use loop, tool dispatch, result extraction
-- [ ] System prompt for the agent
-- [ ] Unit tests: mock tool dispatch, verify branching on low pmid count and low similarity
+```
+tests/
++-- unit/agents/
+|   +-- test_literature_agent.py    # tests _parse_result with fake message histories
+|   +-- test_literature_tools.py    # mocked RetrievalService, verifies tool return shapes
+```

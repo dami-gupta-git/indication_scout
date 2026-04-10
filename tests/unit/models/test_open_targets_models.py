@@ -7,6 +7,7 @@ from indication_scout.models.model_open_targets import (
     DrugTarget,
     GeneticConstraint,
     Indication,
+    MechanismOfAction,
     TargetData,
 )
 
@@ -72,6 +73,104 @@ def test_drug_data_contains_drug_targets(sample_drug_data):
     assert sample_drug_data.targets[1].action_type == "INHIBITOR"
 
 
+def test_drug_data_mechanisms_of_action_field():
+    """DrugData.mechanisms_of_action should store MechanismOfAction objects."""
+    drug = DrugData(
+        chembl_id="CHEMBL2108724",
+        name="SEMAGLUTIDE",
+        mechanisms_of_action=[
+            MechanismOfAction(
+                mechanism_of_action="GLP-1 receptor agonist",
+                action_type="AGONIST",
+                target_ids=["ENSG00000112164"],
+                target_symbols=["GLP1R"],
+            ),
+            MechanismOfAction(
+                mechanism_of_action="Pygo homolog 1 inhibitor",
+                action_type="INHIBITOR",
+                target_ids=["ENSG00000171016"],
+                target_symbols=["PYGO1"],
+            ),
+        ],
+    )
+
+    assert len(drug.mechanisms_of_action) == 2
+
+    glp1r_moa = drug.mechanisms_of_action[0]
+    assert glp1r_moa.mechanism_of_action == "GLP-1 receptor agonist"
+    assert glp1r_moa.action_type == "AGONIST"
+    assert glp1r_moa.target_ids == ["ENSG00000112164"]
+    assert glp1r_moa.target_symbols == ["GLP1R"]
+
+    pygo_moa = drug.mechanisms_of_action[1]
+    assert pygo_moa.mechanism_of_action == "Pygo homolog 1 inhibitor"
+    assert pygo_moa.action_type == "INHIBITOR"
+    assert pygo_moa.target_ids == ["ENSG00000171016"]
+    assert pygo_moa.target_symbols == ["PYGO1"]
+
+
+def test_drug_data_mechanisms_of_action_defaults_to_empty():
+    """DrugData.mechanisms_of_action should default to [] when not provided."""
+    drug = DrugData(chembl_id="CHEMBL9999", name="NO_MOA_DRUG")
+
+    assert drug.mechanisms_of_action == []
+
+
+def test_drug_data_coerce_nones_converts_null_mechanisms_of_action_to_empty():
+    """DrugData with mechanisms_of_action=None must coerce to []."""
+    drug = DrugData(
+        chembl_id="CHEMBL9999",
+        name="TEST_DRUG",
+        mechanisms_of_action=None,
+    )
+
+    assert drug.mechanisms_of_action == []
+
+
+def test_mechanism_of_action_all_fields():
+    """MechanismOfAction should store all fields correctly."""
+    moa = MechanismOfAction(
+        mechanism_of_action="Glucagon-like peptide 1 receptor agonist",
+        action_type="AGONIST",
+        target_ids=["ENSG00000112164"],
+        target_symbols=["GLP1R"],
+    )
+
+    assert moa.mechanism_of_action == "Glucagon-like peptide 1 receptor agonist"
+    assert moa.action_type == "AGONIST"
+    assert moa.target_ids == ["ENSG00000112164"]
+    assert moa.target_symbols == ["GLP1R"]
+
+
+def test_mechanism_of_action_multiple_targets():
+    """MechanismOfAction can hold multiple targets sharing the same mechanism."""
+    moa = MechanismOfAction(
+        mechanism_of_action="Complex I inhibitor",
+        action_type="INHIBITOR",
+        target_ids=["ENSG00000001", "ENSG00000002", "ENSG00000003"],
+        target_symbols=["NDUFV1", "NDUFS1", "NDUFS2"],
+    )
+
+    assert moa.mechanism_of_action == "Complex I inhibitor"
+    assert moa.action_type == "INHIBITOR"
+    assert moa.target_ids == ["ENSG00000001", "ENSG00000002", "ENSG00000003"]
+    assert moa.target_symbols == ["NDUFV1", "NDUFS1", "NDUFS2"]
+
+
+def test_mechanism_of_action_coerce_nones():
+    """MechanismOfAction with None list fields must coerce to []."""
+    moa = MechanismOfAction(
+        mechanism_of_action="Some inhibitor",
+        action_type=None,
+        target_ids=None,
+        target_symbols=None,
+    )
+
+    assert moa.action_type is None
+    assert moa.target_ids == []
+    assert moa.target_symbols == []
+
+
 def test_drug_target_action_type_optional():
     """DrugTarget.action_type should be optional (None allowed)."""
     drug = DrugData(
@@ -115,6 +214,7 @@ def test_drug_data_coerce_nones_converts_null_lists_to_empty():
         name="TEST_DRUG",
         synonyms=None,
         trade_names=None,
+        mechanisms_of_action=None,
         warnings=None,
         indications=None,
         targets=None,
@@ -124,6 +224,7 @@ def test_drug_data_coerce_nones_converts_null_lists_to_empty():
 
     assert drug.synonyms == []
     assert drug.trade_names == []
+    assert drug.mechanisms_of_action == []
     assert drug.warnings == []
     assert drug.indications == []
     assert drug.targets == []

@@ -40,9 +40,9 @@ async def test_run_rag_colchicine_mixed_signals(db_session_truncating, test_cach
     # Breast cancer, lung cancer, and sarcoma flag adverse effects (toxicity to normal cells,
     # myelosuppression) — expect at least 2.
     adverse_flags = {d for d, s in results.items() if s.has_adverse_effects}
-    assert len(adverse_flags) >= 2, (
-        f"Expected at least 2 indications to flag adverse effects, got: {adverse_flags}"
-    )
+    assert (
+        len(adverse_flags) >= 2
+    ), f"Expected at least 2 indications to flag adverse effects, got: {adverse_flags}"
 
     # Summaries should reflect the preclinical-only, no-clinical-trials nature of the evidence.
     summaries = " ".join(r.summary.lower() for r in results.values())

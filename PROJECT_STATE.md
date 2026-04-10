@@ -23,8 +23,9 @@ IndicationScout is an agentic drug repurposing system. A drug name goes in; coor
 | `models/model_drug_profile.py` | Complete | `DrugProfile` + `from_rich_drug_data(rich, atc_descriptions=None)` factory; `atc_descriptions` is optional (None → `[]`); 7 fields; dedup via `dict.fromkeys`; comments explain rich.targets vs rich.drug.targets distinction and why only ATC level3/4 descriptions are used |
 | `models/model_evidence_summary.py` | Complete | `EvidenceSummary` with 7 fields: `summary`, `study_count`, `study_types`, `strength` (Literal), `has_adverse_effects`, `key_findings`, `supporting_pmids`; `coerce_nones` validator applied |
 | `agents/orchestrator.py` | Stub | `run()` raises `NotImplementedError` |
-| `agents/literature.py` | Stub | `run()` raises `NotImplementedError` |
-| `agents/clinical_trials.py` | Stub | `run()` raises `NotImplementedError` |
+| `agents/literature_agent.py` | Complete | LangChain ReAct agent; 4 tools wrapping RetrievalService; fixed call sequence (expand_search_terms -> fetch_and_cache -> semantic_search -> synthesize); returns EvidenceSummary + PMIDs |
+| `agents/literature_tools.py` | Complete | `build_literature_tools(drug_profile, db, date_before)` factory; 4 `@tool` wrappers with closure-captured config |
+| `agents/clinical_trials.py` | Complete | LangChain ReAct agent; 4 tools wrapping ClinicalTrialsClient; conditional branching based on whitespace detection |
 | `agents/mechanism.py` | Stub | `run()` raises `NotImplementedError` |
 | `agents/safety.py` | Stub | `run()` raises `NotImplementedError` |
 | `services/llm.py` | Complete | `query_llm`, `query_small_llm`, and `parse_llm_response` via Anthropic SDK |
@@ -56,7 +57,7 @@ CLI / API
     |
 Orchestrator (agents/orchestrator.py)  — stub
     |
-Specialist agents: literature, clinical_trials, mechanism, safety  — all stubs
+Specialist agents: literature (implemented), clinical_trials (implemented), mechanism (stub), safety (stub)
     |
 Services layer: llm.py, disease_helper.py, pubmed_query.py, retrieval.py
     |
@@ -131,7 +132,7 @@ The database layer (PostgreSQL + pgvector) is used for caching PubMed abstracts 
 
 ## Known Issues / Caveats
 
-- All five agents (`Orchestrator`, `LiteratureAgent`, `ClinicalTrialsAgent`, `MechanismAgent`, `SafetyAgent`) raise `NotImplementedError` in their `run()` methods — the agent layer is completely unimplemented.
+- Three agents (`Orchestrator`, `MechanismAgent`, `SafetyAgent`) raise `NotImplementedError` in their `run()` methods. `ClinicalTrialsAgent` and `LiteratureAgent` are implemented.
 - The RAG pipeline in `services/retrieval.py` is fully implemented: Stage 0 (`expand_search_terms` + `extract_organ_term`), Stage 1 (`fetch_and_cache`, `embed_abstracts`, `insert_abstracts`, `get_stored_pmids`, `fetch_new_abstracts`), Stage 2 (`semantic_search`), and Stage 3 (`synthesize`) are all complete.
 - `DrugBankClient` is a stub (`get_drug` and `get_interactions` raise `NotImplementedError`).
 - The CLI module referenced in `pyproject.toml` (`indication_scout.cli.cli`) does not exist.

@@ -73,6 +73,18 @@ async def test_semaglutide_drug_target(open_targets_client):
     assert glp1r.action_type == "AGONIST"
 
 
+async def test_semaglutide_drug_mechanisms_of_action(open_targets_client):
+    """DrugData.mechanisms_of_action should be populated from mechanismsOfAction rows."""
+    drug = await open_targets_client.get_drug("semaglutide")
+
+    assert len(drug.mechanisms_of_action) == 1
+    moa = drug.mechanisms_of_action[0]
+    assert moa.mechanism_of_action == "Glucagon-like peptide 1 receptor agonist"
+    assert moa.action_type == "AGONIST"
+    assert "ENSG00000112164" in moa.target_ids
+    assert "GLP1R" in moa.target_symbols
+
+
 async def test_semaglutide_indication(open_targets_client):
     """Test Indication fields for semaglutide's type 2 diabetes indication."""
     drug = await open_targets_client.get_drug("semaglutide")
