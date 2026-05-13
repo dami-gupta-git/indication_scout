@@ -24,10 +24,8 @@ to use pytest.mark.parametrize, instead of separate same tests. However, at a ti
 - Before suggesting a refactor, first:
   - Identify the current behavior and entry points it affects (CLI, Streamlit, services).
   - Describe how to verify that behavior is preserved (tests, sample inputs, or fixtures).
-- Do NOT run integration tests automatically.
-- Do NOT run tests that hit external APIs or databases.
+- Do NOT run integration or unit tests automatically.
 - After refactoring:
-  - Ensure all existing unit tests pass.
   - Run only the corresponding integration tests only to ensure they pass.
   - Add targeted regression tests when fixing bugs or changing behavior.
 - If test coverage is missing in a changed area, propose minimal, focused tests that validate the new or modified behavior.

@@ -29,7 +29,7 @@ def cache_get(
     cache_dir: Path,
 ) -> Any | None:
     """Return cached data if present and unexpired, otherwise None."""
-    path = cache_dir / f"{cache_key(namespace, params)}.json"
+    path = cache_dir / namespace / f"{cache_key(namespace, params)}.json"
     if not path.exists():
         return None
     try:
@@ -54,12 +54,15 @@ def cache_set(
     ttl: int | None = None,
 ) -> None:
     """Write data to the cache under the given namespace and params."""
-    cache_dir.mkdir(parents=True, exist_ok=True)
+    ns_dir = cache_dir / namespace
+    ns_dir.mkdir(parents=True, exist_ok=True)
     entry = {
+        "ns": namespace,
+        "params": params,
         "data": data,
         "cached_at": datetime.now().isoformat(),
         "ttl": ttl if ttl is not None else CACHE_TTL,
     }
-    (cache_dir / f"{cache_key(namespace, params)}.json").write_text(
+    (ns_dir / f"{cache_key(namespace, params)}.json").write_text(
         json.dumps(entry, default=str)
     )

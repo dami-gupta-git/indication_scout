@@ -1,5 +1,15 @@
 """Shared fixtures for integration tests."""
 
+import os
+
+# Swap to the integration constants file before any indication_scout import
+# below — get_settings() is @lru_cache'd, so the first import freezes whichever
+# CONSTANTS_FILE is active. tests/conftest.py runs first and sets this to
+# .env.constants.test for unit tests; we override that here. A genuine shell
+# override (anything other than the unit-test default) is preserved.
+if os.environ.get("CONSTANTS_FILE") in (None, ".env.constants.test"):
+    os.environ["CONSTANTS_FILE"] = ".env.constants.test"
+
 import pytest
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
@@ -16,6 +26,7 @@ from indication_scout.config import get_settings
 from indication_scout.constants import TEST_CACHE_DIR
 from indication_scout.data_sources.chembl import ChEMBLClient
 from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
+from indication_scout.data_sources.fda import FDAClient
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.data_sources.pubmed import PubMedClient
 
@@ -79,6 +90,14 @@ def test_cache_dir():
     need to import or reference TEST_CACHE_DIR directly.
     """
     return TEST_CACHE_DIR
+
+
+@pytest.fixture
+async def fda_client():
+    """Create and tear down an FDAClient using the test cache."""
+    c = FDAClient(cache_dir=TEST_CACHE_DIR)
+    yield c
+    await c.close()
 
 
 @pytest.fixture

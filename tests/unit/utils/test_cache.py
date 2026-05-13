@@ -11,6 +11,7 @@ from indication_scout.utils.cache import cache_get, cache_key, cache_set
 
 def _write_entry(path: Path, data: object, age_seconds: int, ttl: int) -> None:
     cached_at = (datetime.now() - timedelta(seconds=age_seconds)).isoformat()
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"data": data, "cached_at": cached_at, "ttl": ttl}))
 
 
@@ -22,7 +23,7 @@ def test_cache_get_returns_none_on_miss(tmp_path: Path) -> None:
 def test_cache_get_returns_none_on_expired(tmp_path: Path) -> None:
     ttl = 100
     key = cache_key("ns", {"k": "v"})
-    entry_path = tmp_path / f"{key}.json"
+    entry_path = tmp_path / "ns" / f"{key}.json"
     _write_entry(entry_path, "stale_data", age_seconds=200, ttl=ttl)
 
     result = cache_get("ns", {"k": "v"}, tmp_path)
@@ -34,7 +35,9 @@ def test_cache_get_returns_none_on_expired(tmp_path: Path) -> None:
 def test_cache_get_returns_data_on_hit(tmp_path: Path) -> None:
     ttl = 86400
     key = cache_key("ns", {"k": "v"})
-    _write_entry(tmp_path / f"{key}.json", {"foo": "bar"}, age_seconds=10, ttl=ttl)
+    _write_entry(
+        tmp_path / "ns" / f"{key}.json", {"foo": "bar"}, age_seconds=10, ttl=ttl
+    )
 
     result = cache_get("ns", {"k": "v"}, tmp_path)
 
@@ -43,7 +46,8 @@ def test_cache_get_returns_data_on_hit(tmp_path: Path) -> None:
 
 def test_cache_get_handles_corrupt_file(tmp_path: Path) -> None:
     key = cache_key("ns", {"k": "v"})
-    entry_path = tmp_path / f"{key}.json"
+    entry_path = tmp_path / "ns" / f"{key}.json"
+    entry_path.parent.mkdir(parents=True, exist_ok=True)
     entry_path.write_text("not valid json{{")
 
     result = cache_get("ns", {"k": "v"}, tmp_path)
@@ -56,11 +60,13 @@ def test_cache_set_writes_file(tmp_path: Path) -> None:
     cache_set("ns", {"k": "v"}, ["result1", "result2"], tmp_path)
 
     key = cache_key("ns", {"k": "v"})
-    entry_path = tmp_path / f"{key}.json"
+    entry_path = tmp_path / "ns" / f"{key}.json"
     assert entry_path.exists()
 
     entry = json.loads(entry_path.read_text())
     assert entry["data"] == ["result1", "result2"]
+    assert entry["ns"] == "ns"
+    assert entry["params"] == {"k": "v"}
     assert "cached_at" in entry
     assert "ttl" in entry
 
@@ -69,8 +75,18 @@ def test_cache_set_custom_ttl(tmp_path: Path) -> None:
     cache_set("ns", {"k": "v"}, "data", tmp_path, ttl=999)
 
     key = cache_key("ns", {"k": "v"})
-    entry = json.loads((tmp_path / f"{key}.json").read_text())
+    entry = json.loads((tmp_path / "ns" / f"{key}.json").read_text())
     assert entry["ttl"] == 999
+
+
+def test_cache_set_creates_namespace_subdir(tmp_path: Path) -> None:
+    cache_set("ns_a", {"k": "v"}, "a", tmp_path)
+    cache_set("ns_b", {"k": "v"}, "b", tmp_path)
+
+    assert (tmp_path / "ns_a").is_dir()
+    assert (tmp_path / "ns_b").is_dir()
+    assert len(list((tmp_path / "ns_a").glob("*.json"))) == 1
+    assert len(list((tmp_path / "ns_b").glob("*.json"))) == 1
 
 
 def test_cache_key_is_deterministic() -> None:

@@ -1,9 +1,19 @@
 """Integration tests for base_client module."""
 
+from unittest.mock import patch
+
 import pytest
 
 from indication_scout.constants import OPEN_TARGETS_BASE_URL
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
+
+
+def _make_client(timeout: float = 30.0, max_retries: int = 3) -> "ConcreteTestClient":
+    """Create a ConcreteTestClient with patched settings values."""
+    with patch("indication_scout.data_sources.base_client._settings") as mock_settings:
+        mock_settings.default_timeout = timeout
+        mock_settings.default_max_retries = max_retries
+        return ConcreteTestClient()
 
 
 class ConcreteTestClient(BaseClient):
@@ -19,7 +29,7 @@ class ConcreteTestClient(BaseClient):
 
 async def test_get_request_to_httpbin():
     """Test GET request to a real endpoint."""
-    async with ConcreteTestClient(timeout=30.0) as client:
+    async with _make_client(timeout=30.0) as client:
         result = await client._rest_get(
             "https://httpbin.org/get",
             params={"test_param": "test_value"},
@@ -31,7 +41,7 @@ async def test_get_request_to_httpbin():
 
 async def test_post_request_to_httpbin():
     """Test POST request to a real endpoint."""
-    async with ConcreteTestClient(timeout=30.0) as client:
+    async with _make_client(timeout=30.0) as client:
         result = await client._request(
             "POST",
             "https://httpbin.org/post",
@@ -52,7 +62,7 @@ async def test_graphql_successful_query():
         }
     }
     """
-    async with ConcreteTestClient(timeout=30.0) as client:
+    async with _make_client(timeout=30.0) as client:
         result = await client._graphql(
             OPEN_TARGETS_BASE_URL,
             query,
@@ -72,7 +82,7 @@ async def test_graphql_invalid_query_raises_datasource_error():
     is raised by _request before _graphql's own error handling.
     """
     invalid_query = "{ invalidField }"
-    async with ConcreteTestClient(timeout=30.0) as client:
+    async with _make_client(timeout=30.0) as client:
         with pytest.raises(DataSourceError, match="HTTP 400") as exc_info:
             await client._graphql(
                 OPEN_TARGETS_BASE_URL,
@@ -84,7 +94,7 @@ async def test_graphql_invalid_query_raises_datasource_error():
 
 async def test_rest_get_xml_returns_xml_string():
     """Test _rest_get_xml with PubMed efetch endpoint."""
-    async with ConcreteTestClient(timeout=30.0) as client:
+    async with _make_client(timeout=30.0) as client:
         result = await client._rest_get_xml(
             "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi",
             params={
@@ -103,7 +113,7 @@ async def test_rest_get_xml_returns_xml_string():
 
 async def test_timeout_raises_error():
     """Test that timeouts raise DataSourceError."""
-    async with ConcreteTestClient(timeout=0.001, max_retries=0) as client:
+    async with _make_client(timeout=0.001, max_retries=0) as client:
         with pytest.raises(DataSourceError):
             await client._rest_get(
                 "https://httpbin.org/delay/10",  # 10 second delay

@@ -9,10 +9,13 @@ Plus convenience accessors for specific target data slices.
 """
 
 import asyncio
+import json
 import logging
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, TypedDict
 
+from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
@@ -20,12 +23,11 @@ from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     INTERACTION_TYPE_MAP,
     OPEN_TARGETS_BASE_URL,
-    OPEN_TARGETS_PAGE_SIZE,
 )
 from indication_scout.markers import no_review
 from indication_scout.utils.cache import cache_get, cache_set
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
-from indication_scout.data_sources.chembl import ChEMBLClient
+from indication_scout.data_sources.chembl import ChEMBLClient, get_all_drug_names
 from indication_scout.helpers.drug_helpers import normalize_drug_name
 
 from indication_scout.models.model_open_targets import (
@@ -44,6 +46,7 @@ from indication_scout.models.model_open_targets import (
     BiologicalModel,
     DrugData,
     DrugTarget,
+    EvidenceRecord,
     MechanismOfAction,
     ProteinExpression,
     DrugWarning,
@@ -52,19 +55,110 @@ from indication_scout.models.model_open_targets import (
     SafetyEffect,
     DiseaseSynonyms,
     RichDrugData,
+    VariantFunctionalConsequence,
 )
 
 logger = logging.getLogger(__name__)
 
+_settings = get_settings()
+
+# Per-target evidences cache. One file per target_id holds
+# {efo_id: {records, cached_at, ttl}}. Replaces the prior `target_evidences`
+# namespace which fanned out one file per (target_id, efo_id) pair.
+# TTL is per-pair so adding a new efo_id later does not reset existing
+# entries' freshness. Reads are concurrent-safe; writes are serialized
+# in get_target_evidences (one merge+write after all fetches gather).
+_TARGET_EVIDENCES_NS = "target_evidences"
+
+
+def _target_evidences_path(target_id: str, cache_dir: Path) -> Path:
+    """Return the per-target cache file path for the evidences namespace."""
+    return cache_dir / _TARGET_EVIDENCES_NS / f"{target_id}.json"
+
+
+def _load_target_evidences(
+    target_id: str, cache_dir: Path
+) -> dict[str, dict[str, Any]]:
+    """Load the per-target evidences file as {efo_id: {records, cached_at, ttl}}.
+
+    Returns an empty dict if the file is missing or unparseable. Expired
+    entries are dropped lazily; the file is rewritten only when a caller
+    invokes _save_target_evidences.
+    """
+    path = _target_evidences_path(target_id, cache_dir)
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text())
+    except (json.JSONDecodeError, ValueError):
+        return {}
+    entries = raw.get("entries")
+    if not isinstance(entries, dict):
+        return {}
+
+    fresh: dict[str, dict[str, Any]] = {}
+    now = datetime.now()
+    for efo_id, entry in entries.items():
+        if not isinstance(entry, dict):
+            continue
+        try:
+            cached_at = datetime.fromisoformat(entry["cached_at"])
+            ttl = int(entry.get("ttl", CACHE_TTL))
+            records = entry["records"]
+        except (KeyError, TypeError, ValueError):
+            continue
+        if (now - cached_at).total_seconds() > ttl:
+            continue
+        if not isinstance(records, list):
+            continue
+        fresh[efo_id] = {
+            "records": records,
+            "cached_at": entry["cached_at"],
+            "ttl": ttl,
+        }
+    return fresh
+
+
+def _save_target_evidences(
+    target_id: str,
+    new_records: dict[str, list[dict[str, Any]]],
+    cache_dir: Path,
+    ttl: int = CACHE_TTL,
+) -> None:
+    """Merge new_records into the per-target file and write it back.
+
+    Existing unexpired entries are preserved; new EFO entries overwrite any
+    prior entry for the same efo_id (refreshing its cached_at).
+    """
+    if not new_records:
+        return
+    path = _target_evidences_path(target_id, cache_dir)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    existing = _load_target_evidences(target_id, cache_dir)
+    now_iso = datetime.now().isoformat()
+    for efo_id, records in new_records.items():
+        existing[efo_id] = {
+            "records": records,
+            "cached_at": now_iso,
+            "ttl": ttl,
+        }
+    payload = {
+        "ns": _TARGET_EVIDENCES_NS,
+        "target_id": target_id,
+        "entries": existing,
+    }
+    path.write_text(json.dumps(payload, default=str, indent=2))
+
 
 class CompetitorRawData(TypedDict):
     diseases: dict[str, set[str]]
+    disease_efo_ids: dict[str, str]
     drug_indications: list[str]
 
 
 class OpenTargetsClient(BaseClient):
     BASE_URL = OPEN_TARGETS_BASE_URL
-    PAGE_SIZE = OPEN_TARGETS_PAGE_SIZE
+    PAGE_SIZE = _settings.open_targets_page_size
 
     def __init__(self, cache_dir: Path = DEFAULT_CACHE_DIR):
         super().__init__()
@@ -80,26 +174,30 @@ class OpenTargetsClient(BaseClient):
     # Public: get_drug and get_target and get_rich_drug_data
     # ------------------------------------------------------------------
 
-    async def get_rich_drug_data(self, drug_name: str) -> RichDrugData:
+    async def get_rich_drug_data(self, chembl_id: str) -> RichDrugData:
         """Fetch drug data and all associated target data in parallel."""
-        drug = await self.get_drug(drug_name)
+        drug = await self.get_drug(chembl_id)
         targets = await asyncio.gather(
             *[self.get_target_data(t.target_id) for t in drug.targets]
         )
         return RichDrugData(drug=drug, targets=list(targets))
 
-    async def get_drug(self, drug_name: str) -> DrugData:
-        """Fetch drug data by name, enriched with ATC codes from ChEMBL."""
-        chembl_id = await self._resolve_drug_name(drug_name)
+    async def get_drug(self, chembl_id: str) -> DrugData:
+        """Fetch drug data by ChEMBL ID, enriched with ATC codes from ChEMBL.
 
+        Also warms the chembl_id_to_names cache (which doubles as the reverse
+        index for resolve_drug_name) so downstream lookups via get_all_drug_names
+        don't re-hit the API.
+        """
         cached = cache_get("drug", {"chembl_id": chembl_id}, self.cache_dir)
         if cached:
             return DrugData.model_validate(cached)
 
         async with ChEMBLClient() as chembl_client:
-            drug_data, molecule = await asyncio.gather(
+            drug_data, molecule, names_result = await asyncio.gather(
                 self._fetch_drug(chembl_id),
                 chembl_client.get_molecule(chembl_id),
+                get_all_drug_names(chembl_id, self.cache_dir),
                 return_exceptions=True,
             )
 
@@ -114,6 +212,11 @@ class OpenTargetsClient(BaseClient):
         else:
             drug_data.atc_classifications = molecule.atc_classifications
 
+        if isinstance(names_result, BaseException):
+            logger.warning(
+                "ChEMBL drug-names warmup failed for %s: %s", chembl_id, names_result
+            )
+
         cache_set(
             "drug",
             {"chembl_id": chembl_id},
@@ -125,31 +228,50 @@ class OpenTargetsClient(BaseClient):
         return drug_data
 
     async def get_drug_competitors(
-        self, name: str, min_stage: str = "PHASE_3"
+        self,
+        chembl_id: str,
+        min_stage: str = "PHASE_3",
+        date_before: date | None = None,
     ) -> CompetitorRawData:
-        """Fetch competitor drugs for a given drug, grouped by disease."""
-        normalized_name = normalize_drug_name(name)
+        """Fetch competitor drugs for a given drug, grouped by disease.
+
+        When `date_before` is set (temporal holdout mode), the OT-derived
+        approved-indications strip is suppressed: OT's `drug.indications`
+        reflects today's approval state and would leak post-cutoff
+        approvals into a holdout. The caller is expected to apply its own
+        cutoff-aware approval filter (the hardcoded approvals table) on the
+        returned competitor list.
+        """
         min_rank = CLINICAL_STAGE_RANK.get(min_stage, 0)
 
-        cache_params = {"drug_name": normalized_name, "min_stage": min_stage}
-        cached = cache_get("drug_competitors", cache_params, self.cache_dir)
+        cache_params = {
+            "chembl_id": chembl_id,
+            "min_stage": min_stage,
+            "date_before": date_before.isoformat() if date_before else None,
+        }
+        cached = cache_get("competitors_raw", cache_params, self.cache_dir)
         if cached is not None:
             return CompetitorRawData(
                 diseases={
                     disease: set(drugs) for disease, drugs in cached["diseases"].items()
                 },
+                disease_efo_ids=dict(cached.get("disease_efo_ids") or {}),
                 drug_indications=cached["drug_indications"],
             )
 
-        drug = await self.get_drug(normalized_name)
+        drug = await self.get_drug(chembl_id)
         targets = drug.targets
 
-        # Build set of approved indication names to exclude from repurposing candidates.
-        approved_indications: set[str] = {
-            i.disease_name.lower()
-            for i in drug.indications
-            if i.max_clinical_stage == "APPROVAL" and i.disease_name is not None
-        }
+        # Build set of approved indication names to exclude from repurposing
+        # candidates. Skipped under date_before — see method docstring.
+        if date_before is None:
+            approved_indications: set[str] = {
+                i.disease_name.lower()
+                for i in drug.indications
+                if i.max_clinical_stage == "APPROVAL" and i.disease_name is not None
+            }
+        else:
+            approved_indications = set()
 
         siblings_with_stage: dict[str, dict[str, int]] = {}
         id_to_canonical: dict[str, str] = {}
@@ -165,8 +287,6 @@ class OpenTargetsClient(BaseClient):
                 )
                 if stage_rank >= min_rank:
                     drug_name = normalize_drug_name(summary.drug_name)
-                    # if drug_name == normalized_name:
-                    #     continue
                     for cd in summary.diseases:
                         if cd.disease_name is None:
                             continue
@@ -204,15 +324,31 @@ class OpenTargetsClient(BaseClient):
         )
 
         drug_indications = list(approved_indications)
-        top_40 = dict(list(sorted_siblings.items())[:40])
+        top_40 = dict(
+            list(sorted_siblings.items())[
+                : _settings.open_targets_competitor_prefetch_max
+            ]
+        )
 
-        result = CompetitorRawData(diseases=top_40, drug_indications=drug_indications)
+        # Inverse of id_to_canonical, scoped to the diseases that survived ranking and trimming.
+        disease_efo_ids = {
+            canonical: efo_id
+            for efo_id, canonical in id_to_canonical.items()
+            if canonical in top_40
+        }
+
+        result = CompetitorRawData(
+            diseases=top_40,
+            disease_efo_ids=disease_efo_ids,
+            drug_indications=drug_indications,
+        )
 
         cache_set(
-            "drug_competitors",
+            "competitors_raw",
             cache_params,
             {
                 "diseases": {d: list(drugs) for d, drugs in top_40.items()},
+                "disease_efo_ids": disease_efo_ids,
                 "drug_indications": drug_indications,
             },
             self.cache_dir,
@@ -221,19 +357,19 @@ class OpenTargetsClient(BaseClient):
 
         return result
 
-    async def get_drug_indications(self, drug_name: str) -> list[Indication]:
-        drug = await self.get_drug(drug_name)
+    async def get_drug_indications(self, chembl_id: str) -> list[Indication]:
+        drug = await self.get_drug(chembl_id)
         return drug.indications
 
     async def get_drug_target_competitors(
-        self, drug_name: str
+        self, chembl_id: str
     ) -> dict[str, list[DrugSummary]]:
         """For each target of a drug, fetch all drugs acting on that target.
 
         Returns a dict mapping target symbol (e.g. "GLP1R") to the list of
         DrugSummary objects from Open Targets' drugAndClinicalCandidates for that target.
         """
-        drug = await self.get_drug(drug_name)
+        drug = await self.get_drug(chembl_id)
         result: dict[str, list[DrugSummary]] = {}
         for target in drug.targets:
             drug_summaries = await self.get_target_data_drug_summaries(target.target_id)
@@ -262,11 +398,13 @@ class OpenTargetsClient(BaseClient):
     # Public accessors — convenience methods using get_drug/get_target
     # ------------------------------------------------------------------
 
-    async def get_target_data_associations(
-        self, target_id: str, min_score: float = 0.1
-    ) -> list[Association]:
+    async def get_target_data_associations(self, target_id: str) -> list[Association]:
         target = await self.get_target_data(target_id)
-        return [a for a in target.associations if a.overall_score >= min_score]
+        return [
+            a
+            for a in target.associations
+            if a.overall_score >= _settings.open_targets_association_min_score
+        ]
 
     async def get_target_data_pathways(self, target_id: str) -> list[Pathway]:
         target = await self.get_target_data(target_id)
@@ -303,6 +441,75 @@ class OpenTargetsClient(BaseClient):
     ) -> list[GeneticConstraint]:
         target = await self.get_target_data(target_id)
         return target.genetic_constraint
+
+    async def get_target_evidences(
+        self, target_id: str, efo_ids: list[str]
+    ) -> dict[str, list[EvidenceRecord]]:
+        """Fetch per-(target, disease) evidence records.
+
+        Returns a dict keyed by disease_id mapping to a list of evidence
+        records. Each record carries directionality fields used to classify
+        whether the drug's action aligns with or opposes the disease
+        mechanism. Empty list for any efo_id with no evidence.
+
+        Fans out per-efo so each (target, disease) pair gets its own
+        200-record budget from OT. Batched queries share that budget
+        across all efoIds, which starves rare diseases when they're
+        batched with common ones. Per-efo fetches run in parallel via
+        asyncio.gather.
+
+        Cache is one file per target_id (`target_evidences/<target_id>.json`)
+        holding {efo_id: records}. Reads happen once at the top; writes are
+        batched into a single merge+rewrite after all fresh fetches complete,
+        so concurrent EFO fetches for the same target cannot stomp the file.
+        """
+        if not efo_ids:
+            return {}
+
+        cached = _load_target_evidences(target_id, self.cache_dir)
+
+        results: dict[str, list[EvidenceRecord]] = {}
+        missing: list[str] = []
+        for efo_id in efo_ids:
+            entry = cached.get(efo_id)
+            if entry is None:
+                missing.append(efo_id)
+            else:
+                results[efo_id] = [
+                    EvidenceRecord.model_validate(r) for r in entry["records"]
+                ]
+
+        if missing:
+            fresh = await asyncio.gather(
+                *[self._fetch_evidences_single(target_id, efo) for efo in missing]
+            )
+            new_serialized: dict[str, list[dict[str, Any]]] = {}
+            for efo_id, records in zip(missing, fresh):
+                results[efo_id] = records
+                new_serialized[efo_id] = [r.model_dump() for r in records]
+            _save_target_evidences(
+                target_id, new_serialized, self.cache_dir, ttl=CACHE_TTL
+            )
+
+        return {efo_id: results[efo_id] for efo_id in efo_ids}
+
+    async def _fetch_evidences_single(
+        self, target_id: str, efo_id: str
+    ) -> list[EvidenceRecord]:
+        """Fetch evidence records for a single (target, disease) pair (no cache)."""
+        data = await self._graphql(
+            self.BASE_URL,
+            EVIDENCES_QUERY,
+            variables={"id": target_id, "efoIds": [efo_id]},
+        )
+        raw_target = (data.get("data") or {}).get("target") or {}
+        rows = (raw_target.get("evidences") or {}).get("rows") or []
+
+        records = [self._parse_evidence(r) for r in rows]
+        # Only keep records whose disease_id matches what we asked for —
+        # defends against the API returning cross-linked disease rows.
+        records = [r for r in records if r.disease_id == efo_id]
+        return records
 
     async def get_disease_drugs(self, disease_id: str) -> list[DrugSummary]:
         """All drugs for a disease, any target, any mechanism."""
@@ -359,7 +566,7 @@ class OpenTargetsClient(BaseClient):
 
         result = DiseaseSynonyms(
             disease_id=raw_disease["id"],
-            disease_name=raw_disease["name"],
+            disease_name=raw_disease["name"].lower(),
             parent_names=parent_names,
             **grouped,
         )
@@ -377,18 +584,6 @@ class OpenTargetsClient(BaseClient):
     # Private: network calls
     # ------------------------------------------------------------------
 
-    async def _resolve_drug_name(self, name: str) -> str:
-        """Search by name → return ChEMBL ID."""
-        data = await self._graphql(self.BASE_URL, SEARCH_QUERY, {"q": name})
-        hits = data["data"]["search"]["hits"]
-        drug_hits = [h for h in hits if h["entity"] == "drug"]
-        if not drug_hits:
-            raise DataSourceError(
-                self._source_name,
-                f"No drug found for '{name}'",
-            )
-        return drug_hits[0]["id"]
-
     async def _resolve_disease_name(self, name: str) -> str:
         """Search by name → return EFO/MONDO disease ID."""
         data = await self._graphql(self.BASE_URL, DISEASE_SEARCH_QUERY, {"q": name})
@@ -400,6 +595,24 @@ class OpenTargetsClient(BaseClient):
                 f"No disease found for '{name}'",
             )
         return disease_hits[0]["id"]
+
+    async def resolve_disease_id(self, name: str) -> str | None:
+        """Public, cached, non-raising wrapper around _resolve_disease_name.
+
+        Returns OT's canonical disease ID for the given name, or None when no hit
+        is found. Intended for dedup paths where a missing resolution is non-fatal.
+        """
+        cache_params = {"name": name.strip().lower()}
+        cached = cache_get("disease_id_resolver", cache_params, self.cache_dir)
+        if cached is not None:
+            return cached or None
+        try:
+            disease_id = await self._resolve_disease_name(name)
+        except DataSourceError:
+            cache_set("disease_id_resolver", cache_params, "", self.cache_dir)
+            return None
+        cache_set("disease_id_resolver", cache_params, disease_id, self.cache_dir)
+        return disease_id
 
     async def _fetch_drug(self, chembl_id: str) -> DrugData:
         """Fetch full drug node from Open Targets."""
@@ -467,26 +680,41 @@ class OpenTargetsClient(BaseClient):
     # ------------------------------------------------------------------
 
     def _parse_drug_data(self, raw: dict) -> DrugData:
-        targets = []
-        mechanisms_of_action = []
+        targets: list[DrugTarget] = []
+        mechanisms_of_action: list[MechanismOfAction] = []
+        # Open Targets aggregates MoA rows across source databases (ChEMBL, DrugBank, etc.),
+        # which yields rows with identical (mechanism, action_type, targets). Dedupe on that key
+        # so the same MoA isn't reported multiple times downstream.
+        seen_moa: set[tuple] = set()
+        seen_target: set[tuple] = set()
         for row in (raw.get("mechanismsOfAction") or {}).get("rows", []):
             moa = row["mechanismOfAction"]
+            action_type = row.get("actionType")
             row_targets = row.get("targets", [])
-            mechanisms_of_action.append(
-                MechanismOfAction(
-                    mechanism_of_action=moa,
-                    action_type=row.get("actionType"),
-                    target_ids=[t["id"] for t in row_targets],
-                    target_symbols=[t["approvedSymbol"] for t in row_targets],
+            target_ids = [t["id"] for t in row_targets]
+            target_symbols = [t["approvedSymbol"] for t in row_targets]
+            moa_key = (moa, action_type, tuple(target_ids))
+            if moa_key not in seen_moa:
+                seen_moa.add(moa_key)
+                mechanisms_of_action.append(
+                    MechanismOfAction(
+                        mechanism_of_action=moa,
+                        action_type=action_type,
+                        target_ids=target_ids,
+                        target_symbols=target_symbols,
+                    )
                 )
-            )
             for t in row_targets:
+                target_key = (t["id"], moa, action_type)
+                if target_key in seen_target:
+                    continue
+                seen_target.add(target_key)
                 targets.append(
                     DrugTarget(
                         target_id=t["id"],
                         target_symbol=t["approvedSymbol"],
                         mechanism_of_action=moa,
-                        action_type=row.get("actionType"),
+                        action_type=action_type,
                     )
                 )
 
@@ -506,7 +734,7 @@ class OpenTargetsClient(BaseClient):
             Indication(
                 id=row.get("id", ""),
                 disease_id=row["disease"]["id"],
-                disease_name=row["disease"]["name"],
+                disease_name=(row["disease"]["name"] or "").lower(),
                 max_clinical_stage=row.get("maxClinicalStage"),
             )
             for row in (raw.get("indications") or {}).get("rows", [])
@@ -519,9 +747,6 @@ class OpenTargetsClient(BaseClient):
 
         return DrugData(
             chembl_id=raw["id"],
-            name=raw["name"],
-            synonyms=raw.get("synonyms", []),
-            trade_names=raw.get("tradeNames", []),
             drug_type=raw.get("drugType"),
             maximum_clinical_stage=raw.get("maximumClinicalStage"),
             mechanisms_of_action=mechanisms_of_action,
@@ -539,6 +764,7 @@ class OpenTargetsClient(BaseClient):
             target_id=raw["id"],
             symbol=raw["approvedSymbol"],
             name=raw.get("approvedName", ""),
+            function_descriptions=raw.get("functionDescriptions") or [],
             associations=[
                 self._parse_association(r)
                 for r in (raw.get("associatedDiseases") or {}).get("rows", [])
@@ -571,10 +797,31 @@ class OpenTargetsClient(BaseClient):
         therapeutic_areas = [ta["name"] for ta in disease.get("therapeuticAreas", [])]
         return Association(
             disease_id=disease["id"],
-            disease_name=disease["name"],
+            disease_name=(disease["name"] or "").lower(),
+            disease_description=disease.get("description") or "",
             overall_score=raw["score"],
             datatype_scores=datatype_scores,
             therapeutic_areas=therapeutic_areas,
+        )
+
+    def _parse_evidence(self, raw: dict) -> EvidenceRecord:
+        disease = raw.get("disease") or {}
+        vfc_raw = raw.get("variantFunctionalConsequence") or {}
+        vfc = (
+            VariantFunctionalConsequence(
+                id=vfc_raw.get("id") or "",
+                label=vfc_raw.get("label") or "",
+            )
+            if vfc_raw
+            else None
+        )
+        return EvidenceRecord(
+            disease_id=disease.get("id") or "",
+            datatype_id=raw.get("datatypeId") or "",
+            score=raw.get("score"),
+            direction_on_target=raw.get("directionOnTarget"),
+            direction_on_trait=raw.get("directionOnTrait"),
+            variant_functional_consequence=vfc,
         )
 
     def _parse_pathway(self, raw: dict) -> Pathway:
@@ -599,18 +846,21 @@ class OpenTargetsClient(BaseClient):
 
     def _parse_drug_summary(self, raw: dict) -> DrugSummary:
         drug = raw.get("drug") or {}
-        diseases = [
-            ClinicalDisease(
-                disease_from_source=d.get("diseaseFromSource", ""),
-                disease_id=(d.get("disease") or {}).get("id"),
-                disease_name=(d.get("disease") or {}).get("name"),
+        diseases = []
+        for d in raw.get("diseases", []):
+            d_node = d.get("disease") or {}
+            d_name = d_node.get("name")
+            diseases.append(
+                ClinicalDisease(
+                    disease_from_source=d.get("diseaseFromSource", ""),
+                    disease_id=d_node.get("id"),
+                    disease_name=d_name.lower() if d_name else None,
+                )
             )
-            for d in raw.get("diseases", [])
-        ]
         return DrugSummary(
             id=raw.get("id", ""),
             drug_id=drug.get("id", ""),
-            drug_name=drug.get("name", ""),
+            drug_name=drug.get("name", "").lower(),
             drug_type=drug.get("drugType"),
             max_clinical_stage=raw.get("maxClinicalStage"),
             diseases=diseases,
@@ -714,14 +964,6 @@ class OpenTargetsClient(BaseClient):
 # GraphQL queries
 # ------------------------------------------------------------------
 
-SEARCH_QUERY = """
-query($q: String!) {
-    search(queryString: $q, entityNames: ["drug"], page: {index: 0, size: 1}) {
-        hits { id entity }
-    }
-}
-"""
-
 DISEASE_SEARCH_QUERY = """
 query($q: String!) {
     search(queryString: $q, entityNames: ["disease"], page: {index: 0, size: 1}) {
@@ -733,7 +975,7 @@ query($q: String!) {
 DRUG_QUERY = """
 query($id: String!) {
     drug(chemblId: $id) {
-        id name synonyms tradeNames drugType
+        id drugType
         maximumClinicalStage
 
         mechanismsOfAction {
@@ -772,12 +1014,12 @@ query($id: String!) {
 TARGET_QUERY = """
 query($id: String!) {
     target(ensemblId: $id) {
-        id approvedSymbol approvedName
+        id approvedSymbol approvedName functionDescriptions
 
         associatedDiseases(page: {index: 0, size: 500}) {
             rows {
                 disease {
-                    id name
+                    id name description
                     therapeuticAreas { id name }
                 }
                 score
@@ -861,11 +1103,28 @@ query($id: String!, $index: Int!, $size: Int!) {
         associatedDiseases(page: {index: $index, size: $size}) {
             rows {
                 disease {
-                    id name
+                    id name description
                     therapeuticAreas { id name }
                 }
                 score
                 datatypeScores { id score }
+            }
+        }
+    }
+}
+"""
+
+EVIDENCES_QUERY = """
+query($id: String!, $efoIds: [String!]!) {
+    target(ensemblId: $id) {
+        evidences(efoIds: $efoIds, size: 200) {
+            rows {
+                datatypeId
+                score
+                directionOnTarget
+                directionOnTrait
+                disease { id name }
+                variantFunctionalConsequence { id label }
             }
         }
     }

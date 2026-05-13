@@ -8,7 +8,7 @@ import pytest
 async def test_get_target_associations(open_targets_client):
     """Test get_target_associations returns filtered associations with all fields."""
     associations = await open_targets_client.get_target_data_associations(
-        "ENSG00000112164", min_score=0.1
+        "ENSG00000112164"
     )
 
     assert len(associations) > 10
@@ -135,16 +135,18 @@ async def test_get_target_drug_summaries(open_targets_client):
     )
 
     assert len(drug_summaries) > 5
-    liraglutide = next(d for d in drug_summaries if d.drug_name == "LIRAGLUTIDE")
+    liraglutide = next(d for d in drug_summaries if d.drug_name == "liraglutide")
     # Verify DrugSummary fields
     assert liraglutide.drug_id == "CHEMBL4084119"
-    assert liraglutide.drug_name == "LIRAGLUTIDE"
+    assert liraglutide.drug_name == "liraglutide"
+    assert liraglutide.drug_type == "Protein"
     assert liraglutide.max_clinical_stage == "APPROVAL"
     assert len(liraglutide.diseases) > 0
     t2d = next(
         d for d in liraglutide.diseases if d.disease_name == "type 2 diabetes mellitus"
     )
     assert t2d.disease_id == "MONDO_0005148"
+    assert t2d.disease_from_source != ""
 
 
 async def test_get_target_expression(open_targets_client):
@@ -184,6 +186,10 @@ async def test_get_target_phenotypes(open_targets_client):
     [model] = glucose.biological_models
     assert model.allelic_composition == "Glp1r<tm1b(KOMP)Mbp> hom early"
     assert model.genetic_background == "C57BL/6NTac"
+    assert model.model_id == "MGI:5637223"
+    assert "8898756" in model.literature
+    assert "23959939" in model.literature
+    assert "14966573" in model.literature
 
 
 async def test_get_target_safety_liabilities(open_targets_client):
@@ -227,16 +233,20 @@ async def test_get_target_genetic_constraints(open_targets_client):
     assert 0.51 < lof_constraint.oe_upper < 0.52
     assert 0.06 < lof_constraint.score < 0.07
     assert lof_constraint.upper_bin == 1
+    assert lof_constraint.exp > 100
+    assert lof_constraint.obs > 0
+    assert lof_constraint.upper_bin6 == 1
 
 
 async def test_get_drug_indications(open_targets_client):
     """Test get_drug_indications returns indication data."""
-    indications = await open_targets_client.get_drug_indications("semaglutide")
+    indications = await open_targets_client.get_drug_indications("CHEMBL2108724")
 
     assert len(indications) > 5
     [t2d] = [i for i in indications if i.disease_name == "type 2 diabetes mellitus"]
     assert t2d.disease_id == "MONDO_0005148"
     assert t2d.max_clinical_stage == "APPROVAL"
+    assert t2d.id != ""
 
 
 async def test_get_disease_drugs(open_targets_client):
@@ -245,8 +255,66 @@ async def test_get_disease_drugs(open_targets_client):
     drugs = await open_targets_client.get_disease_drugs("MONDO_0005148")
 
     assert len(drugs) > 10
-    semaglutide = next(d for d in drugs if d.drug_name == "SEMAGLUTIDE")
+    semaglutide = next(d for d in drugs if d.drug_name == "semaglutide")
     # Verify DrugSummary fields
     assert semaglutide.drug_id == "CHEMBL2108724"
-    assert semaglutide.drug_name == "SEMAGLUTIDE"
+    assert semaglutide.drug_name == "semaglutide"
     assert semaglutide.max_clinical_stage == "APPROVAL"
+
+
+# --- Text fields added for mechanism-agent candidate pipeline ---
+
+
+async def test_target_and_association_text_fields(open_targets_client):
+    """TargetData.function_descriptions + Association.disease_description are
+    populated on GLP1R / type 2 diabetes (both known to carry these fields)."""
+    target = await open_targets_client.get_target_data("ENSG00000112164")
+
+    # Target-level UniProt function paragraphs
+    assert target.symbol == "GLP1R"
+    assert len(target.function_descriptions) >= 1
+    assert "glucagon-like peptide 1" in target.function_descriptions[0].lower()
+
+    # Disease description on the T2D association
+    t2d = next(
+        a for a in target.associations if a.disease_name == "type 2 diabetes mellitus"
+    )
+    assert t2d.disease_description
+    assert "diabetes" in t2d.disease_description.lower()
+
+
+async def test_get_target_evidences_glp1r_t2d(open_targets_client):
+    """get_target_evidences returns records grouped by disease_id with direction
+    fields populated for GLP1R / T2D (GoF / protect is the canonical signal)."""
+    ev_map = await open_targets_client.get_target_evidences(
+        "ENSG00000112164", ["MONDO_0005148"]
+    )
+
+    assert "MONDO_0005148" in ev_map
+    records = ev_map["MONDO_0005148"]
+    assert len(records) > 0
+    directions = {
+        (e.direction_on_target, e.direction_on_trait)
+        for e in records
+        if e.direction_on_target and e.direction_on_trait
+    }
+    assert ("GoF", "protect") in directions
+
+
+async def test_get_target_evidences_variant_functional_consequence(open_targets_client):
+    """variant_functional_consequence populates on rare-variant Mendelian disease.
+
+    SLC6A3 + infantile dystonia-parkinsonism is driven by coding variants in
+    SLC6A3, so the evidence records carry vFC labels like missense_variant /
+    absent_gene_product.
+    """
+    ev_map = await open_targets_client.get_target_evidences(
+        "ENSG00000142319", ["Orphanet_238455"]
+    )
+    records = ev_map["Orphanet_238455"]
+    vfc_labels = {
+        e.variant_functional_consequence.label
+        for e in records
+        if e.variant_functional_consequence and e.variant_functional_consequence.label
+    }
+    assert "missense_variant" in vfc_labels

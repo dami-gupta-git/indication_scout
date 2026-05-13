@@ -1,6 +1,7 @@
 """Retrieval service: PubMed fetch/embed/cache and semantic search via pgvector."""
 
 import asyncio
+import calendar
 import json
 import logging
 from datetime import date
@@ -12,9 +13,11 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
+from typing_extensions import deprecated
 
-from indication_scout.constants import CACHE_TTL, PUBMED_MAX_RESULTS
-from indication_scout.data_sources.chembl import ChEMBLClient
+from indication_scout.config import get_settings
+from indication_scout.constants import CACHE_TTL
+from indication_scout.data_sources.chembl import ChEMBLClient, get_all_drug_names
 from indication_scout.data_sources.open_targets import (
     CompetitorRawData,
     OpenTargetsClient,
@@ -29,12 +32,39 @@ from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
 from indication_scout.services.embeddings import embed_async
 from indication_scout.models.model_evidence_summary import EvidenceSummary
-from indication_scout.services.llm import parse_llm_response, query_llm, query_small_llm
+from indication_scout.services.llm import (
+    parse_llm_response,
+    query_llm,
+    query_small_llm,
+    strip_markdown_fences,
+)
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
+_settings = get_settings()
+
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
+
+# Pubtype multiplicative boosts applied to semantic similarity to surface
+# primary clinical evidence (RCTs, phase trials) over reviews/commentary
+# in the final top-k. Types not listed get a neutral 1.0 boost; the
+# per-record boost is max() across the record's pubtype list, so a paper
+# tagged both "Journal Article" and "Randomized Controlled Trial" gets
+# the RCT boost.
+PUBTYPE_BOOSTS: dict[str, float] = {
+    "Randomized Controlled Trial": 2.0,
+    "Clinical Trial, Phase III": 1.8,
+    "Clinical Trial, Phase II": 1.6,
+    "Clinical Trial": 1.5,
+    "Meta-Analysis": 1.3,
+    "Systematic Review": 1.2,
+    "Review": 0.6,
+    "Comment": 0.3,
+    "Editorial": 0.3,
+    "Letter": 0.3,
+}
+PUBTYPE_BOOST_DEFAULT: float = 1.0
 
 
 class AbstractResult(BaseModel):
@@ -42,6 +72,7 @@ class AbstractResult(BaseModel):
     title: str
     abstract: str
     similarity: float
+    pubtype: list[str] = []
 
 
 class RetrievalService:
@@ -55,54 +86,79 @@ class RetrievalService:
         self.cache_dir = cache_dir
         cache_dir.mkdir(parents=True, exist_ok=True)
 
-    async def _normalize_disease_groups(
-        self, diseases: dict[str, set[str]]
+    # @deprecated
+    # async def _normalize_disease_groups(
+    #     self, diseases: dict[str, set[str]]
+    # ) -> dict[str, set[str]]:
+    #     """Normalize disease names via LLM and merge groups that collapse to the same key.
+    #
+    #     Args:
+    #         diseases: Dict mapping disease name to set of competitor drug names.
+    #
+    #     Returns:
+    #         Dict with normalized disease names as keys and unioned drug sets.
+    #     """
+    #     original_names = list(diseases.keys())
+    #     norm_map = await llm_normalize_disease_batch(original_names)
+    #
+    #     merged: dict[str, set[str]] = {}
+    #     for original in original_names:
+    #         normalized = norm_map[original]
+    #         key = normalized.split(" OR ")[0].strip().lower()
+    #         if key in merged:
+    #             merged[key] |= diseases[original]
+    #         else:
+    #             merged[key] = set(diseases[original])
+    #     return merged
+
+    async def get_drug_competitors(
+        self, chembl_id: str, date_before: date | None = None
     ) -> dict[str, set[str]]:
-        """Normalize disease names via LLM and merge groups that collapse to the same key.
-
-        Args:
-            diseases: Dict mapping disease name to set of competitor drug names.
-
-        Returns:
-            Dict with normalized disease names as keys and unioned drug sets.
-        """
-        original_names = list(diseases.keys())
-        norm_map = await llm_normalize_disease_batch(original_names)
-
-        merged: dict[str, set[str]] = {}
-        for original in original_names:
-            normalized = norm_map[original]
-            key = normalized.split(" OR ")[0].strip().lower()
-            if key in merged:
-                merged[key] |= diseases[original]
-            else:
-                merged[key] = set(diseases[original])
-        return merged
-
-    async def get_drug_competitors(self, drug_name: str) -> dict[str, set[str]]:
         """Fetch top disease indications and their competitor drugs from Open Targets.
 
         Fetches raw competitor data from the client, then uses an LLM to merge
         duplicate disease names and remove overly broad terms before returning.
 
         Args:
-            drug_name: Common drug name (e.g. "empagliflozin").
+            chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
+            date_before: Optional temporal holdout cutoff. Forwarded to the
+                OT client to suppress its current-state approved-indications
+                strip; cache key is keyed on the cutoff so cutoff and no-cutoff
+                runs do not share cached competitor lists.
 
         Returns:
             Dict mapping disease name to set of competitor drug names.
         """
-        cache_params = {"drug_name": drug_name}
-        cached = cache_get("drug_competitors", cache_params, self.cache_dir)
+        cache_params = {
+            "chembl_id": chembl_id,
+            "date_before": date_before.isoformat() if date_before else None,
+        }
+        cached = cache_get("competitors_merged", cache_params, self.cache_dir)
         if cached is not None and len(cached) > 0:
+            # logger.warning("[COMP] cache HIT for %r, %d diseases: %s",
+            #                chembl_id, len(cached), list(cached.keys()))
             return {disease: set(drugs) for disease, drugs in cached.items()}
 
         async with OpenTargetsClient(cache_dir=self.cache_dir) as client:
-            raw: CompetitorRawData = await client.get_drug_competitors(drug_name)
+            raw: CompetitorRawData = await client.get_drug_competitors(
+                chembl_id, date_before=date_before
+            )
+            # logger.warning("[COMP] raw from OT: %d diseases: %s",
+            #                len(raw["diseases"]), list(raw["diseases"].keys()))
 
-        top_40 = await self._normalize_disease_groups(raw["diseases"])
+        top_40 = raw["diseases"]
+        logger.warning(
+            "[COMP] after normalize: %d diseases: %s", len(top_40), list(top_40.keys())
+        )
+
         drug_indications = raw["drug_indications"]
         disease_names = list(top_40.keys())
         merge_result = await merge_duplicate_diseases(disease_names, drug_indications)
+        logger.warning(
+            "[COMP] merge_result: merge=%s remove=%s",
+            merge_result["merge"],
+            merge_result["remove"],
+        )
 
         for disease in merge_result["remove"]:
             if disease.lower() in top_40:
@@ -134,10 +190,11 @@ class RetrievalService:
         sorted_data = dict(
             sorted(top_40.items(), key=lambda item: len(item[1]), reverse=True)
         )
-        top_15 = dict(list(sorted_data.items())[:15])
+        top_15 = dict(list(sorted_data.items())[: _settings.literature_top_k])
+        logger.warning("[COMP] final top_15: %s", list(top_15.keys()))
 
         cache_set(
-            "drug_competitors",
+            "competitors_merged",
             cache_params,
             {disease: list(drugs) for disease, drugs in top_15.items()},
             self.cache_dir,
@@ -145,19 +202,19 @@ class RetrievalService:
         )
         return top_15
 
-    async def build_drug_profile(self, drug_name: str) -> DrugProfile:
+    async def build_drug_profile(self, chembl_id: str) -> DrugProfile:
         """Fetch drug + target data from Open Targets, enrich with ATC descriptions from ChEMBL,
         and return a DrugProfile ready for use in search term expansion.
 
         Args:
-            drug_name: Common drug name (e.g. "metformin").
+            chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
 
         Returns:
             DrugProfile with all fields populated. atc_descriptions will be [] if the drug
             has no ATC classifications.
         """
         async with OpenTargetsClient(cache_dir=self.cache_dir) as open_targets_client:
-            rich = await open_targets_client.get_rich_drug_data(drug_name)
+            rich = await open_targets_client.get_rich_drug_data(chembl_id)
 
         atc_descriptions = []
         if rich.drug.atc_classifications:
@@ -282,12 +339,154 @@ class RetrievalService:
         db.commit()
         logger.debug("Inserted %d abstracts into pubmed_abstracts", len(rows))
 
+    @staticmethod
+    def _parse_pub_date_conservative(raw: str | None) -> date | None:
+        """Parse a PubMed pub_date string into a conservative date.
+
+        PubMed publication dates come in mixed formats from _parse_pubmed_xml:
+            "2023"            → year only
+            "2023-Mar"        → year + 3-letter month
+            "2023-03"         → year + numeric month
+            "2023-03-15"      → full ISO date
+        For partial dates we use the LAST day of the partial range so the
+        cutoff comparison errs toward "later" (a paper dated "2023-Mar"
+        becomes 2023-03-31, which is correctly excluded by a 2023-04-01
+        cutoff but not by a 2023-04-30 one). Returns None for missing or
+        unparseable input — caller decides what to do with that.
+        """
+        if not raw:
+            return None
+        raw = raw.strip()
+        if not raw:
+            return None
+
+        # Full ISO date
+        try:
+            return date.fromisoformat(raw)
+        except ValueError:
+            pass
+
+        parts = raw.split("-")
+        try:
+            year = int(parts[0])
+        except (ValueError, IndexError):
+            return None
+
+        month_map = {
+            "jan": 1,
+            "feb": 2,
+            "mar": 3,
+            "apr": 4,
+            "may": 5,
+            "jun": 6,
+            "jul": 7,
+            "aug": 8,
+            "sep": 9,
+            "oct": 10,
+            "nov": 11,
+            "dec": 12,
+        }
+
+        if len(parts) == 1:
+            # "YYYY" → Dec 31 of that year
+            return date(year, 12, 31)
+
+        month_raw = parts[1].lower()[:3]
+        month = month_map.get(month_raw)
+        if month is None:
+            try:
+                month = int(parts[1])
+            except ValueError:
+                return None
+        if not 1 <= month <= 12:
+            return None
+
+        if len(parts) == 2:
+            # "YYYY-Mon" or "YYYY-MM" → last day of that month
+            last_day = calendar.monthrange(year, month)[1]
+            return date(year, month, last_day)
+
+        try:
+            day = int(parts[2])
+            return date(year, month, day)
+        except ValueError:
+            return None
+
+    def _read_pub_dates_from_db(
+        self, pmids: list[str], db: Session
+    ) -> dict[str, str | None]:
+        """Bulk-read (pmid → raw pub_date string) from pubmed_abstracts.
+
+        Returns a dict containing only the PMIDs found in the DB. Values
+        may be None (the column is nullable). PMIDs not in the DB are
+        absent from the result.
+        """
+        if not pmids:
+            return {}
+        rows = db.execute(
+            text(
+                "SELECT pmid, pub_date FROM pubmed_abstracts WHERE pmid = ANY(:pmids)"
+            ),
+            {"pmids": pmids},
+        ).fetchall()
+        return {row[0]: row[1] for row in rows}
+
+    async def _filter_pmids_by_date(
+        self,
+        pmids: list[str],
+        date_before: date,
+        db: Session,
+        client: PubMedClient,
+    ) -> list[str]:
+        """Drop PMIDs whose publication date is on/after `date_before`.
+
+        Reads pub_date from pgvector for already-stored PMIDs (no HTTP),
+        falls back to esummary for the unknowns. The fallback uses the
+        existing client._filter_pmids_by_date so the esummary parsing
+        logic stays in one place. Missing or unparseable dates are KEPT
+        — same policy as client._filter_pmids_by_date.
+        """
+        if not pmids:
+            return []
+
+        known = self._read_pub_dates_from_db(pmids, db)
+        from_db_kept: list[str] = []
+        unknown: list[str] = []
+        for pmid in pmids:
+            if pmid not in known:
+                unknown.append(pmid)
+                continue
+            parsed = self._parse_pub_date_conservative(known[pmid])
+            if parsed is None:
+                # Stored row but no usable date — match the production
+                # policy of keeping the PMID rather than dropping it.
+                from_db_kept.append(pmid)
+                continue
+            if parsed < date_before:
+                from_db_kept.append(pmid)
+
+        logger.debug(
+            "_filter_pmids_by_date: %d total, %d known in DB, %d unknown → "
+            "esummary; %d kept from DB",
+            len(pmids),
+            len(known),
+            len(unknown),
+            len(from_db_kept),
+        )
+
+        if not unknown:
+            return from_db_kept
+
+        from_esummary_kept = await client._filter_pmids_by_date(unknown, date_before)
+        # Preserve original input order
+        kept_set = set(from_db_kept) | set(from_esummary_kept)
+        return [p for p in pmids if p in kept_set]
+
     async def fetch_and_cache(
         self,
         queries: list[str],
         db: Session,
         date_before: date | None = None,
-        max_results: int | None = None,
     ) -> list[str]:
         """Hit PubMed for all queries concurrently, fetch new abstracts, embed in one batch, cache in pgvector.
 
@@ -305,7 +504,6 @@ class RetrievalService:
             db: Active SQLAlchemy session.
             date_before: Optional temporal holdout cutoff; only articles published
                 before this date are returned by PubMed search.
-            max_results: Maximum number of PubMed results to fetch per query. Defaults to PUBMED_MAX_RESULTS.
 
         Returns:
             Deduplicated list of all PMIDs returned by PubMed search across all queries.
@@ -314,16 +512,13 @@ class RetrievalService:
             that pass this list to semantic_search will see those PMIDs silently skipped
             by the WHERE pmid = ANY(:pmids) clause, which is intentional and correct.
         """
-        effective_max_results = (
-            max_results if max_results is not None else PUBMED_MAX_RESULTS
-        )
         async with PubMedClient(cache_dir=self.cache_dir) as client:
             # 1. Search all queries concurrently
             search_results = await asyncio.gather(
                 *[
                     client.search(
                         query,
-                        max_results=effective_max_results,
+                        max_results=_settings.pubmed_max_results,
                         date_before=date_before,
                     )
                     for query in queries
@@ -334,6 +529,16 @@ class RetrievalService:
             all_pmids: list[str] = list(
                 dict.fromkeys(pmid for pmids in search_results for pmid in pmids)
             )
+
+            # 1.5 Cutoff post-guard. PubMed's eutils maxdate filter is not
+            # strictly respected, so we re-verify each PMID's publication
+            # date. Reads pub_date from pgvector for already-stored PMIDs
+            # (no HTTP) and only falls back to esummary for unknowns.
+            # Massively reduces NCBI traffic on re-runs.
+            if date_before is not None:
+                all_pmids = await self._filter_pmids_by_date(
+                    all_pmids, date_before, db, client
+                )
 
             # 2. Single bulk check against pgvector
             stored = self.get_stored_pmids(all_pmids, db)
@@ -354,7 +559,7 @@ class RetrievalService:
         return all_pmids
 
     async def semantic_search(
-        self, disease: str, drug: str, pmids: list[str], db: Session, top_k: int = 5
+        self, disease: str, chembl_id: str, pmids: list[str], db: Session
     ) -> list[AbstractResult]:
         """For a given drug, disease, and list of PMIDs, return top-k most similar abstracts from pgvector
 
@@ -364,20 +569,27 @@ class RetrievalService:
 
         Args:
             disease: e.g. "colorectal cancer"
-            drug: e.g. "metformin"
+            chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
             pmids: e.g. ["29734553", "31245678", "30198432"]
-            top_k: Maximum number of results to return (default 5).
 
         Returns:
             List of dicts ranked by descending similarity, e.g.:
             [{"pmid": "29734553", "title": "Metformin suppresses colorectal...", "abstract": "...", "similarity": 0.89}, ...]
         """
+        pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
         query_string = (
-            f"Evidence for {drug} as a treatment for {disease}, "
+            f"Evidence for {pref_name} as a treatment for {disease}, "
             "including clinical trials, efficacy data, mechanism of action, "
             "and preclinical studies"
         )
         query_vector = (await embed_async([query_string]))[0]
+
+        # Over-fetch cap: pull top-N by similarity from pgvector, then rerank
+        # by pubtype in Python. Cap gives the boost headroom to reorder
+        # (a 2x RCT boost at rank 50 can beat a review at rank 5) without
+        # an unbounded scan if the candidate pool grows.
+        top_k = _settings.semantic_search_top_k
+        rerank_cap = max(top_k * 10, 100)
 
         rows = db.execute(
             text("""
@@ -389,32 +601,72 @@ class RetrievalService:
                     WHERE pmid = ANY(:pmids)
                 ) sub
                 ORDER BY similarity DESC
-                LIMIT :top_k
+                LIMIT :rerank_cap
             """),
             {
                 "query_vec": "[" + ",".join(str(x) for x in query_vector) + "]",
                 "pmids": pmids,
-                "top_k": top_k,
+                "rerank_cap": rerank_cap,
             },
         ).fetchall()
 
-        results = [
-            AbstractResult(
-                pmid=row[0],
-                title=row[1],
-                abstract=row[2],
-                similarity=float(row[3]),
-            )
-            for row in rows
-        ]
-        avg_similarity = (
-            sum(r.similarity for r in results) / len(results) if results else 0.0
-        )
+        if not rows:
+            return []
 
-        return results
+        candidate_pmids = [row[0] for row in rows]
+        async with PubMedClient(cache_dir=self.cache_dir) as client:
+            pubtypes_map = await client.fetch_pubtypes(candidate_pmids)
+
+        if not pubtypes_map:
+            logger.warning(
+                "semantic_search: fetch_pubtypes returned empty for all %d "
+                "candidates (%s / %s); pubtype boost is a no-op for this call",
+                len(candidate_pmids), chembl_id, disease,
+            )
+
+        scored: list[tuple[AbstractResult, float, float]] = []
+        for row in rows:
+            pmid, title, abstract, similarity = row[0], row[1], row[2], float(row[3])
+            pubtypes = pubtypes_map.get(pmid, [])
+            boost = max(
+                (PUBTYPE_BOOSTS.get(pt, PUBTYPE_BOOST_DEFAULT) for pt in pubtypes),
+                default=PUBTYPE_BOOST_DEFAULT,
+            )
+            final_score = similarity * boost
+            result = AbstractResult(
+                pmid=pmid,
+                title=title,
+                abstract=abstract,
+                similarity=similarity,
+                pubtype=pubtypes,
+            )
+            scored.append((result, boost, final_score))
+
+        scored.sort(key=lambda x: x[2], reverse=True)
+
+        logger.info(
+            "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
+            chembl_id, disease, len(scored), rerank_cap,
+        )
+        for result, boost, final_score in scored[:20]:
+            logger.info(
+                "  pmid=%s title=%r sim=%.4f pubtype=%s boost=%.2f final=%.4f",
+                result.pmid,
+                result.title[:60],
+                result.similarity,
+                result.pubtype,
+                boost,
+                final_score,
+            )
+
+        return [item[0] for item in scored[:top_k]]
 
     async def synthesize(
-        self, drug: str, disease: str, top_abstracts: list[AbstractResult]
+        self,
+        chembl_id: str,
+        disease: str,
+        top_abstracts: list[AbstractResult],
+        holdout_mode: bool = False,
     ) -> EvidenceSummary:
         """Summarize PubMed evidence for a drug-disease pair using an LLM.
 
@@ -422,32 +674,51 @@ class RetrievalService:
         and parses the JSON response into an EvidenceSummary.
 
         Args:
-            drug: Drug name (e.g. "metformin").
+            chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
             disease: Candidate disease (e.g. "colorectal cancer").
             top_abstracts: Output of semantic_search — list of dicts with keys
                 "pmid", "title", "abstract", "similarity".
+            holdout_mode: When True, swap to synthesize_holdout.txt — a relaxed
+                rubric that allows class-level evidence (other drugs in the
+                same mechanism class) to score weak/moderate when the cutoff
+                predates drug-specific publications. Used during temporal
+                holdout runs only.
 
         Returns:
             EvidenceSummary with all fields populated from the LLM response.
         """
+        # Cache key uses sorted PMIDs so two abstract orderings that contain the
+        # same evidence collapse to one cache entry. Holdout mode uses a different
+        # prompt template, so it must be part of the key.
+        cache_params = {
+            "chembl_id": chembl_id,
+            "disease": disease,
+            "pmids": sorted(r.pmid for r in top_abstracts),
+            "holdout_mode": holdout_mode,
+        }
+        cached = cache_get("synthesize", cache_params, self.cache_dir)
+        if cached is not None:
+            # logger.debug(
+            #     "Cache hit for synthesize: %s / %s (%d pmids)",
+            #     chembl_id, disease, len(cache_params["pmids"]),
+            # )
+            return EvidenceSummary(**cached)
+
+        pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
         formatted = "\n\n".join(
             f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
             for r in top_abstracts
         )
 
-        template = (_PROMPTS_DIR / "synthesize.txt").read_text()
+        prompt_file = "synthesize_holdout.txt" if holdout_mode else "synthesize.txt"
+        logger.info("synthesize prompt: %s", prompt_file)
+        template = (_PROMPTS_DIR / prompt_file).read_text()
         prompt = template.format(
-            drug_name=drug, disease_name=disease, abstracts=formatted
+            drug_name=pref_name, disease_name=disease, abstracts=formatted
         )
 
         response = await query_llm(prompt)
-        # Strip markdown code fences if present (```json ... ``` or ``` ... ```)
-        stripped = response.strip()
-        if stripped.startswith("```"):
-            stripped = stripped.split("```", 2)[1]
-            if stripped.startswith("json"):
-                stripped = stripped[4:].lstrip()
-            stripped = stripped.rsplit("```", 1)[0].strip()
+        stripped = strip_markdown_fences(response)
         try:
             data = json.loads(stripped)
         except json.JSONDecodeError as e:
@@ -457,13 +728,22 @@ class RetrievalService:
                 response,
             )
             raise
-        return EvidenceSummary(**data)
+        summary = EvidenceSummary(**data)
+        cache_set(
+            "synthesize",
+            cache_params,
+            summary.model_dump(mode="json"),
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+
+        return summary
 
     async def extract_organ_term(self, disease_name: str) -> str:
         """Return the primary organ or tissue for a disease name via a small LLM call."""
         cached = cache_get("organ_term", {"disease_name": disease_name}, self.cache_dir)
         if cached is not None:
-            logger.debug("Cache hit for organ_term: %s", disease_name)
+            # logger.debug("Cache hit for organ_term: %s", disease_name)
             return cached
 
         template = (_PROMPTS_DIR / "extract_organ_term.txt").read_text()
@@ -484,7 +764,7 @@ class RetrievalService:
         return organ_term
 
     async def expand_search_terms(
-        self, drug_name: str, disease_name: str, drug_profile: DrugProfile
+        self, chembl_id: str, disease_name: str, drug_profile: DrugProfile
     ) -> list[str]:
         """Use LLM to generate diverse PubMed search queries from a drug-disease pair.
 
@@ -494,7 +774,7 @@ class RetrievalService:
         pair and deduplicated (case-insensitive) before return.
 
         Args:
-            drug_name: Common drug name (e.g. "metformin").
+            chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
             disease_name: Target indication (e.g. "colorectal cancer").
             drug_profile: DrugProfile built from Open Targets + ChEMBL data.
 
@@ -522,23 +802,41 @@ class RetrievalService:
         """
         cached = cache_get(
             "expand_search_terms",
-            {"drug_name": drug_name, "disease_name": disease_name},
+            {"chembl_id": chembl_id, "disease_name": disease_name},
             self.cache_dir,
         )
         if cached is not None:
-            logger.debug(
-                "Cache hit for expand_search_terms: %s / %s", drug_name, disease_name
-            )
+            # logger.debug(
+            #     "Cache hit for expand_search_terms: %s / %s", chembl_id, disease_name
+            # )
             return cached
 
+        all_names = await get_all_drug_names(chembl_id, self.cache_dir)
+        pref_name = all_names[0]
+        synonyms = all_names[1:]
         organ_term = await self.extract_organ_term(disease_name)
+
+        # Resolve the disease string to its canonical MeSH preferred term and
+        # pass that into the prompt instead of the raw disease name. PubMed's
+        # auto-term-mapping breaks when bare multi-word phrases appear on
+        # either side of AND, so the prompt template instructs the LLM to wrap
+        # the disease term in double quotes for reliable parsing. If the
+        # MeSH lookup misses, fall back to the raw disease name.
+        from indication_scout.services.disease_helper import resolve_mesh_id
+        mesh_result = await resolve_mesh_id(disease_name)
+        disease_term = mesh_result[1] if mesh_result else disease_name
+        if mesh_result is None:
+            logger.warning(
+                "expand_search_terms: MeSH resolution missed for %r; using raw disease name",
+                disease_name,
+            )
 
         template = (_PROMPTS_DIR / "expand_search_terms.txt").read_text()
         prompt = template.format(
-            drug_name=drug_name,
-            disease_name=disease_name,
+            drug_name=pref_name,
+            disease_name=disease_term,
             organ_term=organ_term,
-            synonyms=", ".join(drug_profile.synonyms),
+            synonyms=", ".join(synonyms),
             target_gene_symbols=", ".join(drug_profile.target_gene_symbols),
             mechanisms_of_action=", ".join(drug_profile.mechanisms_of_action),
             atc_codes=", ".join(drug_profile.atc_codes),
@@ -559,7 +857,7 @@ class RetrievalService:
 
         cache_set(
             "expand_search_terms",
-            {"drug_name": drug_name, "disease_name": disease_name},
+            {"chembl_id": chembl_id, "disease_name": disease_name},
             deduped,
             self.cache_dir,
             ttl=CACHE_TTL,
@@ -567,22 +865,7 @@ class RetrievalService:
         logger.debug(
             "expand_search_terms returned %d queries for %s / %s",
             len(deduped),
-            drug_name,
+            chembl_id,
             disease_name,
         )
         return deduped
-
-    async def get_disease_synonyms(self, disease: str) -> list[str]:
-        """Return alternate names for a disease via LLM.
-
-        Args:
-            disease: Disease name (e.g. "colorectal cancer").
-
-        Returns:
-            List of synonyms (e.g. ["colon cancer", "bowel cancer", "CRC"]).
-        """
-        template = (_PROMPTS_DIR / "disease_synonyms.txt").read_text()
-        prompt = template.format(disease=disease)
-
-        llm_output = await query_small_llm(prompt)
-        return parse_llm_response(llm_output)

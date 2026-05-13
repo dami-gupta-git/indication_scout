@@ -12,6 +12,7 @@ from indication_scout.services.disease_helper import (
     merge_duplicate_diseases,
     normalize_batch,
     normalize_for_pubmed,
+    resolve_mesh_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -179,3 +180,50 @@ async def test_normalize_batch_returns_pubmed_friendly_term(test_cache_dir):
 
     count = await pubmed_count(f"metformin AND ({normalized})")
     assert count >= MIN_RESULTS
+
+
+# ── resolve_mesh_id integration tests ───────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "indication, expected_mesh_id, expected_preferred_term",
+    [
+        ("hypertension", "D006973", "Hypertension"),
+        ("type 2 diabetes", "D003924", "Diabetes Mellitus, Type 2"),
+        ("asthma", "D001249", "Asthma"),
+        ("parkinson disease", "D010300", "Parkinson Disease"),
+        ("rheumatoid arthritis", "D001172", "Arthritis, Rheumatoid"),
+        ("alzheimer disease", "D000544", "Alzheimer Disease"),
+        ("breast neoplasms", "D001943", "Breast Neoplasms"),
+        ("multiple sclerosis", "D009103", "Multiple Sclerosis"),
+        ("psoriasis", "D011565", "Psoriasis"),
+        ("epilepsy", "D004827", "Epilepsy"),
+    ],
+)
+async def test_resolve_mesh_id_real_ncbi(
+    indication, expected_mesh_id, expected_preferred_term
+):
+    """Real NCBI esearch+esummary resolves common indications to (D-number, preferred term)."""
+    result = await resolve_mesh_id(indication)
+    assert result == (expected_mesh_id, expected_preferred_term)
+
+
+@pytest.mark.parametrize(
+    "indication, expected_mesh_id, expected_preferred_term",
+    [
+        # "skin melanoma" is not itself a MeSH heading; NCBI ATM translates it
+        # to "cutaneous malignant melanoma"[MeSH Terms] (D000096142).
+        ("skin melanoma", "D000096142", "Cutaneous Malignant Melanoma"),
+        ("high blood pressure", "D006973", "Hypertension"),
+        ("heart attack", "D009203", "Myocardial Infarction"),
+        ("stroke", "D020521", "Stroke"),
+        ("lou gehrig disease", "D000690", "Amyotrophic Lateral Sclerosis"),
+    ],
+)
+async def test_resolve_mesh_id_atm_fallback(
+    tmp_path, indication, expected_mesh_id, expected_preferred_term
+):
+    """Descriptive phrases with no exact MeSH heading resolve via NCBI ATM fallback."""
+    with patch("indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path):
+        result = await resolve_mesh_id(indication)
+    assert result == (expected_mesh_id, expected_preferred_term)

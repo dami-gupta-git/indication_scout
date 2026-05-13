@@ -1,0 +1,90 @@
+{
+  "bupropion": [
+    {"disease": "major depressive disorder", "approved": "1985-12-30"},
+    {"disease": "smoking cessation", "approved": "1997-05-14"},
+    {"disease": "seasonal affective disorder", "approved": "2006-12-31"},
+    {"disease": "obesity", "approved": "2014-09-10"},
+    {"disease": "alzheimer's disease agitation", "approved": "2026-05-31"}
+  ],
+  "semaglutide": [
+    {"disease": "type 2 diabetes mellitus", "approved": "2017-12-05"},
+    {"disease": "cardiovascular risk reduction", "approved": "2020-01-16"},
+    {"disease": "obesity", "approved": "2021-06-04"},
+    {"disease": "chronic kidney disease", "approved": "2025-01-28"},
+    {"disease": "MASH", "approved": "2025-08-15"}
+  ],
+  "duloxetine": [
+    {"disease": "major depressive disorder", "approved": "2004-08-03"},
+    {"disease": "diabetic peripheral neuropathic pain", "approved": "2004-09-03"},
+    {"disease": "generalized anxiety disorder", "approved": "2007-02-26"},
+    {"disease": "fibromyalgia", "approved": "2008-06-30"},
+    {"disease": "chronic musculoskeletal pain", "approved": "2010-11-04"}
+  ],
+  "imatinib": [
+    {"disease": "chronic myeloid leukemia", "approved": "2001-05-10"},
+    {"disease": "gastrointestinal stromal tumor", "approved": "2002-02-01"},
+    {"disease": "acute lymphoblastic leukemia", "approved": "2006-10-19"},
+    {"disease": "myelodysplastic syndrome", "approved": "2006-10-19"},
+    {"disease": "myeloproliferative neoplasm", "approved": "2006-10-19"},
+    {"disease": "aggressive systemic mastocytosis", "approved": "2006-10-19"},
+    {"disease": "hypereosinophilic syndrome", "approved": "2006-10-19"},
+    {"disease": "dermatofibrosarcoma protuberans", "approved": "2006-10-19"}
+  ],
+  "colchicine": [
+    {"disease": "gout", "approved": "2009-07-29"},
+    {"disease": "familial mediterranean fever", "approved": "2009-07-29"},
+    {"disease": "atherosclerotic cardiovascular disease", "approved": "2023-06-17"}
+  ],
+  "tadalafil": [
+    {"disease": "erectile dysfunction", "approved": "2003-11-21"},
+    {"disease": "pulmonary arterial hypertension", "approved": "2009-05-22"},
+    {"disease": "benign prostatic hyperplasia", "approved": "2011-10-06"}
+  ],
+  "sildenafil": [
+    {"disease": "erectile dysfunction", "approved": "1998-03-27"},
+    {"disease": "pulmonary arterial hypertension", "approved": "2005-06-03"}
+  ],
+  "botox_onabotulinumtoxinA": [
+    {"disease": "strabismus and blepharospasm", "approved": "1989-12-29"},
+    {"disease": "cervical dystonia", "approved": "2000-01-01"},
+    {"disease": "severe axillary hyperhidrosis", "approved": "2004-01-01"},
+    {"disease": "glabellar lines", "approved": "2002-04-12"},
+    {"disease": "chronic migraine", "approved": "2010-01-01"},
+    {"disease": "upper limb spasticity", "approved": "2010-01-01"},
+    {"disease": "overactive bladder", "approved": "2013-01-01"},
+    {"disease": "urinary incontinence due to detrusor overactivity", "approved": "2011-01-01"},
+    {"disease": "lower limb spasticity", "approved": "2015-01-01"},
+    {"disease": "pediatric upper/lower limb spasticity", "approved": "2019-01-01"},
+    {"disease": "pediatric detrusor overactivity", "approved": "2021-01-01"},
+    {"disease": "forehead lines and crow's feet", "approved": "2013-01-01"}
+  ],
+  "methotrexate": [
+    {"disease": "benign prostatic hyperplasia", "approved": "1992-12-31"},
+    {"disease": "male pattern hair loss", "approved": "1997-12-31"}
+  ],
+  "baricitinib": [
+    {"disease": "alopecia areata", "approved": "2022-06-01"}
+  ],
+  "propranolol": [
+    {"disease": "hypertension", "approved": "1967-12-31"},
+    {"disease": "angina pectoris", "approved": "1967-12-31"},
+    {"disease": "migraine prophylaxis", "approved": "1979-12-31"},
+    {"disease": "essential tremor", "approved": "1984-12-31"},
+    {"disease": "proliferating infantile hemangioma", "approved": "2014-12-31"}
+  ],
+  "methotrexate": [
+    {"disease": "acute lymphoblastic leukemia", "approved": "1953-12-31"},
+    {"disease": "psoriasis", "approved": "1972-12-31"},
+    {"disease": "rheumatoid arthritis", "approved": "1988-12-31"}
+  ],
+  "everolimus": [
+    {"disease": "advanced renal cell carcinoma", "approved": "2009-03-30"},
+    {"disease": "prevention of organ rejection in kidney transplant", "approved": "2010-04-22"},
+    {"disease": "subependymal giant cell astrocytoma", "approved": "2010-10-29"},
+    {"disease": "progressive pancreatic neuroendocrine tumors", "approved": "2011-05-06"},
+    {"disease": "renal angiomyolipoma associated", "approved": "2012-04-26"},
+    {"disease": "advanced HR+, HER2- breast cancer", "approved": "2012-07-20"},
+    {"disease": "prevention of organ rejection in liver transplant", "approved": "2013-02-15"},
+    {"disease": "TSC-associated partial-onset seizures", "approved": "2018-04-10"}
+  ]
+}

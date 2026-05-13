@@ -8,9 +8,7 @@ from pydantic import BaseModel, field_validator, model_validator
 class EvidenceSummary(BaseModel):
     summary: str = ""
     study_count: int = 0
-    study_types: list[str] = []
     strength: Literal["strong", "moderate", "weak", "none"] = "none"
-    has_adverse_effects: bool = False
     key_findings: list[str] = []
     supporting_pmids: list[str] = []
 

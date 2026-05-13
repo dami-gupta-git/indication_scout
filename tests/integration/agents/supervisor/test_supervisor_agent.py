@@ -64,44 +64,70 @@ async def test_metformin_supervisor_agent(supervisor_agent):
     - mechanism is present with known targets (analyze_mechanism was called)
     - findings list is non-empty with valid disease names
     - each finding has at least one sub-agent result (literature or clinical_trials)
-    - summary is non-empty and mentions metformin (finalize_supervisor was called)
+    - summary is non-empty and matches the structured fact-list shape (finalize_supervisor was
+      called)
     """
-    output = await run_supervisor_agent(supervisor_agent, "metformin")
+    agent, get_merged_allowlist, get_auto_findings = supervisor_agent
+    output = await run_supervisor_agent(
+        agent,
+        get_merged_allowlist,
+        "metformin",
+        get_auto_findings=get_auto_findings,
+    )
 
     assert isinstance(output, SupervisorOutput)
 
     # --- drug_name ---
     assert output.drug_name == "metformin"
 
-    # --- candidates: find_candidates was called and results parsed ---
-    assert len(output.candidates) >= 3
-    assert all(isinstance(c, str) and len(c) > 0 for c in output.candidates)
-    assert _EXPECTED_CANDIDATES.issubset(set(output.candidates))
+    # --- candidate_diseases: find_candidates was called and results parsed ---
+    assert len(output.candidate_diseases) >= 3
+    assert all(isinstance(c, str) and len(c) > 0 for c in output.candidate_diseases)
+    assert _EXPECTED_CANDIDATES.issubset(set(output.candidate_diseases))
 
     # --- mechanism: analyze_mechanism was called ---
     assert isinstance(output.mechanism, MechanismOutput)
     assert len(output.mechanism.drug_targets) >= 10
     assert _EXPECTED_TARGET_SYMBOLS.issubset(set(output.mechanism.drug_targets.keys()))
 
-    # --- findings: at least one candidate was investigated ---
-    assert len(output.findings) >= 1
-    assert all(isinstance(f, CandidateFindings) for f in output.findings)
+    # --- disease_findings: at least one candidate was investigated ---
+    assert len(output.disease_findings) >= 1
+    assert all(isinstance(f, CandidateFindings) for f in output.disease_findings)
 
     # Every finding must name a disease and have at least one sub-agent result
-    for finding in output.findings:
+    for finding in output.disease_findings:
         assert isinstance(finding.disease, str) and len(finding.disease) > 0
         assert (
             finding.literature is not None or finding.clinical_trials is not None
         ), f"Finding for {finding.disease!r} has no sub-agent results"
 
-    # All finding disease names must come from the candidates list
-    # finding_diseases = {f.disease for f in output.findings}
+    # All finding disease names must come from the candidate_diseases list
+    # finding_diseases = {f.disease for f in output.disease_findings}
     # assert finding_diseases.issubset(
-    #     set(output.candidates)
-    # ), f"Findings reference diseases not in candidates: {finding_diseases - set(output.candidates)}"
+    #     set(output.candidate_diseases)
+    # ), f"Findings reference diseases not in candidate_diseases: {finding_diseases - set(output.candidate_diseases)}"
+
+    # --- top_diseases: invariants ---
+    # Strict subset of disease_findings (enforced in run_supervisor_agent).
+    finding_names = {f.disease for f in output.disease_findings}
+    assert set(output.top_diseases).issubset(
+        finding_names
+    ), f"top_diseases not a subset of disease_findings: {set(output.top_diseases) - finding_names}"
+    # Hard cap at 5.
+    assert len(output.top_diseases) <= 5
+    # disease_findings ordering: top_diseases entries appear first in rank order.
+    findings_order = [f.disease for f in output.disease_findings]
+    assert (
+        findings_order[: len(output.top_diseases)] == output.top_diseases
+    ), "disease_findings must lead with top_diseases in rank order"
 
     # --- summary: finalize_supervisor was called ---
+    # Per supervisor.txt "WRITING THE SUMMARY", the summary is a structured fact list of
+    # investigated candidates (one line per disease with literature/trials/FDA fields), not a
+    # narrative — so the drug name is intentionally absent from the format.
     assert len(output.summary) > 100
-    assert "metformin" in output.summary.lower()
+    summary_lower = output.summary.lower()
+    assert "literature:" in summary_lower
+    assert "trials:" in summary_lower
     # Must not look like raw JSON or a tool schema
     assert not output.summary.strip().startswith("{")

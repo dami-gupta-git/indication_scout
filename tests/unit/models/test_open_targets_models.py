@@ -3,12 +3,15 @@
 import pytest
 
 from indication_scout.models.model_open_targets import (
+    Association,
     DrugData,
     DrugTarget,
+    EvidenceRecord,
     GeneticConstraint,
     Indication,
     MechanismOfAction,
     TargetData,
+    VariantFunctionalConsequence,
 )
 
 # --- DrugData ---
@@ -19,7 +22,6 @@ def sample_drug_data():
     """Create a sample DrugData for testing."""
     return DrugData(
         chembl_id="CHEMBL2108724",
-        name="SEMAGLUTIDE",
         drug_type="Protein",
         maximum_clinical_stage="APPROVAL",
         targets=[
@@ -77,7 +79,6 @@ def test_drug_data_mechanisms_of_action_field():
     """DrugData.mechanisms_of_action should store MechanismOfAction objects."""
     drug = DrugData(
         chembl_id="CHEMBL2108724",
-        name="SEMAGLUTIDE",
         mechanisms_of_action=[
             MechanismOfAction(
                 mechanism_of_action="GLP-1 receptor agonist",
@@ -111,7 +112,7 @@ def test_drug_data_mechanisms_of_action_field():
 
 def test_drug_data_mechanisms_of_action_defaults_to_empty():
     """DrugData.mechanisms_of_action should default to [] when not provided."""
-    drug = DrugData(chembl_id="CHEMBL9999", name="NO_MOA_DRUG")
+    drug = DrugData(chembl_id="CHEMBL9999")
 
     assert drug.mechanisms_of_action == []
 
@@ -120,7 +121,6 @@ def test_drug_data_coerce_nones_converts_null_mechanisms_of_action_to_empty():
     """DrugData with mechanisms_of_action=None must coerce to []."""
     drug = DrugData(
         chembl_id="CHEMBL9999",
-        name="TEST_DRUG",
         mechanisms_of_action=None,
     )
 
@@ -175,7 +175,6 @@ def test_drug_target_action_type_optional():
     """DrugTarget.action_type should be optional (None allowed)."""
     drug = DrugData(
         chembl_id="CHEMBL1234",
-        name="TEST_DRUG",
         drug_type="Small molecule",
         maximum_clinical_stage="PHASE_2",
         targets=[
@@ -199,7 +198,6 @@ def test_drug_data_empty_targets():
     """DrugData.targets should default to empty list."""
     drug = DrugData(
         chembl_id="CHEMBL9999",
-        name="NO_TARGET_DRUG",
         drug_type="Small molecule",
         maximum_clinical_stage="PHASE_1",
     )
@@ -211,9 +209,6 @@ def test_drug_data_coerce_nones_converts_null_lists_to_empty():
     """DrugData with all list fields set to None must coerce them to []."""
     drug = DrugData(
         chembl_id="CHEMBL9999",
-        name="TEST_DRUG",
-        synonyms=None,
-        trade_names=None,
         mechanisms_of_action=None,
         warnings=None,
         indications=None,
@@ -222,8 +217,6 @@ def test_drug_data_coerce_nones_converts_null_lists_to_empty():
         atc_classifications=None,
     )
 
-    assert drug.synonyms == []
-    assert drug.trade_names == []
     assert drug.mechanisms_of_action == []
     assert drug.warnings == []
     assert drug.indications == []
@@ -249,7 +242,6 @@ def test_approved_disease_ids_empty_when_no_indications():
     """approved_disease_ids should be empty when no indications."""
     drug = DrugData(
         chembl_id="CHEMBL9999",
-        name="NO_INDICATION_DRUG",
         drug_type="Small molecule",
         maximum_clinical_stage="PHASE_1",
         indications=[],
@@ -333,9 +325,139 @@ def test_investigated_disease_ids_empty_when_no_indications():
     """investigated_disease_ids should be empty when no indications."""
     drug = DrugData(
         chembl_id="CHEMBL9999",
-        name="NO_INDICATION_DRUG",
         drug_type="Small molecule",
         maximum_clinical_stage="PHASE_1",
         indications=[],
     )
     assert drug.investigated_disease_ids == set()
+
+
+# --- Association.disease_description ---
+
+
+def test_association_disease_description_defaults_to_empty():
+    """disease_description defaults to '' when not provided."""
+    a = Association(disease_id="EFO_001", disease_name="x")
+    assert a.disease_description == ""
+
+
+def test_association_coerce_nones_converts_null_disease_description():
+    """Null disease_description should coerce to '' via the model validator."""
+    a = Association(disease_id="EFO_001", disease_name="x", disease_description=None)
+    assert a.disease_description == ""
+
+
+def test_association_all_fields_populate():
+    a = Association(
+        disease_id="EFO_0000400",
+        disease_name="type 2 diabetes mellitus",
+        disease_description="A type of diabetes mellitus.",
+        overall_score=0.77,
+        datatype_scores={"genetic_association": 0.76},
+        therapeutic_areas=["metabolic disease"],
+    )
+    assert a.disease_description == "A type of diabetes mellitus."
+    assert a.overall_score == 0.77
+    assert a.datatype_scores == {"genetic_association": 0.76}
+
+
+# --- TargetData.function_descriptions ---
+
+
+def test_target_data_function_descriptions_defaults_to_empty():
+    """function_descriptions defaults to []."""
+    t = TargetData(target_id="ENSG0001", symbol="TEST")
+    assert t.function_descriptions == []
+
+
+def test_target_data_coerce_nones_converts_null_function_descriptions():
+    """Null function_descriptions coerces to []."""
+    t = TargetData(target_id="ENSG0001", symbol="TEST", function_descriptions=None)
+    assert t.function_descriptions == []
+
+
+def test_target_data_function_descriptions_populates():
+    """function_descriptions holds a list of UniProt-style strings."""
+    t = TargetData(
+        target_id="ENSG00000112164",
+        symbol="GLP1R",
+        function_descriptions=[
+            "G-protein coupled receptor for GLP-1.",
+            "Regulates insulin secretion.",
+        ],
+    )
+    assert len(t.function_descriptions) == 2
+    assert t.function_descriptions[0].startswith("G-protein")
+
+
+# --- VariantFunctionalConsequence ---
+
+
+def test_variant_functional_consequence_fields_populate():
+    vfc = VariantFunctionalConsequence(
+        id="SO_0002054", label="loss_of_function_variant"
+    )
+    assert vfc.id == "SO_0002054"
+    assert vfc.label == "loss_of_function_variant"
+
+
+def test_variant_functional_consequence_defaults_to_empty_strings():
+    """Both fields default to '' — never required from upstream data."""
+    vfc = VariantFunctionalConsequence()
+    assert vfc.id == ""
+    assert vfc.label == ""
+
+
+def test_variant_functional_consequence_coerces_nones():
+    """Null id / label coerce to ''."""
+    vfc = VariantFunctionalConsequence(id=None, label=None)
+    assert vfc.id == ""
+    assert vfc.label == ""
+
+
+# --- EvidenceRecord ---
+
+
+def test_evidence_record_all_fields_populate():
+    vfc = VariantFunctionalConsequence(
+        id="SO_0002054", label="loss_of_function_variant"
+    )
+    e = EvidenceRecord(
+        disease_id="EFO_0003847",
+        datatype_id="genetic_association",
+        score=0.85,
+        direction_on_target="LoF",
+        direction_on_trait="risk",
+        variant_functional_consequence=vfc,
+    )
+    assert e.disease_id == "EFO_0003847"
+    assert e.datatype_id == "genetic_association"
+    assert e.score == 0.85
+    assert e.direction_on_target == "LoF"
+    assert e.direction_on_trait == "risk"
+    assert e.variant_functional_consequence is vfc
+
+
+def test_evidence_record_direction_fields_optional():
+    """direction_on_target / direction_on_trait / vFC stay None when absent.
+
+    coerce_nones only fills defaults when `default is not None`; these
+    fields default to None and therefore pass through untouched, which
+    is what downstream direction classification relies on.
+    """
+    e = EvidenceRecord(
+        disease_id="EFO_001",
+        datatype_id="literature",
+        score=0.4,
+    )
+    assert e.direction_on_target is None
+    assert e.direction_on_trait is None
+    assert e.variant_functional_consequence is None
+
+
+def test_evidence_record_coerces_null_string_fields_to_empty():
+    """disease_id / datatype_id coerce None → '' so downstream filtering
+    can safely call `.lower()` or dict-key on them."""
+    e = EvidenceRecord(disease_id=None, datatype_id=None)
+    assert e.disease_id == ""
+    assert e.datatype_id == ""

@@ -28,6 +28,21 @@ class Intervention(BaseModel):
         return values
 
 
+class MeshTerm(BaseModel):
+    """A MeSH term from ClinicalTrials.gov's derived conditionBrowseModule."""
+
+    id: str = ""  # e.g. "D003924"
+    term: str = ""  # e.g. "Diabetes Mellitus, Type 2"
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
 class PrimaryOutcome(BaseModel):
     """A primary outcome measure for a trial."""
 
@@ -53,6 +68,8 @@ class Trial(BaseModel):
     overall_status: str = ""  # "Recruiting", "Completed", "Terminated", etc.
     why_stopped: str | None = None  # free text, only for Terminated/Withdrawn/Suspended
     indications: list[str] = []
+    mesh_conditions: list[MeshTerm] = []
+    mesh_ancestors: list[MeshTerm] = []
     interventions: list[Intervention] = []
     sponsor: str = ""
     enrollment: int | None = None
@@ -71,18 +88,24 @@ class Trial(BaseModel):
 
 
 # ------------------------------------------------------------------
-# Whitespace detection
+# Per-pair trial query results (count + top-50 exemplars)
 # ------------------------------------------------------------------
 
 
-class IndicationDrug(BaseModel):
-    """A drug being tested for the same indication (when whitespace exists)."""
+class SearchTrialsResult(BaseModel):
+    """All-status trial query for a drug × indication pair.
 
-    nct_id: str = ""
-    drug_name: str = ""
-    indication: str = ""
-    phase: str = ""
-    status: str = ""
+    `total_count` is the exact number of trials matching the pair (via
+    countTotal). `by_status` carries per-status counts for RECRUITING,
+    ACTIVE_NOT_RECRUITING, WITHDRAWN, and UNKNOWN. TERMINATED and COMPLETED
+    counts live on TerminatedTrialsResult and CompletedTrialsResult to avoid
+    double-counting. `trials` is the top 50 by enrollment for the agent
+    to inspect.
+    """
+
+    total_count: int = 0
+    by_status: dict[str, int] = {}
+    trials: list[Trial] = []
 
     @model_validator(mode="before")
     @classmethod
@@ -92,27 +115,37 @@ class IndicationDrug(BaseModel):
                 values[field_name] = field_info.default
         return values
 
+
+class CompletedTrialsResult(BaseModel):
+    """Status=COMPLETED trial query for a drug × indication pair.
+
+    `total_count` is all completed trials for the pair. `trials` is the top
+    50 by enrollment; the agent reads phase information off each trial.
+    """
+
+    total_count: int = 0
+    trials: list[Trial] = []
+
+    @model_validator(mode="before")
     @classmethod
-    def from_trial(cls, trial: Trial, drug_name: str) -> "IndicationDrug":
-        """Build an IndicationDrug from a Trial and its primary drug name."""
-        return cls(
-            nct_id=trial.nct_id,
-            drug_name=drug_name,
-            indication=trial.indications[0] if trial.indications else "",
-            phase=trial.phase,
-            status=trial.overall_status,
-        )
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
 
 
-class WhitespaceResult(BaseModel):
-    """Result of whitespace detection — is this drug-indication pair unexplored?"""
+class TerminatedTrialsResult(BaseModel):
+    """Status=TERMINATED trial query for a drug × indication pair.
 
-    is_whitespace: bool | None = None
-    no_data: bool | None = None
-    exact_match_count: int | None = None
-    drug_only_trials: int | None = None
-    indication_only_trials: int | None = None
-    indication_drugs: list[IndicationDrug] = []
+    `total_count` is all terminated trials for the pair. `trials` is the
+    top 50 by enrollment, each carrying `why_stopped` text. Stop-category
+    classification is derived on read at the tool layer (no separate
+    field stored).
+    """
+
+    total_count: int = 0
+    trials: list[Trial] = []
 
     @model_validator(mode="before")
     @classmethod
@@ -184,27 +217,28 @@ class IndicationLandscape(BaseModel):
 
 
 # ------------------------------------------------------------------
-# Terminated trials (Critique Agent)
+# FDA approval check
 # ------------------------------------------------------------------
 
 
-class TerminatedTrial(BaseModel):
-    """A terminated, withdrawn, or suspended trial with stop classification."""
+class ApprovalCheck(BaseModel):
+    """Result of an FDA-label lookup for a drug × indication pair.
 
-    nct_id: str = ""
-    title: str = ""
-    drug_name: str | None = None
-    indication: str | None = None
-    phase: str | None = None
-    why_stopped: str | None = None
-    stop_category: str | None = (
-        None  # safety, efficacy, business, enrollment, other, unknown
-    )
-    enrollment: int | None = None
-    sponsor: str | None = None
-    start_date: str | None = None
-    termination_date: str | None = None
-    references: list[str] = []  # PMIDs
+    `is_approved` is True when the indication appears on a current
+    FDA label for any known name of the drug. When False it means
+    "not found on FDA labels" — it does not distinguish trial failure
+    from approval pending from approval outside the US.
+
+    `label_found` is True when FDA returned at least one label for any
+    of the drug names checked. When False, no label exists in openFDA
+    for this drug (e.g. withdrawn drugs like aducanumab after 2024) —
+    approval status cannot be determined from available data.
+    """
+
+    is_approved: bool = False
+    label_found: bool = False
+    matched_indication: str | None = None
+    drug_names_checked: list[str] = []
 
     @model_validator(mode="before")
     @classmethod

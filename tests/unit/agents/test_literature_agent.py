@@ -35,9 +35,7 @@ SEMANTIC_RESULTS = [
 EVIDENCE = EvidenceSummary(
     strength="moderate",
     study_count=2,
-    study_types=["RCT"],
     key_findings=["Metformin reduces tumor growth"],
-    has_adverse_effects=False,
     supporting_pmids=["111", "222"],
     summary="Moderate evidence supports metformin in colorectal cancer.",
 )
@@ -93,9 +91,7 @@ async def test_run_literature_agent_assembles_all_fields():
     assert isinstance(output.evidence_summary, EvidenceSummary)
     assert output.evidence_summary.strength == "moderate"
     assert output.evidence_summary.study_count == 2
-    assert output.evidence_summary.study_types == ["RCT"]
     assert output.evidence_summary.key_findings == ["Metformin reduces tumor growth"]
-    assert output.evidence_summary.has_adverse_effects is False
     assert output.evidence_summary.supporting_pmids == ["111", "222"]
     assert output.summary == NARRATIVE
 

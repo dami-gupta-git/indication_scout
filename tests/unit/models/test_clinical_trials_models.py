@@ -2,15 +2,16 @@
 
 import pytest
 from indication_scout.models.model_clinical_trials import (
+    ApprovalCheck,
     CompetitorEntry,
-    IndicationDrug,
+    CompletedTrialsResult,
     IndicationLandscape,
     Intervention,
     PrimaryOutcome,
     RecentStart,
-    TerminatedTrial,
+    SearchTrialsResult,
+    TerminatedTrialsResult,
     Trial,
-    WhitespaceResult,
 )
 
 # --- Intervention and PrimaryOutcome ---
@@ -229,90 +230,116 @@ def test_trial_accepts_various_statuses(status):
     assert trial.overall_status == status
 
 
-# --- IndicationDrug and WhitespaceResult ---
+# --- SearchTrialsResult ---
 
 
-@pytest.fixture
-def sample_indication_drug():
-    """Create a sample IndicationDrug."""
-    return IndicationDrug(
-        nct_id="NCT04375669",
-        drug_name="Semaglutide",
-        indication="NASH",
-        phase="Phase 3",
-        status="Active, not recruiting",
-    )
-
-
-def test_indication_drug_all_fields(sample_indication_drug):
-    """IndicationDrug should store all fields correctly."""
-    assert sample_indication_drug.nct_id == "NCT04375669"
-    assert sample_indication_drug.drug_name == "Semaglutide"
-    assert sample_indication_drug.indication == "NASH"
-    assert sample_indication_drug.phase == "Phase 3"
-    assert sample_indication_drug.status == "Active, not recruiting"
-
-
-def test_indication_drug_missing_status_defaults_to_empty_string():
-    """IndicationDrug status defaults to empty string when omitted."""
-    cd = IndicationDrug(
-        nct_id="NCT04375669",
-        drug_name="Semaglutide",
-        indication="NASH",
-        phase="Phase 3",
-        # missing status
-    )
-    assert cd.status == ""
-
-
-def test_whitespace_result_is_whitespace_true():
-    """WhitespaceResult should handle is_whitespace=True case."""
-    result = WhitespaceResult(
-        is_whitespace=True,
-        exact_match_count=0,
-        drug_only_trials=15,
-        indication_only_trials=42,
-        indication_drugs=[],
-    )
-    assert result.is_whitespace is True
-    assert result.exact_match_count == 0
-    assert result.drug_only_trials == 15
-    assert result.indication_only_trials == 42
-    assert result.indication_drugs == []
-
-
-def test_whitespace_result_with_indication_drugs():
-    """WhitespaceResult should store indication_drugs when whitespace exists."""
-    indication_drug = IndicationDrug(
-        nct_id="NCT04375669",
-        drug_name="Semaglutide",
-        indication="NASH",
+def test_search_trials_result_all_fields():
+    """SearchTrialsResult stores total, by_status counts, and trials list."""
+    trial = Trial(
+        nct_id="NCT00000001",
+        title="T1",
         phase="Phase 2",
-        status="Completed",
+        overall_status="Recruiting",
+        sponsor="S",
     )
-    result = WhitespaceResult(
-        is_whitespace=True,
-        exact_match_count=0,
-        drug_only_trials=10,
-        indication_only_trials=25,
-        indication_drugs=[indication_drug],
+    result = SearchTrialsResult(
+        total_count=42,
+        by_status={"RECRUITING": 10, "ACTIVE_NOT_RECRUITING": 4, "WITHDRAWN": 1},
+        trials=[trial],
     )
-    assert result.is_whitespace is True
-    assert result.exact_match_count == 0
-    assert len(result.indication_drugs) == 1
-    assert result.indication_drugs[0].nct_id == "NCT04375669"
-    assert result.indication_drugs[0].indication == "NASH"
+    assert result.total_count == 42
+    assert result.by_status == {
+        "RECRUITING": 10,
+        "ACTIVE_NOT_RECRUITING": 4,
+        "WITHDRAWN": 1,
+    }
+    assert len(result.trials) == 1
+    assert result.trials[0].nct_id == "NCT00000001"
 
 
-def test_whitespace_result_defaults_indication_drugs_to_empty():
-    """WhitespaceResult should default indication_drugs to empty list."""
-    result = WhitespaceResult(
-        is_whitespace=True,
-        exact_match_count=0,
-        drug_only_trials=5,
-        indication_only_trials=10,
+def test_search_trials_result_defaults():
+    """SearchTrialsResult() yields the documented zero-state defaults."""
+    result = SearchTrialsResult()
+    assert result.total_count == 0
+    assert result.by_status == {}
+    assert result.trials == []
+
+
+def test_search_trials_result_coerce_nones():
+    """SearchTrialsResult coerces None values for fields with non-None defaults."""
+    result = SearchTrialsResult(total_count=None, by_status=None, trials=None)
+    assert result.total_count == 0
+    assert result.by_status == {}
+    assert result.trials == []
+
+
+# --- CompletedTrialsResult ---
+
+
+def test_completed_trials_result_all_fields():
+    """CompletedTrialsResult stores total and trials list."""
+    trial = Trial(
+        nct_id="NCT00000002",
+        title="T2",
+        phase="Phase 3",
+        overall_status="Completed",
+        sponsor="S",
     )
-    assert result.indication_drugs == []
+    result = CompletedTrialsResult(
+        total_count=12,
+        trials=[trial],
+    )
+    assert result.total_count == 12
+    assert len(result.trials) == 1
+    assert result.trials[0].nct_id == "NCT00000002"
+
+
+def test_completed_trials_result_defaults():
+    """CompletedTrialsResult() yields the documented zero-state defaults."""
+    result = CompletedTrialsResult()
+    assert result.total_count == 0
+    assert result.trials == []
+
+
+def test_completed_trials_result_coerce_nones():
+    """CompletedTrialsResult coerces None values for fields with non-None defaults."""
+    result = CompletedTrialsResult(total_count=None, trials=None)
+    assert result.total_count == 0
+    assert result.trials == []
+
+
+# --- TerminatedTrialsResult ---
+
+
+def test_terminated_trials_result_all_fields():
+    """TerminatedTrialsResult stores total and trials list."""
+    trial = Trial(
+        nct_id="NCT00000003",
+        title="T3",
+        phase="Phase 2",
+        overall_status="Terminated",
+        why_stopped="Lack of efficacy",
+        sponsor="S",
+    )
+    result = TerminatedTrialsResult(total_count=5, trials=[trial])
+    assert result.total_count == 5
+    assert len(result.trials) == 1
+    assert result.trials[0].nct_id == "NCT00000003"
+    assert result.trials[0].why_stopped == "Lack of efficacy"
+
+
+def test_terminated_trials_result_defaults():
+    """TerminatedTrialsResult() yields the documented zero-state defaults."""
+    result = TerminatedTrialsResult()
+    assert result.total_count == 0
+    assert result.trials == []
+
+
+def test_terminated_trials_result_coerce_nones():
+    """TerminatedTrialsResult coerces None values for fields with non-None defaults."""
+    result = TerminatedTrialsResult(total_count=None, trials=None)
+    assert result.total_count == 0
+    assert result.trials == []
 
 
 # --- CompetitorEntry and IndicationLandscape ---
@@ -410,67 +437,41 @@ def test_indication_landscape_empty_competitors():
     assert landscape.recent_starts == []
 
 
-# --- TerminatedTrial ---
+# --- ApprovalCheck ---
 
 
-@pytest.fixture
-def sample_terminated_trial():
-    """Create a sample TerminatedTrial."""
-    return TerminatedTrial(
-        nct_id="NCT03456789",
-        drug_name="Failed Drug",
-        indication="Type 2 Diabetes",
-        phase="Phase 3",
-        why_stopped="Interim analysis showed lack of efficacy",
-        stop_category="efficacy",
+def test_approval_check_defaults():
+    """ApprovalCheck() has documented default field values."""
+    result = ApprovalCheck()
+    assert result.is_approved is False
+    assert result.label_found is False
+    assert result.matched_indication is None
+    assert result.drug_names_checked == []
+
+
+def test_approval_check_all_fields():
+    """ApprovalCheck stores all fields correctly."""
+    result = ApprovalCheck(
+        is_approved=True,
+        label_found=True,
+        matched_indication="type 2 diabetes mellitus",
+        drug_names_checked=["semaglutide", "ozempic", "wegovy", "rybelsus"],
     )
+    assert result.is_approved is True
+    assert result.label_found is True
+    assert result.matched_indication == "type 2 diabetes mellitus"
+    assert result.drug_names_checked == ["semaglutide", "ozempic", "wegovy", "rybelsus"]
 
 
-def test_terminated_trial_all_fields(sample_terminated_trial):
-    """TerminatedTrial should store all fields correctly."""
-    assert sample_terminated_trial.nct_id == "NCT03456789"
-    assert sample_terminated_trial.drug_name == "Failed Drug"
-    assert sample_terminated_trial.indication == "Type 2 Diabetes"
-    assert sample_terminated_trial.phase == "Phase 3"
-    assert (
-        sample_terminated_trial.why_stopped
-        == "Interim analysis showed lack of efficacy"
+def test_approval_check_coerce_nones():
+    """ApprovalCheck coerces None values for fields with non-None defaults."""
+    result = ApprovalCheck(
+        is_approved=None,
+        label_found=None,
+        matched_indication=None,
+        drug_names_checked=None,
     )
-    assert sample_terminated_trial.stop_category == "efficacy"
-
-
-def test_terminated_trial_minimal_fields():
-    """TerminatedTrial should work with only required fields."""
-    trial = TerminatedTrial(
-        nct_id="NCT00000001",
-    )
-    assert trial.nct_id == "NCT00000001"
-    # Defaults
-    assert trial.drug_name is None
-    assert trial.indication is None
-    assert trial.phase is None
-    assert trial.why_stopped is None
-    assert trial.stop_category is None
-    assert trial.stop_category is None
-
-
-@pytest.mark.parametrize(
-    "stop_category,why_stopped",
-    [
-        ("safety", "Serious adverse events observed"),
-        ("efficacy", "Primary endpoint not met"),
-        ("business", "Strategic decision by sponsor"),
-        ("enrollment", "Insufficient enrollment"),
-        ("other", "COVID-19 pandemic impact"),
-        ("unknown", None),
-    ],
-)
-def test_terminated_trial_stop_categories(stop_category, why_stopped):
-    """TerminatedTrial should accept various stop_category values."""
-    trial = TerminatedTrial(
-        nct_id="NCT00000001",
-        stop_category=stop_category,
-        why_stopped=why_stopped,
-    )
-    assert trial.stop_category == stop_category
-    assert trial.why_stopped == why_stopped
+    assert result.is_approved is False
+    assert result.label_found is False
+    assert result.matched_indication is None
+    assert result.drug_names_checked == []

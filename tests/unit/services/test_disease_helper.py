@@ -12,6 +12,7 @@ from indication_scout.services.disease_helper import (
     llm_normalize_disease_batch,
     merge_duplicate_diseases,
     normalize_for_pubmed,
+    resolve_mesh_id,
 )
 
 logger = logging.getLogger(__name__)
@@ -381,3 +382,223 @@ async def test_batch_returned_keys_match_all_input_terms():
         "narcolepsy-cataplexy syndrome",
         "type 2 diabetes mellitus",
     }
+
+
+# ── resolve_mesh_id unit tests ───────────────────────────────────────────────
+
+
+async def test_resolve_mesh_id_cached_hit_skips_network():
+    """A cached (D-number, preferred_term) tuple is returned without aiohttp."""
+    with (
+        patch(
+            "indication_scout.services.disease_helper.cache_get",
+            return_value=("D006973", "Hypertension"),
+        ),
+        patch(
+            "indication_scout.services.disease_helper.aiohttp.ClientSession"
+        ) as mock_session,
+    ):
+        result = await resolve_mesh_id("hypertension")
+
+    assert result == ("D006973", "Hypertension")
+    mock_session.assert_not_called()
+
+
+async def test_resolve_mesh_id_returns_none_when_esearch_empty():
+    """No esearch hit → None returned and nothing written to cache."""
+    esearch_response = {"esearchresult": {"idlist": []}}
+
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status = MagicMock()
+    mock_resp.json = AsyncMock(return_value=esearch_response)
+    mock_resp.__aenter__ = AsyncMock(return_value=mock_resp)
+    mock_resp.__aexit__ = AsyncMock(return_value=None)
+
+    mock_session = MagicMock()
+    mock_session.get = MagicMock(return_value=mock_resp)
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch(
+            "indication_scout.services.disease_helper.cache_get",
+            return_value=None,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.cache_set",
+        ) as mock_cache_set,
+        patch(
+            "indication_scout.services.disease_helper.aiohttp.ClientSession",
+            return_value=mock_session,
+        ),
+    ):
+        result = await resolve_mesh_id("totally-fake-indication-xyz")
+
+    assert result is None
+    mock_cache_set.assert_not_called()
+
+
+async def test_resolve_mesh_id_writes_cache_on_success():
+    """On a successful resolution, (uid, preferred_term) is cached.
+
+    The resolver parses the preferred term out of esearch's `querytranslation`
+    (esummary on the MeSH db returns empty records for valid UIDs).
+    """
+    from indication_scout.constants import MESH_RESOLVER_TTL_SECONDS
+
+    esearch_response = {
+        "esearchresult": {
+            "idlist": ["68006973"],
+            "querytranslation": '"Hypertension"[MeSH Terms]',
+        }
+    }
+
+    def make_resp():
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.json = AsyncMock(return_value=esearch_response)
+        resp.__aenter__ = AsyncMock(return_value=resp)
+        resp.__aexit__ = AsyncMock(return_value=None)
+        return resp
+
+    mock_session = MagicMock()
+    mock_session.get = MagicMock(side_effect=lambda *a, **kw: make_resp())
+    mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+    mock_session.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch(
+            "indication_scout.services.disease_helper.cache_get",
+            return_value=None,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.cache_set",
+        ) as mock_cache_set,
+        patch(
+            "indication_scout.services.disease_helper.aiohttp.ClientSession",
+            return_value=mock_session,
+        ),
+    ):
+        result = await resolve_mesh_id("hypertension")
+
+    assert result == ("68006973", "Hypertension")
+    mock_cache_set.assert_called_once()
+    args, kwargs = mock_cache_set.call_args
+    assert args[0] == "mesh_resolver"
+    assert args[1] == {"indication": "hypertension", "v": 3}
+    assert args[2] == ("68006973", "Hypertension")
+    assert kwargs["ttl"] == MESH_RESOLVER_TTL_SECONDS
+
+
+async def test_resolve_mesh_id_round_trip_through_real_cache(tmp_path, monkeypatch):
+    """End-to-end: a successful resolution lands on disk, and a second call
+    reads it back without touching the network.
+
+    Uses the real cache.py module — no mocking of cache_get/cache_set — and
+    monkeypatches DEFAULT_CACHE_DIR (used directly by resolve_mesh_id) to
+    point at tmp_path. The aiohttp session is replaced with a counter so we
+    can assert the second call performs zero HTTP requests.
+    """
+    monkeypatch.setattr(
+        "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
+    )
+
+    esearch_response = {
+        "esearchresult": {
+            "idlist": ["68006973"],
+            "querytranslation": '"Hypertension"[MeSH Terms]',
+        }
+    }
+
+    call_log: list[str] = []
+
+    def make_resp(payload):
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.json = AsyncMock(return_value=payload)
+        resp.__aenter__ = AsyncMock(return_value=resp)
+        resp.__aexit__ = AsyncMock(return_value=None)
+        return resp
+
+    def fake_get(url, *args, **kwargs):
+        call_log.append(url)
+        if "esearch" in url:
+            return make_resp(esearch_response)
+        raise AssertionError(f"Unexpected URL in test: {url}")
+
+    def make_session():
+        session = MagicMock()
+        session.get = MagicMock(side_effect=fake_get)
+        session.__aenter__ = AsyncMock(return_value=session)
+        session.__aexit__ = AsyncMock(return_value=None)
+        return session
+
+    with patch(
+        "indication_scout.services.disease_helper.aiohttp.ClientSession",
+        side_effect=lambda *a, **kw: make_session(),
+    ):
+        first = await resolve_mesh_id("hypertension")
+        calls_after_first = len(call_log)
+        second = await resolve_mesh_id("hypertension")
+        calls_after_second = len(call_log)
+
+    assert first == ("68006973", "Hypertension")
+    assert second == ("68006973", "Hypertension")
+    # First call: esearch only = 1 HTTP request
+    assert calls_after_first == 1
+    # Second call: must hit the cache and skip the network entirely
+    assert calls_after_second == 1, (
+        f"Cache miss on second call — saw {calls_after_second - calls_after_first} "
+        f"extra HTTP requests on what should have been a cache hit"
+    )
+
+    # Confirm the file actually landed on disk in the expected namespace
+    cache_files = list((tmp_path / "mesh_resolver").glob("*.json"))
+    assert (
+        len(cache_files) == 1
+    ), f"Expected exactly one cache file under mesh_resolver/, found {len(cache_files)}"
+
+    # Confirm the on-disk payload deserialises back to the expected tuple
+    raw = json.loads(cache_files[0].read_text())
+    assert raw["ns"] == "mesh_resolver"
+    assert raw["params"] == {"indication": "hypertension", "v": 3}
+    assert raw["data"] == ["68006973", "Hypertension"]
+
+
+async def test_resolve_mesh_id_does_not_cache_failures(tmp_path, monkeypatch):
+    """A None result must not be written to disk, so a later run can retry NCBI.
+
+    This is the documented behaviour ("Does NOT cache None results") and is
+    important: if a transient esearch miss got cached, every subsequent call
+    for that indication would silently return None forever.
+    """
+    monkeypatch.setattr(
+        "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
+    )
+
+    empty_esearch = {"esearchresult": {"idlist": [], "querytranslation": ""}}
+
+    def make_resp():
+        resp = MagicMock()
+        resp.raise_for_status = MagicMock()
+        resp.json = AsyncMock(return_value=empty_esearch)
+        resp.__aenter__ = AsyncMock(return_value=resp)
+        resp.__aexit__ = AsyncMock(return_value=None)
+        return resp
+
+    session = MagicMock()
+    session.get = MagicMock(side_effect=lambda *a, **kw: make_resp())
+    session.__aenter__ = AsyncMock(return_value=session)
+    session.__aexit__ = AsyncMock(return_value=None)
+
+    with patch(
+        "indication_scout.services.disease_helper.aiohttp.ClientSession",
+        return_value=session,
+    ):
+        result = await resolve_mesh_id("totally-fake-indication-xyz")
+
+    assert result is None
+    # Nothing should have been written to disk
+    assert not (tmp_path / "mesh_resolver").exists() or not list(
+        (tmp_path / "mesh_resolver").glob("*.json")
+    ), "Failures were cached — this means every later call for the same string returns None forever"

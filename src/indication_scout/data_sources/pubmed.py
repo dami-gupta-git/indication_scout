@@ -9,16 +9,23 @@ Three methods:
 
 from __future__ import annotations
 
+import asyncio
+import json
+import logging
 import re
 import xml.etree.ElementTree as ET
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
+logger = logging.getLogger(__name__)
+
 from indication_scout.config import get_settings
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     PUBMED_FETCH_URL,
+    PUBMED_MAX_CONCURRENT_REQUESTS,
+    PUBMED_SEARCH_SLEEP_SECONDS,
     PUBMED_SEARCH_URL,
     PUBMED_SUMMARY_URL,
 )
@@ -30,9 +37,21 @@ from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 class PubMedClient(BaseClient):
     """Client for querying PubMed/NCBI APIs."""
 
+    # NCBI eutils is a hard dependency for literature analysis. If retries
+    # exhaust, exit the program (logged to data_source_failures.log) instead
+    # of raising a DataSourceError that downstream code may swallow into
+    # silently degraded results.
+    exit_on_retry_exhausted = True
+
     SEARCH_URL = PUBMED_SEARCH_URL
     FETCH_URL = PUBMED_FETCH_URL
     SUMMARY_URL = PUBMED_SUMMARY_URL
+
+    # Process-wide concurrency cap on NCBI eutils requests. Class-level so the
+    # bound holds across the multiple PubMedClient instances the supervisor
+    # spins up in parallel (each RetrievalService call creates a new client).
+    # Created lazily so the semaphore binds to the running event loop.
+    _request_semaphore: asyncio.Semaphore | None = None
 
     def __init__(self, cache_dir: Path = DEFAULT_CACHE_DIR) -> None:
         super().__init__()
@@ -45,16 +64,38 @@ class PubMedClient(BaseClient):
     def _source_name(self) -> str:
         return "pubmed"
 
+    @classmethod
+    def _get_semaphore(cls) -> asyncio.Semaphore:
+        if cls._request_semaphore is None:
+            cls._request_semaphore = asyncio.Semaphore(PUBMED_MAX_CONCURRENT_REQUESTS)
+        return cls._request_semaphore
+
     def _inject_api_key(self, params: dict[str, Any]) -> dict[str, Any]:
         """Add the NCBI api_key to request params if configured."""
         if self._api_key:
             params["api_key"] = self._api_key
         return params
 
+    async def _rest_get_json_tolerant(self, url: str, params: dict[str, Any]) -> Any:
+        """GET JSON, tolerating raw control characters in the response body.
+
+        NCBI eutils occasionally echoes user-supplied query terms back inside
+        ``querytranslation`` / ``translationstack`` with stray control bytes,
+        which strict ``json.loads`` rejects. Fetch as text and parse with
+        ``strict=False`` so those responses don't crash the supervisor.
+        """
+        text = await self._request("GET", url, params=params, as_text=True)
+        return json.loads(text, strict=False)
+
     async def search(
-        self, query: str, max_results: int = 50, date_before: date | None = None
+        self,
+        query: str,
+        max_results: int | None = None,
+        date_before: date | None = None,
     ) -> list[str]:
         """Search PubMed and return list of PMIDs."""
+        if max_results is None:
+            max_results = get_settings().pubmed_search_default_max_results
         effective_maxdate = (date_before - timedelta(days=1)) if date_before else None
         cache_params: dict[str, Any] = {
             "query": query,
@@ -70,17 +111,29 @@ class PubMedClient(BaseClient):
             "term": query,
             "retmax": max_results,
             "retmode": "json",
+            'sort': 'relevance',
         }
         if effective_maxdate:
             params["datetype"] = "pdat"
             params["mindate"] = "1900/01/01"
             params["maxdate"] = effective_maxdate.strftime("%Y/%m/%d")
 
-        data = await self._rest_get(self.SEARCH_URL, self._inject_api_key(params))
+        async with self._get_semaphore():
+            await asyncio.sleep(PUBMED_SEARCH_SLEEP_SECONDS)
+            data = await self._rest_get_json_tolerant(
+                self.SEARCH_URL, self._inject_api_key(params)
+            )
         pmids: list[str] = data.get("esearchresult", {}).get("idlist", [])
 
-        if date_before and pmids:
-            pmids = await self._filter_pmids_by_date(pmids, date_before)
+        if not pmids:
+            logger.warning("PubMed search returned 0 PMIDs for query: %r", query)
+
+        # NOTE: the post-search esummary date guard used to live here. It
+        # was moved into RetrievalService.fetch_and_cache so it can read
+        # pub_date from pgvector for known PMIDs and only call esummary
+        # for unknowns — a major NCBI traffic reduction on re-runs.
+        # Callers that need a standalone date filter can still invoke
+        # PubMedClient._filter_pmids_by_date directly (used by some tests).
 
         cache_set("pubmed_search", cache_params, pmids, self.cache_dir)
         return pmids
@@ -98,13 +151,16 @@ class PubMedClient(BaseClient):
             params["mindate"] = "1900/01/01"
             params["maxdate"] = (date_before - timedelta(days=1)).strftime("%Y/%m/%d")
 
-        data = await self._rest_get(self.SEARCH_URL, self._inject_api_key(params))
+        async with self._get_semaphore():
+            data = await self._rest_get_json_tolerant(
+                self.SEARCH_URL, self._inject_api_key(params)
+            )
 
         count_str = data.get("esearchresult", {}).get("count", "0")
         return int(count_str)
 
     async def _filter_pmids_by_date(
-        self, pmids: list[str], date_before: date, batch_size: int = 200
+        self, pmids: list[str], date_before: date, batch_size: int | None = None
     ) -> list[str]:
         """Remove PMIDs whose sortpubdate is on or after date_before.
 
@@ -112,6 +168,8 @@ class PubMedClient(BaseClient):
         PubMed's maxdate filter is not strictly respected, so this is a
         post-search guard.
         """
+        if batch_size is None:
+            batch_size = get_settings().pubmed_esummary_batch_size
         kept: list[str] = []
         for i in range(0, len(pmids), batch_size):
             batch = pmids[i : i + batch_size]
@@ -120,7 +178,10 @@ class PubMedClient(BaseClient):
                 "id": ",".join(batch),
                 "retmode": "json",
             }
-            data = await self._rest_get(self.SUMMARY_URL, self._inject_api_key(params))
+            async with self._get_semaphore():
+                data = await self._rest_get_json_tolerant(
+                    self.SUMMARY_URL, self._inject_api_key(params)
+                )
             result = data.get("result", {})
             for pmid in batch:
                 summary = result.get(pmid, {})
@@ -137,13 +198,72 @@ class PubMedClient(BaseClient):
                     kept.append(pmid)
         return kept
 
+    async def fetch_pubtypes(
+        self, pmids: list[str], batch_size: int | None = None
+    ) -> dict[str, list[str]]:
+        """Fetch publication types from esummary for the given PMIDs.
+
+        Returns a dict mapping pmid → list of pubtype strings (e.g.
+        ["Journal Article", "Randomized Controlled Trial"]). PMIDs with
+        no esummary record or no pubtype field are absent from the result.
+
+        Per-PMID file cache so re-runs across different candidate sets
+        reuse prior fetches. Cache misses are batched into single
+        esummary requests (pubmed_esummary_batch_size, default 200).
+        """
+        if not pmids:
+            return {}
+
+        if batch_size is None:
+            batch_size = get_settings().pubmed_esummary_batch_size
+
+        result: dict[str, list[str]] = {}
+        missing: list[str] = []
+        for pmid in pmids:
+            cached = cache_get("pubmed_pubtypes", {"pmid": pmid}, self.cache_dir)
+            if cached is not None:
+                if cached:
+                    result[pmid] = cached
+            else:
+                missing.append(pmid)
+
+        if not missing:
+            return result
+
+        for i in range(0, len(missing), batch_size):
+            batch = missing[i : i + batch_size]
+            params: dict[str, Any] = {
+                "db": "pubmed",
+                "id": ",".join(batch),
+                "retmode": "json",
+            }
+            async with self._get_semaphore():
+                data = await self._rest_get_json_tolerant(
+                    self.SUMMARY_URL, self._inject_api_key(params)
+                )
+            summaries = data.get("result", {})
+            for pmid in batch:
+                summary = summaries.get(pmid, {})
+                pubtypes = summary.get("pubtype", []) or []
+                # Persist even empty lists so we don't refetch records
+                # that genuinely have no pubtype field.
+                cache_set(
+                    "pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir
+                )
+                if pubtypes:
+                    result[pmid] = pubtypes
+
+        return result
+
     async def fetch_abstracts(
-        self, pmids: list[str], batch_size: int = 100
+        self, pmids: list[str], batch_size: int | None = None
     ) -> list[PubmedAbstract]:
         """Fetch article content for given PMIDs."""
         if not pmids:
             return []
 
+        if batch_size is None:
+            batch_size = get_settings().pubmed_efetch_batch_size
         all_articles: list[PubmedAbstract] = []
 
         for i in range(0, len(pmids), batch_size):
@@ -155,9 +275,10 @@ class PubMedClient(BaseClient):
                 "rettype": "abstract",
             }
 
-            xml_text = await self._rest_get_xml(
-                self.FETCH_URL, self._inject_api_key(params)
-            )
+            async with self._get_semaphore():
+                xml_text = await self._rest_get_xml(
+                    self.FETCH_URL, self._inject_api_key(params)
+                )
 
             articles = self._parse_pubmed_xml(xml_text)
             all_articles.extend(articles)

@@ -13,8 +13,7 @@ class DrugProfile(BaseModel):
     the from_rich_drug_data factory classmethod.
     """
 
-    name: str = ""
-    synonyms: list[str] = []
+    chembl_id: str = ""
     target_gene_symbols: list[str] = []
     mechanisms_of_action: list[str] = []
     atc_codes: list[str] = []
@@ -45,12 +44,7 @@ class DrugProfile(BaseModel):
         """
         drug = rich.drug
         return cls(
-            name=drug.name if drug else "",
-            synonyms=list(
-                dict.fromkeys(
-                    s for s in (drug.synonyms + drug.trade_names if drug else []) if s
-                )
-            ),
+            chembl_id=drug.chembl_id if drug else "",
             target_gene_symbols=list(
                 dict.fromkeys(t.symbol for t in rich.targets if t.symbol)
             ),

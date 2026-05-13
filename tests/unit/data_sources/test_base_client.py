@@ -8,6 +8,14 @@ import pytest
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
 
 
+def _make_client(timeout: float = 30.0, max_retries: int = 3) -> "ConcreteTestClient":
+    """Create a ConcreteTestClient with patched settings values."""
+    with patch("indication_scout.data_sources.base_client._settings") as mock_settings:
+        mock_settings.default_timeout = timeout
+        mock_settings.default_max_retries = max_retries
+        return ConcreteTestClient()
+
+
 class ConcreteTestClient(BaseClient):
     """Concrete implementation of BaseClient for testing."""
 
@@ -110,7 +118,7 @@ async def test_rest_get_xml_raises_datasource_error_on_4xx():
     mock_session = AsyncMock()
     mock_session.get = AsyncMock(return_value=mock_resp)
 
-    client = ConcreteTestClient(max_retries=0)
+    client = _make_client(max_retries=0)
     with patch.object(
         client, "_get_session", new_callable=AsyncMock, return_value=mock_session
     ):
@@ -135,7 +143,7 @@ async def test_rest_get_xml_retries_on_5xx_then_succeeds():
     mock_session = AsyncMock()
     mock_session.get = AsyncMock(side_effect=[error_resp, ok_resp])
 
-    client = ConcreteTestClient(max_retries=1)
+    client = _make_client(max_retries=1)
     with patch.object(
         client, "_get_session", new_callable=AsyncMock, return_value=mock_session
     ):
@@ -157,7 +165,7 @@ async def test_rest_get_xml_raises_after_exhausting_retries_on_5xx():
     mock_session = AsyncMock()
     mock_session.get = AsyncMock(return_value=error_resp)
 
-    client = ConcreteTestClient(max_retries=2)
+    client = _make_client(max_retries=2)
     with patch.object(
         client, "_get_session", new_callable=AsyncMock, return_value=mock_session
     ):

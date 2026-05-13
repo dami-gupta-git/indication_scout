@@ -27,5 +27,5 @@ class LiteratureOutput(BaseModel):
     )
     summary: str = Field(
         default="",
-        description="LLM narrative summary from the final agent message.",
+        description="Narrative summary returned by finalize_analysis.",
     )

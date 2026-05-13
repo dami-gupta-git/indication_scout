@@ -41,9 +41,6 @@ def atc_metformin() -> ATCDescription:
 def rich_metformin(atc_metformin) -> RichDrugData:
     drug = DrugData(
         chembl_id="CHEMBL1431",
-        name="METFORMIN",
-        synonyms=["Glucophage", "Glucophage"],  # intentional duplicate
-        trade_names=["Fortamet", "Glucophage"],  # overlap with synonyms
         drug_type="Small molecule",
         maximum_clinical_stage="APPROVAL",
         atc_classifications=["A10BA02"],
@@ -80,8 +77,7 @@ def rich_metformin(atc_metformin) -> RichDrugData:
 @pytest.fixture
 def metformin_profile() -> DrugProfile:
     return DrugProfile(
-        name="metformin",
-        synonyms=["Glucophage", "Fortamet"],
+        chembl_id="CHEMBL1431",
         target_gene_symbols=["PRKAA1", "PRKAA2", "STK11"],
         mechanisms_of_action=[
             "AMP-activated protein kinase activator",
@@ -103,8 +99,7 @@ def svc(tmp_path):
 
 def test_drug_profile_from_rich_drug_data(rich_metformin, atc_metformin):
     profile = DrugProfile.from_rich_drug_data(rich_metformin, [atc_metformin])
-    assert profile.name == "METFORMIN"
-    assert profile.synonyms == ["Glucophage", "Fortamet"]
+    assert profile.chembl_id == "CHEMBL1431"
     assert profile.target_gene_symbols == ["PRKAA1", "PRKAA2"]
     assert profile.mechanisms_of_action == ["AMP-activated protein kinase activator"]
     assert profile.atc_codes == ["A10BA02"]
@@ -113,16 +108,6 @@ def test_drug_profile_from_rich_drug_data(rich_metformin, atc_metformin):
         "Biguanides",
     ]
     assert profile.drug_type == "Small molecule"
-
-
-def test_drug_profile_from_rich_drug_data_synonyms_deduped(
-    rich_metformin, atc_metformin
-):
-    """synonyms = drug.synonyms + drug.trade_names, deduplicated, order-preserving."""
-    profile = DrugProfile.from_rich_drug_data(rich_metformin, [atc_metformin])
-    # synonyms: ["Glucophage", "Glucophage"] → deduped → ["Glucophage"]
-    # trade_names: ["Fortamet", "Glucophage"] → "Glucophage" already seen
-    assert profile.synonyms == ["Glucophage", "Fortamet"]
 
 
 def test_drug_profile_from_rich_drug_data_target_gene_symbols(
@@ -197,6 +182,10 @@ async def test_expand_search_terms_returns_list(tmp_path, metformin_profile):
     llm_response = '["metformin AND colorectal cancer", "biguanides AND colon"]'
     with (
         patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage", "fortamet"]),
+        ),
+        patch(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
@@ -206,7 +195,7 @@ async def test_expand_search_terms_returns_list(tmp_path, metformin_profile):
         ),
     ):
         result = await RetrievalService(tmp_path).expand_search_terms(
-            "metformin", "colorectal cancer", metformin_profile
+            "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
     assert result == ["metformin AND colorectal cancer", "biguanides AND colon"]
@@ -223,17 +212,57 @@ async def test_expand_search_terms_prompt_contains_drug_name(
 
     with (
         patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage", "fortamet"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
+            new=AsyncMock(return_value="colon"),
+        ),
+        patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=None),
+        ),
+        patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
+    ):
+        await RetrievalService(tmp_path).expand_search_terms(
+            "CHEMBL1431", "colorectal cancer", metformin_profile
+        )
+
+    assert "metformin" in captured["prompt"]
+    assert "colorectal cancer" in captured["prompt"]
+
+
+async def test_expand_search_terms_prompt_sources_names_from_chembl(
+    tmp_path, metformin_profile
+):
+    """Both `{drug_name}` and `{synonyms}` come from get_all_drug_names(chembl_id):
+    index 0 is the pref_name, the rest are synonyms.
+    """
+    captured = {}
+
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return '["x"]'
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["CHEMBL_PREF", "CHEMBL_SYN_1", "CHEMBL_SYN_2"]),
+        ),
+        patch(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
         patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
     ):
         await RetrievalService(tmp_path).expand_search_terms(
-            "metformin", "colorectal cancer", metformin_profile
+            "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
-    assert "metformin" in captured["prompt"]
-    assert "colorectal cancer" in captured["prompt"]
+    prompt = captured["prompt"]
+    assert "Drug name: CHEMBL_PREF" in prompt
+    assert "Synonyms and trade names: CHEMBL_SYN_1, CHEMBL_SYN_2" in prompt
 
 
 async def test_expand_search_terms_prompt_contains_targets(tmp_path, metformin_profile):
@@ -245,13 +274,17 @@ async def test_expand_search_terms_prompt_contains_targets(tmp_path, metformin_p
 
     with (
         patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage", "fortamet"]),
+        ),
+        patch(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
         patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
     ):
         await RetrievalService(tmp_path).expand_search_terms(
-            "metformin", "colorectal cancer", metformin_profile
+            "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
     assert "PRKAA1" in captured["prompt"]
@@ -270,13 +303,17 @@ async def test_expand_search_terms_prompt_contains_atc_descriptions(
 
     with (
         patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage", "fortamet"]),
+        ),
+        patch(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
         patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
     ):
         await RetrievalService(tmp_path).expand_search_terms(
-            "metformin", "colorectal cancer", metformin_profile
+            "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
     assert "Biguanides" in captured["prompt"]
@@ -294,13 +331,17 @@ async def test_expand_search_terms_prompt_contains_organ_term(
 
     with (
         patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage", "fortamet"]),
+        ),
+        patch(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
         patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
     ):
         await RetrievalService(tmp_path).expand_search_terms(
-            "metformin", "colorectal cancer", metformin_profile
+            "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
     assert "colon" in captured["prompt"]
@@ -311,6 +352,10 @@ async def test_expand_search_terms_deduplicates_output(tmp_path, metformin_profi
     llm_response = '["Metformin AND colorectal cancer", "metformin AND colorectal cancer", "biguanides AND colon"]'
     with (
         patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage", "fortamet"]),
+        ),
+        patch(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
@@ -320,7 +365,7 @@ async def test_expand_search_terms_deduplicates_output(tmp_path, metformin_profi
         ),
     ):
         result = await RetrievalService(tmp_path).expand_search_terms(
-            "metformin", "colorectal cancer", metformin_profile
+            "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
     assert result == ["Metformin AND colorectal cancer", "biguanides AND colon"]
@@ -332,7 +377,7 @@ async def test_expand_search_terms_returns_cached_result(tmp_path, metformin_pro
     cached_queries = ["metformin AND colorectal cancer", "biguanides AND colon"]
     cache_set(
         "expand_search_terms",
-        {"drug_name": "metformin", "disease_name": "colorectal cancer"},
+        {"chembl_id": "CHEMBL1431", "disease_name": "colorectal cancer"},
         cached_queries,
         tmp_path,
     )
@@ -342,7 +387,7 @@ async def test_expand_search_terms_returns_cached_result(tmp_path, metformin_pro
         new=AsyncMock(),
     ) as mock_llm:
         result = await RetrievalService(tmp_path).expand_search_terms(
-            "metformin", "colorectal cancer", metformin_profile
+            "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
     assert result == cached_queries
@@ -373,10 +418,9 @@ async def test_build_drug_profile_returns_profile(svc, rich_metformin, atc_metfo
             "indication_scout.services.retrieval.ChEMBLClient", return_value=mock_chembl
         ),
     ):
-        profile = await svc.build_drug_profile("metformin")
+        profile = await svc.build_drug_profile("CHEMBL1431")
 
-    assert profile.name == "METFORMIN"
-    assert profile.synonyms == ["Glucophage", "Fortamet"]
+    assert profile.chembl_id == "CHEMBL1431"
     assert profile.target_gene_symbols == ["PRKAA1", "PRKAA2"]
     assert profile.mechanisms_of_action == ["AMP-activated protein kinase activator"]
     assert profile.atc_codes == ["A10BA02"]
@@ -410,7 +454,7 @@ async def test_build_drug_profile_fetches_atc_per_code(
             "indication_scout.services.retrieval.ChEMBLClient", return_value=mock_chembl
         ),
     ):
-        await svc.build_drug_profile("metformin")
+        await svc.build_drug_profile("CHEMBL1431")
 
     # rich_metformin has one ATC code: "A10BA02"
     assert mock_chembl.get_atc_description.call_count == 1
@@ -437,7 +481,7 @@ async def test_build_drug_profile_no_atc_codes(svc, rich_metformin):
             "indication_scout.services.retrieval.ChEMBLClient", return_value=mock_chembl
         ),
     ):
-        profile = await svc.build_drug_profile("metformin")
+        profile = await svc.build_drug_profile("CHEMBL1431")
 
     assert profile.atc_codes == []
     assert profile.atc_descriptions == []
@@ -761,16 +805,17 @@ async def test_fetch_and_cache_calls_search_per_query(svc):
         await svc.fetch_and_cache(["q1", "q2", "q3"], mock_db)
 
     assert mock_client.search.call_count == 3
-    from indication_scout.constants import PUBMED_MAX_RESULTS
+    from indication_scout.config import get_settings
 
+    _expected_max = get_settings().pubmed_max_results
     mock_client.search.assert_any_call(
-        "q1", max_results=PUBMED_MAX_RESULTS, date_before=None
+        "q1", max_results=_expected_max, date_before=None
     )
     mock_client.search.assert_any_call(
-        "q2", max_results=PUBMED_MAX_RESULTS, date_before=None
+        "q2", max_results=_expected_max, date_before=None
     )
     mock_client.search.assert_any_call(
-        "q3", max_results=PUBMED_MAX_RESULTS, date_before=None
+        "q3", max_results=_expected_max, date_before=None
     )
 
 
@@ -804,7 +849,25 @@ def _make_db_with_rows(rows: list[tuple]) -> MagicMock:
     return mock_db
 
 
-async def test_semantic_search_returns_ranked_dicts(svc):
+@pytest.fixture
+def mock_pubtypes_empty():
+    """Patch PubMedClient so semantic_search's pubtype fetch is a no-op (empty map).
+    With no pubtypes, every record gets PUBTYPE_BOOST_DEFAULT (1.0), so the
+    rerank is a no-op and ordering follows pure similarity — matching the
+    pre-rerank behaviour these unit tests were written against.
+    """
+    mock_client = AsyncMock()
+    mock_client.fetch_pubtypes = AsyncMock(return_value={})
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    with patch(
+        "indication_scout.services.retrieval.PubMedClient",
+        return_value=mock_client,
+    ):
+        yield mock_client
+
+
+async def test_semantic_search_returns_ranked_dicts(svc, mock_pubtypes_empty):
     """Returns list of dicts with pmid, title, abstract, similarity for each DB row."""
     db_rows = [
         ("111", "Title A", "Abstract A", 0.92),
@@ -813,11 +876,18 @@ async def test_semantic_search_returns_ranked_dicts(svc):
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
-    with patch(
-        "indication_scout.services.retrieval.embed_async", return_value=[mock_vector]
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[mock_vector],
+        ),
     ):
         result = await svc.semantic_search(
-            "colorectal cancer", "metformin", ["111", "222"], mock_db
+            "colorectal cancer", "CHEMBL1431", ["111", "222"], mock_db
         )
 
     assert len(result) == 2
@@ -831,7 +901,7 @@ async def test_semantic_search_returns_ranked_dicts(svc):
     assert result[1].similarity == 0.85
 
 
-async def test_semantic_search_embeds_therapeutic_query(svc):
+async def test_semantic_search_embeds_therapeutic_query(svc, mock_pubtypes_empty):
     """embed() is called with the therapeutic intent query string."""
     mock_db = _make_db_with_rows([])
     mock_vector = [0.1] * 768
@@ -841,48 +911,107 @@ async def test_semantic_search_embeds_therapeutic_query(svc):
         captured["texts"] = texts
         return [mock_vector]
 
-    with patch(
-        "indication_scout.services.retrieval.embed_async", side_effect=capture_embed
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["bupropion", "wellbutrin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async", side_effect=capture_embed
+        ),
     ):
-        await svc.semantic_search("obesity", "bupropion", ["111"], mock_db)
+        await svc.semantic_search("obesity", "CHEMBL894", ["111"], mock_db)
 
     assert len(captured["texts"]) == 1
     assert "bupropion" in captured["texts"][0]
     assert "obesity" in captured["texts"][0]
 
 
-async def test_semantic_search_passes_pmids_to_query(svc):
+async def test_semantic_search_uses_pref_name_not_chembl_id(svc, mock_pubtypes_empty):
+    """The embedded query string uses pref_name (first element of get_all_drug_names),
+    not the ChEMBL ID or any other identifier. Sentinel values guarantee correct routing.
+    """
+    mock_db = _make_db_with_rows([])
+    mock_vector = [0.1] * 768
+    captured = {}
+
+    def capture_embed(texts: list[str]) -> list[list[float]]:
+        captured["texts"] = texts
+        return [mock_vector]
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["SENTINEL_PREF", "SENTINEL_SYN_A"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async", side_effect=capture_embed
+        ),
+    ):
+        await svc.semantic_search("obesity", "CHEMBL999", ["111"], mock_db)
+
+    query = captured["texts"][0]
+    assert "SENTINEL_PREF" in query
+    # ChEMBL ID must not leak into the embedded query
+    assert "CHEMBL999" not in query
+    # Non-pref synonyms must not be used as the drug identifier
+    assert "SENTINEL_SYN_A" not in query
+
+
+async def test_semantic_search_passes_pmids_to_query(svc, mock_pubtypes_empty):
     """The pmids list is passed as a bind parameter to the SQL query."""
     mock_db = _make_db_with_rows([])
     mock_vector = [0.1] * 768
     pmids = ["111", "222", "333"]
 
-    with patch(
-        "indication_scout.services.retrieval.embed_async", return_value=[mock_vector]
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[mock_vector],
+        ),
     ):
-        await svc.semantic_search("diabetes", "metformin", pmids, mock_db)
+        await svc.semantic_search("diabetes", "CHEMBL1431", pmids, mock_db)
 
     call_kwargs = mock_db.execute.call_args
     params = call_kwargs[0][1]
     assert params["pmids"] == pmids
 
 
-async def test_semantic_search_respects_top_k(svc):
-    """top_k is passed as a bind parameter to the SQL LIMIT clause."""
-    mock_db = _make_db_with_rows([])
+async def test_semantic_search_respects_top_k_from_settings(svc, mock_pubtypes_empty):
+    """Returned list length is capped at settings.semantic_search_top_k after rerank."""
+    from indication_scout.config import get_settings
+
+    top_k = get_settings().semantic_search_top_k
+    # Build more rows than top_k so the slice has work to do.
+    db_rows = [
+        (f"{i}", f"Title {i}", f"Abstract {i}", 0.9 - 0.01 * i)
+        for i in range(top_k + 3)
+    ]
+    mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
-    with patch(
-        "indication_scout.services.retrieval.embed_async", return_value=[mock_vector]
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[mock_vector],
+        ),
     ):
-        await svc.semantic_search("diabetes", "metformin", ["111"], mock_db, top_k=5)
+        result = await svc.semantic_search(
+            "diabetes", "CHEMBL1431", ["111"], mock_db
+        )
 
-    call_kwargs = mock_db.execute.call_args
-    params = call_kwargs[0][1]
-    assert params["top_k"] == 5
+    assert len(result) == top_k
 
 
-async def test_semantic_search_similarity_is_float(svc):
+async def test_semantic_search_similarity_is_float(svc, mock_pubtypes_empty):
     """similarity values in returned dicts are plain Python floats."""
     from decimal import Decimal
 
@@ -890,10 +1019,17 @@ async def test_semantic_search_similarity_is_float(svc):
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
-    with patch(
-        "indication_scout.services.retrieval.embed_async", return_value=[mock_vector]
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[mock_vector],
+        ),
     ):
-        result = await svc.semantic_search("diabetes", "metformin", ["111"], mock_db)
+        result = await svc.semantic_search("diabetes", "CHEMBL1431", ["111"], mock_db)
 
     assert isinstance(result[0].similarity, float)
     assert result[0].similarity == float(Decimal("0.8765"))
@@ -915,6 +1051,10 @@ async def test_semantic_search_logs_wandb_table_when_run_active(svc):
 
     with (
         patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
             "indication_scout.services.retrieval.embed_async",
             return_value=[mock_vector],
         ),
@@ -928,7 +1068,7 @@ async def test_semantic_search_logs_wandb_table_when_run_active(svc):
         ),
     ):
         await svc.semantic_search(
-            "colorectal cancer", "metformin", ["111", "222"], mock_db
+            "colorectal cancer", "CHEMBL1431", ["111", "222"], mock_db
         )
 
     assert logged["semantic_search/colorectal_cancer/candidate_pmids"] == 2
@@ -942,12 +1082,16 @@ async def test_semantic_search_logs_wandb_table_when_run_active(svc):
     mock_table.add_data.assert_any_call("222", "Title B", 0.85)
 
 
-async def test_semantic_search_skips_wandb_log_when_no_run(svc):
+async def test_semantic_search_skips_wandb_log_when_no_run(svc, mock_pubtypes_empty):
     """When wandb.run is None, wandb.log is never called."""
     mock_db = _make_db_with_rows([("111", "Title A", "Abstract A", 0.92)])
     mock_vector = [0.1] * 768
 
     with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
         patch(
             "indication_scout.services.retrieval.embed_async",
             return_value=[mock_vector],
@@ -955,7 +1099,7 @@ async def test_semantic_search_skips_wandb_log_when_no_run(svc):
         patch("indication_scout.services.retrieval.wandb.run", None),
         patch("indication_scout.services.retrieval.wandb.log") as mock_log,
     ):
-        await svc.semantic_search("colorectal cancer", "metformin", ["111"], mock_db)
+        await svc.semantic_search("colorectal cancer", "CHEMBL1431", ["111"], mock_db)
 
     mock_log.assert_not_called()
 
@@ -981,9 +1125,7 @@ _SAMPLE_LLM_RESPONSE = json.dumps(
     {
         "summary": "Two studies support metformin for colorectal cancer.",
         "study_count": 2,
-        "study_types": ["RCT", "preclinical"],
         "strength": "moderate",
-        "has_adverse_effects": False,
         "key_findings": [
             "Significant CRC risk reduction in RCT (PMID: 11111111)",
             "AMPK-mediated apoptosis in colon cancer cells (PMID: 22222222)",
@@ -1001,8 +1143,14 @@ async def test_synthesize_calls_llm_with_correct_prompt(svc):
         captured["prompt"] = prompt
         return _SAMPLE_LLM_RESPONSE
 
-    with patch("indication_scout.services.retrieval.query_llm", new=capture_llm):
-        await svc.synthesize("metformin", "colorectal cancer", _SAMPLE_ABSTRACTS)
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage"]),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+    ):
+        await svc.synthesize("CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS)
 
     assert "metformin" in captured["prompt"]
     assert "colorectal cancer" in captured["prompt"]
@@ -1013,15 +1161,48 @@ async def test_synthesize_calls_llm_with_correct_prompt(svc):
     )
 
 
+async def test_synthesize_prompt_uses_pref_name(svc):
+    """`{drug_name}` in the synthesize prompt must come from get_all_drug_names[0]
+    (pref_name), not from the ChEMBL ID. Uses a distinct sentinel to guarantee routing.
+    """
+    captured = {}
+
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return _SAMPLE_LLM_RESPONSE
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["SENTINEL_PREF", "SENTINEL_SYN"]),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+    ):
+        await svc.synthesize("CHEMBL999", "colorectal cancer", _SAMPLE_ABSTRACTS)
+
+    prompt = captured["prompt"]
+    assert "SENTINEL_PREF" in prompt
+    # ChEMBL ID must not leak into the prompt
+    assert "CHEMBL999" not in prompt
+    # Non-pref synonyms must not appear (synthesize only uses pref_name)
+    assert "SENTINEL_SYN" not in prompt
+
+
 async def test_synthesize_strips_markdown_fences(svc):
     """synthesize handles LLM responses wrapped in ```json ... ``` code fences."""
     fenced = f"```json\n{_SAMPLE_LLM_RESPONSE}\n```"
-    with patch(
-        "indication_scout.services.retrieval.query_llm",
-        new=AsyncMock(return_value=fenced),
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=fenced),
+        ),
     ):
         result = await svc.synthesize(
-            "metformin", "colorectal cancer", _SAMPLE_ABSTRACTS
+            "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
         )
 
     assert result.strength == "moderate"
@@ -1030,20 +1211,24 @@ async def test_synthesize_strips_markdown_fences(svc):
 
 async def test_synthesize_parses_llm_response(svc):
     """synthesize returns an EvidenceSummary with all fields matching the LLM JSON output."""
-    with patch(
-        "indication_scout.services.retrieval.query_llm",
-        new=AsyncMock(return_value=_SAMPLE_LLM_RESPONSE),
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=_SAMPLE_LLM_RESPONSE),
+        ),
     ):
         result = await svc.synthesize(
-            "metformin", "colorectal cancer", _SAMPLE_ABSTRACTS
+            "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
         )
 
     assert isinstance(result, EvidenceSummary)
     assert result.summary == "Two studies support metformin for colorectal cancer."
     assert result.study_count == 2
-    assert result.study_types == ["RCT", "preclinical"]
     assert result.strength == "moderate"
-    assert result.has_adverse_effects is False
     assert result.key_findings == [
         "Significant CRC risk reduction in RCT (PMID: 11111111)",
         "AMPK-mediated apoptosis in colon cancer cells (PMID: 22222222)",
@@ -1053,12 +1238,18 @@ async def test_synthesize_parses_llm_response(svc):
 
 async def test_synthesize_raises_on_invalid_json(svc):
     """synthesize raises json.JSONDecodeError when the LLM returns unparseable JSON."""
-    with patch(
-        "indication_scout.services.retrieval.query_llm",
-        new=AsyncMock(return_value="not valid json at all"),
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value="not valid json at all"),
+        ),
     ):
         with pytest.raises(json.JSONDecodeError):
-            await svc.synthesize("metformin", "colorectal cancer", _SAMPLE_ABSTRACTS)
+            await svc.synthesize("CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS)
 
 
 # --- get_drug_competitors ---
@@ -1106,7 +1297,7 @@ async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
             new=AsyncMock(return_value=merge_result),
         ),
     ):
-        result = await RetrievalService(tmp_path).get_drug_competitors("testdrug")
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert "narcolepsy-cataplexy syndrome" not in result
     assert "narcolepsy" in result
@@ -1118,136 +1309,19 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
     from indication_scout.utils.cache import cache_set
 
     cached = {"depression": ["competitor_a"]}
-    cache_set("drug_competitors", {"drug_name": "testdrug"}, cached, tmp_path)
+    cache_set(
+        "competitors_merged",
+        {"chembl_id": "CHEMBL1", "date_before": None},
+        cached,
+        tmp_path,
+    )
 
     mock_client = AsyncMock()
     with patch(
         "indication_scout.services.retrieval.OpenTargetsClient",
         return_value=mock_client,
     ):
-        result = await RetrievalService(tmp_path).get_drug_competitors("testdrug")
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert result == {"depression": {"competitor_a"}}
     mock_client.__aenter__.assert_not_called()
-
-
-# --- _normalize_disease_groups ---
-
-
-async def test_normalize_disease_groups_merges_by_normalized_name(tmp_path):
-    """Diseases that normalize to the same string are merged with drug sets unioned."""
-    diseases = {
-        "breast cancer": {"drug_a", "drug_b"},
-        "breast neoplasm": {"drug_c"},
-        "colorectal cancer": {"drug_d"},
-    }
-
-    async def mock_normalize_batch(terms: list[str]) -> dict[str, str]:
-        mapping = {
-            "breast cancer": "breast cancer",
-            "breast neoplasm": "breast cancer",
-            "colorectal cancer": "colorectal cancer",
-        }
-        return {term: mapping[term] for term in terms}
-
-    with patch(
-        "indication_scout.services.retrieval.llm_normalize_disease_batch",
-        new=mock_normalize_batch,
-    ):
-        result = await RetrievalService(tmp_path)._normalize_disease_groups(diseases)
-
-    assert len(result) == 2
-    assert result["breast cancer"] == {"drug_a", "drug_b", "drug_c"}
-    assert result["colorectal cancer"] == {"drug_d"}
-
-
-async def test_normalize_disease_groups_uses_first_term_before_or(tmp_path):
-    """When llm_normalize_disease returns 'X OR Y', only the first term is used as key."""
-    diseases = {
-        "hepatocellular carcinoma": {"drug_a"},
-        "liver cancer": {"drug_b"},
-    }
-
-    async def mock_normalize_batch(terms: list[str]) -> dict[str, str]:
-        mapping = {
-            "hepatocellular carcinoma": "liver cancer OR hepatocellular carcinoma",
-            "liver cancer": "liver cancer",
-        }
-        return {term: mapping[term] for term in terms}
-
-    with patch(
-        "indication_scout.services.retrieval.llm_normalize_disease_batch",
-        new=mock_normalize_batch,
-    ):
-        result = await RetrievalService(tmp_path)._normalize_disease_groups(diseases)
-
-    assert len(result) == 1
-    assert result["liver cancer"] == {"drug_a", "drug_b"}
-
-
-async def test_normalize_disease_groups_calls_batch_not_per_term(tmp_path):
-    """_normalize_disease_groups calls llm_normalize_disease_batch once with all terms,
-    not once per disease (i.e. does not call the single-term variant)."""
-    diseases = {
-        "breast cancer": {"drug_a"},
-        "colorectal cancer": {"drug_b"},
-        "type 2 diabetes": {"drug_c"},
-    }
-
-    mock_batch = AsyncMock(return_value={term: term for term in diseases})
-
-    with patch(
-        "indication_scout.services.retrieval.llm_normalize_disease_batch",
-        new=mock_batch,
-    ):
-        await RetrievalService(tmp_path)._normalize_disease_groups(diseases)
-
-    mock_batch.assert_awaited_once()
-    called_terms = set(mock_batch.call_args[0][0])
-    assert called_terms == {"breast cancer", "colorectal cancer", "type 2 diabetes"}
-
-
-# --- run_rag — batch normalisation ---
-
-
-async def test_run_rag_batch_normalisation_called_once(tmp_path):
-    """run_rag triggers exactly one llm_normalize_disease_batch call covering all diseases.
-
-    get_drug_competitors → _normalize_disease_groups batches all disease names into a
-    single LLM call. This asserts the batch is called once with all terms rather than
-    once per disease (N calls).
-    """
-    raw = {
-        "diseases": {
-            "type 2 diabetes": {"competitor_a"},
-            "obesity": {"competitor_b"},
-            "heart failure": {"competitor_c"},
-        },
-        "drug_indications": [],
-    }
-    mock_ot_client = AsyncMock()
-    mock_ot_client.__aenter__ = AsyncMock(return_value=mock_ot_client)
-    mock_ot_client.__aexit__ = AsyncMock(return_value=None)
-    mock_ot_client.get_drug_competitors = AsyncMock(return_value=raw)
-
-    mock_batch = AsyncMock(return_value={term: term for term in raw["diseases"]})
-
-    with (
-        patch(
-            "indication_scout.services.retrieval.OpenTargetsClient",
-            return_value=mock_ot_client,
-        ),
-        patch(
-            "indication_scout.services.retrieval.llm_normalize_disease_batch",
-            new=mock_batch,
-        ),
-        patch(
-            "indication_scout.services.retrieval.merge_duplicate_diseases",
-            new=AsyncMock(return_value={"merge": {}, "remove": []}),
-        ),
-    ):
-        await RetrievalService(tmp_path).get_drug_competitors("metformin")
-
-    mock_batch.assert_awaited_once()
-    called_terms = set(mock_batch.call_args[0][0])
-    assert called_terms == {"type 2 diabetes", "obesity", "heart failure"}

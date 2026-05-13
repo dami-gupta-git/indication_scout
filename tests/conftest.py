@@ -1,5 +1,13 @@
 """Pytest configuration and fixtures."""
 
+import os
+
+# Point Settings at the test constants file before indication_scout.config is
+# imported anywhere. get_settings() is @lru_cache'd, so the first import freezes
+# whichever file is active at that moment. setdefault preserves an explicit
+# CONSTANTS_FILE=... override on the command line.
+os.environ.setdefault("CONSTANTS_FILE", ".env.constants.test")
+
 import pytest
 
 

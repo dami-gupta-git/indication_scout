@@ -10,17 +10,24 @@ from indication_scout.models.model_clinical_trials import (
 
 
 def _make_study(
-    nct_id: str, why_stopped: str | None, intervention_name: str = "Drug A"
+    nct_id: str,
+    why_stopped: str | None = None,
+    overall_status: str = "TERMINATED",
+    phases: list[str] | None = None,
+    intervention_name: str = "Drug A",
 ) -> dict:
     """Minimal study dict that _parse_trial can handle."""
     return {
         "protocolSection": {
             "identificationModule": {"nctId": nct_id, "briefTitle": f"Trial {nct_id}"},
             "statusModule": {
-                "overallStatus": "TERMINATED",
+                "overallStatus": overall_status,
                 "whyStopped": why_stopped,
             },
-            "designModule": {"phases": ["PHASE2"], "enrollmentInfo": {"count": 100}},
+            "designModule": {
+                "phases": phases if phases is not None else ["PHASE2"],
+                "enrollmentInfo": {"count": 100},
+            },
             "conditionsModule": {"conditions": ["Test Indication"]},
             "sponsorCollaboratorsModule": {"leadSponsor": {"name": "Test Sponsor"}},
             "armsInterventionsModule": {
@@ -34,128 +41,231 @@ def _make_study(
 
 
 # ------------------------------------------------------------------
-# get_terminated — dual-query shape
+# _count_trials_total — single-call countTotal
 # ------------------------------------------------------------------
 
 
-async def test_get_terminated_drug_query_filters_to_safety_efficacy_only(tmp_path):
-    """Drug query results are filtered to stop_category in {safety, efficacy}.
-
-    Business and enrollment terminations from the drug query are dropped as noise.
-    """
-    drug_studies = [
-        _make_study("NCT00000001", "Serious adverse events observed"),  # safety
-        _make_study("NCT00000002", "Lack of efficacy in interim analysis"),  # efficacy
-        _make_study(
-            "NCT00000003", "Strategic decision by sponsor"
-        ),  # business — dropped
-        _make_study("NCT00000004", "Insufficient enrollment"),  # enrollment — dropped
-    ]
-    indication_studies = []
-
-    client = ClinicalTrialsClient()
+async def test_count_trials_total_returns_total_count_with_pagesize_one(tmp_path):
+    """_count_trials_total issues one HTTP call with pageSize=1 and returns totalCount."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
     with patch.object(
         client,
         "_rest_get",
-        new=AsyncMock(
-            side_effect=[
-                {"studies": drug_studies},
-                {"studies": indication_studies},
-            ]
-        ),
-    ):
-        results = await client.get_terminated("testdrug", "testindication")
-
-    nct_ids = {t.nct_id for t in results}
-    assert "NCT00000001" in nct_ids  # safety — kept
-    assert "NCT00000002" in nct_ids  # efficacy — kept
-    assert "NCT00000003" not in nct_ids  # business — dropped
-    assert "NCT00000004" not in nct_ids  # enrollment — dropped
-
-
-async def test_get_terminated_indication_query_not_filtered(tmp_path):
-    """Indication query results are not filtered — all stop categories pass through."""
-    drug_studies = []
-    indication_studies = [
-        _make_study("NCT00000010", "Serious adverse events observed"),  # safety
-        _make_study("NCT00000011", "Strategic decision by sponsor"),  # business
-        _make_study("NCT00000012", "Insufficient enrollment"),  # enrollment
-        _make_study("NCT00000013", None),  # unknown
-    ]
-
-    client = ClinicalTrialsClient()
-    with patch.object(
-        client,
-        "_rest_get",
-        new=AsyncMock(
-            side_effect=[
-                {"studies": drug_studies},
-                {"studies": indication_studies},
-            ]
-        ),
-    ):
-        results = await client.get_terminated("testdrug", "testindication")
-
-    nct_ids = {t.nct_id for t in results}
-    assert "NCT00000010" in nct_ids
-    assert "NCT00000011" in nct_ids
-    assert "NCT00000012" in nct_ids
-    assert "NCT00000013" in nct_ids
-
-
-async def test_get_terminated_deduplicates_by_nct_id(tmp_path):
-    """A trial appearing in both drug and indication queries appears only once."""
-    shared_study = _make_study("NCT00000020", "Lack of efficacy")
-
-    client = ClinicalTrialsClient()
-    with patch.object(
-        client,
-        "_rest_get",
-        new=AsyncMock(
-            side_effect=[
-                {"studies": [shared_study]},  # drug query
-                {"studies": [shared_study]},  # indication query
-            ]
-        ),
-    ):
-        results = await client.get_terminated("testdrug", "testindication")
-
-    assert len([t for t in results if t.nct_id == "NCT00000020"]) == 1
-
-
-async def test_get_terminated_max_results_caps_indication_not_drug(tmp_path):
-    """max_results caps indication results; drug safety/efficacy results are not capped."""
-    drug_studies = [
-        _make_study(f"NCT9000{i:04d}", "Serious adverse events observed")
-        for i in range(5)
-    ]
-    indication_studies = [
-        _make_study(f"NCT8000{i:04d}", "Strategic decision by sponsor")
-        for i in range(10)
-    ]
-
-    client = ClinicalTrialsClient()
-    with patch.object(
-        client,
-        "_rest_get",
-        new=AsyncMock(
-            side_effect=[
-                {"studies": drug_studies},
-                {"studies": indication_studies},
-            ]
-        ),
-    ):
-        results = await client.get_terminated(
-            "testdrug", "testindication", max_results=3
+        new=AsyncMock(return_value={"studies": [], "totalCount": 4200}),
+    ) as mock_get:
+        count = await client._count_trials_total(
+            drug="metformin", indication='AREA[ConditionMeshTerm]"Hypertension"'
         )
 
-    drug_ids = {t.nct_id for t in results if t.nct_id.startswith("NCT9")}
-    indication_ids = {t.nct_id for t in results if t.nct_id.startswith("NCT8")}
+    assert count == 4200
+    assert mock_get.await_count == 1
+    args, _ = mock_get.await_args
+    params = args[1]
+    assert params["pageSize"] == 1
+    assert params["countTotal"] == "true"
+    assert params["query.intr"] == "metformin"
+    assert params["query.cond"] == 'AREA[ConditionMeshTerm]"Hypertension"'
 
-    # All 5 drug safety results included
-    assert len(drug_ids) == 5
-    # Indication results capped at max_results=3
-    assert len(indication_ids) == 3
+
+async def test_count_trials_total_zero_when_missing_total(tmp_path):
+    """When the API response lacks totalCount, _count_trials_total returns 0."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+    with patch.object(client, "_rest_get", new=AsyncMock(return_value={"studies": []})):
+        count = await client._count_trials_total(
+            drug="x", indication='AREA[ConditionMeshTerm]"Y"'
+        )
+    assert count == 0
+
+
+async def test_count_trials_total_passes_status_and_phase_filters(tmp_path):
+    """status_filter goes to filter.overallStatus; phase_filter is appended via AREA[Phase]."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+    with patch.object(
+        client,
+        "_rest_get",
+        new=AsyncMock(return_value={"totalCount": 7}),
+    ) as mock_get:
+        count = await client._count_trials_total(
+            drug="metformin",
+            indication='AREA[ConditionMeshTerm]"Hypertension"',
+            status_filter="COMPLETED",
+            phase_filter="PHASE3",
+        )
+
+    assert count == 7
+    args, _ = mock_get.await_args
+    params = args[1]
+    assert params["filter.overallStatus"] == "COMPLETED"
+    assert params["query.term"] == "AREA[Phase]PHASE3"
+
+
+# ------------------------------------------------------------------
+# search_trials — 5 counts + 1 fetch, MeSH server-side
+# ------------------------------------------------------------------
+
+
+async def test_search_trials_assembles_counts_and_fetch(tmp_path):
+    """search_trials fans out five count calls plus one fetch and returns a SearchTrialsResult."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+    fake_trial = Trial(
+        nct_id="NCT11111111",
+        title="T",
+        phase="Phase 2",
+        overall_status="RECRUITING",
+        sponsor="S",
+    )
+
+    with (
+        patch.object(
+            client,
+            "_count_trials_total",
+            new=AsyncMock(side_effect=[131, 12, 4, 1, 7]),
+        ) as mock_count,
+        patch.object(
+            client,
+            "_paginated_search",
+            new=AsyncMock(return_value=([fake_trial], False)),
+        ) as mock_fetch,
+    ):
+        result = await client.search_trials("bupropion", "Depressive Disorder")
+
+    assert result.total_count == 131
+    assert result.by_status == {
+        "RECRUITING": 12,
+        "ACTIVE_NOT_RECRUITING": 4,
+        "WITHDRAWN": 1,
+        "UNKNOWN": 7,
+    }
+    assert len(result.trials) == 1
+    assert result.trials[0].nct_id == "NCT11111111"
+
+    # 5 counts: total + recruiting + active + withdrawn + unknown
+    assert mock_count.await_count == 5
+    # 1 fetch with EnrollmentCount:desc sort and the FETCH_MAX cap
+    assert mock_fetch.await_count == 1
+    fetch_kwargs = mock_fetch.await_args.kwargs
+    assert fetch_kwargs["drug"] == "bupropion"
+    assert fetch_kwargs["indication"] == 'AREA[ConditionMeshTerm]"Depressive Disorder"'
+    assert fetch_kwargs["sort"] == "EnrollmentCount:desc"
+    assert fetch_kwargs["max_results"] == 50
+
+
+async def test_search_trials_uses_same_mesh_cond_for_count_and_fetch(tmp_path):
+    """The same AREA[ConditionMeshTerm] filter is applied to every count call and the fetch."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+    expected_cond = 'AREA[ConditionMeshTerm]"Hypertension"'
+
+    with (
+        patch.object(
+            client,
+            "_count_trials_total",
+            new=AsyncMock(return_value=0),
+        ) as mock_count,
+        patch.object(
+            client,
+            "_paginated_search",
+            new=AsyncMock(return_value=([], False)),
+        ) as mock_fetch,
+    ):
+        await client.search_trials("metformin", "Hypertension")
+
+    for call in mock_count.await_args_list:
+        assert call.kwargs["indication"] == expected_cond
+    assert mock_fetch.await_args.kwargs["indication"] == expected_cond
+
+
+# ------------------------------------------------------------------
+# get_completed_trials — 2 counts + 1 fetch
+# ------------------------------------------------------------------
+
+
+async def test_get_completed_trials_returns_total_and_trials(tmp_path):
+    """get_completed_trials issues one total count call and a COMPLETED fetch."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+    fake_trial = Trial(
+        nct_id="NCT22222222",
+        title="T",
+        phase="Phase 3",
+        overall_status="COMPLETED",
+        sponsor="S",
+    )
+
+    with (
+        patch.object(
+            client,
+            "_count_trials_total",
+            new=AsyncMock(return_value=20),
+        ) as mock_count,
+        patch.object(
+            client,
+            "_paginated_search",
+            new=AsyncMock(return_value=([fake_trial], False)),
+        ) as mock_fetch,
+    ):
+        result = await client.get_completed_trials(
+            "semaglutide", "Diabetes Mellitus, Type 2"
+        )
+
+    assert result.total_count == 20
+    assert len(result.trials) == 1
+    assert result.trials[0].nct_id == "NCT22222222"
+
+    assert mock_count.await_count == 1
+    count_kwargs = mock_count.await_args.kwargs
+    assert count_kwargs["status_filter"] == "COMPLETED"
+    assert count_kwargs.get("phase_filter") is None
+
+    assert mock_fetch.await_count == 1
+    fetch_kwargs = mock_fetch.await_args.kwargs
+    assert fetch_kwargs["status_filter"] == "COMPLETED"
+    assert fetch_kwargs["max_results"] == 50
+    assert fetch_kwargs["sort"] == "EnrollmentCount:desc"
+
+
+# ------------------------------------------------------------------
+# get_terminated_trials — 1 count + 1 fetch
+# ------------------------------------------------------------------
+
+
+async def test_get_terminated_trials_returns_total_and_trials(tmp_path):
+    """get_terminated_trials issues a TERMINATED count and a TERMINATED fetch."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+    fake_trial = Trial(
+        nct_id="NCT33333333",
+        title="T",
+        phase="Phase 2",
+        overall_status="TERMINATED",
+        why_stopped="Lack of efficacy",
+        sponsor="S",
+    )
+
+    with (
+        patch.object(
+            client,
+            "_count_trials_total",
+            new=AsyncMock(return_value=3),
+        ) as mock_count,
+        patch.object(
+            client,
+            "_paginated_search",
+            new=AsyncMock(return_value=([fake_trial], False)),
+        ) as mock_fetch,
+    ):
+        result = await client.get_terminated_trials("metformin", "Hypertension")
+
+    assert result.total_count == 3
+    assert len(result.trials) == 1
+    assert result.trials[0].nct_id == "NCT33333333"
+    assert result.trials[0].why_stopped == "Lack of efficacy"
+
+    assert mock_count.await_count == 1
+    assert mock_count.await_args.kwargs["status_filter"] == "TERMINATED"
+
+    assert mock_fetch.await_count == 1
+    fetch_kwargs = mock_fetch.await_args.kwargs
+    assert fetch_kwargs["status_filter"] == "TERMINATED"
+    assert fetch_kwargs["max_results"] == 50
+    assert fetch_kwargs["sort"] == "EnrollmentCount:desc"
 
 
 # ------------------------------------------------------------------
@@ -180,88 +290,42 @@ def _make_drug_trial(
     )
 
 
-def test_aggregate_landscape_uses_passed_total_count():
+def test_aggregate_landscape_uses_passed_total_count(tmp_path):
     """_aggregate_landscape stores passed total_count, not len(trials).
 
     50 trials fetched but the API reported 330 total → total_trial_count == 330.
     """
     trials = [_make_drug_trial(f"NCT{i:08d}") for i in range(50)]
-    client = ClinicalTrialsClient()
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
 
     result = client._aggregate_landscape(trials, total_count=330, top_n=10)
 
     assert result.total_trial_count == 330
 
 
-async def test_get_landscape_calls_fetch_and_count():
-    """get_landscape calls both _fetch_all_indication_trials and _count_trials."""
+async def test_get_landscape_calls_fetch_and_count_total(tmp_path):
+    """get_landscape calls both _fetch_all_indication_trials and _count_trials_total."""
     fake_trials = [_make_drug_trial("NCT00000001")]
 
-    client = ClinicalTrialsClient()
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
     with (
         patch.object(
             client,
             "_fetch_all_indication_trials",
-            new=AsyncMock(return_value=fake_trials),
+            new=AsyncMock(return_value=(fake_trials, False)),
         ) as mock_fetch,
         patch.object(
             client,
-            "_count_trials",
+            "_count_trials_total",
             new=AsyncMock(return_value=330),
         ) as mock_count,
     ):
-        result = await client.get_landscape("gastroparesis")
+        result = await client.get_landscape("Gastroparesis")
 
     mock_fetch.assert_awaited_once()
     mock_count.assert_awaited_once()
     assert result.total_trial_count == 330
-
-
-# ------------------------------------------------------------------
-# _parse_terminated_trial — field population
-# ------------------------------------------------------------------
-
-
-def test_parse_terminated_trial_field_population():
-    """_parse_terminated_trial populates title, enrollment, sponsor, start_date, termination_date from Trial."""
-    study = {
-        "protocolSection": {
-            "identificationModule": {
-                "nctId": "NCT99887766",
-                "briefTitle": "A Phase 2 Study of DrugX in Lupus",
-            },
-            "statusModule": {
-                "overallStatus": "TERMINATED",
-                "whyStopped": "Lack of efficacy in interim analysis",
-                "startDateStruct": {"date": "2019-06"},
-                "primaryCompletionDateStruct": {"date": "2021-11"},
-            },
-            "designModule": {
-                "phases": ["PHASE2"],
-                "enrollmentInfo": {"count": 245},
-            },
-            "conditionsModule": {"conditions": ["Systemic Lupus Erythematosus"]},
-            "sponsorCollaboratorsModule": {"leadSponsor": {"name": "BioPharm Inc"}},
-            "armsInterventionsModule": {
-                "interventions": [{"type": "DRUG", "name": "DrugX"}]
-            },
-            "outcomesModule": {},
-            "referencesModule": {},
-            "descriptionModule": {},
-        }
-    }
-
-    client = ClinicalTrialsClient()
-    result = client._parse_terminated_trial(study)
-
-    assert result.nct_id == "NCT99887766"
-    assert result.title == "A Phase 2 Study of DrugX in Lupus"
-    assert result.enrollment == 245
-    assert result.sponsor == "BioPharm Inc"
-    assert result.start_date == "2019-06"
-    assert result.termination_date == "2021-11"
-    assert result.drug_name == "DrugX"
-    assert result.indication == "Systemic Lupus Erythematosus"
-    assert result.phase == "Phase 2"
-    assert result.why_stopped == "Lack of efficacy in interim analysis"
-    assert result.stop_category == "efficacy"
+    # Server-side MeSH filter is applied to both fetch and count
+    expected_cond = 'AREA[ConditionMeshTerm]"Gastroparesis"'
+    assert mock_fetch.await_args.args[0] == expected_cond
+    assert mock_count.await_args.kwargs["indication"] == expected_cond

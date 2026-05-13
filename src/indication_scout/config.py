@@ -1,5 +1,17 @@
-"""Application configuration."""
+"""Application configuration.
 
+Two env files are loaded in order:
+  1. .env                — secrets, DB credentials, API keys, model names
+  2. .env.constants      — tunable numeric limits (top-k, max results, etc.)
+
+Later files override earlier ones; actual environment variables override both.
+
+To swap the constants file at runtime:
+    CONSTANTS_FILE=.env.constants.test pytest
+    CONSTANTS_FILE=.env.constants.experiment scout find -d "metformin"
+"""
+
+import os
 from functools import lru_cache
 
 from pydantic_settings import BaseSettings
@@ -34,8 +46,53 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
 
+    # -- Tunable limits (values come from .env.constants) ----------------------
+    # No defaults here — if .env.constants is missing a field, startup fails
+    # immediately so you know what to add.
+
+    # LLM token limits
+    llm_max_tokens: int
+    small_llm_max_tokens: int
+
+    # Base client
+    default_timeout: float
+    default_max_retries: int
+
+    # Literature / RAG
+    literature_top_k: int
+    semantic_search_top_k: int
+    pubmed_max_results: int
+    pubmed_search_default_max_results: int
+    pubmed_esummary_batch_size: int
+    pubmed_efetch_batch_size: int
+    rag_llm_concurrency: int
+    rag_pubmed_concurrency: int
+    rag_disease_concurrency: int
+
+    # Clinical trials
+    clinical_trials_landscape_max_trials: int
+    clinical_trials_cap: int
+
+    # Supervisor
+    supervisor_candidate_cap: int
+
+    # Mechanism
+    mechanism_signal_threshold: float
+    mechanism_associations_cap: int
+
+    # Disease helper
+    disease_pubmed_min_results: int
+
+    # Open Targets
+    open_targets_page_size: int
+    open_targets_competitor_prefetch_max: int
+    open_targets_association_min_score: float
+
     class Config:
-        env_file = ".env"
+        env_file = (
+            ".env",
+            os.environ.get("CONSTANTS_FILE", ".env.constants"),
+        )
         env_file_encoding = "utf-8"
         frozen = True
 

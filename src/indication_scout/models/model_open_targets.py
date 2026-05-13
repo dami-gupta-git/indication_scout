@@ -17,11 +17,51 @@ class Association(BaseModel):
 
     disease_id: str = ""
     disease_name: str = ""
+    disease_description: str = ""
     overall_score: float | None = None
     datatype_scores: dict[str, float] = (
         {}
     )  # e.g. {"genetic_association": 0.7, "literature": 0.9}
     therapeutic_areas: list[str] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class VariantFunctionalConsequence(BaseModel):
+    """Sequence Ontology term describing the functional effect of a variant."""
+
+    id: str = ""  # SO ID, e.g. SO_0001589
+    label: str = ""  # e.g. loss_of_function_variant
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class EvidenceRecord(BaseModel):
+    """A single evidence record supporting a target-disease association.
+
+    Pulled from Open Targets' `target.evidences(efoIds: [...])` endpoint.
+    Carries directionality fields used downstream to classify whether a
+    drug's action aligns with or opposes the disease mechanism.
+    """
+
+    disease_id: str = ""
+    datatype_id: str = ""  # genetic_association, animal_model, etc.
+    score: float | None = None
+    direction_on_target: str | None = None  # GoF / LoF
+    direction_on_trait: str | None = None  # risk / protect
+    variant_functional_consequence: VariantFunctionalConsequence | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -289,6 +329,7 @@ class TargetData(BaseModel):
     target_id: str = ""
     symbol: str = ""
     name: str = ""
+    function_descriptions: list[str] = []  # UniProt function paragraphs
     associations: list[Association] = []
     pathways: list[Pathway] = []
     interactions: list[Interaction] = []
@@ -420,9 +461,6 @@ class DrugData(BaseModel):
     """
 
     chembl_id: str = ""
-    name: str = ""
-    synonyms: list[str] = []
-    trade_names: list[str] = []
     drug_type: str | None = None
     maximum_clinical_stage: str | None = None  # APPROVAL, PHASE_3, etc.
     mechanisms_of_action: list[MechanismOfAction] = []

@@ -8,7 +8,7 @@ At the start of every session, read `PROJECT_STATE.md`, the most recent `session
 
 ## Findings Workflow
 
-- When a non-obvious finding is confirmed (API behaviour, naming discrepancy, architectural decision, pattern, project rule), append it to `docs/findings.md` under the appropriate section with a date.
+- When a non-obvious finding is confirmed (API behaviour, naming discrepancy, architectural decision, pattern, project rule), append it to `docs/findings.md` under the appropriate section with a date. Items should be short and to-the-point.
 - `docs/findings.md` is the single source of truth for findings, decisions, and patterns — not `MEMORY.md`.
 
 ## Session File Workflow
@@ -50,10 +50,10 @@ IndicationScout is an agentic drug repurposing system. A drug name goes in; coor
 
 ### Layered structure (`src/indication_scout/`)
 
-- **data_sources/** — Async API clients for external biomedical databases. Each extends `BaseClient` (async context manager with retry/backoff). Current clients: `OpenTargetsClient` (GraphQL), `ClinicalTrialsClient` (REST), `PubMedClient` (REST+XML), `ChEMBLClient`, `DrugBankClient`. Errors surface as `DataSourceError`.
-- **models/** — Pydantic `BaseModel` contracts between data sources and agents. Organized per source: `model_open_targets.py` (TargetData, DrugData and their nested models), `model_clinical_trials.py` (Trial, WhitespaceResult, ConditionLandscape, TerminatedTrial), `model_pubmed_abstract.py` (PubmedAbstract), `model_chembl.py` (MoleculeData, ATCDescription), `model_drug_profile.py` (DrugProfile). Agents never see raw API responses.
-- **agents/** — AI agents that each own a slice of analysis. All extend `BaseAgent` (single `async run()` method). Agents: `orchestrator`, `literature`, `clinical_trials`, `mechanism`, `safety`. The `Orchestrator` coordinates the specialist agents.
-- **services/** — Business logic layer. Implemented: `llm.py` (Anthropic SDK), `embeddings.py` (BioLORD-2023), `disease_helper.py` (LLM normalization), `pubmed_query.py` (query building), `retrieval.py` (RAG pipeline).
+- **data_sources/** — Async API clients for external biomedical databases. Each extends `BaseClient` (async context manager with retry/backoff). Current clients: `OpenTargetsClient` (GraphQL), `ClinicalTrialsClient` (REST), `PubMedClient` (REST+XML), `ChEMBLClient`, `FDAClient` (openFDA labels). Errors surface as `DataSourceError`.
+- **models/** — Pydantic `BaseModel` contracts between data sources and agents. Organized per source: `model_open_targets.py` (TargetData, DrugData, RichDrugData and their nested models), `model_clinical_trials.py` (Trial, Intervention, MeshTerm, PrimaryOutcome, SearchTrialsResult, CompletedTrialsResult, TerminatedTrialsResult, IndicationLandscape, CompetitorEntry, RecentStart, ApprovalCheck), `model_pubmed_abstract.py` (PubmedAbstract), `model_chembl.py` (MoleculeData, ATCDescription), `model_drug_profile.py` (DrugProfile), `model_evidence_summary.py` (EvidenceSummary). Agents never see raw API responses.
+- **agents/** — AI agents that each own a slice of analysis. Agents: `supervisor`, `literature`, `clinical_trials`, `mechanism`. Each lives in its own subpackage (`<name>_agent.py`, `<name>_tools.py`, `<name>_output.py`). The `supervisor` coordinates the specialist sub-agents via LangGraph's prebuilt `create_react_agent`. `agents/base.py` defines a `BaseAgent` ABC that is currently unused by the active ReAct-style agents.
+- **services/** — Business logic layer. Implemented: `llm.py` (Anthropic SDK), `embeddings.py` (BioLORD-2023), `disease_helper.py` (LLM disease normalization + MeSH descriptor resolver), `pubmed_query.py` (query building), `retrieval.py` (RAG pipeline), `approval_check.py` (openFDA label + LLM approval extraction).
 - **api/** — FastAPI app (`api/main.py`). Routes in `api/routes/`, request/response schemas in `api/schemas/`.
 - **config.py** — `pydantic_settings.BaseSettings` loaded from `.env`. Access via `get_settings()`.
 - **constants.py** — All magic numbers, URLs, and lookup maps.
@@ -61,9 +61,9 @@ IndicationScout is an agentic drug repurposing system. A drug name goes in; coor
 ### Data flow
 
 ```
-CLI/API → Orchestrator → specialist agents → data source clients → external APIs
-                                          ↕
-                                    Pydantic models (models/)
+CLI/API → Supervisor → specialist agents → data source clients → external APIs
+                                        ↕
+                                  Pydantic models (models/)
 ```
 
 
@@ -98,6 +98,7 @@ tests/
 - If you see potential bugs or improvements, list them separately rather than fixing automatically.
 - When asked to make changes, only make those changes, do not introduce new functionality without getting approval.
 - Do not delete commented code.
+- Wrap docstrings and comments at a maximum of 105 characters per line. Preserve exact wording when reflowing — only adjust line breaks, never change words.
 
 ## Planning & Implementation Rules
 
@@ -111,6 +112,7 @@ When creating a plan:
 - [ ] Identify all external dependencies (APIs, databases, services)
 - [ ] Verify each dependency's schema/contract before writing code
 - [ ] If you can't verify, explicitly flag it as an assumption that needs human confirmation
+- [ ] Suggest changes that need to be made to the unit and integration tests
 
 ## Plan Tracking Workflow
 - When asked to design or plan a feature, write the plan to `PLAN.md` in the **project root** as a checklist (`- [ ]` items) before touching any code.
@@ -132,6 +134,7 @@ When creating a plan:
 - All external data contracts must use Pydantic `BaseModel`. Do not use raw dicts for structured data crossing module boundaries.
 - All data source clients must extend `BaseClient` (async context manager, lazy session via `_get_session()`).
 - Raise `DataSourceError` (not generic exceptions) from data source clients. Include source name and context in the error.
+- When making changes to the cli, flag that corresponding changes need to be made in streamlit UI.
 
 ## Pydantic Defensive Defaults
 
@@ -191,4 +194,17 @@ drug = Drug(**{"name": None, "synonyms": None, "year_approved": None})
   - Remove associated dead code, unused variables, and unused constants that are now provably unreachable.
   - Do not remove code that might still be used indirectly without first verifying usage (e.g. via search, tests, or references).
   - Listen carefully to what the client says. If she asks for a list of things, make sure to implement them all
+
+## Accuracy vs. Coverage
+- **Error by omission is acceptable. Inaccurate output is not.** It is fine for the system to miss a
+  legitimate candidate (e.g. mechanism-agent threshold filters out a real association, LLM doesn't
+  propose a known opportunity). It is NOT fine for the system to surface an analysis that wasn't
+  grounded in the upstream data sources.
+- Do not loosen reject paths, allowlist guards, or candidate filters to "rescue" diseases that were
+  excluded upstream. If something is missing, fix it at the source (mechanism scoring, candidate
+  surfacing, data ingestion) — never by relaxing the integrity check.
+- When the supervisor or any agent proposes a disease/drug/target that isn't in the upstream
+  allowlist, the correct behavior is to REJECT and log. Don't add fallbacks that "try anyway."
+- Prefer a smaller, correct report over a larger one that includes hallucinated or unverified
+  entries.
 

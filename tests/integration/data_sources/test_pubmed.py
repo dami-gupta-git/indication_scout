@@ -41,12 +41,15 @@ async def test_get_count_returns_total(pubmed_client):
 
 
 async def test_fetch_articles_parses_correctly(pubmed_client):
-    """Test fetch_articles returns parsed PubmedAbstract objects."""
-    # First search for a known article
-    pmids = await pubmed_client.search("semaglutide obesity clinical trial")
-    articles = await pubmed_client.fetch_abstracts(pmids)
+    """Test fetch_articles returns parsed PubmedAbstract objects.
 
-    assert len(articles) >= 5
+    PMID 41664890 fetched directly rather than via search — PubMed search
+    relevance drifts over time and used to flake this test when the PMID
+    dropped out of the default result window.
+    """
+    articles = await pubmed_client.fetch_abstracts(["41664890"])
+
+    assert len(articles) == 1
     [article] = [a for a in articles if a.pmid == "41664890"]
 
     assert article.pmid.isdigit()

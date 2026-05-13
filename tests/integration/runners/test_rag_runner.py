@@ -23,7 +23,6 @@ async def test_run_rag_empagliflozin(db_session_truncating, test_cache_dir):
     for disease, summary in results.items():
         assert len(summary.summary) > 50
         assert summary.strength in ["strong", "moderate", "weak", "none"]
-        assert isinstance(summary.has_adverse_effects, bool)
 
 
 async def test_run_rag_colchicine_mixed_signals(db_session_truncating, test_cache_dir):
@@ -36,13 +35,6 @@ async def test_run_rag_colchicine_mixed_signals(db_session_truncating, test_cach
     assert all(
         s in ("weak", "none") for s in strengths
     ), f"Expected only weak/none signals for colchicine, got: {strengths}"
-
-    # Breast cancer, lung cancer, and sarcoma flag adverse effects (toxicity to normal cells,
-    # myelosuppression) — expect at least 2.
-    adverse_flags = {d for d, s in results.items() if s.has_adverse_effects}
-    assert (
-        len(adverse_flags) >= 2
-    ), f"Expected at least 2 indications to flag adverse effects, got: {adverse_flags}"
 
     # Summaries should reflect the preclinical-only, no-clinical-trials nature of the evidence.
     summaries = " ".join(r.summary.lower() for r in results.values())
@@ -62,4 +54,3 @@ async def test_run_rag_colchicine_mixed_signals(db_session_truncating, test_cach
     for disease, summary in results.items():
         assert len(summary.summary) > 50
         assert summary.strength in ["strong", "moderate", "weak", "none"]
-        assert isinstance(summary.has_adverse_effects, bool)

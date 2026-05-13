@@ -20,7 +20,7 @@ def mock_db() -> MagicMock:
 def drug_profile() -> DrugProfile:
     return DrugProfile(
         name="metformin",
-        synonyms=["Glucophage"],
+        synonyms=["glucophage"],
         target_gene_symbols=["PRKAA1"],
         mechanisms_of_action=["AMP-activated protein kinase activator"],
         atc_codes=["A10BA02"],
@@ -34,7 +34,6 @@ def evidence_colorectal() -> EvidenceSummary:
     return EvidenceSummary(
         summary="Evidence for metformin in colorectal cancer.",
         study_count=3,
-        study_types=["RCT"],
         strength="moderate",
         key_findings=["Reduced CRC incidence"],
         supporting_pmids=["11111111"],
@@ -46,7 +45,6 @@ def evidence_breast() -> EvidenceSummary:
     return EvidenceSummary(
         summary="Evidence for metformin in breast cancer.",
         study_count=2,
-        study_types=["observational"],
         strength="weak",
         key_findings=["Lower recurrence rate"],
         supporting_pmids=["22222222"],

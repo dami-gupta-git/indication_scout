@@ -1,0 +1,651 @@
+drug,disease,mesh_id,mesh_term,chembl_id,label,n_competitors,has_competitor,n_ct_completed,n_ct_terminated,n_ct_total,term_to_total_ratio,n_expand_terms,has_expand,n_pubmed,log_n_pubmed,has_pubmed,atc_level1,atc_level2
+baricitinib,psoriasis,,,CHEMBL2105759,0,8,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,myeloproliferative disorder,,,CHEMBL2105759,0,7,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,systemic lupus erythematosus,D008180,"lupus erythematosus, systemic",CHEMBL2105759,0,6,1,2,2,4,0.5,9,1,32,3.4965075614664802,1,L,L04
+baricitinib,myelofibrosis,,,CHEMBL2105759,0,6,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,alopecia areata,,,CHEMBL2105759,1,5,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,ulcerative colitis,D003093,"colitis, ulcerative",CHEMBL2105759,0,6,1,0,0,0,0.0,8,1,2,1.0986122886681098,1,L,L04
+baricitinib,kidney disease,D007674,kidney diseases,CHEMBL2105759,0,6,1,0,0,0,0.0,0,0,1,0.6931471805599453,1,L,L04
+baricitinib,graft versus host disease,D006086,graft vs host disease,CHEMBL2105759,0,3,1,1,0,1,0.0,8,1,4,1.6094379124341003,1,L,L04
+baricitinib,dermatomyositis,D003882,dermatomyositis,CHEMBL2105759,0,3,1,1,0,1,0.0,8,1,13,2.6390573296152584,1,L,L04
+baricitinib,crohn's disease,D003424,crohn disease,CHEMBL2105759,0,4,1,0,0,0,0.0,0,0,2,1.0986122886681098,1,L,L04
+baricitinib,psoriatic arthritis,D015535,"arthritis, psoriatic",CHEMBL2105759,0,4,1,1,0,1,0.0,8,1,19,2.995732273553991,1,L,L04
+baricitinib,hidradenitis suppurativa,,,CHEMBL2105759,0,4,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,liver disease,,,CHEMBL2105759,0,4,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,covid-19,D000086382,covid-19,CHEMBL2105759,1,3,1,0,0,0,0.0,0,0,56,4.04305126783455,1,L,L04
+baricitinib,leukemia,,,CHEMBL2105759,0,4,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,acute myeloid leukemia,D015470,"leukemia, myeloid, acute",CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,atopic eczema,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,"autoinflammation, immune dysregulation, and eosinophilia",,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,cancer,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,eczematoid dermatitis,D004485,eczema,CHEMBL2105759,0,0,0,6,1,7,0.14285714285714285,8,1,15,2.772588722239781,1,L,L04
+baricitinib,essential thrombocythemia,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,hematologic disease,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,hemorrhagic disease,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,neoplasm,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,polycythemia vera,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,primary myelofibrosis,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,rheumatoid arthritis,,,CHEMBL2105759,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,splenomegaly,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+baricitinib,thrombocythemia 3,,,CHEMBL2105759,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+bevacizumab,age-related macular degeneration,D008268,macular degeneration,CHEMBL1201583,0,8,1,44,9,53,0.16981132075471697,10,1,59,4.0943445622221,1,S,S01
+bevacizumab,retinopathy,,,CHEMBL1201583,0,8,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,diabetic retinopathy,D003930,diabetic retinopathy,CHEMBL1201583,0,6,1,25,2,27,0.07407407407407407,8,1,102,4.634728988229636,1,S,S01
+bevacizumab,retinal vein occlusion,D012170,retinal vein occlusion,CHEMBL1201583,0,5,1,20,2,22,0.09090909090909091,8,1,99,4.605170185988092,1,S,S01
+bevacizumab,choroidal neovascularization,,,CHEMBL1201583,0,4,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,polypoidal choroidal vasculopathy,,,CHEMBL1201583,0,3,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,corneal neovascularization,,,CHEMBL1201583,0,3,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,pathological myopia,,,CHEMBL1201583,0,3,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,myopia,,,CHEMBL1201583,0,2,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,retinopathy of prematurity,,,CHEMBL1201583,0,2,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,glaucoma,,,CHEMBL1201583,0,2,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,telangiectasis,,,CHEMBL1201583,0,2,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,hereditary hemorrhagic telangiectasia,D013683,"telangiectasia, hereditary hemorrhagic",CHEMBL1201583,0,1,1,10,1,11,0.09090909090909091,8,1,107,4.68213122712422,1,S,S01
+bevacizumab,neovascular glaucoma,,,CHEMBL1201583,0,2,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,pterygium,,,CHEMBL1201583,0,1,1,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,breast cancer,D001943,breast neoplasms,CHEMBL1201583,0,0,0,0,0,0,0.0,0,0,45,3.828641396489095,1,S,S01
+bevacizumab,breast neoplasm,,,CHEMBL1201583,0,0,0,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,cervical cancer,,,CHEMBL1201583,1,0,0,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,colorectal cancer,D015179,colorectal neoplasms,CHEMBL1201583,1,0,0,0,0,0,0.0,0,0,58,4.07753744390572,1,S,S01
+bevacizumab,colorectal neoplasm,,,CHEMBL1201583,1,0,0,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,diabetic macular edema,D008269,macular edema,CHEMBL1201583,0,0,0,25,4,29,0.13793103448275862,8,1,135,4.912654885736052,1,S,S01
+bevacizumab,macular degeneration,,,CHEMBL1201583,0,0,0,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,macular retinal edema,D008269,macular edema,CHEMBL1201583,0,0,0,25,4,29,0.13793103448275862,7,1,135,4.912654885736052,1,S,S01
+bevacizumab,non-small cell lung carcinoma,D002289,"carcinoma, non-small-cell lung",CHEMBL1201583,1,0,0,0,0,0,0.0,0,0,60,4.110873864173311,1,S,S01
+bevacizumab,ovarian neoplasm,,,CHEMBL1201583,1,0,0,0,0,0,0.0,0,0,0,0.0,0,S,S01
+bevacizumab,renal cell carcinoma,D002292,"carcinoma, renal cell",CHEMBL1201583,1,0,0,0,0,0,0.0,0,0,21,3.091042453358316,1,S,S01
+bevacizumab,wet macular degeneration,D057135,wet macular degeneration,CHEMBL1201583,0,0,0,9,0,9,0.0,8,1,110,4.709530201312334,1,S,S01
+bupropion,attention deficit hyperactivity disorder,D001289,attention deficit disorder with hyperactivity,CHEMBL894,0,20,1,0,0,0,0.0,8,1,119,4.787491742782046,1,N,N06
+bupropion,mood disorder,,,CHEMBL894,0,19,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,substance dependence,D019966,substance-related disorders,CHEMBL894,0,16,1,0,0,0,0.0,8,1,62,4.143134726391533,1,N,N06
+bupropion,fibromyalgia,D005356,fibromyalgia,CHEMBL894,0,9,1,0,0,0,0.0,0,0,2,1.0986122886681098,1,N,N06
+bupropion,schizophrenia,D012559,schizophrenia,CHEMBL894,0,8,1,0,0,0,0.0,0,0,54,4.007333185232471,1,N,N06
+bupropion,back pain,D001416,back pain,CHEMBL894,0,7,1,0,0,0,0.0,0,0,1,0.6931471805599453,1,N,N06
+bupropion,eating disorder,D001068,feeding and eating disorders,CHEMBL894,0,5,1,0,0,0,0.0,0,0,5,1.791759469228055,1,N,N06
+bupropion,bipolar disorder,D001714,bipolar disorder,CHEMBL894,0,5,1,0,0,0,0.0,8,1,87,4.477336814478207,1,N,N06
+bupropion,multiple sclerosis,D009103,multiple sclerosis,CHEMBL894,0,6,1,0,0,0,0.0,0,0,3,1.3862943611198906,1,N,N06
+bupropion,parkinson disease,D010300,parkinson disease,CHEMBL894,0,6,1,0,0,0,0.0,0,0,16,2.833213344056216,1,N,N06
+bupropion,diabetic neuropathy,,,CHEMBL894,0,6,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,narcolepsy,,,CHEMBL894,0,6,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,insomnia,,,CHEMBL894,0,5,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,breast cancer,D001943,breast neoplasms,CHEMBL894,0,5,1,0,0,0,0.0,0,0,9,2.302585092994046,1,N,N06
+bupropion,post-traumatic stress disorder,D013313,"stress disorders, post-traumatic",CHEMBL894,0,5,1,0,0,0,0.0,8,1,20,3.044522437723423,1,N,N06
+bupropion,alzheimer disease,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,anxiety disorder,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,classic dopamine transporter deficiency syndrome,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,common cold,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,cough,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,depressive disorder,,,CHEMBL894,1,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,drug dependence,D019966,substance-related disorders,CHEMBL894,0,0,0,0,0,0,0.0,0,0,62,4.143134726391533,1,N,N06
+bupropion,huntington disease,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,infantile dystonia-parkinsonism,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,intellectual disability,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,major depressive disorder,D003865,major depressive disorder,CHEMBL894,1,0,0,0,0,0,0.0,0,0,186,5.231108616854587,1,N,N06
+bupropion,narcolepsy-cataplexy syndrome,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,nasal congestion,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,neuropathic pain,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,obesity,D009765,obesity,CHEMBL894,0,0,0,0,0,0,0.0,8,1,167,5.123963979403259,1,N,N06
+bupropion,obstructive sleep apnea,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,orthostatic intolerance,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,pain,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,"parkinsonism-dystonia, infantile",,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,seasonal allergic rhinitis,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+bupropion,sleep disorder,,,CHEMBL894,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+colchicine,lung cancer,D008175,lung neoplasms,CHEMBL107,0,17,1,0,0,0,0.0,8,1,82,4.418840607796598,1,M,M04
+colchicine,breast cancer,D001943,breast neoplasms,CHEMBL107,0,16,1,0,0,0,0.0,8,1,110,4.709530201312334,1,M,M04
+colchicine,prostate cancer,D011471,prostatic neoplasms,CHEMBL107,0,12,1,0,0,0,0.0,8,1,30,3.4339872044851463,1,M,M04
+colchicine,urinary bladder cancer,D001749,urinary bladder neoplasms,CHEMBL107,0,11,1,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,ovarian cancer,,,CHEMBL107,0,10,1,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,lymphoma,,,CHEMBL107,0,9,1,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,gastric cancer,D013274,stomach neoplasms,CHEMBL107,0,7,1,0,0,0,0.0,8,1,12,2.5649493574615367,1,M,M04
+colchicine,cervical cancer,,,CHEMBL107,0,7,1,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,triple-negative breast cancer,D064726,triple negative breast neoplasms,CHEMBL107,0,7,1,0,0,0,0.0,8,1,8,2.1972245773362196,1,M,M04
+colchicine,soft tissue sarcoma,,,CHEMBL107,0,7,1,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,peritoneal cancer,,,CHEMBL107,0,7,1,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,colorectal cancer,D015179,colorectal neoplasms,CHEMBL107,0,6,1,0,0,0,0.0,8,1,13,2.6390573296152584,1,M,M04
+colchicine,multiple myeloma,D009101,multiple myeloma,CHEMBL107,0,5,1,0,0,0,0.0,0,0,1,0.6931471805599453,1,M,M04
+colchicine,fallopian tube cancer,,,CHEMBL107,0,5,1,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,melanoma,D008545,melanoma,CHEMBL107,0,5,1,0,0,0,0.0,0,0,13,2.6390573296152584,1,M,M04
+colchicine,amyotrophic lateral sclerosis,D000690,amyotrophic lateral sclerosis,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,amyotrophic lateral sclerosis type 22,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,autosomal dominant macrothrombocytopenia,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,breast carcinoma,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,breast neoplasm,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,complex cortical dysplasia with other brain malformations 1,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,complex cortical dysplasia with other brain malformations 5,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,complex cortical dysplasia with other brain malformations 6,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,complex cortical dysplasia with other brain malformations 7,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,congenital fibrosis of the extraocular muscles,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,cortical dysgenesis with pontocerebellar hypoplasia due to tubb3 mutation,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,diffuse large b-cell lymphoma,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,familial mediterranean fever,,,CHEMBL107,1,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,female infertility due to fertilization defect,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,"fibrosis of extraocular muscles, congenital, 3a, with or without extraocular involvement",,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,genetic central nervous system malformation,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,gout,,,CHEMBL107,1,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,head and neck malignant neoplasia,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,hemorrhagic disease,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,hodgkins lymphoma,D006689,hodgkin disease,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,hypomyelinating leukodystrophy 6,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,hypomyelination with atrophy of basal ganglia and cerebellum,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,intellectual disability,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,leber congenital amaurosis with early-onset deafness,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,lissencephaly,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,lissencephaly due to tuba1a mutation,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,lissencephaly type 3,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,multiple benign circumferential skin creases on limbs,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,multiple benign circumferential skin creases on limbs 1,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,neoplasm,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,non-small cell lung carcinoma,D002289,"carcinoma, non-small-cell lung",CHEMBL107,0,0,0,0,0,0,0.0,0,0,28,3.367295829986474,1,M,M04
+colchicine,polymicrogyria due to tubb2b mutation,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,"primary dystonia, dyt4 type",,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,stomach neoplasm,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,torsion dystonia 4,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,tubb3-related tubulinopathy,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,tubulinopathy,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+colchicine,tubulinopathy-associated dysgyria,,,CHEMBL107,0,0,0,0,0,0,0.0,0,0,0,0.0,0,M,M04
+dasatinib,gastrointestinal stromal tumor,D046152,gastrointestinal stromal tumors,CHEMBL1421,0,17,1,0,0,0,0.0,0,0,22,3.1354942159291497,1,,
+dasatinib,breast cancer,D001943,breast neoplasms,CHEMBL1421,0,17,1,0,0,0,0.0,0,0,72,4.290459441148391,1,,
+dasatinib,myeloid leukemia,,,CHEMBL1421,0,17,1,0,0,0,0.0,0,0,0,0.0,0,,
+dasatinib,glioblastoma multiforme,D005909,glioblastoma,CHEMBL1421,0,15,1,0,0,0,0.0,0,0,38,3.6635616461296463,1,,
+dasatinib,lung cancer,D008175,lung neoplasms,CHEMBL1421,0,15,1,0,0,0,0.0,0,0,124,4.8283137373023015,1,,
+dasatinib,renal cell carcinoma,D002292,"carcinoma, renal cell",CHEMBL1421,0,15,1,0,0,0,0.0,0,0,2,1.0986122886681098,1,,
+dasatinib,pancreatic carcinoma,D010190,pancreatic neoplasms,CHEMBL1421,0,11,1,0,0,0,0.0,0,0,9,2.302585092994046,1,,
+dasatinib,melanoma,D008545,melanoma,CHEMBL1421,0,11,1,0,0,0,0.0,0,0,34,3.5553480614894135,1,,
+dasatinib,colorectal cancer,D015179,colorectal neoplasms,CHEMBL1421,0,12,1,0,0,0,0.0,0,0,8,2.1972245773362196,1,,
+dasatinib,prostate cancer,D011471,prostatic neoplasms,CHEMBL1421,0,10,1,0,0,0,0.0,0,0,49,3.912023005428146,1,,
+dasatinib,multiple myeloma,D009101,multiple myeloma,CHEMBL1421,0,9,1,0,0,0,0.0,0,0,8,2.1972245773362196,1,,
+dasatinib,hepatocellular carcinoma,D006528,"carcinoma, hepatocellular",CHEMBL1421,0,10,1,0,0,0,0.0,0,0,31,3.4657359027997265,1,,
+dasatinib,gastric cancer,D013274,stomach neoplasms,CHEMBL1421,0,10,1,0,0,0,0.0,0,0,11,2.4849066497880004,1,,
+dasatinib,ovarian cancer,,,CHEMBL1421,0,10,1,0,0,0,0.0,0,0,0,0.0,0,,
+dasatinib,thyroid cancer,D013964,thyroid neoplasms,CHEMBL1421,0,10,1,0,0,0,0.0,0,0,2,1.0986122886681098,1,,
+disulfiram,non-small cell lung carcinoma,D002289,"carcinoma, non-small-cell lung",CHEMBL964,0,0,0,1,0,1,0.0,7,1,21,3.091042453358316,1,P,P03
+disulfiram,cocaine dependence,D019970,cocaine-related disorders,CHEMBL964,0,0,0,9,0,9,0.0,7,1,20,3.044522437723423,1,P,P03
+disulfiram,glioblastoma multiforme,D005909,glioblastoma,CHEMBL964,0,0,0,5,2,7,0.2857142857142857,8,1,39,3.6888794541139363,1,P,P03
+disulfiram,melanoma,D008545,melanoma,CHEMBL964,0,0,0,2,1,3,0.3333333333333333,8,1,20,3.044522437723423,1,P,P03
+disulfiram,germ cell tumor,D009373,"neoplasms, germ cell and embryonal",CHEMBL964,0,0,0,1,0,1,0.0,8,1,1,0.6931471805599453,1,P,P03
+disulfiram,covid-19,D000086382,covid-19,CHEMBL964,0,0,0,1,1,2,0.5,8,1,16,2.833213344056216,1,P,P03
+disulfiram,methamphetamine dependence,,,CHEMBL964,0,0,0,0,0,0,0.0,8,1,0,0.0,0,P,P03
+disulfiram,fatigue,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,inherited retinal dystrophy,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,prostate cancer,D011471,prostatic neoplasms,CHEMBL964,0,0,0,1,1,2,0.5,7,1,17,2.8903717578961645,1,P,P03
+disulfiram,multiple myeloma,D009101,multiple myeloma,CHEMBL964,0,0,0,0,1,1,1.0,7,1,8,2.1972245773362196,1,P,P03
+disulfiram,hiv-1 infection,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,alcohol dependence,D000437,alcoholism,CHEMBL964,1,0,0,0,0,0,0.0,7,1,87,4.477336814478207,1,P,P03
+disulfiram,alcohol drinking,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,alcohol-related disorders,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,"amed syndrome, digenic",,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,atrial fibrillation,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,chronic obstructive pulmonary disease,D029424,"pulmonary disease, chronic obstructive",CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,cirrhosis of liver,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,colorectal cancer,D015179,colorectal neoplasms,CHEMBL964,0,0,0,0,0,0,0.0,0,0,7,2.0794415416798357,1,P,P03
+disulfiram,coronary artery disease,D003324,coronary artery disease,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,esophageal carcinoma,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,gout,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,ischemic stroke,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,myocardial infarction,,,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+disulfiram,parasitic infection,D010272,parasitic diseases,CHEMBL964,0,0,0,0,0,0,0.0,7,1,0,0.0,0,P,P03
+disulfiram,stroke,D020521,stroke,CHEMBL964,0,0,0,0,0,0,0.0,0,0,0,0.0,0,P,P03
+duloxetine,attention deficit hyperactivity disorder,D001289,attention deficit disorder with hyperactivity,CHEMBL1175,0,19,1,2,0,2,0.0,8,1,18,2.9444389791664403,1,N,N06
+duloxetine,obesity,D009765,obesity,CHEMBL1175,0,14,1,0,0,0,0.0,8,1,7,2.0794415416798357,1,N,N06
+duloxetine,cocaine dependence,D019970,cocaine-related disorders,CHEMBL1175,0,14,1,0,0,0,0.0,9,1,0,0.0,0,N,N06
+duloxetine,bipolar disorder,D001714,bipolar disorder,CHEMBL1175,0,13,1,1,0,1,0.0,8,1,11,2.4849066497880004,1,N,N06
+duloxetine,anxiety,,,CHEMBL1175,0,12,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,fibromyalgia,D005356,fibromyalgia,CHEMBL1175,1,9,1,7,0,7,0.0,8,1,91,4.5217885770490405,1,N,N06
+duloxetine,alcohol dependence,D000437,alcoholism,CHEMBL1175,0,10,1,0,0,0,0.0,8,1,1,0.6931471805599453,1,N,N06
+duloxetine,obsessive-compulsive disorder,D009771,obsessive-compulsive disorder,CHEMBL1175,0,9,1,2,0,2,0.0,8,1,8,2.1972245773362196,1,N,N06
+duloxetine,schizophrenia,D012559,schizophrenia,CHEMBL1175,0,10,1,1,0,1,0.0,8,1,7,2.0794415416798357,1,N,N06
+duloxetine,post-traumatic stress disorder,D013313,"stress disorders, post-traumatic",CHEMBL1175,0,8,1,2,1,3,0.3333333333333333,8,1,6,1.9459101490553132,1,N,N06
+duloxetine,nicotine dependence,,,CHEMBL1175,0,8,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,drug dependence,D019966,substance-related disorders,CHEMBL1175,0,8,1,0,0,0,0.0,0,0,3,1.3862943611198906,1,N,N06
+duloxetine,eating disorder,D001068,feeding and eating disorders,CHEMBL1175,0,8,1,0,0,0,0.0,8,1,1,0.6931471805599453,1,N,N06
+duloxetine,irritable bowel syndrome,D043183,irritable bowel syndrome,CHEMBL1175,0,7,1,3,0,3,0.0,8,1,10,2.3978952727983707,1,N,N06
+duloxetine,parkinson disease,D010300,parkinson disease,CHEMBL1175,0,6,1,0,0,0,0.0,0,0,7,2.0794415416798357,1,N,N06
+duloxetine,anxiety disorder,,,CHEMBL1175,0,8,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,common cold,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,cough,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,depressive disorder,,,CHEMBL1175,1,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,diabetic neuropathy,,,CHEMBL1175,1,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,generalized anxiety disorder,D000098647,generalized anxiety disorder,CHEMBL1175,1,8,1,0,0,0,0.0,8,1,0,0.0,0,N,N06
+duloxetine,major depressive disorder,D003865,major depressive disorder,CHEMBL1175,1,40,1,0,0,0,0.0,0,0,80,4.394449154672439,1,N,N06
+duloxetine,muscular disease,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,narcolepsy-cataplexy syndrome,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,nasal congestion,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,neuropathic pain,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,orthostatic intolerance,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,pain,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,panic disorder,D016584,panic disorder,CHEMBL1175,0,9,1,1,0,1,0.0,8,1,7,2.0794415416798357,1,N,N06
+duloxetine,seasonal allergic rhinitis,,,CHEMBL1175,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+duloxetine,social anxiety disorder,,,CHEMBL1175,0,8,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+everolimus,liver cancer,D008113,liver neoplasms,CHEMBL1908360,0,3,1,5,1,6,0.16666666666666666,9,1,149,5.0106352940962555,1,L,L01
+everolimus,prostate cancer,D011471,prostatic neoplasms,CHEMBL1908360,0,2,1,10,4,14,0.2857142857142857,8,1,25,3.258096538021482,1,L,L01
+everolimus,multiple myeloma,D009101,multiple myeloma,CHEMBL1908360,0,2,1,7,1,8,0.125,9,1,11,2.4849066497880004,1,L,L01
+everolimus,glioblastoma multiforme,D005909,glioblastoma,CHEMBL1908360,0,2,1,10,2,12,0.16666666666666666,9,1,29,3.4011973816621555,1,L,L01
+everolimus,thyroid cancer,D013964,thyroid neoplasms,CHEMBL1908360,0,2,1,3,0,3,0.0,9,1,30,3.4339872044851463,1,L,L01
+everolimus,acute myeloid leukemia,D015470,"leukemia, myeloid, acute",CHEMBL1908360,0,2,1,4,0,4,0.0,9,1,17,2.8903717578961645,1,L,L01
+everolimus,urinary bladder cancer,D001749,urinary bladder neoplasms,CHEMBL1908360,0,2,1,3,2,5,0.4,8,1,19,2.995732273553991,1,L,L01
+everolimus,sarcoma,D012509,sarcoma,CHEMBL1908360,0,2,1,8,2,10,0.2,8,1,17,2.8903717578961645,1,L,L01
+everolimus,vitiligo,,,CHEMBL1908360,0,3,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,graft versus host disease,D006086,graft vs host disease,CHEMBL1908360,0,2,1,6,2,8,0.25,9,1,24,3.2188758248682006,1,L,L01
+everolimus,chronic kidney disease,D051436,"renal insufficiency, chronic",CHEMBL1908360,0,2,1,0,0,0,0.0,0,0,2,1.0986122886681098,1,L,L01
+everolimus,oral lichen planus,,,CHEMBL1908360,0,3,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,kidney transplant,,,CHEMBL1908360,1,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,liver transplant,,,CHEMBL1908360,1,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,non-small cell lung cancer,D002289,"carcinoma, non-small-cell lung",CHEMBL1908360,0,2,1,13,3,16,0.1875,9,1,49,3.912023005428146,1,L,L01
+everolimus,atopic eczema,,,CHEMBL1908360,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,breast cancer,D001943,breast neoplasms,CHEMBL1908360,1,2,1,63,15,78,0.19230769230769232,8,1,183,5.214935757608986,1,L,L01
+everolimus,hamartoma,,,CHEMBL1908360,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,hemangioendothelioma,,,CHEMBL1908360,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,kidney angiomyolipoma,,,CHEMBL1908360,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,lymphangioleiomyomatosis,D018192,lymphangioleiomyomatosis,CHEMBL1908360,0,0,0,8,0,8,0.0,8,1,22,3.1354942159291497,1,L,L01
+everolimus,lymphatic malformation,,,CHEMBL1908360,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,neoplasm,,,CHEMBL1908360,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,neuroendocrine neoplasm,,,CHEMBL1908360,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,renal cell carcinoma,D002292,"carcinoma, renal cell",CHEMBL1908360,1,0,0,0,0,0,0.0,0,0,111,4.718498871295094,1,L,L01
+everolimus,tuberous sclerosis,,,CHEMBL1908360,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+everolimus,vascular malformation,,,CHEMBL1908360,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+finasteride,hypogonadism,,,CHEMBL710,0,1,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,alcohol abuse,D000437,alcoholism,CHEMBL710,0,1,1,0,0,0,0.0,7,1,2,1.0986122886681098,1,G,G04
+finasteride,prostatitis,,,CHEMBL710,0,1,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,kennedy disease,,,CHEMBL710,0,1,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,amyotrophic lateral sclerosis,D000690,amyotrophic lateral sclerosis,CHEMBL710,0,1,1,0,0,0,0.0,8,1,0,0.0,0,G,G04
+finasteride,lower urinary tract symptom,,,CHEMBL710,0,1,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,metastatic prostate cancer,,,CHEMBL710,0,1,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,retinopathy,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,non-small cell lung carcinoma,D002289,"carcinoma, non-small-cell lung",CHEMBL710,0,0,0,0,1,1,1.0,7,1,1,0.6931471805599453,1,G,G04
+finasteride,acne,D000152,acne vulgaris,CHEMBL710,0,0,0,1,0,1,0.0,7,1,14,2.70805020110221,1,G,G04
+finasteride,hyperplasia,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,"46,xy disorder of sex development due to 5-alpha-reductase 2 deficiency",,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,alopecia,D000505,alopecia,CHEMBL710,0,0,0,11,0,11,0.0,8,1,225,5.420534999272286,1,G,G04
+finasteride,androgenetic alopecia,,,CHEMBL710,1,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,benign prostatic hyperplasia,D011470,prostatic hyperplasia,CHEMBL710,1,0,0,0,0,0,0.0,0,0,127,4.852030263919617,1,G,G04
+finasteride,gout,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,hypotrichosis,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,micropenis,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,neoplasm,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,prostate adenocarcinoma,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,prostate cancer,D011471,prostatic neoplasms,CHEMBL710,0,0,0,8,0,8,0.0,8,1,109,4.700480365792417,1,G,G04
+finasteride,prostate carcinoma,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,prostate neoplasm,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,skin aging,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+finasteride,tricuspid valve disease,,,CHEMBL710,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+imatinib,leukemia,,,CHEMBL941,0,20,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,breast cancer,D001943,breast neoplasms,CHEMBL941,0,16,1,0,0,0,0.0,10,1,70,4.2626798770413155,1,L,L01
+imatinib,glioblastoma multiforme,D005909,glioblastoma,CHEMBL941,0,14,1,4,1,5,0.2,9,1,59,4.0943445622221,1,L,L01
+imatinib,lung cancer,D008175,lung neoplasms,CHEMBL941,0,14,1,10,1,11,0.09090909090909091,10,1,120,4.795790545596741,1,L,L01
+imatinib,renal cell carcinoma,D002292,"carcinoma, renal cell",CHEMBL941,0,13,1,0,0,0,0.0,10,1,9,2.302585092994046,1,L,L01
+imatinib,liver cancer,D008113,liver neoplasms,CHEMBL941,0,14,1,0,0,0,0.0,0,0,139,4.941642422609304,1,L,L01
+imatinib,melanoma,D008545,melanoma,CHEMBL941,0,11,1,0,0,0,0.0,9,1,76,4.343805421853684,1,L,L01
+imatinib,pancreatic carcinoma,D010190,pancreatic neoplasms,CHEMBL941,0,10,1,0,0,0,0.0,10,1,13,2.6390573296152584,1,L,L01
+imatinib,colorectal cancer,D015179,colorectal neoplasms,CHEMBL941,0,10,1,0,0,0,0.0,9,1,9,2.302585092994046,1,L,L01
+imatinib,prostate cancer,D011471,prostatic neoplasms,CHEMBL941,0,11,1,0,0,0,0.0,0,0,32,3.4965075614664802,1,L,L01
+imatinib,multiple myeloma,D009101,multiple myeloma,CHEMBL941,0,10,1,0,0,0,0.0,0,0,28,3.367295829986474,1,L,L01
+imatinib,gastric cancer,D013274,stomach neoplasms,CHEMBL941,0,8,1,0,0,0,0.0,8,1,154,5.043425116919247,1,L,L01
+imatinib,thyroid cancer,D013964,thyroid neoplasms,CHEMBL941,0,8,1,0,0,0,0.0,0,0,7,2.0794415416798357,1,L,L01
+imatinib,ovarian cancer,,,CHEMBL941,0,7,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,systemic mastocytosis,D034721,"mastocytosis, systemic",CHEMBL941,0,6,1,1,0,1,0.0,8,1,77,4.356708826689592,1,L,L01
+imatinib,acroosteolysis-keloid-like lesions-premature aging syndrome,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,acute lymphoblastic leukemia,,,CHEMBL941,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,acute myeloid leukemia,D015470,"leukemia, myeloid, acute",CHEMBL941,0,16,1,7,0,7,0.0,10,1,79,4.382026634673881,1,L,L01
+imatinib,basal ganglia calcification,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,bilateral striopallidodentate calcinosis,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,"blast phase chronic myelogenous leukemia, bcr-abl1 positive",,,CHEMBL941,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,cancer,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,chronic myelogenous leukemia,D015464,"leukemia, myelogenous, chronic, bcr-abl positive",CHEMBL941,1,11,1,10,0,10,0.0,10,1,1082,6.9874902470009905,1,L,L01
+imatinib,congenital heart defects and skeletal malformations syndrome,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,cutaneous mastocytosis,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,dermatofibrosarcoma protuberans,,,CHEMBL941,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,follicular lymphoma,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,gastrointestinal stromal tumor,D046152,gastrointestinal stromal tumors,CHEMBL941,1,16,1,2,1,3,0.3333333333333333,10,1,754,6.626717749249025,1,L,L01
+imatinib,hepatocellular carcinoma,D006528,"carcinoma, hepatocellular",CHEMBL941,0,9,1,0,0,0,0.0,10,1,39,3.6888794541139363,1,L,L01
+imatinib,hypereosinophilic syndrome,,,CHEMBL941,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,idiopathic pulmonary fibrosis,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,infantile myofibromatosis,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,lymphoid leukemia,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,maculopapular cutaneous mastocytosis,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,mastocytosis,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,metastatic colorectal cancer,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,myelodysplastic syndrome,D009190,myelodysplastic syndromes,CHEMBL941,0,0,0,0,0,0,0.0,0,0,44,3.8066624897703196,1,L,L01
+imatinib,myelodysplastic/myeloproliferative disease,,,CHEMBL941,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,myelodysplastic/myeloproliferative neoplasm,,,CHEMBL941,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,myeloid leukemia,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,"myofibromatosis, infantile, 1",,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,neoplasm,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,neurodegenerative disease,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,non-small cell lung carcinoma,D002289,"carcinoma, non-small-cell lung",CHEMBL941,0,13,1,0,0,0,0.0,10,1,36,3.6109179126442243,1,L,L01
+imatinib,piebaldism,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+imatinib,skeletal overgrowth-craniofacial dysmorphism-hyperelastic skin-white matter lesions syndrome,,,CHEMBL941,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+metformin,abnormal glucose tolerance,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,abnormality of the skeletal system,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,aging,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,alzheimer disease,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,colorectal cancer,D015179,colorectal neoplasms,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,158,5.0689042022202315,1,A,A10
+metformin,covid-19,D000086382,covid-19,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,67,4.219507705176107,1,A,A10
+metformin,diabetes mellitus,D003920,diabetes mellitus,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,349,5.857933154483459,1,A,A10
+metformin,disorder of lipid metabolism,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,external ophthalmoplegia,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,familial hypertrophic cardiomyopathy,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,follicular thyroid carcinoma,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,genetic disorder,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,gestational diabetes,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,hair color,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,histiocytoid cardiomyopathy,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,inborn mitochondrial myopathy,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,insulin resistance,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,interstitial nephritis,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,isolated cytochrome c oxidase deficiency,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,kearns-sayre syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,leber hereditary optic neuropathy,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"leber hereditary optic neuropathy, autosomal recessive",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,leber plus disease,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"leber-like hereditary optic neuropathy, autosomal recessive 2",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,leigh syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,leigh syndrome due to mitochondrial complex iv deficiency,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"leigh syndrome, mitochondrial",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,linear skin defects with multiple congenital anomalies 3,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,lysosomal storage disease,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,maternally-inherited diabetes and deafness,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,maternally-inherited leigh syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,melas,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,melas syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,merrf,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,merrf syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,metabolic disease,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,metabolic syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,microphthalmia with linear skin defects syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex 1 deficiency, nuclear type 35",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,mitochondrial complex i deficiency,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, mitochondrial type 1",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 1",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 10",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 11",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 12",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 13",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 14",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 15",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 18",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 2",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 22",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 23",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 24",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 25",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 26",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 28",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 3",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 30",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 32",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 33",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 36",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 37",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 39",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 4",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 5",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 6",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 7",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 8",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex i deficiency, nuclear type 9",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,"mitochondrial complex iv deficiency, nuclear type 21",,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,mitochondrial disease,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,mitochondrial encephalomyopathy,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,mitochondrial myopathy,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,mitochondrial myopathy with reversible cytochrome c oxidase deficiency,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,mitochondrial non-syndromic sensorineural deafness,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,mitochondrial non-syndromic sensorineural deafness with susceptibility to aminoglycoside exposure,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,mitochondrial non-syndromic sensorineural hearing loss,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,multiple sclerosis,D009103,multiple sclerosis,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,13,2.6390573296152584,1,A,A10
+metformin,myopia,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,ndufb11-related disorders,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,neurodegenerative disease,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,neurodevelopmental delay,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,neuroinflammatory disorder,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,nystagmus,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,obesity,D009765,obesity,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,633,6.452048954437226,1,A,A10
+metformin,obstructive sleep apnea,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,parkinson disease,D010300,parkinson disease,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,25,3.258096538021482,1,A,A10
+metformin,pathologic nystagmus,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,pearson syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,polycystic ovary syndrome,D011085,polycystic ovary syndrome,CHEMBL1431,0,0,0,105,8,113,0.07079646017699115,10,1,870,6.769641976852503,1,A,A10
+metformin,prediabetes syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,progressive cavitating leukoencephalopathy,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,prostate cancer,D011471,prostatic neoplasms,CHEMBL1431,0,0,0,10,8,18,0.4444444444444444,8,1,181,5.204006687076795,1,A,A10
+metformin,rare genetic deafness,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,sleep apnea,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,sudden infant death syndrome,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,systemic lupus erythematosus,D008180,"lupus erythematosus, systemic",CHEMBL1431,0,0,0,0,0,0,0.0,0,0,25,3.258096538021482,1,A,A10
+metformin,thyroid gland oncocytic follicular carcinoma,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,type 1 diabetes mellitus,D003922,"diabetes mellitus, type 1",CHEMBL1431,0,0,0,0,0,0,0.0,0,0,143,4.969813299576001,1,A,A10
+metformin,type 2 diabetes mellitus,D003924,"diabetes mellitus, type 2",CHEMBL1431,1,0,0,0,0,0,0.0,0,0,2815,7.943072717277933,1,A,A10
+metformin,cardiovascular disease,D002318,cardiovascular diseases,CHEMBL1431,0,0,0,10,2,12,0.16666666666666666,10,1,379,5.940171252720432,1,A,A10
+metformin,hepatic steatosis,D005234,fatty liver,CHEMBL1431,0,0,0,24,4,28,0.14285714285714285,10,1,93,4.543294782270004,1,A,A10
+metformin,muscular dystrophy,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+metformin,brain neoplasm,D001932,brain neoplasms,CHEMBL1431,0,0,0,1,0,1,0.0,9,1,71,4.276666119016055,1,A,A10
+metformin,bipolar disorder,D001714,bipolar disorder,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,20,3.044522437723423,1,A,A10
+metformin,migraine disorder,,,CHEMBL1431,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+methotrexate,lung cancer,D008175,lung neoplasms,CHEMBL34259,1,6,1,0,0,0,0.0,0,0,202,5.313205979041787,1,L,L04
+methotrexate,mesothelioma,D008654,mesothelioma,CHEMBL34259,0,4,1,2,0,2,0.0,8,1,32,3.4965075614664802,1,L,L04
+methotrexate,head and neck cancer,,,CHEMBL34259,0,3,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,sarcoma,D012509,sarcoma,CHEMBL34259,0,2,1,25,6,31,0.1935483870967742,8,1,11,2.4849066497880004,1,L,L04
+methotrexate,prostate cancer,D011471,prostatic neoplasms,CHEMBL34259,0,2,1,0,0,0,0.0,0,0,11,2.4849066497880004,1,L,L04
+methotrexate,lymphoma,,,CHEMBL34259,1,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,osteosarcoma,,,CHEMBL34259,1,1,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,gestational trophoblastic neoplasm,,,CHEMBL34259,1,1,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,ovarian cancer,,,CHEMBL34259,0,1,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,colorectal cancer,D015179,colorectal neoplasms,CHEMBL34259,0,1,1,0,0,0,0.0,0,0,5,1.791759469228055,1,L,L04
+methotrexate,urothelial carcinoma,D002295,"carcinoma, transitional cell",CHEMBL34259,0,1,1,1,0,1,0.0,8,1,121,4.804021044733257,1,L,L04
+methotrexate,cervical cancer,,,CHEMBL34259,0,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,pancreatic carcinoma,D010190,pancreatic neoplasms,CHEMBL34259,0,2,1,0,0,0,0.0,0,0,2,1.0986122886681098,1,L,L04
+methotrexate,adenoma,,,CHEMBL34259,0,1,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,fungal infectious disease,,,CHEMBL34259,0,1,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,acute lymphoblastic leukemia,,,CHEMBL34259,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,breast cancer,D001943,breast neoplasms,CHEMBL34259,1,0,0,0,0,0,0.0,0,0,48,3.8918202981106265,1,L,L04
+methotrexate,constitutional megaloblastic anemia with severe neurologic disease,,,CHEMBL34259,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,familial adenomatous polyposis 4,,,CHEMBL34259,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,hereditary neoplastic syndrome,,,CHEMBL34259,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,inherited cancer-predisposing syndrome,,,CHEMBL34259,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,juvenile idiopathic arthritis,,,CHEMBL34259,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,mycosis fungoides,,,CHEMBL34259,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,neoplasm,,,CHEMBL34259,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,non-small cell lung carcinoma,D002289,"carcinoma, non-small-cell lung",CHEMBL34259,0,0,0,1,0,1,0.0,8,1,99,4.605170185988092,1,L,L04
+methotrexate,psoriasis,,,CHEMBL34259,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methotrexate,psoriatic arthritis,D015535,"arthritis, psoriatic",CHEMBL34259,0,0,0,25,1,26,0.038461538461538464,8,1,193,5.267858159063328,1,L,L04
+methotrexate,rheumatoid arthritis,,,CHEMBL34259,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+methylphenidate,depressive disorder,,,CHEMBL796,0,30,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,obesity,D009765,obesity,CHEMBL796,0,16,1,0,0,0,0.0,8,1,1,0.6931471805599453,1,N,N06
+methylphenidate,substance dependence,D019966,substance-related disorders,CHEMBL796,0,16,1,0,0,0,0.0,0,0,43,3.784189633918261,1,N,N06
+methylphenidate,fibromyalgia,D005356,fibromyalgia,CHEMBL796,0,9,1,0,0,0,0.0,10,1,0,0.0,0,N,N06
+methylphenidate,schizophrenia,D012559,schizophrenia,CHEMBL796,0,7,1,0,0,0,0.0,9,1,4,1.6094379124341003,1,N,N06
+methylphenidate,neuropathic pain,,,CHEMBL796,0,7,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,back pain,D001416,back pain,CHEMBL796,0,7,1,0,0,0,0.0,8,1,0,0.0,0,N,N06
+methylphenidate,eating disorder,D001068,feeding and eating disorders,CHEMBL796,0,5,1,0,0,0,0.0,9,1,2,1.0986122886681098,1,N,N06
+methylphenidate,bipolar disorder,D001714,bipolar disorder,CHEMBL796,0,5,1,0,0,0,0.0,9,1,8,2.1972245773362196,1,N,N06
+methylphenidate,multiple sclerosis,D009103,multiple sclerosis,CHEMBL796,0,5,1,0,0,0,0.0,9,1,0,0.0,0,N,N06
+methylphenidate,parkinson disease,D010300,parkinson disease,CHEMBL796,0,5,1,0,0,0,0.0,0,0,8,2.1972245773362196,1,N,N06
+methylphenidate,insomnia,,,CHEMBL796,0,5,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,breast cancer,D001943,breast neoplasms,CHEMBL796,0,5,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,post-traumatic stress disorder,D013313,"stress disorders, post-traumatic",CHEMBL796,0,4,1,0,0,0,0.0,0,0,1,0.6931471805599453,1,N,N06
+methylphenidate,irritable bowel syndrome,D043183,irritable bowel syndrome,CHEMBL796,0,5,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,alzheimer disease,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,anxiety disorder,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,attention deficit hyperactivity disorder,D001289,attention deficit disorder with hyperactivity,CHEMBL796,1,20,1,0,0,0,0.0,9,1,266,5.58724865840025,1,N,N06
+methylphenidate,classic dopamine transporter deficiency syndrome,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,common cold,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,cough,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,diabetic neuropathy,,,CHEMBL796,0,6,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,drug dependence,D019966,substance-related disorders,CHEMBL796,0,16,1,0,0,0,0.0,8,1,43,3.784189633918261,1,N,N06
+methylphenidate,huntington disease,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,infantile dystonia-parkinsonism,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,intellectual disability,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,major depressive disorder,D003865,major depressive disorder,CHEMBL796,0,30,1,0,0,0,0.0,9,1,6,1.9459101490553132,1,N,N06
+methylphenidate,narcolepsy,,,CHEMBL796,1,5,1,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,narcolepsy-cataplexy syndrome,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,nasal congestion,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,obstructive sleep apnea,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,orthostatic intolerance,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,pain,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,"parkinsonism-dystonia, infantile",,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,seasonal allergic rhinitis,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+methylphenidate,sleep disorder,,,CHEMBL796,0,0,0,0,0,0,0.0,0,0,0,0.0,0,N,N06
+propranolol,asthma,,,CHEMBL27,0,27,1,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,airway obstruction,,,CHEMBL27,0,20,1,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,hypertension,D006973,hypertension,CHEMBL27,1,16,1,0,0,0,0.0,0,0,40,3.713572066704308,1,C,C07
+propranolol,chronic obstructive pulmonary disease,D029424,"pulmonary disease, chronic obstructive",CHEMBL27,0,16,1,0,0,0,0.0,0,0,3,1.3862943611198906,1,C,C07
+propranolol,glaucoma,,,CHEMBL27,0,8,1,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,hypotension,,,CHEMBL27,0,6,1,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,bronchitis,,,CHEMBL27,0,7,1,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,shock,,,CHEMBL27,0,6,1,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,parkinson disease,D010300,parkinson disease,CHEMBL27,0,5,1,1,0,1,0.0,8,1,44,3.8066624897703196,1,C,C07
+propranolol,cognitive impairment,D060825,cognitive dysfunction,CHEMBL27,0,5,1,1,0,1,0.0,8,1,3,1.3862943611198906,1,C,C07
+propranolol,type 1 diabetes mellitus,D003922,"diabetes mellitus, type 1",CHEMBL27,0,3,1,0,0,0,0.0,0,0,20,3.044522437723423,1,C,C07
+propranolol,sepsis,D018805,sepsis,CHEMBL27,0,4,1,0,0,0,0.0,8,1,13,2.6390573296152584,1,C,C07
+propranolol,diabetes mellitus,D003920,diabetes mellitus,CHEMBL27,0,4,1,3,1,4,0.25,8,1,15,2.772588722239781,1,C,C07
+propranolol,arrhythmia,,,CHEMBL27,0,3,1,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,hemangioma,,,CHEMBL27,1,2,1,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,angina pectoris,,,CHEMBL27,1,0,0,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,cardiovascular disease,D002318,cardiovascular diseases,CHEMBL27,0,0,0,0,0,0,0.0,0,0,9,2.302585092994046,1,C,C07
+propranolol,congestive heart failure,,,CHEMBL27,0,0,0,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,emphysema,,,CHEMBL27,0,0,0,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,heart failure,,,CHEMBL27,0,0,0,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,migraine disorder,,,CHEMBL27,1,0,0,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,myocardial infarction,,,CHEMBL27,1,0,0,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,ocular hypertension,,,CHEMBL27,0,0,0,0,0,0,0.0,0,0,0,0.0,0,C,C07
+propranolol,open-angle glaucoma,D005902,"glaucoma, open-angle",CHEMBL27,0,0,0,0,0,0,0.0,8,1,2,1.0986122886681098,1,C,C07
+propranolol,stroke,D020521,stroke,CHEMBL27,0,0,0,0,0,0,0.0,0,0,5,1.791759469228055,1,C,C07
+propranolol,sudden cardiac arrest,,,CHEMBL27,0,0,0,0,0,0,0.0,0,0,0,0.0,0,C,C07
+rituximab,lymphoma,,,CHEMBL1201576,1,10,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,follicular lymphoma,,,CHEMBL1201576,1,9,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,mantle cell lymphoma,,,CHEMBL1201576,0,8,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,diffuse large b-cell lymphoma,,,CHEMBL1201576,1,6,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,neoplasm of mature b-cells,,,CHEMBL1201576,0,4,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,richter syndrome,C537025,kotzot-richter syndrome,CHEMBL1201576,0,4,1,0,0,0,0.0,9,1,0,0.0,0,L,L01
+rituximab,multiple sclerosis,D009103,multiple sclerosis,CHEMBL1201576,0,3,1,15,3,18,0.16666666666666666,8,1,213,5.365976015021851,1,L,L01
+rituximab,waldenstrom macroglobulinemia,D008258,waldenstrom macroglobulinemia,CHEMBL1201576,0,2,1,58,25,83,0.30120481927710846,9,1,214,5.3706380281276624,1,L,L01
+rituximab,leukemia,,,CHEMBL1201576,0,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,neuromyelitis optica,D009471,neuromyelitis optica,CHEMBL1201576,0,2,1,5,1,6,0.16666666666666666,8,1,225,5.420534999272286,1,L,L01
+rituximab,lymphoid leukemia,,,CHEMBL1201576,0,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,hodgkins lymphoma,D006689,hodgkin disease,CHEMBL1201576,0,2,1,0,0,0,0.0,9,1,43,3.784189633918261,1,L,L01
+rituximab,marginal zone b-cell lymphoma,,,CHEMBL1201576,0,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,graft versus host disease,D006086,graft vs host disease,CHEMBL1201576,0,2,1,11,6,17,0.35294117647058826,8,1,186,5.231108616854587,1,L,L01
+rituximab,kidney disease,D007674,kidney diseases,CHEMBL1201576,0,1,1,1,0,1,0.0,9,1,53,3.9889840465642745,1,L,L01
+rituximab,acute lymphoblastic leukemia,,,CHEMBL1201576,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,chronic lymphocytic leukemia,,,CHEMBL1201576,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,chronic progressive multiple sclerosis,,,CHEMBL1201576,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,common variable immunodeficiency,,,CHEMBL1201576,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,granulomatosis with polyangiitis,,,CHEMBL1201576,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,"lymphoma, non-hodgkin, familial",,,CHEMBL1201576,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,microscopic polyangiitis,,,CHEMBL1201576,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,neoplasm,,,CHEMBL1201576,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,non-hodgkins lymphoma,,,CHEMBL1201576,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,pemphigus,,,CHEMBL1201576,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,relapsing-remitting multiple sclerosis,,,CHEMBL1201576,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,rheumatoid arthritis,,,CHEMBL1201576,1,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L01
+rituximab,b-cell non-hodgkins lymphoma,,,CHEMBL1201576,1,6,1,0,0,0,0.0,0,0,0,0.0,0,L,L01
+semaglutide,alzheimer disease,,,CHEMBL2108724,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+semaglutide,diabetes mellitus,D003920,diabetes mellitus,CHEMBL2108724,0,8,1,40,0,40,0.0,8,1,21,3.091042453358316,1,A,A10
+semaglutide,gestational diabetes,,,CHEMBL2108724,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+semaglutide,hyperlipidemia,D006949,hyperlipidemias,CHEMBL2108724,0,2,1,0,0,0,0.0,8,1,2,1.0986122886681098,1,A,A10
+semaglutide,hypertension,D006973,hypertension,CHEMBL2108724,0,0,0,0,0,0,0.0,9,1,12,2.5649493574615367,1,A,A10
+semaglutide,non-alcoholic fatty liver disease,D065626,non-alcoholic fatty liver disease,CHEMBL2108724,0,2,1,12,0,12,0.0,8,1,110,4.709530201312334,1,A,A10
+semaglutide,non-alcoholic steatohepatitis,D065626,non-alcoholic fatty liver disease,CHEMBL2108724,1,3,1,12,0,12,0.0,8,1,110,4.709530201312334,1,A,A10
+semaglutide,nutritional disorder,D009748,nutrition disorders,CHEMBL2108724,0,2,1,2,0,2,0.0,8,1,0,0.0,0,A,A10
+semaglutide,obesity,D009765,obesity,CHEMBL2108724,1,3,1,2,0,2,0.0,8,1,562,6.333279628139691,1,A,A10
+semaglutide,overnutrition,,,CHEMBL2108724,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+semaglutide,overweight,,,CHEMBL2108724,1,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+semaglutide,smoking initiation,,,CHEMBL2108724,0,0,0,0,0,0,0.0,0,0,0,0.0,0,A,A10
+semaglutide,type 1 diabetes mellitus,D003922,"diabetes mellitus, type 1",CHEMBL2108724,0,6,1,4,0,4,0.0,8,1,25,3.258096538021482,1,A,A10
+semaglutide,type 2 diabetes mellitus,D003924,"diabetes mellitus, type 2",CHEMBL2108724,1,11,1,27,0,27,0.0,8,1,833,6.726233402358747,1,A,A10
+semaglutide,parkinson disease,D010300,parkinson disease,CHEMBL2108724,0,3,1,0,0,0,0.0,8,1,13,2.6390573296152584,1,A,A10
+semaglutide,cardiovascular disease,D002318,cardiovascular diseases,CHEMBL2108724,0,1,1,1,0,1,0.0,8,1,245,5.5053315359323625,1,A,A10
+semaglutide,coronary artery disease,D003324,coronary artery disease,CHEMBL2108724,0,1,1,0,0,0,0.0,0,0,10,2.3978952727983707,1,A,A10
+semaglutide,polycystic ovary syndrome,D011085,polycystic ovary syndrome,CHEMBL2108724,0,1,1,0,0,0,0.0,8,1,17,2.8903717578961645,1,A,A10
+semaglutide,alcohol dependence,D000437,alcoholism,CHEMBL2108724,0,1,1,4,0,4,0.0,8,1,22,3.1354942159291497,1,A,A10
+semaglutide,cocaine use disorder,,,CHEMBL2108724,0,1,1,0,0,0,0.0,0,0,0,0.0,0,A,A10
+semaglutide,renal insufficiency,D051437,renal insufficiency,CHEMBL2108724,0,2,1,5,1,6,0.16666666666666666,8,1,5,1.791759469228055,1,A,A10
+semaglutide,hyperinsulinemic hypoglycemia,,,CHEMBL2108724,0,2,1,0,0,0,0.0,0,0,0,0.0,0,A,A10
+sildenafil,raynaud disease,D011928,raynaud disease,CHEMBL192,0,3,1,0,0,0,0.0,7,1,39,3.6888794541139363,1,G,G04
+sildenafil,covid-19,D000086382,covid-19,CHEMBL192,0,3,1,0,0,0,0.0,10,1,16,2.833213344056216,1,G,G04
+sildenafil,hypertension,D006973,hypertension,CHEMBL192,0,2,1,12,1,13,0.07692307692307693,8,1,60,4.110873864173311,1,G,G04
+sildenafil,major depressive disorder,D003865,major depressive disorder,CHEMBL192,0,2,1,0,0,0,0.0,8,1,11,2.4849066497880004,1,G,G04
+sildenafil,eisenmenger syndrome,D004541,eisenmenger complex,CHEMBL192,0,2,1,1,0,1,0.0,8,1,13,2.6390573296152584,1,G,G04
+sildenafil,benign prostatic hyperplasia,D011470,prostatic hyperplasia,CHEMBL192,0,2,1,1,0,1,0.0,8,1,50,3.9318256327243257,1,G,G04
+sildenafil,duchenne muscular dystrophy,D020388,"muscular dystrophy, duchenne",CHEMBL192,0,2,1,0,0,0,0.0,8,1,14,2.70805020110221,1,G,G04
+sildenafil,heart disease,D006331,heart diseases,CHEMBL192,0,2,1,0,0,0,0.0,8,1,20,3.044522437723423,1,G,G04
+sildenafil,coronary artery disease,D003324,coronary artery disease,CHEMBL192,0,2,1,0,0,0,0.0,8,1,17,2.8903717578961645,1,G,G04
+sildenafil,chronic obstructive pulmonary disease,D029424,"pulmonary disease, chronic obstructive",CHEMBL192,0,1,1,0,0,0,0.0,0,0,15,2.772588722239781,1,G,G04
+sildenafil,infertility,,,CHEMBL192,0,1,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,stroke,D020521,stroke,CHEMBL192,0,1,1,0,0,0,0.0,8,1,24,3.2188758248682006,1,G,G04
+sildenafil,diastolic heart failure,D054144,"heart failure, diastolic",CHEMBL192,0,1,1,0,0,0,0.0,8,1,5,1.791759469228055,1,G,G04
+sildenafil,cirrhosis of liver,,,CHEMBL192,0,1,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,cystic fibrosis,,,CHEMBL192,0,1,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,airway obstruction,,,CHEMBL192,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,cardiovascular disease,D002318,cardiovascular diseases,CHEMBL192,0,0,0,0,0,0,0.0,0,0,68,4.23410650459726,1,G,G04
+sildenafil,castleman disease,,,CHEMBL192,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,connective tissue disease,,,CHEMBL192,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,erectile dysfunction,,,CHEMBL192,1,4,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,fetal growth restriction,,,CHEMBL192,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,heart failure,,,CHEMBL192,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,impotence,,,CHEMBL192,1,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,intermittent vascular claudication,,,CHEMBL192,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+sildenafil,pulmonary arterial hypertension,D000081029,pulmonary arterial hypertension,CHEMBL192,1,3,1,2,0,2,0.0,8,1,64,4.174387269895637,1,G,G04
+sildenafil,pulmonary hypertension,D006976,"hypertension, pulmonary",CHEMBL192,0,0,0,0,0,0,0.0,8,1,488,6.192362489474872,1,G,G04
+tadalafil,raynaud disease,D011928,raynaud disease,CHEMBL779,0,3,1,4,0,4,0.0,7,1,13,2.6390573296152584,1,G,G04
+tadalafil,covid-19,D000086382,covid-19,CHEMBL779,0,4,1,0,0,0,0.0,8,1,7,2.0794415416798357,1,G,G04
+tadalafil,hypertension,D006973,hypertension,CHEMBL779,0,2,1,0,0,0,0.0,0,0,23,3.1780538303479458,1,G,G04
+tadalafil,major depressive disorder,D003865,major depressive disorder,CHEMBL779,0,2,1,0,0,0,0.0,8,1,2,1.0986122886681098,1,G,G04
+tadalafil,eisenmenger syndrome,D004541,eisenmenger complex,CHEMBL779,0,2,1,1,0,1,0.0,8,1,4,1.6094379124341003,1,G,G04
+tadalafil,duchenne muscular dystrophy,D020388,"muscular dystrophy, duchenne",CHEMBL779,0,2,1,3,2,5,0.4,8,1,11,2.4849066497880004,1,G,G04
+tadalafil,heart disease,D006331,heart diseases,CHEMBL779,0,3,1,1,0,1,0.0,8,1,5,1.791759469228055,1,G,G04
+tadalafil,coronary artery disease,D003324,coronary artery disease,CHEMBL779,0,3,1,0,0,0,0.0,8,1,9,2.302585092994046,1,G,G04
+tadalafil,chronic obstructive pulmonary disease,D029424,"pulmonary disease, chronic obstructive",CHEMBL779,0,1,1,0,0,0,0.0,8,1,4,1.6094379124341003,1,G,G04
+tadalafil,infertility,,,CHEMBL779,0,2,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,stroke,D020521,stroke,CHEMBL779,0,2,1,1,0,1,0.0,8,1,6,1.9459101490553132,1,G,G04
+tadalafil,diastolic heart failure,D054144,"heart failure, diastolic",CHEMBL779,0,2,1,0,0,0,0.0,7,1,3,1.3862943611198906,1,G,G04
+tadalafil,cirrhosis of liver,,,CHEMBL779,0,2,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,cystic fibrosis,,,CHEMBL779,0,2,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,sickle cell disease,D000755,"anemia, sickle cell",CHEMBL779,0,2,1,0,0,0,0.0,7,1,2,1.0986122886681098,1,G,G04
+tadalafil,airway obstruction,,,CHEMBL779,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,benign prostatic hyperplasia,D011470,prostatic hyperplasia,CHEMBL779,1,2,1,10,0,10,0.0,7,1,114,4.74493212836325,1,G,G04
+tadalafil,cardiovascular disease,D002318,cardiovascular diseases,CHEMBL779,0,0,0,0,0,0,0.0,0,0,39,3.6888794541139363,1,G,G04
+tadalafil,castleman disease,,,CHEMBL779,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,connective tissue disease,,,CHEMBL779,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,erectile dysfunction,,,CHEMBL779,1,4,1,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,fetal growth restriction,,,CHEMBL779,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,heart failure,,,CHEMBL779,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,impotence,,,CHEMBL779,1,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,intermittent vascular claudication,,,CHEMBL779,0,0,0,0,0,0,0.0,0,0,0,0.0,0,G,G04
+tadalafil,pulmonary arterial hypertension,D000081029,pulmonary arterial hypertension,CHEMBL779,1,3,1,0,0,0,0.0,0,0,62,4.143134726391533,1,G,G04
+tadalafil,pulmonary hypertension,D006976,"hypertension, pulmonary",CHEMBL779,0,0,0,11,4,15,0.26666666666666666,8,1,95,4.564348191467836,1,G,G04
+thalidomide,myelodysplastic syndrome,D009190,myelodysplastic syndromes,CHEMBL468,0,2,1,7,2,9,0.2222222222222222,8,1,75,4.330733340286331,1,L,L04
+thalidomide,prostate cancer,D011471,prostatic neoplasms,CHEMBL468,0,2,1,10,1,11,0.09090909090909091,8,1,82,4.418840607796598,1,L,L04
+thalidomide,waldenstrom macroglobulinemia,D008258,waldenstrom macroglobulinemia,CHEMBL468,0,2,1,0,0,0,0.0,0,0,50,3.9318256327243257,1,L,L04
+thalidomide,central nervous system neoplasm,,,CHEMBL468,0,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,myelofibrosis,,,CHEMBL468,0,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,lymphoma,,,CHEMBL468,0,2,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,amyloidosis,D000686,amyloidosis,CHEMBL468,0,2,1,7,2,9,0.2222222222222222,9,1,73,4.30406509320417,1,L,L04
+thalidomide,melanoma,D008545,melanoma,CHEMBL468,0,1,1,0,0,0,0.0,0,0,43,3.784189633918261,1,L,L04
+thalidomide,plasma cell neoplasm,D054219,"neoplasms, plasma cell",CHEMBL468,0,1,1,34,4,38,0.10526315789473684,8,1,2,1.0986122886681098,1,L,L04
+thalidomide,chronic lymphocytic leukemia,,,CHEMBL468,0,1,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,leukemia,,,CHEMBL468,0,1,1,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,non-small cell lung carcinoma,D002289,"carcinoma, non-small-cell lung",CHEMBL468,0,1,1,0,0,0,0.0,0,0,2,1.0986122886681098,1,L,L04
+thalidomide,crohn's disease,D003424,crohn disease,CHEMBL468,0,1,1,2,1,3,0.3333333333333333,8,1,81,4.406719247264253,1,L,L04
+thalidomide,graft versus host disease,D006086,graft vs host disease,CHEMBL468,0,2,1,2,1,3,0.3333333333333333,8,1,76,4.343805421853684,1,L,L04
+thalidomide,colorectal cancer,D015179,colorectal neoplasms,CHEMBL468,0,1,1,0,0,0,0.0,0,0,4,1.6094379124341003,1,L,L04
+thalidomide,anemia,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,autosomal recessive non-syndromic intellectual disability,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,cancer,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,congenital sideroblastic anemia-b-cell immunodeficiency-periodic fever-developmental delay syndrome,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,diffuse large b-cell lymphoma,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,follicular lymphoma,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,genetic disorder,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,hepatocellular carcinoma,D006528,"carcinoma, hepatocellular",CHEMBL468,0,0,0,0,0,0,0.0,0,0,64,4.174387269895637,1,L,L04
+thalidomide,hiv infection,D015658,hiv infections,CHEMBL468,0,0,0,0,0,0,0.0,0,0,31,3.4657359027997265,1,L,L04
+thalidomide,immune system disease,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,intellectual disability,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,mantle cell lymphoma,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,multiple myeloma,D009101,multiple myeloma,CHEMBL468,1,0,0,0,0,0,0.0,0,0,501,6.218600119691729,1,L,L04
+thalidomide,neoplasm,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,neurodegenerative disease,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,non-hodgkins lymphoma,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,retinal dystrophy,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,retinitis pigmentosa and erythrocytic microcytosis,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04
+thalidomide,systemic scleroderma,D012595,"scleroderma, systemic",CHEMBL468,0,0,0,0,0,0,0.0,0,0,5,1.791759469228055,1,L,L04
+thalidomide,white-kernohan syndrome,,,CHEMBL468,0,0,0,0,0,0,0.0,0,0,0,0.0,0,L,L04

@@ -10,21 +10,35 @@ Strategy: LLM normalize → verify with PubMed count → cache everything.
 import asyncio
 import json
 import logging
+import random
+import re
+import sys
 from pathlib import Path
-from typing import TypedDict
+from typing import Any, TypedDict
 
+import aiohttp
+
+from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     DEFAULT_CACHE_DIR,
+    MESH_RESOLVER_MAX_CONCURRENT,
+    MESH_RESOLVER_TTL_SECONDS,
+    NCBI_ESEARCH_URL,
+    NCBI_ESUMMARY_URL,
 )
-from indication_scout.data_sources.base_client import DataSourceError
+from indication_scout.data_sources.base_client import (
+    DataSourceError,
+    log_data_source_failure,
+)
 from indication_scout.data_sources.pubmed import PubMedClient
-from indication_scout.services.llm import query_small_llm
+from indication_scout.services.llm import query_small_llm, strip_markdown_fences
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
-MIN_RESULTS = 3  # Minimum PubMed hits to consider a term useful
+_settings = get_settings()
+MIN_RESULTS = _settings.disease_pubmed_min_results
 
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
@@ -93,12 +107,7 @@ async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
         .format(raw_terms=json.dumps(uncached))
     )
     response = await query_small_llm(prompt)
-    cleaned = response.strip()
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("```", 2)[1]
-        if cleaned.startswith("json"):
-            cleaned = cleaned[4:]
-        cleaned = cleaned.rsplit("```", 1)[0].strip()
+    cleaned = strip_markdown_fences(response)
 
     try:
         batch_results: dict[str, str] = json.loads(cleaned)
@@ -136,21 +145,23 @@ async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
 async def merge_duplicate_diseases(
     diseases: list[str], drug_indications: list[str]
 ) -> MergeResult:
+    cache_params = {
+        "diseases": sorted(diseases),
+        "drug_indications": sorted(drug_indications),
+    }
+    cached = cache_get("disease_merge", cache_params, DEFAULT_CACHE_DIR)
+    if cached is not None:
+        return cached
+
     prompt = (
         (_PROMPTS_DIR / "merge_diseases.txt")
         .read_text()
         .format(disease_names=diseases, drug_indications=drug_indications)
     )
     response = await query_small_llm(prompt)
-    cleaned = response.strip()
-    # Strip markdown code fences if present
-    if cleaned.startswith("```"):
-        cleaned = cleaned.split("```", 2)[1]
-        if cleaned.startswith("json"):
-            cleaned = cleaned[4:]
-        cleaned = cleaned.rsplit("```", 1)[0].strip()
+    cleaned = strip_markdown_fences(response)
     try:
-        return json.loads(cleaned)
+        result = json.loads(cleaned)
     except json.JSONDecodeError as e:
         logger.error(
             "merge_duplicate_diseases: failed to parse LLM response: %s\nResponse was: %s",
@@ -158,6 +169,9 @@ async def merge_duplicate_diseases(
             response,
         )
         return {"merge": {}, "remove": []}
+
+    cache_set("disease_merge", cache_params, result, DEFAULT_CACHE_DIR)
+    return result
 
 
 # ── PubMed Count ─────────────────────────────────────────────────────────────
@@ -257,3 +271,168 @@ async def normalize_batch(
         await asyncio.sleep(0.35)  # Stay under NCBI rate limit
 
     return results
+
+
+# ── MeSH Resolver ────────────────────────────────────────────────────────────
+
+# Pre-emptive sleep before every NCBI call. Crude desynchronization: when several
+# coroutines (e.g. parallel disease pairs from the supervisor) hit NCBI in the
+# same scheduler tick they otherwise blow past the 10 req/s ceiling and 429.
+# Jitter widens the firing window so concurrent callers don't land in lockstep.
+_NCBI_PRECALL_SLEEP_BASE: float = 1.5
+_NCBI_PRECALL_SLEEP_JITTER: float = 0.5
+
+
+async def _ncbi_get_json(
+    session: aiohttp.ClientSession,
+    url: str,
+    params: dict[str, Any],
+    indication: str,
+) -> dict[str, Any]:
+    """GET json from NCBI with up to 3 90s-spaced retries on transient failure.
+
+    Initial attempt + 3 retries (4 total tries). Each retry waits 90s before
+    firing. If all 4 attempts fail, the program exits non-zero — NCBI is
+    a hard dependency for MeSH resolution and continuing without it would
+    silently produce degraded clinical analysis.
+
+    A pre-emptive jittered sleep runs before every attempt to keep concurrent
+    callers from saturating NCBI's per-second rate ceiling.
+    """
+    max_retries = 3
+    last_exc: Exception | None = None
+    for attempt in range(max_retries + 1):
+        await asyncio.sleep(
+            _NCBI_PRECALL_SLEEP_BASE + random.random() * _NCBI_PRECALL_SLEEP_JITTER
+        )
+        try:
+            async with session.get(url, params=params) as resp:
+                logger.debug(
+                    "_ncbi_get_json attempt=%d status=%s indication=%r",
+                    attempt + 1,
+                    resp.status,
+                    indication,
+                )
+                resp.raise_for_status()
+                return await resp.json()
+        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+            last_exc = e
+            if attempt < max_retries:
+                logger.warning(
+                    "MeSH resolver: NCBI request failed for '%s': %s; sleeping 90s "
+                    "and retrying (attempt %d/%d)",
+                    indication,
+                    e,
+                    attempt + 1,
+                    max_retries,
+                )
+                await asyncio.sleep(90)
+            else:
+                logger.error(
+                    "MeSH resolver: NCBI request failed for '%s' after %d retries "
+                    "(%d total attempts): %s. Exiting — NCBI is a hard dependency.",
+                    indication,
+                    max_retries,
+                    max_retries + 1,
+                    e,
+                )
+    # All attempts exhausted. NCBI is unreachable / sustainedly throttling us;
+    # downstream MeSH-dependent analysis cannot proceed correctly without it.
+    # Append a timestamped record to data_source_failures.log so a later
+    # session can see *which* indication crashed the previous run, even
+    # after stderr scrolls away.
+    assert last_exc is not None
+    log_data_source_failure(
+        source="ncbi-mesh",
+        url=url,
+        context=indication,
+        error=last_exc,
+    )
+    sys.exit(
+        f"FATAL: NCBI eutils unreachable after {max_retries + 1} attempts for "
+        f"indication {indication!r}: {last_exc}"
+    )
+
+
+_MESH_PREF_TERM_RE = re.compile(r'"([^"]+)"\[MeSH Terms\]')
+_MESH_RESOLVER_SEMAPHORE: asyncio.Semaphore | None = None
+
+
+def _mesh_semaphore() -> asyncio.Semaphore:
+    global _MESH_RESOLVER_SEMAPHORE
+    if _MESH_RESOLVER_SEMAPHORE is None:
+        _MESH_RESOLVER_SEMAPHORE = asyncio.Semaphore(MESH_RESOLVER_MAX_CONCURRENT)
+    return _MESH_RESOLVER_SEMAPHORE
+
+
+async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
+    """Resolve an indication to (descriptor_id, preferred_term) via MeSH ATM.
+
+    Parses the preferred term from esearch's `querytranslation` because
+    esummary on the MeSH db returns empty records for valid UIDs.
+    """
+    cache_params = {"indication": indication.strip().lower(), "v": 3}
+    cached = cache_get("mesh_resolver", cache_params, DEFAULT_CACHE_DIR)
+    if cached is not None:
+        return tuple(cached) if isinstance(cached, list) else cached
+
+    api_key = get_settings().ncbi_api_key
+
+    esearch_params: dict[str, Any] = {
+        "db": "mesh",
+        "term": indication,
+        "retmode": "json",
+        "retmax": 1,
+    }
+    if api_key:
+        esearch_params["api_key"] = api_key
+
+    async with _mesh_semaphore(), aiohttp.ClientSession() as session:
+        # NCBI's MeSH backend intermittently returns empty idlist for valid
+        # terms. Retry up to 3 times on empty before treating as a real miss.
+        for attempt in range(3):
+            await asyncio.sleep(0.1)
+            async with PubMedClient._get_semaphore():
+                esearch_data = await _ncbi_get_json(
+                    session, NCBI_ESEARCH_URL, esearch_params, indication
+                )
+            uids = esearch_data.get("esearchresult", {}).get("idlist", [])
+            if uids:
+                break
+            await asyncio.sleep(2)
+
+    translation = esearch_data.get("esearchresult", {}).get("querytranslation", "")
+
+    if not uids:
+        logger.warning("MeSH resolver: no esearch hit for '%s'", indication)
+        return None
+
+    match = _MESH_PREF_TERM_RE.search(translation)
+    if not match:
+        logger.warning(
+            "MeSH resolver: ATM did not produce a MeSH-Terms translation for "
+            "'%s' (translation=%r)",
+            indication,
+            translation,
+        )
+        return None
+
+    preferred_term = match.group(1)
+    mesh_id = uids[0]
+
+    logger.info(
+        "MeSH resolver: '%s' → uid=%s pref=%r",
+        indication,
+        mesh_id,
+        preferred_term,
+    )
+
+    resolved = (mesh_id, preferred_term)
+    cache_set(
+        "mesh_resolver",
+        cache_params,
+        resolved,
+        DEFAULT_CACHE_DIR,
+        ttl=MESH_RESOLVER_TTL_SECONDS,
+    )
+    return resolved

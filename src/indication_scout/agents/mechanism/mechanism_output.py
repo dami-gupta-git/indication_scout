@@ -1,29 +1,33 @@
 """Structured output from the mechanism agent."""
 
-from typing import Literal
+from pydantic import BaseModel, Field, model_validator
 
-from pydantic import BaseModel, Field
-
-from indication_scout.models.model_open_targets import Association, MechanismOfAction, Pathway
+from indication_scout.models.model_open_targets import MechanismOfAction
 
 
-class ShapedAssociation(BaseModel):
-    """A disease association annotated with mechanistic directionality."""
+class MechanismCandidate(BaseModel):
+    """A repurposing candidate surfaced by the mechanism agent.
 
-    target_symbol: str = Field(description="Gene symbol of the target")
-    disease_name: str = Field(description="Disease name from Open Targets")
-    disease_id: str = Field(description="Disease ID from Open Targets")
-    shape: Literal["hypothesis", "contraindication", "neutral", "confirms_known"] = Field(
-        description=(
-            "hypothesis: drug action direction matches disease mechanism; "
-            "contraindication: drug action opposes disease mechanism; "
-            "neutral: insufficient evidence to determine direction; "
-            "confirms_known: association is dominated by the drug's own clinical use"
-        )
-    )
-    rationale: str = Field(
-        description="One sentence explaining why this shape was assigned, referencing the action type and disease mechanism"
-    )
+    A (target, disease) pair where the drug's action direction aligns with the disease mechanism per Open
+    Targets evidence, and the disease is not an approved indication. Carries text context the LLM
+    reasons over. No scores, no direction labels — those are used upstream for selection and discarded
+    here.
+    """
+
+    target_symbol: str = ""
+    action_type: str = ""
+    disease_name: str = ""
+    disease_id: str | None = None
+    disease_description: str = ""
+    target_function: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
 
 
 class MechanismOutput(BaseModel):
@@ -37,16 +41,19 @@ class MechanismOutput(BaseModel):
         default_factory=list,
         description="Structured MoA entries from the drug entity: action type, mechanism string, and targets",
     )
-    associations: dict[str, list[Association]] = Field(
-        default_factory=dict,
-        description="Top disease associations per target (symbol → associations)",
-    )
-    shaped_associations: list[ShapedAssociation] = Field(
+    candidates: list[MechanismCandidate] = Field(
         default_factory=list,
-        description="Per-association directionality judgements from the agent",
-    )
-    pathways: dict[str, list[Pathway]] = Field(
-        default_factory=dict,
-        description="Reactome pathways per target (symbol → pathways)",
+        description="Top POSITIVE-direction, non-approved repurposing candidates",
     )
     summary: str = Field(default="", description="Narrative summary from the agent")
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None:
+                if field_info.default_factory is not None:
+                    values[field_name] = field_info.default_factory()
+                elif field_info.default is not None:
+                    values[field_name] = field_info.default
+        return values
