@@ -2,7 +2,7 @@ Do the following two steps in order:
 
 ## Step 1 — Update findings.md
 If there have been any major bugs or technical or doman decisions in this session,
-write to this file.
+write to `for_me/findings.md`.
 
 ## Step 2 — Update the session file
 

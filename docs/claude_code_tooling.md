@@ -88,8 +88,7 @@ Manages `session_*.md` files in the project root.
 | End of session | Append session continuation block + update `PROJECT_STATE.md` | Claude, via `/remember` |
 
 **Rotation rules:**
-- Session files older than 20 minutes are rotated to `session_bak/` before a new one is created
-- `session_bak/` retains the 5 most recent files; older ones are deleted automatically
+- Session files older than 30 minutes are rotated to `session_bak/` before a new one is created
 
 **Session file structure:**
 ```

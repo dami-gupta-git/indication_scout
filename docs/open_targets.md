@@ -447,7 +447,7 @@ client = OpenTargetsClient()
 
 # Get drug + all target data in one call
 rich = await client.get_rich_drug_data("semaglutide")
-print(f"Drug: {rich.drug.name}, Targets fetched: {len(rich.targets)}")
+print(f"Drug: {rich.drug.chembl_id}, Targets fetched: {len(rich.targets)}")
 
 # Or get drug data alone
 drug = await client.get_drug("semaglutide")

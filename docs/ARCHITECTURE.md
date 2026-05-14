@@ -56,7 +56,8 @@ indication_scout/
 │   ├── unit/                      # Unit tests (no network)
 │   ├── integration/               # Integration tests (hits real APIs)
 │   └── conftest.py                # Shared fixtures
-├── docs/                          # Documentation (findings.md is source of truth)
+├── docs/                          # Documentation
+├── for_me/                        # Personal notes (findings.md is source of truth)
 ├── _cache/                        # Disk cache for API/LLM responses (per-namespace JSON, 5-day TTL)
 └── pyproject.toml                 # Project metadata & dependencies
 ```
@@ -251,8 +252,7 @@ Results are cached independently per namespace.
 
 Drug names (pref_name, synonyms, trade names) are not on `DrugData` — they are fetched
 separately via `data_sources.chembl.get_all_drug_names(chembl_id)` so a single source of
-truth (ChEMBL) handles them and the result can be cached per ChEMBL ID. See
-`docs/findings.md` → "ChEMBL ID is the sole drug identifier".
+truth (ChEMBL) handles them and the result can be cached per ChEMBL ID. ChEMBL ID is the sole drug identifier.
 
 ```
 DrugData
@@ -507,8 +507,7 @@ e.g. `D006973` for hypertension). When supplied, results are post-filtered to tr
 ClinicalTrials.gov's Essie engine being recall-first — `query.cond=hypertension` returns
 trials for glaucoma, portal hypertension, and pulmonary hypertension. The agent tool layer
 (`agents/clinical_trials/clinical_trials_tools.py`) resolves the indication → MeSH ID via
-`services.disease_helper.resolve_mesh_id` and forwards it on every call. See
-`docs/findings.md` for the full rationale.
+`services.disease_helper.resolve_mesh_id` and forwards it on every call.
 
 ### Trial
 

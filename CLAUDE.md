@@ -4,12 +4,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Session Startup
 
-At the start of every session, read `PROJECT_STATE.md`, the most recent `session_*.md` file in the project root, `README.md`, and `docs/findings.md`.
+At the start of every session, read `PROJECT_STATE.md`, the most recent `session_*.md` file in the project root, `README.md`, and `for_me/findings.md`.
 
 ## Findings Workflow
 
-- When a non-obvious finding is confirmed (API behaviour, naming discrepancy, architectural decision, pattern, project rule), append it to `docs/findings.md` under the appropriate section with a date. Items should be short and to-the-point.
-- `docs/findings.md` is the single source of truth for findings, decisions, and patterns — not `MEMORY.md`.
+- When a non-obvious finding is confirmed (API behaviour, naming discrepancy, architectural decision, pattern, project rule), append it to `for_me/findings.md` under the appropriate section with a date. Items should be short and to-the-point.
+- `for_me/findings.md` is the single source of truth for findings, decisions, and patterns — not `MEMORY.md`.
 
 ## Session File Workflow
 
