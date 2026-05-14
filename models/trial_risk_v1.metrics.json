@@ -1,0 +1,29 @@
+{
+  "n_trials_scored": 303,
+  "class_balance": 0.22442244224422442,
+  "roc_auc": 0.4672715894868586,
+  "pr_auc": 0.21156474470976508,
+  "brier": 0.21267326732673267,
+  "folds": [
+    {
+      "fold": 0,
+      "held_out_drug": "metformin",
+      "n_test": 118,
+      "n_test_terminated": 24
+    },
+    {
+      "fold": 1,
+      "held_out_drug": "rituximab",
+      "n_test": 114,
+      "n_test_terminated": 33
+    },
+    {
+      "fold": 2,
+      "held_out_drug": "thalidomide",
+      "n_test": 71,
+      "n_test_terminated": 11
+    }
+  ],
+  "model": "knn",
+  "use_fingerprint": true
+}
