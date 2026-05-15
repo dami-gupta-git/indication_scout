@@ -6,6 +6,8 @@ An agentic system for discovering drug repurposing opportunities.
 
 IndicationScout is an agentic drug repurposing system. A drug name goes in; coordinated AI agents query multiple biomedical data sources and produce a repurposing report.
 
+IndicationScout pulls **live evidence** from multiple biomedical databases at query time — no static knowledge base, no precomputed answers. For each candidate indication it gathers current trial activity, recent literature, mechanistic associations, and regulatory status, then synthesizes them into a single repurposing report that characterizes the *state of the hypothesis* (live, stalled, niche, untested, post-readout-and-stuck) per disease.
+
 A **Supervisor** agent orchestrates three specialist sub-agents:
 
 - **Literature agent** — Queries PubMed via EUtils, then runs a RAG pipeline: fetch abstracts, embed with BioLORD-2023, semantic search, and LLM-based synthesis of evidence for each candidate disease.
@@ -16,7 +18,7 @@ The Supervisor first calls `find_candidates` (Open Targets competitor analysis) 
 
 ### Top-5 candidate blurbs
 
-After investigating candidates, the Supervisor produces a ranked Summary. For each of the **top 5 ranked candidates**, the Supervisor also writes a **2-sentence interpretive blurb** characterizing the *state of the hypothesis* — live, stalled, niche, untested, post-readout-and-stuck, etc. — grounded in the literature and clinical-trials sub-agent summaries seen during that run. Mechanism content is intentionally excluded from the blurb to keep it focused on clinical evidence. Blurbs are produced by the same `finalize_supervisor` tool call that emits the ranked summary (no extra LLM call) and rendered inline under each disease in the Summary section of both the Markdown report and the Streamlit Overview tab. Holdout runs (`--date-before`) skip blurbs.
+After investigating candidates, the Supervisor produces a ranked Summary. For each of the **top 5 ranked candidates**, the Supervisor also writes a **2-sentence interpretive blurb** characterizing the *state of the hypothesis* — live, stalled, niche, untested, post-readout-and-stuck, etc. — grounded in the literature and clinical-trials sub-agent summaries seen during that run. Mechanism content is intentionally excluded from the blurb to keep it focused on clinical evidence. Blurbs are produced by the same `finalize_supervisor` tool call that emits the ranked summary (no extra LLM call) and rendered inline under each disease in the Summary section of both the Markdown report and the Streamlit Overview tab. 
 
 Data sources:
 
@@ -123,6 +125,14 @@ scout --help
 
 
 
+### Streamlit UI
+
+```bash
+streamlit run app.py
+```
+
+Single-page app: enter a drug name, run the supervisor agent, download the Markdown report.
+
 ### API
 
 ```bash
@@ -175,7 +185,7 @@ src/indication_scout/
 │   ├── trial_risk/         # Trial-risk model (data.py, features.py, literature.py, score.py, train.py, inspect.py)
 │   └── success_classifier/ # Trial-success classifier (features.py, labels.py)
 ├── models/          # Pydantic data contracts (model_open_targets, model_clinical_trials, model_pubmed_abstract, model_chembl, model_drug_profile, model_evidence_summary)
-├── prompts/         # LLM prompt templates (supervisor, supervisor_holdout, synthesize, synthesize_holdout, expand_search_terms, extract_fda_approvals, extract_fda_approval_single, list_label_indications, extract_organ_term, merge_diseases, normalize_disease, normalize_disease_batch)
+├── prompts/         # LLM prompt templates (supervisor, literature, clinical_trials, synthesize, expand_search_terms, extract_fda_approvals, extract_fda_approval_single, list_label_indications, extract_organ_term, merge_diseases, normalize_disease, normalize_disease_batch)
 ├── report/          # Report formatting (format_report.py) — turns SupervisorOutput into the final markdown report
 ├── runners/         # Pipeline runners (rag_runner.py) and exploration scripts (pubmed_runner.py); wandb/ logs
 ├── services/        # Business logic -- LLM calls (llm.py, including parse_llm_response), embeddings (embeddings.py), disease normalization + MeSH resolver (disease_helper.py: llm_normalize_disease, normalize_for_pubmed, resolve_mesh_id), PubMed query building (pubmed_query.py), FDA approval extraction (approval_check.py), RAG pipeline (retrieval.py -- fetch_and_cache, semantic_search, synthesize)

@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 # load_dotenv MUST run before any indication_scout imports, because
 # module-level code in base_client.py calls get_settings() at import time.
 # Manually edit the constants filename below to switch tunable-limit profiles.
-CONSTANTS_FILE = ".env.constants.test"
+CONSTANTS_FILE = ".env.constants"
 load_dotenv(Path(__file__).parent / ".env")
 constants_path = Path(__file__).parent / CONSTANTS_FILE
 load_dotenv(constants_path)
@@ -301,17 +301,6 @@ with tab_trials:
             a1.metric("Total trials", search_total)
             a2.metric("Recruiting", by_status.get("RECRUITING", 0))
             a3.metric("Active (not recruiting)", by_status.get("ACTIVE_NOT_RECRUITING", 0))
-
-            if ct.approval is not None:
-                ap = ct.approval
-                if ap.is_approved:
-                    matched = f" ({ap.matched_indication})" if ap.matched_indication else ""
-                    st.success(f"**FDA approval:** Approved{matched}")
-                elif ap.label_found:
-                    st.warning("**FDA approval:** Not found on FDA label for this indication")
-                else:
-                    names = ", ".join(ap.drug_names_checked) if ap.drug_names_checked else "drug"
-                    st.info(f"**FDA approval:** No FDA label found for {names} — status undetermined")
 
             if by_status:
                 st.markdown("#### Status breakdown")
