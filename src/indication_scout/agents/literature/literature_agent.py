@@ -39,7 +39,7 @@ async def run_literature_agent(
     agent, drug_name: str, disease_name: str
 ) -> LiteratureOutput:
     """Invoke the agent and assemble a LiteratureOutput from the run."""
-    logger.warning(
+    logger.debug(
         "Starting literature agent run for drug=%s disease=%s", drug_name, disease_name
     )
     result = await agent.ainvoke(

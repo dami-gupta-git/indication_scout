@@ -75,8 +75,11 @@ def _scrub_post_cutoff_outcome(trial: Trial, cutoff: date) -> tuple[Trial, bool]
     future the holdout shouldn't see. We replace those with UNKNOWN /
     None so the trial appears as "still in progress at the cutoff."
 
-    Trials with no `completion_date` (or with a completion_date before
-    the cutoff) are returned unchanged.
+    Trials with a completion_date before the cutoff are returned
+    unchanged. A trial with a terminal status (COMPLETED/TERMINATED)
+    but NO completion_date is scrubbed conservatively — we can't prove
+    it completed before the cutoff, so we don't surface its outcome.
+    Non-terminal trials with no completion_date are returned unchanged.
 
     The caller decides what to do with `was_scrubbed=True` trials — e.g.
     `get_completed` and `get_terminated` drop them entirely (a trial
@@ -84,8 +87,21 @@ def _scrub_post_cutoff_outcome(trial: Trial, cutoff: date) -> tuple[Trial, bool]
     in those scopes), while `search_trials` keeps them with the
     scrubbed status.
     """
+    _TERMINAL_STATUSES = {"COMPLETED", "TERMINATED"}
     completion_iso = trial.completion_date
     if not completion_iso:
+        # No completion date. If the trial reports a terminal status, we
+        # can't prove that outcome predates the cutoff — scrub it. A
+        # non-terminal trial has no future outcome to hide, so keep it.
+        if trial.overall_status in _TERMINAL_STATUSES:
+            scrubbed = trial.model_copy(
+                update={
+                    "overall_status": "UNKNOWN",
+                    "why_stopped": None,
+                    "completion_date": None,
+                }
+            )
+            return scrubbed, True
         return trial, False
     cutoff_iso = cutoff.isoformat()
     # CT.gov dates are "YYYY-MM-DD" or "YYYY-MM"; both compare

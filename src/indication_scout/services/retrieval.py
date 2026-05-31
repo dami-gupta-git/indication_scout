@@ -559,7 +559,12 @@ class RetrievalService:
         return all_pmids
 
     async def semantic_search(
-        self, disease: str, chembl_id: str, pmids: list[str], db: Session
+        self,
+        disease: str,
+        chembl_id: str,
+        pmids: list[str],
+        db: Session,
+        date_before: date | None = None,
     ) -> list[AbstractResult]:
         """For a given drug, disease, and list of PMIDs, return top-k most similar abstracts from pgvector
 
@@ -571,11 +576,26 @@ class RetrievalService:
             disease: e.g. "colorectal cancer"
             chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
             pmids: e.g. ["29734553", "31245678", "30198432"]
+            date_before: Optional temporal holdout cutoff. pgvector is a
+                shared cache that may hold abstracts fetched in a prior
+                non-holdout run, so re-apply the same date post-guard here
+                before re-ranking.
 
         Returns:
             List of dicts ranked by descending similarity, e.g.:
             [{"pmid": "29734553", "title": "Metformin suppresses colorectal...", "abstract": "...", "similarity": 0.89}, ...]
         """
+        # Holdout post-guard: drop PMIDs published on/after the cutoff that
+        # may have leaked in via the shared pgvector cache. Reuses the same
+        # filter as fetch_and_cache so the date policy stays in one place.
+        if date_before is not None:
+            async with PubMedClient(cache_dir=self.cache_dir) as client:
+                pmids = await self._filter_pmids_by_date(
+                    pmids, date_before, db, client
+                )
+            if not pmids:
+                return []
+
         pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
         query_string = (
             f"Evidence for {pref_name} as a treatment for {disease}, "
@@ -648,16 +668,16 @@ class RetrievalService:
             "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
             chembl_id, disease, len(scored), rerank_cap,
         )
-        for result, boost, final_score in scored[:20]:
-            logger.info(
-                "  pmid=%s title=%r sim=%.4f pubtype=%s boost=%.2f final=%.4f",
-                result.pmid,
-                result.title[:60],
-                result.similarity,
-                result.pubtype,
-                boost,
-                final_score,
-            )
+        # for result, boost, final_score in scored[:20]:
+        #     logger.info(
+        #         "  pmid=%s title=%r sim=%.4f pubtype=%s boost=%.2f final=%.4f",
+        #         result.pmid,
+        #         result.title[:60],
+        #         result.similarity,
+        #         result.pubtype,
+        #         boost,
+        #         final_score,
+        #     )
 
         return [item[0] for item in scored[:top_k]]
 
@@ -711,7 +731,7 @@ class RetrievalService:
         )
 
         prompt_file = "synthesize_holdout.txt" if holdout_mode else "synthesize.txt"
-        logger.info("synthesize prompt: %s", prompt_file)
+        logger.debug("synthesize prompt: %s", prompt_file)
         template = (_PROMPTS_DIR / prompt_file).read_text()
         prompt = template.format(
             drug_name=pref_name, disease_name=disease, abstracts=formatted
@@ -845,11 +865,27 @@ class RetrievalService:
         )
 
         llm_output = await query_small_llm(prompt)
-        raw: list[str] = parse_llm_response(llm_output)
+        try:
+            raw: list[str] = parse_llm_response(llm_output)
+        except json.JSONDecodeError:
+            logger.error(
+                "expand_search_terms: failed to parse LLM output for chembl_id=%s "
+                "disease_name=%r. Raw output:\n%s",
+                chembl_id,
+                disease_name,
+                llm_output,
+            )
+            raise
+
+        # Substitute the <DISEASE> placeholder with the quoted MeSH preferred term.
+        # The prompt instructs the LLM to emit `<DISEASE>` instead of writing the
+        # disease name directly, so the JSON array never contains embedded quotes.
+        quoted_disease = f'"{disease_term}"'
+        substituted = [q.replace("<DISEASE>", quoted_disease) for q in raw]
 
         # Case-normalised dedup: lowercase+strip as key, preserve original casing
         seen: dict[str, str] = {}
-        for term in raw:
+        for term in substituted:
             key = term.lower().strip()
             if key not in seen:
                 seen[key] = term

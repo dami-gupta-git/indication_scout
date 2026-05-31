@@ -86,7 +86,9 @@ def build_literature_tools(
         if not pmids:
             return "No PMIDs — call fetch_and_cache first.", []
         chembl_id = await _get_chembl(drug_name)
-        results = await svc.semantic_search(disease_name, chembl_id, pmids, db)
+        results = await svc.semantic_search(
+            disease_name, chembl_id, pmids, db, date_before=date_before
+        )
         store["abstracts"] = results
         top = results[0].similarity if results else 0.0
         return f"Found {len(results)} abstracts (top sim: {top:.2f})", results

@@ -573,7 +573,7 @@ def build_supervisor_tools(
         # logger.warning("[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name)
 
         output = await run_literature_agent(lit_agent, drug_name, disease_name)
-        logger.info(
+        logger.debug(
             "analyze_literature took %.2fs for %s × %s",
             time.perf_counter() - t0,
             drug_name,
@@ -756,7 +756,9 @@ def build_supervisor_tools(
 
     async def _analyze_mechanism_impl(drug_name: str) -> tuple[str, MechanismOutput]:
         drug_name = normalize_drug_name(drug_name)
-        output = await run_mechanism_agent(mech_agent, drug_name)
+        output = await run_mechanism_agent(
+            mech_agent, drug_name, date_before=date_before
+        )
         # logger.warning("[TOOL] analyze_mechanism(drug=%r)", drug_name)
 
         # Buffer raw mechanism candidates for find_candidates to consume in merge_and_dedup()

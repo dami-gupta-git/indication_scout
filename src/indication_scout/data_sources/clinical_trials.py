@@ -621,7 +621,8 @@ class ClinicalTrialsClient(BaseClient):
             start_date=self._extract_date(status.get("startDateStruct")),
             completion_date=self._extract_date(
                 status.get("primaryCompletionDateStruct")
-            ),
+            )
+            or self._extract_date(status.get("completionDateStruct")),
             primary_outcomes=primary_outcomes,
             references=pmids,
         )

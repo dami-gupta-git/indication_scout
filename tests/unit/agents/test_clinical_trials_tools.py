@@ -1065,16 +1065,34 @@ def _trial(
 # --- _scrub_post_cutoff_outcome (direct unit) ------------------------------
 
 
-def test_scrub_no_completion_date_returns_unchanged():
-    """A trial with no completion_date can't be classified as post-cutoff;
-    return unchanged.
+def test_scrub_no_completion_date_terminal_status_scrubbed():
+    """A terminal trial (COMPLETED/TERMINATED) with no completion_date
+    can't be proven pre-cutoff — scrub it conservatively.
     """
-    t = _trial(nct_id="NCT001", completion_date=None)
+    t = _trial(
+        nct_id="NCT001", overall_status="TERMINATED", completion_date=None
+    )
+    out, was_scrubbed = _scrub_post_cutoff_outcome(t, date(2020, 1, 1))
+    assert was_scrubbed is True
+    assert out.overall_status == "UNKNOWN"
+    assert out.why_stopped is None
+    assert out.completion_date is None
+
+
+def test_scrub_no_completion_date_non_terminal_unchanged():
+    """A non-terminal trial with no completion_date has no future
+    outcome to hide — return unchanged.
+    """
+    t = _trial(
+        nct_id="NCT001",
+        overall_status="RECRUITING",
+        why_stopped=None,
+        completion_date=None,
+    )
     out, was_scrubbed = _scrub_post_cutoff_outcome(t, date(2020, 1, 1))
     assert was_scrubbed is False
     assert out is t  # same object, no copy made
-    assert out.overall_status == "TERMINATED"
-    assert out.why_stopped == "lack of efficacy"
+    assert out.overall_status == "RECRUITING"
     assert out.completion_date is None
 
 

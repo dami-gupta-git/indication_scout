@@ -19,13 +19,19 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.fixture(autouse=True)
-def _stub_candidate_assembly():
+def _stub_candidate_assembly(request):
     """Skip the OT/FDA network work in _assemble_candidates.
 
     These unit tests only care about message-history plumbing.
     Candidate assembly is covered by test_mechanism_row_builder and
     test_mechanism_candidates; integration tests cover the full path.
+
+    Tests that exercise _assemble_candidates directly request the
+    `_patch_assemble_deps` fixture and opt out of this stub.
     """
+    if "_patch_assemble_deps" in request.fixturenames:
+        yield
+        return
     with patch(
         "indication_scout.agents.mechanism.mechanism_agent._assemble_candidates",
         new=AsyncMock(return_value=[]),
@@ -140,3 +146,80 @@ async def test_run_mechanism_agent_missing_tool_leaves_default(
     output = await run_mechanism_agent(agent, "metformin")
 
     assert getattr(output, field) == default
+
+
+# --- _assemble_candidates FDA approval gating (holdout) --------------------
+
+from datetime import date  # noqa: E402
+
+from indication_scout.agents.mechanism import mechanism_agent as _mech  # noqa: E402
+
+_ROWS = [{"disease_name": "systemic mastocytosis"}, {"disease_name": "glioblastoma"}]
+
+
+@pytest.fixture
+def _patch_assemble_deps():
+    """Stub OT network + row builder so _assemble_candidates reaches the FDA filter.
+
+    Yields (live_mock, table_mock) so each test can assert which path ran.
+    select_top_candidates is stubbed to echo the approved set back for assertion.
+    """
+    live = AsyncMock(return_value={"systemic mastocytosis": True, "glioblastoma": False})
+    table = MagicMock(return_value={"systemic mastocytosis"})
+    captured: dict = {}
+
+    def _capture(rows, approved_diseases, limit):
+        captured["approved"] = approved_diseases
+        return []
+
+    class _DummyOT:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *a):
+            return False
+
+    with (
+        patch.object(_mech, "build_candidate_rows", new=AsyncMock(return_value=_ROWS)),
+        patch.object(_mech, "OpenTargetsClient", new=lambda *a, **k: _DummyOT()),
+        patch.object(_mech, "get_fda_approved_disease_mapping", new=live),
+        patch.object(_mech, "get_approved_indications", new=table),
+        patch.object(_mech, "select_top_candidates", new=_capture),
+    ):
+        yield live, table, captured
+
+
+async def test_assemble_candidates_uses_date_gated_table_in_holdout(
+    _patch_assemble_deps,
+):
+    """With date_before set, the date-gated table is used and live FDA is NOT called."""
+    live, table, captured = _patch_assemble_deps
+    cutoff = date(2002, 6, 1)
+
+    await _mech._assemble_candidates(
+        "imatinib",
+        {"KIT": "ENSG00000157404"},
+        MECHANISMS_OF_ACTION,
+        date_before=cutoff,
+    )
+
+    live.assert_not_awaited()
+    table.assert_called_once()
+    assert table.call_args.kwargs["as_of"] == cutoff
+    assert captured["approved"] == {"systemic mastocytosis"}
+
+
+async def test_assemble_candidates_uses_live_fda_when_no_cutoff(_patch_assemble_deps):
+    """With date_before None, the live FDA mapping is used and the table is NOT."""
+    live, table, captured = _patch_assemble_deps
+
+    await _mech._assemble_candidates(
+        "imatinib",
+        {"KIT": "ENSG00000157404"},
+        MECHANISMS_OF_ACTION,
+        date_before=None,
+    )
+
+    live.assert_awaited_once()
+    table.assert_not_called()
+    assert captured["approved"] == {"systemic mastocytosis"}

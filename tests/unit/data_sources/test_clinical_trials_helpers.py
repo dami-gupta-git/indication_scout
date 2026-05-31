@@ -205,3 +205,50 @@ def test_parse_trial_missing_ancestors_defaults_empty(tmp_path):
     trial = client._parse_trial(study)
 
     assert trial.mesh_ancestors == []
+
+
+def _study_with_dates(
+    primary: str | None, overall: str | None, tmp_status: dict | None = None
+) -> dict:
+    """Minimal study dict for completion-date parsing tests."""
+    status: dict = {"overallStatus": "COMPLETED"}
+    if primary is not None:
+        status["primaryCompletionDateStruct"] = {"date": primary}
+    if overall is not None:
+        status["completionDateStruct"] = {"date": overall}
+    return {
+        "protocolSection": {
+            "identificationModule": {"nctId": "NCT00000001", "briefTitle": "x"},
+            "statusModule": status,
+            "designModule": {"phases": ["PHASE1"]},
+            "conditionsModule": {"conditions": ["Condition X"]},
+            "sponsorCollaboratorsModule": {"leadSponsor": {"name": "Sponsor"}},
+            "armsInterventionsModule": {
+                "interventions": [{"type": "DRUG", "name": "DrugZ"}]
+            },
+            "outcomesModule": {},
+            "referencesModule": {},
+            "descriptionModule": {},
+        },
+    }
+
+
+def test_parse_trial_completion_date_prefers_primary(tmp_path):
+    """When primaryCompletionDate is present, it wins over completionDate."""
+    study = _study_with_dates(primary="2020-03", overall="2021-01")
+    trial = ClinicalTrialsClient(cache_dir=tmp_path)._parse_trial(study)
+    assert trial.completion_date == "2020-03"
+
+
+def test_parse_trial_completion_date_falls_back_to_completion(tmp_path):
+    """When primaryCompletionDate is absent, fall back to completionDate."""
+    study = _study_with_dates(primary=None, overall="2006-01")
+    trial = ClinicalTrialsClient(cache_dir=tmp_path)._parse_trial(study)
+    assert trial.completion_date == "2006-01"
+
+
+def test_parse_trial_completion_date_none_when_both_absent(tmp_path):
+    """No completion date in either field → None."""
+    study = _study_with_dates(primary=None, overall=None)
+    trial = ClinicalTrialsClient(cache_dir=tmp_path)._parse_trial(study)
+    assert trial.completion_date is None
