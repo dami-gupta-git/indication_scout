@@ -1,15 +1,12 @@
 """Hierarchical LLM dedup pass for candidate diseases.
 
-The supervisor's `merge_and_dedup()` step calls `run_hierarchical_dedup` after the
-deterministic exact-match passes (ID match, name match, OT name-resolve). The LLM
-sees the full merged candidate list and identifies super/subtype pairs that the
-exact-match passes can't catch (e.g. "ulcerative colitis" ⊂ "inflammatory bowel
-disease"; "type 2 diabetes mellitus" ⊂ "diabetes mellitus").
-
-For each hierarchical pair, the LLM picks ONE survivor based on which level is most
-actionable for the drug's mechanism. Failure modes — LLM error, unparseable JSON,
-references to unknown survivors — log a WARNING and yield zero decisions. The
-caller keeps all candidates on failure (error by omission, not inaccuracy).
+`merge_and_dedup()` calls `run_hierarchical_dedup` after the deterministic exact-match passes (ID,
+name, OT name-resolve). The LLM sees the full merged candidate list and identifies super/subtype
+pairs the exact-match passes can't catch (e.g. "ulcerative colitis" ⊂ "inflammatory bowel
+disease"; "type 2 diabetes mellitus" ⊂ "diabetes mellitus"), picking ONE survivor per pair by
+which level is most actionable for the drug's mechanism. On failure (LLM error, unparseable JSON,
+unknown survivors) it logs a WARNING and yields zero decisions, so the caller keeps all candidates
+(error by omission, not inaccuracy).
 """
 
 from __future__ import annotations
@@ -69,22 +66,19 @@ async def run_hierarchical_dedup(
     Args:
         drug_name: the drug under analysis (for MoA-aware survivor selection).
         mechanism_targets: list of (gene, action_type) pairs from the mechanism agent.
-        candidates: full merged candidate list. Each entry is
-            (canonical_name, source, efo_id_or_None). `source` ∈ {"competitor",
-            "mechanism", "both"}.
+        candidates: full merged list of (canonical_name, source, efo_id_or_None);
+            source ∈ {"competitor", "mechanism", "both"}.
 
     Returns:
-        HierarchyDedupOutput. On any failure (LLM error, parse error, missing fields),
-        returns `HierarchyDedupOutput(decisions=[])` with a WARNING logged. The caller
-        treats empty decisions as "no consolidation" and keeps every candidate.
+        HierarchyDedupOutput. On any failure (LLM/parse error, missing fields), returns
+        `decisions=[]` with a WARNING logged; the caller then keeps every candidate.
 
     Idempotence guards applied here (not the caller):
         - Decisions naming a survivor not in `candidates` are dropped.
-        - Inside `dropped`, the survivor's own name and any unknown name are
-          filtered out. The decision is kept only if at least one valid drop
-          remains.
-        - A name appearing in `dropped` across multiple decisions is still only
-          removed once at apply time (caller responsibility).
+        - In `dropped`, the survivor's own name and any unknown name are filtered out; the
+          decision is kept only if at least one valid drop remains.
+        - A name in `dropped` across multiple decisions is still removed once at apply time
+          (caller responsibility).
     """
     if len(candidates) < 2:
         return HierarchyDedupOutput(decisions=[])

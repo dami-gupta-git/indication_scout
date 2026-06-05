@@ -14,12 +14,10 @@ from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 class CandidateBlurb(BaseModel):
     """Structured per-candidate synthesis written by the supervisor.
 
-    Six short single-line fields plus a 2-sentence prose synthesis. Fields are
-    independently optional — an empty string means the supervisor had nothing to
-    write for that field this run, and the report formatter omits empty fields
-    from the rendered output. Populated only for the supervisor's top 5 ranked
-    candidates in production runs; left as None in holdout runs and for
-    un-ranked candidates.
+    Single-line fields plus a 2-sentence prose synthesis. Fields are independently optional — an
+    empty string means nothing to write for that field this run, and the formatter omits empty
+    fields. Populated only for the top 5 ranked candidates in production runs; None in holdout runs
+    and for un-ranked candidates.
     """
 
     stage: str = Field(

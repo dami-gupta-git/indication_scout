@@ -46,7 +46,7 @@ async def run_literature_agent(
         {"messages": [HumanMessage(content=f"Analyze {drug_name} in {disease_name}")]}
     )
 
-    # Walk the message history and pull each tool's typed artifact off msg.artifact
+    # Pull each tool's typed artifact off msg.artifact
     artifacts: dict = {
         "queries": [],
         "pmids": [],
@@ -54,7 +54,7 @@ async def run_literature_agent(
         "evidence": None,
         "summary": "",
     }
-    # maps tool names → keys in the local artifacts dict , used for mapping to LiteratureOutput
+    # tool names → keys in the artifacts dict, for mapping to LiteratureOutput
     field_map = {
         "expand_search_terms": "queries",
         "fetch_and_cache": "pmids",
