@@ -8,7 +8,6 @@ find_candidates tool that hits Open Targets directly to surface disease candidat
 import asyncio
 import logging
 import re
-import time
 from datetime import date
 from typing import Literal
 
@@ -548,16 +547,9 @@ def build_supervisor_tools(
         lit_agent = build_literature_agent(
             llm=llm, svc=svc, db=db, date_before=date_before
         )
-        t0 = time.perf_counter()
         logger.warning("[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name)
 
         output = await run_literature_agent(lit_agent, drug_name, disease_name)
-        logger.debug(
-            "analyze_literature took %.2fs for %s × %s",
-            time.perf_counter() - t0,
-            drug_name,
-            disease_name,
-        )
         strength = (
             output.evidence_summary.strength if output.evidence_summary else "no data"
         )
@@ -608,9 +600,7 @@ def build_supervisor_tools(
             )
 
         # logger.warning("[TOOL] analyze_clinical_trials(drug=%r, disease=%r)", drug_name, disease_name)
-        t0 = time.perf_counter()
         output = await run_clinical_trials_agent(ct_agent, drug_name, disease_name)
-        # logger.info("analyze_clinical_trials took %.2fs for %s × %s", time.perf_counter() - t0, drug_name, disease_name)
 
         # Drug-level write-through: when the FDA check matches the candidate
         # against an approved indication, capture it in the supervisor's
