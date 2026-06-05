@@ -420,7 +420,7 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
     preferred_term = match.group(1)
     mesh_id = uids[0]
 
-    logger.info(
+    logger.debug(
         "MeSH resolver: '%s' → uid=%s pref=%r",
         indication,
         mesh_id,

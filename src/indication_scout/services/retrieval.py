@@ -664,7 +664,7 @@ class RetrievalService:
 
         scored.sort(key=lambda x: x[2], reverse=True)
 
-        logger.info(
+        logger.debug(
             "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
             chembl_id, disease, len(scored), rerank_cap,
         )

@@ -126,7 +126,7 @@ class PubMedClient(BaseClient):
         pmids: list[str] = data.get("esearchresult", {}).get("idlist", [])
 
         if not pmids:
-            logger.warning("PubMed search returned 0 PMIDs for query: %r", query)
+            logger.debug("PubMed search returned 0 PMIDs for query: %r", query)
 
         # NOTE: the post-search esummary date guard used to live here. It
         # was moved into RetrievalService.fetch_and_cache so it can read

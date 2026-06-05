@@ -382,7 +382,7 @@ def build_clinical_trials_tools(
 
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
-            logger.warning(
+            logger.debug(
                 "get_landscape: could not resolve MeSH id for indication '%s'; "
                 "returning empty IndicationLandscape",
                 indication,

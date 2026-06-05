@@ -344,3 +344,11 @@ CURATED_FDA_REJECTED_CANDIDATES: dict[str, list[str]] = {
 # Minimum Open Targets overall_score for a mechanism-surfaced disease
 # association to be promoted into the supervisor's investigation allowlist.
 MECHANISM_ASSOCIATION_MIN_SCORE: float = 0.3
+
+# -- Cost instrumentation: Claude Sonnet 4.6 base on-demand rates ------------
+# Source: Anthropic pricing docs (global routing, standard on-demand). Used by
+# the CLI to estimate per-run cost from aggregated token usage. This is the
+# base (uncached) rate; runs that hit prompt caching cost slightly less, so
+# this estimate is an upper bound, not exact billing.
+SONNET_4_6_INPUT_USD_PER_MTOK: float = 3.0
+SONNET_4_6_OUTPUT_USD_PER_MTOK: float = 15.0
