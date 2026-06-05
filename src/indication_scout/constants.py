@@ -22,6 +22,10 @@ DEFAULT_CACHE_DIR: Path = _PROJECT_ROOT / "_cache"
 TEST_CACHE_DIR: Path = _PROJECT_ROOT / "_cache_test"
 CACHE_TTL: int = 5 * 86400  # 5 days in seconds
 
+# -- Metrics instrumentation ------------------------------------------------
+# JSONL file that metrics.record_metric() appends to (one record per line).
+METRICS_PATH: Path = _PROJECT_ROOT / "metrics.jsonl"
+
 # -- Hardcoded FDA approvals (used during temporal holdouts) ----------------
 # When the pipeline is run with --date-before, the live FDA-label lookup is
 # replaced with a hardcoded {drug: [{disease, approved}]} table loaded from

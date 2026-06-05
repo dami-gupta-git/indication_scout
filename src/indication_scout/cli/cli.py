@@ -10,6 +10,7 @@ Usage:
 import asyncio
 import logging
 import os
+import time
 from datetime import date, datetime
 from pathlib import Path
 
@@ -53,6 +54,7 @@ async def _run_for_drug(
     from indication_scout.constants import DEFAULT_CACHE_DIR
     from indication_scout.db.session import get_db
     from indication_scout.helpers.drug_helpers import normalize_drug_name
+    from indication_scout.metrics import record_metric
     from indication_scout.report.format_report import format_report
     from indication_scout.services.retrieval import RetrievalService
 
@@ -75,11 +77,20 @@ async def _run_for_drug(
     agent, get_merged_allowlist, get_auto_findings = build_supervisor_agent(
         llm=llm, svc=svc, db=db, date_before=date_before
     )
+    start = time.perf_counter()
     output = await run_supervisor_agent(
         agent,
         get_merged_allowlist,
         drug,
         get_auto_findings=get_auto_findings,
+    )
+    duration_seconds = time.perf_counter() - start
+    logger.info("Repurposing run for %s took %.1fs", drug, duration_seconds)
+    record_metric(
+        "repurposing_run",
+        drug=drug,
+        duration_seconds=round(duration_seconds, 3),
+        date_before=date_before.isoformat() if date_before else None,
     )
 
     timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
