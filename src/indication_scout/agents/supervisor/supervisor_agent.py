@@ -1,13 +1,8 @@
 """Supervisor agent.
 
-Top-level agent that orchestrates the literature, clinical trials, and mechanism sub-agents. Given
-a drug, it surfaces candidate diseases, decides which to investigate, and delegates to the right
-sub-agent for each candidate.
-
-The LLM decides:
-- Which candidates are worth investigating in depth
-- Whether to run literature, clinical trials, or both for each
-- When enough evidence has been gathered to stop
+Orchestrates the literature, clinical trials, and mechanism sub-agents. Given a drug, the LLM
+surfaces candidate diseases, picks which to investigate in depth, chooses literature/trials/both
+for each, and decides when enough evidence has been gathered to stop.
 """
 
 import logging
@@ -40,26 +35,23 @@ def _load_system_prompt(holdout_mode: bool) -> str:
     return (_PROMPTS_DIR / name).read_text()
 
 
-# Production prompt loaded at import time. Importers (e.g. the probe script
-# in scripts/probe_supervisor_t2dm.py) reference this binding directly.
+# Production prompt loaded at import time. Importers (e.g. scripts/probe_supervisor_t2dm.py)
+# reference this binding directly.
 SYSTEM_PROMPT = _load_system_prompt(holdout_mode=False)
 
 
 def build_supervisor_agent(llm, svc, db, date_before: date | None = None):
     """Return (compiled supervisor agent, get_merged_allowlist, get_auto_findings).
 
-    - get_merged_allowlist: snapshots the closure-scoped competitor + mechanism
-      disease allowlist after the agent has finished running.
-    - get_auto_findings: snapshots artifacts produced by the holdout-only
-      investigate_top_candidates tool. Empty in non-holdout runs. Used by
-      run_supervisor_agent to merge into findings_by_disease since those tool
-      calls bypass the LangGraph ReAct loop.
+    - get_merged_allowlist: snapshots the competitor + mechanism disease allowlist after the run.
+    - get_auto_findings: snapshots artifacts from the holdout-only investigate_top_candidates tool
+      (empty in non-holdout runs). run_supervisor_agent merges these into findings_by_disease
+      because those tool calls bypass the LangGraph ReAct loop.
 
     `date_before` is forwarded to the literature and clinical trials sub-agents so PubMed and
-    ClinicalTrials.gov queries respect the same temporal cutoff. When `date_before` is set,
-    the supervisor loads a holdout-specific system prompt that tells the LLM to treat all
-    candidates as open hypotheses (including ones that would look "obvious" today) and not
-    skip them based on training knowledge of the drug's eventual primary use.
+    ClinicalTrials.gov queries share the same temporal cutoff. When set, the supervisor loads a
+    holdout-specific prompt telling the LLM to treat all candidates as open hypotheses (even
+    "obvious" ones) rather than skipping based on training knowledge of the drug's eventual use.
     """
     tools, get_merged_allowlist, get_auto_findings = build_supervisor_tools(
         llm=llm, svc=svc, db=db, date_before=date_before
@@ -80,14 +72,13 @@ async def _stream_and_collect(
 ) -> dict:
     """Stream the agent and return {"messages": [...]} identical to ainvoke's result.
 
-    Streams with stream_mode="updates": each chunk is {node: {"messages": [new...]}}. The "agent"
-    node yields AIMessages (tool-call decisions); the "tools" node yields ToolMessages (results).
-    Concatenating the streamed messages after the seed HumanMessage reproduces ainvoke's
-    result["messages"] exactly, so downstream assembly is unchanged.
+    Streams with stream_mode="updates" (each chunk is {node: {"messages": [new...]}}). Concatenating
+    the streamed messages after the seed HumanMessage reproduces ainvoke's result["messages"]
+    exactly, so downstream assembly is unchanged.
 
-    When on_event is set, a ProgressEvent is emitted per relevant message: agent_start /
-    mechanism_start when a sub-agent tool is about to run (from AIMessage tool_calls), and
-    agent_done / mechanism_done / finalizing when the matching ToolMessage arrives.
+    When on_event is set, emits a ProgressEvent per relevant message: agent_start / mechanism_start
+    from AIMessage tool_calls (a sub-agent is about to run), and agent_done / mechanism_done /
+    finalizing when the matching ToolMessage arrives.
     """
     seed = HumanMessage(content=f"Find repurposing opportunities for {drug_name}")
     messages: list = [seed]
@@ -102,8 +93,8 @@ async def _stream_and_collect(
 
     await emit(type="started", drug=drug_name)
 
-    # Map tool_call_id -> (tool_name, disease) so a ToolMessage can be tied back to the
-    # disease its originating tool call named (ToolMessage carries only tool_call_id + name).
+    # tool_call_id -> (tool_name, disease), so a ToolMessage (which carries only tool_call_id +
+    # name) can be tied back to the disease its originating tool call named.
     pending: dict[str, tuple[str, str]] = {}
 
     async for chunk in agent.astream(
@@ -153,21 +144,17 @@ async def run_supervisor_agent(
 ) -> SupervisorOutput:
     """Invoke the supervisor and assemble a SupervisorOutput from the run.
 
-    Filters out tool calls that were rejected by the candidate guard, and canonicalises disease
-    names against the merged competitor + mechanism allowlist so that casing variants (e.g.
-    "Parkinson disease" vs "parkinson disease") do not produce duplicate findings, and so that
-    mechanism-promoted diseases reach the findings list with their correct source tag.
+    Filters out tool calls rejected by the candidate guard, and canonicalises disease names against
+    the merged allowlist so casing variants (e.g. "Parkinson disease" vs "parkinson disease") don't
+    produce duplicate findings and mechanism-promoted diseases land with their correct source tag.
 
-    `get_auto_findings` (holdout-only): a zero-arg callable returning artifacts produced by
-    investigate_top_candidates. Those tool calls bypass the LangGraph ReAct loop, so their
-    artifacts don't reach result["messages"]. We pull them via the closure and merge into
-    findings_by_disease so the report renderer sees them like any other investigation.
-    None in non-holdout runs (the tool isn't built and no closure to read from).
+    `get_auto_findings` (holdout-only): zero-arg callable returning investigate_top_candidates
+    artifacts. Those tool calls bypass the ReAct loop, so their artifacts don't reach
+    result["messages"]; we pull them via the closure and merge into findings_by_disease so the
+    renderer sees them like any other investigation. None in non-holdout runs.
 
-    `on_event` (optional): async callback invoked with a ProgressEvent for each streamed step.
-    When None the run behaves exactly as before — the agent is streamed with
-    stream_mode="updates" and the streamed messages are concatenated into the same final message
-    list ainvoke would have returned, so all downstream assembly is unchanged.
+    `on_event` (optional): async callback invoked with a ProgressEvent per streamed step. When None
+    the run is unchanged — streamed messages concatenate into the same list ainvoke would return.
     """
     result = await _stream_and_collect(agent, drug_name, on_event)
     seq = result.get("_seq", 0)
@@ -184,8 +171,7 @@ async def run_supervisor_agent(
     blurbs: list[dict] = []
     findings_by_disease: dict[str, CandidateFindings] = {}
 
-    # Build a map from tool_call_id → args so we can recover the disease_name argument passed to
-    # each analyze_* call.
+    # tool_call_id → args, to recover the disease_name passed to each analyze_* call.
     tool_call_args: dict[str, dict] = {}
     for msg in result["messages"]:
         if isinstance(msg, AIMessage):
@@ -193,7 +179,7 @@ async def run_supervisor_agent(
                 tool_call_args[tc["id"]] = tc["args"]
 
     # First pass: capture mechanism artifact and the supervisor's final summary.
-    # finalize_supervisor's artifact is {"summary": str, "blurbs": list[dict]}.
+    # finalize_supervisor's artifact: {"summary": str, "blurbs": list[dict]}.
     for msg in result["messages"]:
         if not isinstance(msg, ToolMessage):
             continue
@@ -204,9 +190,8 @@ async def run_supervisor_agent(
             summary = artifact.get("summary", "") or ""
             blurbs = artifact.get("blurbs", []) or []
 
-    # Single source of truth: the merged allowlist the runtime tools enforced. Keyed by
-    # lowercase disease name → (canonical_name, source). Source is "competitor", "mechanism",
-    # or "both".
+    # Single source of truth: the merged allowlist the runtime tools enforced. Keyed by lowercase
+    # disease name → (canonical_name, source), source ∈ {competitor, mechanism, both}.
     allowed_lower = get_merged_allowlist()
 
     def _canonical(
@@ -245,12 +230,10 @@ async def run_supervisor_agent(
         else:  # analyze_clinical_trials
             findings.clinical_trials = msg.artifact
 
-    # Holdout merge: investigate_top_candidates invokes analyze_literature /
-    # analyze_clinical_trials directly (not through the ReAct loop), so their
-    # artifacts don't reach result["messages"]. Pull them from the closure
-    # and merge into findings_by_disease. LLM-driven calls take precedence
-    # because they may have been re-runs with refined disease names; we only
-    # fill in slots the LLM didn't already populate.
+    # Holdout merge: investigate_top_candidates calls the analyze_* tools directly (not via the
+    # ReAct loop), so their artifacts don't reach result["messages"]. Pull them from the closure
+    # and merge in. LLM-driven calls take precedence (they may be re-runs with refined names); we
+    # only fill slots the LLM didn't already populate.
     if get_auto_findings is not None:
         auto = get_auto_findings()
         for disease_lower, artifacts in auto.items():
@@ -270,9 +253,8 @@ async def run_supervisor_agent(
                 findings.clinical_trials = artifacts["clinical_trials"]
 
     # Attach supervisor-written blurbs to the matching CandidateFindings. Blurbs only attach to
-    # diseases the supervisor actually investigated this run (i.e. already present in
-    # findings_by_disease). Names are canonicalised through the merged allowlist so casing /
-    # synonym variants land on the right finding. Holdout runs send an empty blurbs list.
+    # diseases investigated this run (already in findings_by_disease). Names are canonicalised
+    # through the allowlist so casing / synonym variants land right. Holdout runs send no blurbs.
     structured_keys = (
         "stage",
         "literature",
@@ -306,14 +288,14 @@ async def run_supervisor_agent(
             continue
         finding.blurb = CandidateBlurb(prose=prose, **fields)
 
-    # Candidates surfaced to downstream consumers = every disease in the merged allowlist,
-    # mapped back to its canonical name. Includes mechanism-promoted diseases.
+    # Candidates surfaced downstream = every allowlist disease by canonical name (incl.
+    # mechanism-promoted).
     candidate_diseases = [canonical for (canonical, _) in allowed_lower.values()]
     await emit(type="candidates", diseases=candidate_diseases)
 
-    # Build top_diseases from the supervisor's blurb list (rank-ordered). Drop any blurb
-    # disease that isn't in the allowlist or wasn't investigated this run, then hard cap
-    # at 5. Enforces top_diseases ⊆ disease_findings ⊆ candidate_diseases.
+    # Build top_diseases from the rank-ordered blurb list. Drop any disease not in the allowlist or
+    # not investigated this run, then hard cap. Enforces top_diseases ⊆ disease_findings ⊆
+    # candidate_diseases.
     top_diseases: list[str] = []
     seen_top: set[str] = set()
     for entry in blurbs:
@@ -336,8 +318,7 @@ async def run_supervisor_agent(
         top_diseases.append(canonical)
     top_diseases = top_diseases[: get_settings().supervisor_candidate_cap]
 
-    # Reorder disease_findings so top_diseases entries appear first in rank order, with
-    # any remaining investigated diseases following in insertion order.
+    # Reorder disease_findings: top_diseases first in rank order, then the rest in insertion order.
     top_set = set(top_diseases)
     disease_findings = [findings_by_disease[name] for name in top_diseases]
     for canonical, finding in findings_by_disease.items():

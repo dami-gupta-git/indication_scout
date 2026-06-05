@@ -1,11 +1,8 @@
 """Supervisor tools — wraps sub-agents as tools.
 
-Each sub-agent (literature, clinical trials) becomes a single tool the supervisor can call. The
-tool runs the full sub-agent and returns its typed output as an artifact, plus a short summary
-string for the LLM.
-
-There's also a find_candidates tool that hits Open Targets directly to surface disease candidates
-for a drug.
+Each sub-agent (literature, clinical trials) becomes one tool: it runs the full sub-agent and
+returns its typed output as an artifact plus a short summary string for the LLM. Also a
+find_candidates tool that hits Open Targets directly to surface disease candidates for a drug.
 """
 
 import asyncio
@@ -40,9 +37,8 @@ logger = logging.getLogger(__name__)
 def _log_disease_banner(title: str, diseases: list[str]) -> None:
     """Emit a boxed WARNING-level banner listing diseases, one per line.
 
-    Used to make pivotal candidate-list transitions easy to spot in run logs:
-    FDA-dropped, final candidate allowlist, mechanism-promoted, and top-N
-    investigation set.
+    Makes pivotal candidate-list transitions easy to spot in run logs: FDA-dropped, final
+    allowlist, mechanism-promoted, and top-N investigation set.
     """
     header = f" {title} (n={len(diseases)}) "
     width = max(len(header) + 4, 60)
@@ -93,73 +89,59 @@ def build_supervisor_tools(
 ) -> tuple[list, "callable", "callable"]:
     """Build supervisor tools that close over the sub-agents.
 
-    The literature and clinical trials agents are compiled once here and reused across calls — no
-    need to rebuild them per invocation.
+    The clinical trials and mechanism agents are compiled once here and reused across calls.
 
     `date_before` is forwarded to the literature and clinical trials sub-agents so all PubMed and
-    ClinicalTrials.gov queries respect the same temporal cutoff. Mechanism sub-agent does not
+    ClinicalTrials.gov queries share the same temporal cutoff. The mechanism sub-agent doesn't
     accept it (OpenTargets has no date-filtering API).
 
     Returns (tools, get_merged_allowlist) where get_merged_allowlist() snapshots the post-merge
-    competitor + mechanism disease allowlist (lowercase name → (canonical_name, source)). The
-    snapshot reflects whatever state the closure holds at call time — intended to be read after
-    the agent loop has finished.
+    allowlist (lowercase name → (canonical_name, source)). The snapshot reflects closure state at
+    call time — intended to be read after the agent loop has finished.
     """
 
-    # Build sub-agents once at supervisor construction (except literature — see below)
+    # Build sub-agents once at construction (except literature — see below)
     ct_agent = build_clinical_trials_agent(llm=llm, date_before=date_before)
     mech_agent = build_mechanism_agent(llm=llm)
 
     # Closure-scoped allowlist — populated by find_candidates and analyze_mechanism, checked by
-    # analyze_literature / analyze_clinical_trials.
-    # allowed_diseases: lowercase disease name → (canonical_name, source)
+    # analyze_literature / analyze_clinical_trials. Keyed: lowercase name → (canonical_name, source)
     allowed_diseases: dict[
         str, tuple[str, Literal["competitor", "mechanism", "both"]]
     ] = {}
-    # EFO ID → lowercase disease name (key into allowed_diseases). Lets the merge step dedup
-    # mechanism candidates against competitor entries by ontology ID even when names differ
-    # (e.g. "NSCLC" vs "non-small cell lung cancer").
+    # EFO ID → lowercase name (key into allowed_diseases). Lets the merge dedup mechanism vs
+    # competitor entries by ontology ID even when names differ (e.g. "NSCLC" vs the full name).
     allowed_efo_ids: dict[str, str] = {}
-    # Raw mechanism candidates as they arrive. analyze_mechanism appends here; find_candidates
-    # consumes them in merge_and_dedup() after both seed tools have finished. Holding the full
-    # list (rather than merging per-candidate) lets the hierarchical LLM pass see the complete
-    # union of competitor + mechanism candidates in one shot.
+    # Raw mechanism candidates as they arrive. analyze_mechanism appends; find_candidates consumes
+    # them in merge_and_dedup() after both seed tools finish. Holding the full list (vs merging
+    # per-candidate) lets the hierarchical LLM pass see the whole union in one shot.
     mechanism_candidates_buffer: list = []
-    # Drug-level mechanism target list, set by analyze_mechanism and read by merge_and_dedup
-    # so the hierarchical LLM pass can reason about the drug's MoA when picking survivors.
+    # Drug-level mechanism target list, set by analyze_mechanism and read by merge_and_dedup so the
+    # hierarchical LLM pass can reason about the drug's MoA when picking survivors.
     mechanism_targets_for_dedup: list[tuple[str, str]] = []
-    # Seed-phase gates. find_candidates and analyze_mechanism run in parallel.
-    # analyze_mechanism only buffers raw candidates and sets analyze_mechanism_done; it does not
-    # touch the allowlist. find_candidates seeds the competitor allowlist, awaits
-    # analyze_mechanism_done, then runs merge_and_dedup which performs the centralized
-    # exact-match + hierarchical-LLM dedup over the union. find_candidates_done is set inside
-    # merge_and_dedup so downstream tools (analyze_literature, analyze_clinical_trials,
-    # investigate_top_candidates) only observe the post-dedup allowlist. Both events are set in
-    # try/finally so a sub-agent crash doesn't deadlock downstream tools.
+    # Seed-phase gates. find_candidates and analyze_mechanism run in parallel. analyze_mechanism
+    # only buffers raw candidates and sets analyze_mechanism_done (doesn't touch the allowlist).
+    # find_candidates seeds the competitor allowlist, awaits analyze_mechanism_done, then runs
+    # merge_and_dedup (centralized exact-match + hierarchical-LLM dedup over the union).
+    # find_candidates_done is set inside merge_and_dedup so downstream tools only observe the
+    # post-dedup allowlist. Both events set in try/finally so a sub-agent crash can't deadlock.
     find_candidates_done = asyncio.Event()
     analyze_mechanism_done = asyncio.Event()
 
-    # Drug-level shared store. Populated by sub-agents as they run; surfaced
-    # to the supervisor via get_drug_briefing. Keyed by drug name (normalized).
-    # See supervisor_ideas.md for design rationale.
+    # Drug-level shared store, populated by sub-agents and surfaced via get_drug_briefing. Keyed by
+    # normalized drug name. See supervisor_ideas.md for design rationale.
     drug_facts: dict[str, dict] = {}
 
-    # Holdout-only: artifacts produced by investigate_top_candidates. The tool
-    # invokes analyze_literature/analyze_clinical_trials directly (not through
-    # the LangGraph ReAct loop), so their tool messages don't reach
-    # result["messages"]. We stash them here and run_supervisor_agent reads
-    # them via get_auto_findings() after the agent run completes.
-    # Keyed by lowercase canonical disease name → {"literature": LiteratureOutput,
-    # "clinical_trials": ClinicalTrialsOutput}.
+    # Holdout-only: artifacts from investigate_top_candidates. That tool calls the analyze_* tools
+    # directly (not via the ReAct loop), so their messages don't reach result["messages"]; we stash
+    # them here and run_supervisor_agent reads them via get_auto_findings() after the run. Keyed by
+    # lowercase canonical name → {"literature": LiteratureOutput, "clinical_trials": ...Output}.
     auto_findings: dict[str, dict] = {}
 
-    # Per-disease sub-agent artifacts written by analyze_literature and
-    # analyze_clinical_trials as the supervisor runs. Used by
-    # finalize_supervisor to enforce the top-N evidence gate (drop blurbs
-    # for candidates that fail the (0 trials AND <N PMIDs) check). Keyed by
-    # lowercase canonical disease name (the allowlist key) →
-    # {"literature": LiteratureOutput | None,
-    #  "clinical_trials": ClinicalTrialsOutput | None}.
+    # Per-disease sub-agent artifacts written by analyze_literature / analyze_clinical_trials during
+    # the run. Used by finalize_supervisor's top-N evidence gate (drop blurbs failing the 0-trials-
+    # AND-<N-PMIDs check). Keyed by lowercase canonical name → {"literature": ... | None,
+    # "clinical_trials": ... | None}.
     findings_local: dict[str, dict] = {}
 
     def _drug_key(drug_name: str) -> str:
@@ -207,8 +189,7 @@ def build_supervisor_tools(
             lines.append("- Top mechanism-disease associations:")
             # cap at 10 to keep briefing terse
             for g, d, s in entry["mechanism_disease_associations"][:10]:
-                # Hide score when it's the placeholder (not surfaced by
-                # MechanismCandidate). Show otherwise.
+                # Hide the placeholder score (not surfaced by MechanismCandidate); show otherwise.
                 score_str = f" (score {s:.2f})" if s > 0 else ""
                 lines.append(f"  - {g} → {d}{score_str}")
 
@@ -228,8 +209,8 @@ def build_supervisor_tools(
         try:
             return await _find_candidates_impl(drug_name)
         finally:
-            # Always release the seed gate so a failure here doesn't deadlock analyze_literature
-            # / analyze_clinical_trials. They will see an empty allowlist and reject downstream.
+            # Always release the seed gate so a failure here can't deadlock the analyze_* tools;
+            # they'll see an empty allowlist and reject downstream.
             find_candidates_done.set()
 
     async def _find_candidates_impl(drug_name: str) -> tuple[str, list[str]]:
@@ -238,8 +219,8 @@ def build_supervisor_tools(
         competitors = await svc.get_drug_competitors(chembl_id, date_before=date_before)
         diseases = list(competitors.keys())
 
-        # Drug-level intake: populate the shared store with aliases and any
-        # FDA-approved indications discovered during the candidate filter.
+        # Drug-level intake: populate the shared store with aliases and any FDA-approved
+        # indications discovered during the candidate filter.
         entry = _ensure_drug_entry(drug_name)
         try:
             entry["drug_aliases"] = await get_all_drug_names(chembl_id, svc.cache_dir)
@@ -248,16 +229,14 @@ def build_supervisor_tools(
                 "find_candidates: get_all_drug_names failed for %s: %s", chembl_id, e
             )
 
-        # Seed approved_indications from the drug's own FDA label, independent of
-        # any candidate list. Without this, an approved indication that doesn't
-        # appear among OpenTargets competitor diseases (e.g. semaglutide × MASH)
-        # never reaches the briefing and the supervisor cannot reason about
+        # Seed approved_indications from the drug's own FDA label, independent of any candidate
+        # list. Without this, an approved indication absent from OpenTargets competitor diseases
+        # (e.g. semaglutide × MASH) never reaches the briefing and the supervisor can't reason about
         # subset/superset relationships against it.
         #
-        # When date_before is set, swap the live openFDA path for the hardcoded
-        # approvals table — the live path leaks today's approvals into a
-        # holdout. Drugs not in the table return [] and approval reasoning is
-        # silently disabled for that holdout run (see PLAN_date_before.md).
+        # When date_before is set, swap the live openFDA path for the hardcoded approvals table —
+        # the live path would leak today's approvals into a holdout. Drugs not in the table return
+        # [] and approval reasoning is silently disabled for that run (see PLAN_date_before.md).
         seed_aliases = entry["drug_aliases"] or [drug_name]
         try:
             if date_before is not None:
@@ -291,8 +270,8 @@ def build_supervisor_tools(
                 e,
             )
 
-        # Drop competitor diseases already approved for this drug. Same swap as
-        # above: hardcoded table when date_before is set, live FDA otherwise.
+        # Drop competitor diseases already approved for this drug. Same swap as above: hardcoded
+        # table when date_before is set, live FDA otherwise.
         fda_approved_lower: set[str] = set()
         if diseases:
             if date_before is not None:
@@ -316,11 +295,10 @@ def build_supervisor_tools(
                     f"{'hardcoded table' if date_before is not None else 'live FDA'})",
                     sorted(fda_approved),
                 )
-                # Record the approved indications in the shared store. These were
-                # discovered as side effect of candidate filtering — even though
-                # they're dropped from the candidate list, the supervisor needs
-                # to see them to reason about subset/superset relationships
-                # (e.g. CML approval makes "myeloid leukemia" candidate ambiguous).
+                # Record the approved indications in the shared store. Discovered as a side effect
+                # of candidate filtering — though dropped from the candidate list, the supervisor
+                # needs them to reason about subset/superset relationships (e.g. CML approval makes
+                # "myeloid leukemia" ambiguous).
                 existing = {
                     ind.lower().strip() for ind in entry["approved_indications"]
                 }
@@ -331,9 +309,9 @@ def build_supervisor_tools(
 
         diseases = [d for d in diseases if d.lower().strip() not in fda_approved_lower]
 
-        # Cap applies to competitor entries only. Mechanism-promoted entries are appended on top
-        # after the merge below — they're already small (capped upstream by
-        # MECHANISM_TOP_CANDIDATES) and dropping them here would defeat the purpose of the merge.
+        # Cap applies to competitor entries only. Mechanism-promoted entries are appended after the
+        # merge — already small (capped upstream by MECHANISM_TOP_CANDIDATES), and dropping them
+        # here would defeat the merge.
         candidate_cap = get_settings().supervisor_candidate_cap
         if len(diseases) > candidate_cap:
             logger.warning(
@@ -349,10 +327,9 @@ def build_supervisor_tools(
         for d in diseases:
             allowed_diseases[d.lower().strip()] = (d, "competitor")
 
-        # Pull EFO IDs for the competitor allowlist directly from the raw OT cache. Used by
-        # analyze_mechanism to dedup mechanism candidates against competitor entries by ontology
-        # ID. Disease names that don't resolve to an EFO (e.g. renamed by the LLM merge step)
-        # simply don't get an entry — analyze_mechanism falls back to name match in that case.
+        # Pull EFO IDs for the competitor allowlist from the raw OT cache, used to dedup mechanism
+        # vs competitor entries by ontology ID. Names that don't resolve to an EFO (e.g. renamed by
+        # the LLM merge) get no entry — the merge falls back to name match in that case.
         async with OpenTargetsClient(cache_dir=svc.cache_dir) as ot_client:
             raw = await ot_client.get_drug_competitors(
                 chembl_id, date_before=date_before
@@ -367,21 +344,17 @@ def build_supervisor_tools(
             diseases,
         )
 
-        # Wait for analyze_mechanism to populate mechanism_candidates_buffer. The mechanism
-        # sub-agent's finally block always sets this gate, so a mechanism crash means we just
-        # see an empty mechanism contribution rather than deadlocking.
+        # Wait for analyze_mechanism to populate mechanism_candidates_buffer. Its finally block
+        # always sets this gate, so a mechanism crash yields an empty contribution, not a deadlock.
         await analyze_mechanism_done.wait()
 
         # Run the centralized merge + dedup pipeline. find_candidates_done is set inside
-        # merge_and_dedup's finally so downstream readers (analyze_literature,
-        # analyze_clinical_trials, investigate_top_candidates) only ever see the post-dedup
-        # allowlist.
+        # merge_and_dedup's finally so downstream readers only ever see the post-dedup allowlist.
         await merge_and_dedup(drug_name)
 
-        # Snapshot the post-dedup allowlist in dict insertion order. Competitor entries
-        # were inserted first (in OT ranked order), then mechanism-only entries (in the
-        # order analyze_mechanism produced them); the hierarchical dedup may have removed
-        # entries from either group. "both" entries stay in their original competitor slot.
+        # Snapshot the post-dedup allowlist in insertion order: competitor entries first (OT ranked
+        # order), then mechanism-only entries (analyze_mechanism's order); hierarchical dedup may
+        # have removed entries from either. "both" entries stay in their original competitor slot.
         merged: list[tuple[str, str]] = [
             (canonical, source) for (canonical, source) in allowed_diseases.values()
         ]
@@ -403,21 +376,17 @@ def build_supervisor_tools(
     async def merge_and_dedup(drug_name: str) -> None:
         """Merge buffered mechanism candidates into the competitor-seeded allowlist.
 
-        Pipeline (single chokepoint for all candidate-disease deduplication):
-          1. Exact ID match — drop mechanism candidate if disease_id already in
-             allowed_efo_ids. Upgrade matched competitor entry's source to "both".
-          2. Exact name match — drop mechanism candidate if lowercased name already
-             in allowed_diseases. Upgrade source to "both".
-          3. OT name-resolve — ask OT to resolve unresolved mechanism candidate names
-             to EFO IDs; retry step 1 against allowed_efo_ids.
-          4. Hierarchical LLM pass — over the full merged list, identify
-             super/subtype overlaps that the exact-match passes can't catch
-             (UC ⊂ IBD, T2DM ⊂ DM) and pick one survivor per overlap.
+        Pipeline (single chokepoint for all candidate-disease dedup):
+          1. Exact ID match — drop mechanism candidate if disease_id already in allowed_efo_ids;
+             upgrade the matched competitor entry's source to "both".
+          2. Exact name match — drop if lowercased name already in allowed_diseases; upgrade to
+             "both".
+          3. OT name-resolve — resolve unresolved mechanism names to EFO IDs; retry step 1.
+          4. Hierarchical LLM pass — over the full merged list, catch super/subtype overlaps the
+             exact-match passes miss (UC ⊂ IBD, T2DM ⊂ DM), one survivor per overlap.
 
-        Sets find_candidates_done before returning so downstream readers
-        (analyze_literature, analyze_clinical_trials, investigate_top_candidates)
-        observe the post-dedup allowlist. The find_candidates wrapper's
-        try/finally still sets the gate on any exception path.
+        Sets find_candidates_done before returning so downstream readers observe the post-dedup
+        allowlist. The find_candidates wrapper's try/finally still sets the gate on exception.
         """
         try:
             await _merge_and_dedup_impl(drug_name)
@@ -467,12 +436,10 @@ def build_supervisor_tools(
                 promoted,
             )
 
-        # Step 4: hierarchical LLM pass — temporarily disabled while we revisit
-        # the case that motivated it. The dedup was collapsing actionable
-        # subtype candidates (e.g. PCOS, gestational diabetes) into broad
-        # parents (metabolic disease) for broadly-acting drugs like metformin.
-        # Keep all candidates from the exact-match dedup until we decide on a
-        # hardcoded equivalence-group approach.
+        # Step 4: hierarchical LLM pass — temporarily disabled while we revisit the motivating case.
+        # The dedup was collapsing actionable subtypes (e.g. PCOS, gestational diabetes) into broad
+        # parents (metabolic disease) for broadly-acting drugs like metformin. Keep all exact-match
+        # candidates until we decide on a hardcoded equivalence-group approach.
         # if len(allowed_diseases) < 2:
         #     return
         #
@@ -552,15 +519,14 @@ def build_supervisor_tools(
         Investigates published evidence via PubMed, embeds and re-ranks abstracts, and produces a
         structured evidence summary with strength rating (none / weak / moderate / strong).
         """
-        # Wait for both seed tools to finish populating the allowlist. Without this, parallel
-        # tool calls can hit analyze_literature before find_candidates / analyze_mechanism have
-        # merged their candidates, causing legitimate diseases to be rejected.
+        # Wait for both seed tools to populate the allowlist. Without this, parallel tool calls can
+        # hit analyze_literature before the candidates are merged, rejecting legitimate diseases.
         await find_candidates_done.wait()
         await analyze_mechanism_done.wait()
 
         drug_name = normalize_drug_name(drug_name)
-        # Build a fresh agent per call so the closure-scoped store dict in literature_tools is not
-        # shared across disease invocations.
+        # Fresh agent per call so literature_tools' closure-scoped store isn't shared across
+        # disease invocations.
         if disease_name.lower().strip() not in allowed_diseases:
             return _reject(disease_name, "analyze_literature", LiteratureOutput())
 
@@ -586,8 +552,8 @@ def build_supervisor_tools(
             f"Literature for {drug_name} × {disease_name}: "
             f"{len(output.pmids)} PMIDs, strength={strength}."
         )
-        # Build supervisor-facing summary deterministically from EvidenceSummary so adverse-signal
-        # language reaches the supervisor verbatim with no LLM rewrite in between.
+        # Build the supervisor-facing summary deterministically from EvidenceSummary so adverse-
+        # signal language reaches the supervisor verbatim, with no LLM rewrite in between.
         synth_summary = (
             output.evidence_summary.summary if output.evidence_summary else ""
         )
@@ -633,11 +599,9 @@ def build_supervisor_tools(
         output = await run_clinical_trials_agent(ct_agent, drug_name, disease_name)
         # logger.info("analyze_clinical_trials took %.2fs for %s × %s", time.perf_counter() - t0, drug_name, disease_name)
 
-        # Drug-level write-through: when the FDA check matches the candidate
-        # against an approved indication, capture it in the supervisor's
-        # briefing so subsequent reasoning sees the approval status. Trial
-        # data still flows through to the summary below — the sub-agent
-        # always investigates fully now (no short-circuits).
+        # Drug-level write-through: when the FDA check matches an approved indication, capture it in
+        # the briefing so later reasoning sees the approval status. Trial data still flows to the
+        # summary below — the sub-agent always investigates fully now (no short-circuits).
         approval = output.approval
         if approval is not None and approval.is_approved:
             entry = _ensure_drug_entry(drug_name)
@@ -646,8 +610,8 @@ def build_supervisor_tools(
             if matched.lower().strip() not in existing:
                 entry["approved_indications"].append(matched)
 
-        # Normal path: counts come from the new exact-count tools (countTotal
-        # API). Each scope owns its own count; no cross-scope summing.
+        # Normal path: counts come from the exact-count tools (countTotal API). Each scope owns its
+        # own count; no cross-scope summing.
         search = output.search
         completed = output.completed
         terminated = output.terminated
@@ -660,8 +624,8 @@ def build_supervisor_tools(
         n_withdrawn = search.by_status.get("WITHDRAWN", 0) if search else 0
         n_completed = completed.total_count if completed else 0
         n_terminated = terminated.total_count if terminated else 0
-        # safety/efficacy classification is computed from the top-50 shown
-        # terminated trials; if total_count > len(trials) this is a floor.
+        # safety/efficacy classification is over the top-50 shown terminated trials; if total_count
+        # > len(trials) this is a floor.
         n_safety_efficacy_shown = (
             sum(
                 1
@@ -750,8 +714,7 @@ def build_supervisor_tools(
         try:
             return await _analyze_mechanism_impl(drug_name)
         finally:
-            # Always release the seed gate so a failure here doesn't deadlock analyze_literature
-            # / analyze_clinical_trials.
+            # Always release the seed gate so a failure here can't deadlock the analyze_* tools.
             analyze_mechanism_done.set()
 
     async def _analyze_mechanism_impl(drug_name: str) -> tuple[str, MechanismOutput]:
@@ -761,10 +724,8 @@ def build_supervisor_tools(
         )
         # logger.warning("[TOOL] analyze_mechanism(drug=%r)", drug_name)
 
-        # Buffer raw mechanism candidates for find_candidates to consume in merge_and_dedup()
-        # after both seed tools have finished. The merge is centralized in one place so the
-        # full union of competitor + mechanism candidates can be passed to a single
-        # hierarchical-dedup pass.
+        # Buffer raw mechanism candidates for find_candidates to consume in merge_and_dedup() after
+        # both seed tools finish. Centralized so the full union can go to a single hierarchical pass.
         mechanism_candidates_buffer.clear()
         raw_received: list[str] = []
         for candidate in output.candidates:
@@ -779,9 +740,8 @@ def build_supervisor_tools(
                 raw_received,
             )
 
-        # Drug-level write-through: populate mechanism_targets and
-        # mechanism_disease_associations in the shared store. Captured per-MoA
-        # so the briefing can show "ABL1 (INHIBITOR), KIT (INHIBITOR)".
+        # Drug-level write-through: populate mechanism_targets and mechanism_disease_associations in
+        # the shared store. Captured per-MoA so the briefing can show "ABL1 (INHIBITOR), KIT (...)".
         entry = _ensure_drug_entry(drug_name)
         target_pairs: list[tuple[str, str]] = []
         seen_target_pairs: set[tuple[str, str]] = set()
@@ -793,9 +753,8 @@ def build_supervisor_tools(
                     target_pairs.append(pair)
         entry["mechanism_targets"] = target_pairs
 
-        # Mechanism candidates already carry the high-score target→disease
-        # associations the agent surfaced. We don't have the raw scores on the
-        # candidate model — record the pair without a score for now.
+        # Mechanism candidates already carry the high-score target→disease associations the agent
+        # surfaced. Raw scores aren't on the candidate model — record the pair without a score.
         assocs: list[tuple[str, str, float]] = []
         seen_assoc_pairs: set[tuple[str, str]] = set()
         for cand in output.candidates:
@@ -803,15 +762,14 @@ def build_supervisor_tools(
             if pair_key in seen_assoc_pairs:
                 continue
             seen_assoc_pairs.add(pair_key)
-            # Score not surfaced on MechanismCandidate; use 0.0 as a placeholder.
-            # The supervisor only needs to know "this gene is associated with
-            # this disease per OT mechanism evidence" — the briefing renderer
-            # will hide the score if it's the placeholder.
+            # Score not surfaced on MechanismCandidate; use 0.0 as a placeholder. The supervisor
+            # only needs "this gene is associated with this disease per OT mechanism evidence" —
+            # the briefing renderer hides the placeholder score.
             assocs.append((cand.target_symbol, cand.disease_name, 0.0))
         entry["mechanism_disease_associations"] = assocs
 
-        # Record the mechanism target list so merge_and_dedup() can pass it to the
-        # hierarchical LLM pass as context for survivor selection.
+        # Record the mechanism target list so merge_and_dedup() can pass it to the hierarchical LLM
+        # pass as context for survivor selection.
         mechanism_targets_for_dedup.clear()
         mechanism_targets_for_dedup.extend(target_pairs)
 
@@ -840,12 +798,10 @@ def build_supervisor_tools(
         drug_name = normalize_drug_name(drug_name)
         return _render_briefing(drug_name)
 
-    # Holdout-only tool: bulk-investigate the top-N candidates with no LLM
-    # discretion. The probe (scripts/probe_supervisor_t2dm.py) showed the
-    # supervisor LLM systematically skips "obvious" candidates like T2DM for
-    # semaglutide regardless of prompt instructions. In holdout mode that's
-    # exactly the candidate the holdout is testing, so we remove the LLM's
-    # ability to skip by auto-investigating the top-10.
+    # Holdout-only tool: bulk-investigate the top-N candidates with no LLM discretion. The probe
+    # (scripts/probe_supervisor_t2dm.py) showed the supervisor LLM systematically skips "obvious"
+    # candidates like T2DM for semaglutide regardless of prompt — exactly the candidate a holdout
+    # tests, so we remove the LLM's ability to skip by auto-investigating the top-10.
     HOLDOUT_INVESTIGATION_CAP = 10
 
     @tool(response_format="content_and_artifact")
@@ -868,9 +824,8 @@ def build_supervisor_tools(
 
         drug_name = normalize_drug_name(drug_name)
 
-        # Top-N from the merged allowlist. Insertion order preserves
-        # find_candidates's competitor ranking, with mechanism-promoted
-        # entries appended in the order analyze_mechanism processed them.
+        # Top-N from the merged allowlist. Insertion order preserves find_candidates's competitor
+        # ranking, with mechanism-promoted entries appended in analyze_mechanism's order.
         top_n = list(allowed_diseases.items())[:HOLDOUT_INVESTIGATION_CAP]
         if not top_n:
             return "No candidates in allowlist; nothing to investigate.", []
@@ -881,10 +836,9 @@ def build_supervisor_tools(
             canonical_diseases,
         )
 
-        # Fan out: analyze_literature + analyze_clinical_trials in parallel.
-        # Pass a ToolCall-shaped dict (not a plain args dict) so .ainvoke()
-        # returns a ToolMessage with .artifact populated. A plain dict input
-        # returns just the content string and we lose the typed artifact.
+        # Fan out: analyze_literature + analyze_clinical_trials in parallel. Pass a ToolCall-shaped
+        # dict (not a plain args dict) so .ainvoke() returns a ToolMessage with .artifact populated;
+        # a plain dict returns only the content string and loses the typed artifact.
         async def _invest(disease: str) -> tuple[str, dict]:
             disease_slug = disease.lower().replace(" ", "_")
             lit_call = analyze_literature.ainvoke(
@@ -907,10 +861,8 @@ def build_supervisor_tools(
 
             lit_artifact = lit_msg.artifact
             ct_artifact = ct_msg.artifact
-            # Stash artifacts in the closure so run_supervisor_agent can
-            # merge them into the SupervisorOutput. The LangGraph ReAct
-            # loop doesn't see these tool messages because they were
-            # invoked directly, not through the agent.
+            # Stash artifacts in the closure so run_supervisor_agent can merge them into the
+            # SupervisorOutput. The ReAct loop doesn't see these messages (invoked directly).
             auto_findings[disease.lower().strip()] = {
                 "literature": lit_artifact,
                 "clinical_trials": ct_artifact,
@@ -948,7 +900,7 @@ def build_supervisor_tools(
         results = await asyncio.gather(*(_invest(d) for d in canonical_diseases))
         artifacts = [a for _, a in results]
 
-        # One-line-per-disease compact summary the LLM can rank against.
+        # Compact one-line-per-disease summary the LLM can rank against.
         lines = [
             f"Auto-investigated {len(artifacts)} top candidates " f"for {drug_name}:"
         ]
@@ -963,12 +915,11 @@ def build_supervisor_tools(
     def _reconstruct_holdout_summary() -> str:
         """Build the holdout summary deterministically from findings_local.
 
-        Holdout mode renders a structured fact list — no LLM prose. Each
-        investigated candidate becomes one ranked line with literature strength,
-        PMID count, and trial counts pulled directly from the typed sub-agent
-        artifacts. Candidates with zero trials and no usable literature signal
-        (matching the same gate finalize_supervisor applies to blurbs) drop into
-        a single "Evidence gate exclusions:" footer line.
+        Holdout mode renders a structured fact list — no LLM prose. Each investigated candidate
+        becomes one ranked line with literature strength, PMID count, and trial counts pulled from
+        the typed sub-agent artifacts. Candidates with zero trials and no usable literature signal
+        (same gate finalize_supervisor applies to blurbs) drop into a single "Evidence gate
+        exclusions:" footer line.
         """
         strength_rank = {"strong": 3, "moderate": 2, "weak": 1, "none": 0}
 
@@ -1115,15 +1066,11 @@ def build_supervisor_tools(
                     disease,
                 )
                 continue
-            # Top-N evidence gate: drop candidates where 0 trials AND
-            # synthesize indicates no usable literature signal —
-            # strength="none" OR study_count==0 (OR both). Strong/moderate/weak
-            # literature with at least one relevant abstract and 0 trials is a
-            # legitimate repurposing signal and is kept. PMID-count fallback
-            # applies only when synthesize didn't run.
-            # Investigated-but-filtered candidates still appear in
-            # disease_findings (per-disease section); they are only removed
-            # from the top-N ranking + blurbs.
+            # Top-N evidence gate: drop candidates with 0 trials AND no usable literature signal —
+            # strength="none" OR study_count==0. Strong/moderate/weak literature with ≥1 relevant
+            # abstract and 0 trials is a legitimate signal and is kept; the PMID-count fallback
+            # applies only when synthesize didn't run. Filtered candidates still appear in
+            # disease_findings (per-disease section) — only removed from the top-N ranking + blurbs.
             slot = findings_local.get(disease_key) or {}
             lit = slot.get("literature")
             ct = slot.get("clinical_trials")
@@ -1167,25 +1114,23 @@ def build_supervisor_tools(
             validated.append(entry)
 
         if date_before is not None:
-            # Holdout mode: ignore the LLM's summary string entirely and rebuild
-            # it deterministically from the typed artifacts in findings_local.
-            # The LLM drifts to narrative prose under the # APPROVAL RELATIONSHIPS
-            # instructions; reconstruction enforces the structured fact-list
+            # Holdout mode: ignore the LLM's summary string and rebuild it deterministically from
+            # the typed artifacts in findings_local. The LLM drifts to narrative prose under the
+            # APPROVAL RELATIONSHIPS instructions; reconstruction enforces the structured fact-list
             # contract documented in supervisor_holdout.txt.
             filtered_summary = _reconstruct_holdout_summary()
             artifact = {"summary": filtered_summary, "blurbs": []}
             return "Supervisor analysis complete.", artifact
 
-        # Filter the LLM-written summary string to drop ranked lines whose disease
-        # didn't pass the evidence gate (i.e. isn't in validated). Lines that aren't
-        # ranked entries (e.g. trailing "Closed signals:") pass through unchanged.
-        # Surviving lines are renumbered to keep the rank sequence contiguous.
-        # Uses the same regex and longest-substring match strategy as the report
-        # formatter's _splice_blurbs_into_summary so disease matching is consistent.
+        # Filter the LLM-written summary to drop ranked lines whose disease didn't pass the evidence
+        # gate (not in validated). Non-ranked lines (e.g. trailing "Closed signals:") pass through
+        # unchanged; survivors are renumbered to keep the rank sequence contiguous. Uses the same
+        # regex and longest-substring match as the formatter's _splice_blurbs_into_summary, for
+        # consistent disease matching.
         validated_diseases = {e["disease"].lower().strip() for e in validated}
         rank_line = re.compile(r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)\s+—\s+(?P<tail>.+)$")
-        # Normalize the heading line so the report uses "signals" instead of
-        # "candidates" / "opportunities" / "indications" regardless of what the LLM wrote.
+        # Normalize the heading so the report says "signals" regardless of whether the LLM wrote
+        # "candidates" / "opportunities" / "indications".
         heading_line = re.compile(
             r"^\s*Ranked\s+repurposing\s+"
             r"(?:candidates|opportunities|indications|signals)"
@@ -1232,16 +1177,16 @@ def build_supervisor_tools(
     ):
         """Snapshot the post-merge competitor + mechanism disease allowlist.
 
-        Returns a copy keyed by lowercase disease name → (canonical_name, source). Sources are
-        "competitor", "mechanism", or "both" depending on which sub-agent surfaced the disease.
+        Returns a copy keyed by lowercase name → (canonical_name, source), where source ∈
+        {"competitor", "mechanism", "both"} per which sub-agent surfaced the disease.
         """
         return dict(allowed_diseases)
 
     def get_auto_findings() -> dict[str, dict]:
         """Snapshot artifacts produced by investigate_top_candidates (holdout-only).
 
-        Returns {lowercase_canonical_disease: {"literature": LiteratureOutput,
-        "clinical_trials": ClinicalTrialsOutput}}. Empty in non-holdout runs.
+        Returns {lowercase_canonical: {"literature": LiteratureOutput, "clinical_trials":
+        ClinicalTrialsOutput}}. Empty in non-holdout runs.
         """
         return dict(auto_findings)
 
@@ -1254,7 +1199,7 @@ def build_supervisor_tools(
         finalize_supervisor,
     ]
     if date_before is not None:
-        # Holdout-only: insert investigate_top_candidates before finalize so
-        # the LLM can see it after seed-phase tools but before terminating.
+        # Holdout-only: insert investigate_top_candidates before finalize so the LLM sees it after
+        # the seed-phase tools but before terminating.
         tools.insert(-1, investigate_top_candidates)
     return tools, get_merged_allowlist, get_auto_findings
