@@ -11,6 +11,7 @@ The LLM decides:
 """
 
 import logging
+from collections.abc import Awaitable, Callable
 from datetime import date
 from pathlib import Path
 from typing import Literal
@@ -19,6 +20,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
 from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
+from indication_scout.agents.supervisor.progress import ProgressEvent, agent_label
 from indication_scout.agents.supervisor.supervisor_output import (
     CandidateBlurb,
     CandidateFindings,
@@ -71,11 +73,83 @@ def build_supervisor_agent(llm, svc, db, date_before: date | None = None):
     return agent, get_merged_allowlist, get_auto_findings
 
 
+async def _stream_and_collect(
+    agent,
+    drug_name: str,
+    on_event: "Callable[[ProgressEvent], Awaitable[None]] | None",
+) -> dict:
+    """Stream the agent and return {"messages": [...]} identical to ainvoke's result.
+
+    Streams with stream_mode="updates": each chunk is {node: {"messages": [new...]}}. The "agent"
+    node yields AIMessages (tool-call decisions); the "tools" node yields ToolMessages (results).
+    Concatenating the streamed messages after the seed HumanMessage reproduces ainvoke's
+    result["messages"] exactly, so downstream assembly is unchanged.
+
+    When on_event is set, a ProgressEvent is emitted per relevant message: agent_start /
+    mechanism_start when a sub-agent tool is about to run (from AIMessage tool_calls), and
+    agent_done / mechanism_done / finalizing when the matching ToolMessage arrives.
+    """
+    seed = HumanMessage(content=f"Find repurposing opportunities for {drug_name}")
+    messages: list = [seed]
+    seq = 0
+
+    async def emit(**kwargs) -> None:
+        nonlocal seq
+        if on_event is None:
+            return
+        seq += 1
+        await on_event(ProgressEvent(seq=seq, **kwargs))
+
+    await emit(type="started", drug=drug_name)
+
+    # Map tool_call_id -> (tool_name, disease) so a ToolMessage can be tied back to the
+    # disease its originating tool call named (ToolMessage carries only tool_call_id + name).
+    pending: dict[str, tuple[str, str]] = {}
+
+    async for chunk in agent.astream(
+        {"messages": [seed]}, stream_mode="updates"
+    ):
+        for _node, payload in chunk.items():
+            new_messages = payload.get("messages", []) if isinstance(payload, dict) else []
+            for msg in new_messages:
+                messages.append(msg)
+                if isinstance(msg, AIMessage):
+                    for tc in msg.tool_calls:
+                        name = tc.get("name", "")
+                        disease = (tc.get("args") or {}).get("disease_name", "") or ""
+                        pending[tc["id"]] = (name, disease)
+                        label = agent_label(name)
+                        if label is not None:
+                            await emit(type="agent_start", agent=label, disease=disease)
+                        elif name == "analyze_mechanism":
+                            await emit(type="mechanism_start")
+                        elif name == "finalize_supervisor":
+                            await emit(type="finalizing")
+                elif isinstance(msg, ToolMessage):
+                    name = msg.name
+                    _call, disease = pending.get(msg.tool_call_id, (name, ""))
+                    label = agent_label(name)
+                    if label is not None:
+                        await emit(type="agent_done", agent=label, disease=disease)
+                    elif name == "analyze_mechanism":
+                        target_count = _mechanism_target_count(msg.artifact)
+                        await emit(type="mechanism_done", target_count=target_count)
+
+    return {"messages": messages, "_seq": seq}
+
+
+def _mechanism_target_count(artifact) -> int | None:
+    """Return the number of drug targets from a mechanism artifact, or None."""
+    targets = getattr(artifact, "drug_targets", None)
+    return len(targets) if targets is not None else None
+
+
 async def run_supervisor_agent(
     agent,
     get_merged_allowlist,
     drug_name: str,
     get_auto_findings=None,
+    on_event: Callable[[ProgressEvent], Awaitable[None]] | None = None,
 ) -> SupervisorOutput:
     """Invoke the supervisor and assemble a SupervisorOutput from the run.
 
@@ -89,14 +163,21 @@ async def run_supervisor_agent(
     artifacts don't reach result["messages"]. We pull them via the closure and merge into
     findings_by_disease so the report renderer sees them like any other investigation.
     None in non-holdout runs (the tool isn't built and no closure to read from).
+
+    `on_event` (optional): async callback invoked with a ProgressEvent for each streamed step.
+    When None the run behaves exactly as before — the agent is streamed with
+    stream_mode="updates" and the streamed messages are concatenated into the same final message
+    list ainvoke would have returned, so all downstream assembly is unchanged.
     """
-    result = await agent.ainvoke(
-        {
-            "messages": [
-                HumanMessage(content=f"Find repurposing opportunities for {drug_name}")
-            ]
-        }
-    )
+    result = await _stream_and_collect(agent, drug_name, on_event)
+    seq = result.get("_seq", 0)
+
+    async def emit(**kwargs) -> None:
+        nonlocal seq
+        if on_event is None:
+            return
+        seq += 1
+        await on_event(ProgressEvent(seq=seq, **kwargs))
 
     mechanism: MechanismOutput | None = None
     summary: str = ""
@@ -228,6 +309,7 @@ async def run_supervisor_agent(
     # Candidates surfaced to downstream consumers = every disease in the merged allowlist,
     # mapped back to its canonical name. Includes mechanism-promoted diseases.
     candidate_diseases = [canonical for (canonical, _) in allowed_lower.values()]
+    await emit(type="candidates", diseases=candidate_diseases)
 
     # Build top_diseases from the supervisor's blurb list (rank-ordered). Drop any blurb
     # disease that isn't in the allowlist or wasn't investigated this run, then hard cap
@@ -261,6 +343,8 @@ async def run_supervisor_agent(
     for canonical, finding in findings_by_disease.items():
         if canonical not in top_set:
             disease_findings.append(finding)
+
+    await emit(type="done")
 
     return SupervisorOutput(
         drug_name=drug_name,
