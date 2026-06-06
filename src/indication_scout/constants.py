@@ -344,3 +344,9 @@ CURATED_FDA_REJECTED_CANDIDATES: dict[str, list[str]] = {
 # Minimum Open Targets overall_score for a mechanism-surfaced disease
 # association to be promoted into the supervisor's investigation allowlist.
 MECHANISM_ASSOCIATION_MIN_SCORE: float = 0.3
+
+# -- API: frontend integration -----------------------------------------------
+# Origins allowed by CORS — the Vite dev server (dev) and same-origin (prod).
+CORS_ALLOW_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
+# Built React bundle served by FastAPI in prod (Vite `npm run build` output).
+FRONTEND_DIST_DIR: Path = _PROJECT_ROOT / "frontend" / "dist"
