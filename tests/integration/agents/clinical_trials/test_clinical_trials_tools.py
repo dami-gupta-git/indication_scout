@@ -36,9 +36,17 @@ _HYPERTENSION_MESH_ID = "D006973"
 async def test_search_trials_tool_uses_server_side_mesh_filter():
     """search_trials tool: resolves hypertension → ('D006973', 'Hypertension')
     and forwards the preferred term to the client, which builds
-    `AREA[ConditionMeshTerm]"Hypertension"` server-side. The returned
-    SearchTrialsResult.total_count and .trials are both filtered to that
-    descriptor — no client-side _filter_by_mesh post-walk.
+    `AREA[ConditionMeshTerm]"Hypertension"` server-side.
+
+    This is a live integration test (real NCBI + real CT.gov), so exact trial
+    counts drift as new trials register. Assert the stable invariants the test
+    exists to prove, not a pinned count:
+      - the descriptor resolves to D006973 / "Hypertension"
+      - the client forwards it as the server-side AREA[ConditionMeshTerm] filter
+      - every returned trial carries that descriptor (direct mesh_conditions OR
+        mesh_ancestors — ancestor matches are accepted because the server-side
+        AREA filter matches ancestors too; see the KNOWN BUG note on
+        clinical_trials._mesh_cond)
     """
     tools = build_clinical_trials_tools(date_before=_CUTOFF)
     search_trials = next(t for t in tools if t.name == "search_trials")
@@ -52,28 +60,33 @@ async def test_search_trials_tool_uses_server_side_mesh_filter():
         }
     )
 
-    # Content string format: "Search for {drug} × {indication}: {N} trials
-    # (recruiting=..., active=..., withdrawn=..., unknown=...)" — no
-    # truncation note when shown == total.
-    assert "Search for semaglutide × hypertension: 1 trials" in msg.content
-    assert "recruiting=2" in msg.content
-    assert "active=0" in msg.content
-    assert "withdrawn=0" in msg.content
-    assert "unknown=0" in msg.content
-
     result = msg.artifact
     assert isinstance(result, SearchTrialsResult)
-    assert result.total_count == 1
-    assert result.by_status == {
-        "RECRUITING": 2,
-        "ACTIVE_NOT_RECRUITING": 0,
-        "WITHDRAWN": 0,
-        "UNKNOWN": 0,
-    }
-    assert len(result.trials) == 1
 
-    nct_ids = {t.nct_id for t in result.trials}
-    assert nct_ids
+    # Content string leads with the resolved pair; count is live-variable so
+    # only assert the stable prefix.
+    assert "Search for semaglutide × hypertension:" in msg.content
+
+    # by_status is an exhaustive partition of the returned trials.
+    assert set(result.by_status) == {
+        "RECRUITING",
+        "ACTIVE_NOT_RECRUITING",
+        "WITHDRAWN",
+        "UNKNOWN",
+    }
+    assert sum(result.by_status.values()) == result.total_count
+
+    # Core invariant: every returned trial is filtered to the hypertension
+    # descriptor (D006973), via direct conditions or ancestors.
+    assert result.trials, "expected at least one semaglutide × hypertension trial"
+    for t in result.trials:
+        mesh_ids = {m.id for m in t.mesh_conditions} | {
+            m.id for m in t.mesh_ancestors
+        }
+        assert _HYPERTENSION_MESH_ID in mesh_ids, (
+            f"{t.nct_id} not filtered to {_HYPERTENSION_MESH_ID}; "
+            f"mesh ids {sorted(mesh_ids)}"
+        )
 
 
 # ------------------------------------------------------------------

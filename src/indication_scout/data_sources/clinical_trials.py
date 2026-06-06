@@ -37,6 +37,13 @@ _settings = get_settings()
 
 def _mesh_cond(mesh_term: str) -> str:
     """Format a MeSH preferred term as a CT.gov server-side condition filter."""
+    # KNOWN BUG (not yet fixed): AREA[ConditionMeshTerm] matches a trial when the
+    # term appears in EITHER its direct condition meshes OR its mesh ancestors.
+    # So "Hypertension" (D006973) also pulls in Pulmonary Hypertension trials
+    # (D006976), whose tree rolls up under Hypertension — exactly the mixing the
+    # design intends to avoid. Fix belongs here at the source: after fetching,
+    # require the resolved descriptor to appear in the trial's direct
+    # mesh_conditions (drop ancestor-only matches), keyed on MeSH ID not term.
     return f'AREA[ConditionMeshTerm]"{mesh_term}"'
 
 

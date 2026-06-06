@@ -5,7 +5,10 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+from indication_scout.agents.supervisor.supervisor_output import (
+    CandidateFindings,
+    SupervisorOutput,
+)
 from indication_scout.api.routes.analyses import _execute
 from indication_scout.services.job_store import JobStore
 
@@ -114,3 +117,54 @@ def test_delete_finished_job_is_idempotent_204(client, fresh_store):
     resp = client.delete(f"/api/analyses/{job.job_id}")
     assert resp.status_code == 204
     assert job.status == "done"
+
+
+# --- end-to-end: structured result through POST -> poll -> GET ---
+
+
+def _poll_until_done(client, job_id, max_polls=50):
+    """Poll GET like the frontend does until the job reaches a terminal status."""
+    for _ in range(max_polls):
+        body = client.get(f"/api/analyses/{job_id}").json()
+        if body["status"] in {"done", "error", "cancelled"}:
+            return body
+    raise AssertionError(f"job {job_id} never reached a terminal status")
+
+
+def test_structured_result_round_trips_through_post_and_get(client, fresh_store):
+    output = SupervisorOutput(
+        drug_name="duloxetine",
+        candidate_diseases=["alcohol dependence", "obesity", "bipolar disorder"],
+        disease_findings=[
+            CandidateFindings(disease="alcohol dependence", source="mechanism"),
+            CandidateFindings(disease="obesity", source="both"),
+        ],
+        top_diseases=["alcohol dependence", "obesity"],
+        summary="Duloxetine shows mechanism-grounded signals in mood and metabolic indications.",
+    )
+
+    with patch(
+        "indication_scout.api.routes.analyses.run_analysis",
+        new=AsyncMock(return_value=(output, "report")),
+    ):
+        created = client.post("/api/analyses", json={"drug_name": "duloxetine"})
+        assert created.status_code == 202
+        job_id = created.json()["job_id"]
+
+        body = _poll_until_done(client, job_id)
+
+    assert body["status"] == "done"
+    assert body["error"] is None
+    result = body["result"]
+    assert result["drug_name"] == "duloxetine"
+    assert result["candidate_diseases"] == ["alcohol dependence", "obesity", "bipolar disorder"]
+    assert result["top_diseases"] == ["alcohol dependence", "obesity"]
+    assert result["summary"].startswith("Duloxetine shows mechanism-grounded")
+    assert len(result["disease_findings"]) == 2
+    assert result["disease_findings"][0] == {
+        "disease": "alcohol dependence",
+        "source": "mechanism",
+        "literature": None,
+        "clinical_trials": None,
+        "blurb": None,
+    }
