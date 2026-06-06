@@ -44,46 +44,18 @@ async def _run_for_drug(
 ) -> None:
     # Imports are deferred until after _load_env() runs in main(), because
     # base_client.py calls get_settings() at import time.
-    from langchain_anthropic import ChatAnthropic
-
-    from indication_scout.agents.supervisor.supervisor_agent import (
-        build_supervisor_agent,
-        run_supervisor_agent,
-    )
-    from indication_scout.constants import DEFAULT_CACHE_DIR
-    from indication_scout.db.session import get_db
     from indication_scout.helpers.drug_helpers import normalize_drug_name
-    from indication_scout.report.format_report import format_report
-    from indication_scout.services.retrieval import RetrievalService
+    from indication_scout.services.analysis_runner import run_analysis
     from indication_scout.tracing import setup_tracing, shutdown_tracing
 
     setup_tracing()
     try:
-        # Normalize at the entry point so every downstream consumer (cache keys,
-        # tools, sub-agents, snapshot filename, logs) sees a consistent lowercased
-        # form. Anything that needs the original casing must be captured before
-        # this point.
+        # Normalize at the entry point so filenames/logs below see the same lowercased form
+        # run_analysis derives internally (normalize_drug_name is idempotent).
         drug = normalize_drug_name(drug)
 
-        llm = ChatAnthropic(
-            model="claude-sonnet-4-6",
-            temperature=0,
-            max_tokens=4096,
-            api_key=os.environ["ANTHROPIC_API_KEY"],
-        )
-        db = next(get_db())
-        svc = RetrievalService(DEFAULT_CACHE_DIR)
-
         logger.info("Starting %s (date_before=%s)", drug, date_before)
-        agent, get_merged_allowlist, get_auto_findings = build_supervisor_agent(
-            llm=llm, svc=svc, db=db, date_before=date_before
-        )
-        output = await run_supervisor_agent(
-            agent,
-            get_merged_allowlist,
-            drug,
-            get_auto_findings=get_auto_findings,
-        )
+        output, report_md = await run_analysis(drug, date_before=date_before)
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -97,14 +69,13 @@ async def _run_for_drug(
             click.echo(f"Payload:   {payload_path}")
 
         if not write:
-            click.echo(format_report(output))
+            click.echo(report_md)
             return
 
         write_dir = out_dir / "holdouts" if date_before else out_dir
         write_dir.mkdir(parents=True, exist_ok=True)
         cutoff_tag = f"_holdout_{date_before.isoformat()}" if date_before else ""
         md_path = write_dir / f"{drug}{cutoff_tag}_{timestamp}.md"
-        report_md = format_report(output)
         if date_before is not None:
             banner = f"> **HOLDOUT** — date_before={date_before.isoformat()}\n\n"
             report_md = banner + report_md

@@ -9,18 +9,16 @@ Expected values verified by a live run on 2026-04-08 with drug=metformin.
 import logging
 
 import pytest
-from langchain_anthropic import ChatAnthropic
 
+from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 from indication_scout.agents.supervisor.supervisor_agent import (
-    build_supervisor_agent,
     run_supervisor_agent,
 )
 from indication_scout.agents.supervisor.supervisor_output import (
     CandidateFindings,
     SupervisorOutput,
 )
-from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
-from indication_scout.services.retrieval import RetrievalService
+from indication_scout.services.analysis_runner import build_agent
 
 logger = logging.getLogger(__name__)
 
@@ -30,18 +28,18 @@ logger = logging.getLogger(__name__)
 # Expected values verified by a live run on 2026-04-08.
 # ------------------------------------------------------------------
 
-# Stable subset of candidate diseases surfaced by find_candidates via Open Targets
-# (full list from live run: cardiovascular disease, polycystic ovary syndrome,
-#  metabolic disease, gestational diabetes, lipid metabolism disorder,
-#  metabolic syndrome, type 1 diabetes, insulin resistance, prostate cancer,
-#  muscular dystrophy, brain cancer, bipolar disorder, migraine,
-#  colorectal cancer, psoriasis)
+# Stable subset of candidate diseases surfaced by find_candidates via Open Targets.
+# Re-baselined 2026-06-06 after integration tests began loading .env.constants.integration
+# (larger SUPERVISOR_CANDIDATE_CAP / OPEN_TARGETS prefetch). At integration-scale caps the
+# wider competitor pool feeds the hierarchical dedup pass, which collapses specific subtypes
+# (insulin resistance, metabolic syndrome, prostate cancer) into broader parents
+# (metabolic disease, diabetes mellitus, cardiovascular disease). PCOS and gestational
+# diabetes are the top-ranked RCT-level signals and survive dedup run-to-run.
+# (full list from 2026-06-06 run: cardiovascular disease, hepatic steatosis,
+#  polycystic ovary syndrome, metabolic disease, gestational diabetes, diabetes mellitus)
 _EXPECTED_CANDIDATES = {
     "polycystic ovary syndrome",
     "gestational diabetes",
-    "metabolic syndrome",
-    "insulin resistance",
-    "prostate cancer",
 }
 
 # Mechanism target symbols that must appear (mirrors test_mechanism_agent.py)
@@ -50,9 +48,7 @@ _EXPECTED_TARGET_SYMBOLS = {"NDUFS2", "NDUFS1", "NDUFV1", "MT-ND1", "GPD2"}
 
 @pytest.fixture
 def supervisor_agent(db_session_truncating, test_cache_dir):
-    llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
-    svc = RetrievalService(test_cache_dir)
-    return build_supervisor_agent(llm, svc=svc, db=db_session_truncating)
+    return build_agent(db_session_truncating, cache_dir=test_cache_dir)
 
 
 async def test_metformin_supervisor_agent(supervisor_agent):
@@ -122,12 +118,12 @@ async def test_metformin_supervisor_agent(supervisor_agent):
     ), "disease_findings must lead with top_diseases in rank order"
 
     # --- summary: finalize_supervisor was called ---
-    # Per supervisor.txt "WRITING THE SUMMARY", the summary is a structured fact list of
-    # investigated candidates (one line per disease with literature/trials/FDA fields), not a
-    # narrative — so the drug name is intentionally absent from the format.
+    # Per supervisor.txt "WRITING THE SUMMARY", the summary is a structured ranked
+    # fact list headed "Ranked repurposing signals for <drug>:", one line per
+    # investigated pair with literature-maturity and development-status phrases
+    # (not field labels), not a narrative.
     assert len(output.summary) > 100
     summary_lower = output.summary.lower()
-    assert "literature:" in summary_lower
-    assert "trials:" in summary_lower
+    assert "ranked repurposing signals for metformin:" in summary_lower
     # Must not look like raw JSON or a tool schema
     assert not output.summary.strip().startswith("{")

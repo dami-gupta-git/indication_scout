@@ -8,7 +8,7 @@ import os
 # .env.constants.test for unit tests; we override that here. A genuine shell
 # override (anything other than the unit-test default) is preserved.
 if os.environ.get("CONSTANTS_FILE") in (None, ".env.constants.test"):
-    os.environ["CONSTANTS_FILE"] = ".env.constants.test"
+    os.environ["CONSTANTS_FILE"] = ".env.constants.integration"
 
 import pytest
 from dotenv import load_dotenv

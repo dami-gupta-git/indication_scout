@@ -26,35 +26,15 @@ load_dotenv(constants_path)
 # Also export so config.py's pydantic Settings reads the same file.
 os.environ["CONSTANTS_FILE"] = str(constants_path)
 
-from langchain_anthropic import ChatAnthropic
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     _classify_stop_reason,
 )
-from indication_scout.agents.supervisor.supervisor_agent import (
-    build_supervisor_agent,
-    run_supervisor_agent,
-)
-from indication_scout.config import get_settings
-from indication_scout.constants import DEFAULT_CACHE_DIR
-from indication_scout.report.format_report import (
-    _splice_blurbs_into_summary,
-    format_report,
-)
-from indication_scout.services.retrieval import RetrievalService
+from indication_scout.report.format_report import _splice_blurbs_into_summary
+from indication_scout.services.analysis_runner import run_analysis
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 st.set_page_config(page_title="IndicationScout", page_icon="static/favicon.png", layout="wide")
-
-
-def _make_db_session():
-    settings = get_settings()
-    engine = create_engine(settings.database_url)
-    Session = sessionmaker(bind=engine)
-    return Session()
 
 
 def _title_case(name: str) -> str:
@@ -62,30 +42,6 @@ def _title_case(name: str) -> str:
     rest of each word untouched so acronyms (e.g. NSCLC) and possessives (e.g.
     Alzheimer's) are preserved."""
     return " ".join(w[:1].upper() + w[1:] if w else w for w in name.split(" "))
-
-
-def _build_agent(db):
-    settings = get_settings()
-    llm = ChatAnthropic(
-        model=settings.llm_model,
-        temperature=0,
-        max_tokens=4096,
-        anthropic_api_key=settings.anthropic_api_key,
-    )
-    svc = RetrievalService(DEFAULT_CACHE_DIR)
-    return build_supervisor_agent(llm, svc=svc, db=db)
-
-
-async def _run(drug_name: str):
-    db = _make_db_session()
-    try:
-        agent, get_merged_allowlist, get_auto_findings = _build_agent(db)
-        output = await run_supervisor_agent(
-            agent, get_merged_allowlist, drug_name, get_auto_findings=get_auto_findings
-        )
-        return output, format_report(output)
-    finally:
-        db.close()
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +72,7 @@ with st.sidebar:
         drug_name = drug_name.strip()
         with st.spinner(f"Running analysis for **{drug_name}**… this may take several minutes."):
             try:
-                output, report_md = asyncio.run(_run(drug_name))
+                output, report_md = asyncio.run(run_analysis(drug_name))
             except Exception as exc:
                 logger.exception("Analysis failed for %s", drug_name)
                 st.error(f"Analysis failed: {exc}")

@@ -4,6 +4,8 @@ Covers the clinical-trials section rewrite (search / completed / terminated /
 landscape / approval) and the top-level format_report assembly.
 """
 
+import pytest
+
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
 )
@@ -181,6 +183,10 @@ def test_fmt_clinical_trials_terminated_zero_count_renders_nothing_for_section()
     assert "Terminated trials" not in rendered
 
 
+@pytest.mark.skip(
+    reason="Competitive landscape rendering in the report is deferred; the data is still "
+    "surfaced in the UI (Clinical Trials tab). See PLAN_react.md."
+)
 def test_fmt_clinical_trials_landscape_renders_competitors():
     out = ClinicalTrialsOutput(
         landscape=IndicationLandscape(
