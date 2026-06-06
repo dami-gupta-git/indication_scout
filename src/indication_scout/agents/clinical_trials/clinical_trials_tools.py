@@ -138,7 +138,7 @@ def build_clinical_trials_tools(
         """
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
-            logger.warning(
+            logger.debug(
                 "search_trials: could not resolve MeSH id for indication '%s'; "
                 "returning empty SearchTrialsResult",
                 indication,
@@ -210,7 +210,7 @@ def build_clinical_trials_tools(
         """
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
-            logger.warning(
+            logger.debug(
                 "get_completed: could not resolve MeSH id for indication '%s'; "
                 "returning empty CompletedTrialsResult",
                 indication,
@@ -287,7 +287,7 @@ def build_clinical_trials_tools(
         """
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
-            logger.warning(
+            logger.debug(
                 "get_terminated: could not resolve MeSH id for indication '%s'; "
                 "returning empty TerminatedTrialsResult",
                 indication,
@@ -382,7 +382,7 @@ def build_clinical_trials_tools(
 
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
-            logger.warning(
+            logger.debug(
                 "get_landscape: could not resolve MeSH id for indication '%s'; "
                 "returning empty IndicationLandscape",
                 indication,

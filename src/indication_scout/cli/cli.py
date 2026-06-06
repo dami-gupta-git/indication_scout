@@ -55,59 +55,65 @@ async def _run_for_drug(
     from indication_scout.helpers.drug_helpers import normalize_drug_name
     from indication_scout.report.format_report import format_report
     from indication_scout.services.retrieval import RetrievalService
+    from indication_scout.tracing import setup_tracing, shutdown_tracing
 
-    # Normalize at the entry point so every downstream consumer (cache keys,
-    # tools, sub-agents, snapshot filename, logs) sees a consistent lowercased
-    # form. Anything that needs the original casing must be captured before
-    # this point.
-    drug = normalize_drug_name(drug)
+    setup_tracing()
+    try:
+        # Normalize at the entry point so every downstream consumer (cache keys,
+        # tools, sub-agents, snapshot filename, logs) sees a consistent lowercased
+        # form. Anything that needs the original casing must be captured before
+        # this point.
+        drug = normalize_drug_name(drug)
 
-    llm = ChatAnthropic(
-        model="claude-sonnet-4-6",
-        temperature=0,
-        max_tokens=4096,
-        api_key=os.environ["ANTHROPIC_API_KEY"],
-    )
-    db = next(get_db())
-    svc = RetrievalService(DEFAULT_CACHE_DIR)
+        llm = ChatAnthropic(
+            model="claude-sonnet-4-6",
+            temperature=0,
+            max_tokens=4096,
+            api_key=os.environ["ANTHROPIC_API_KEY"],
+        )
+        db = next(get_db())
+        svc = RetrievalService(DEFAULT_CACHE_DIR)
 
-    logger.info("Starting %s (date_before=%s)", drug, date_before)
-    agent, get_merged_allowlist, get_auto_findings = build_supervisor_agent(
-        llm=llm, svc=svc, db=db, date_before=date_before
-    )
-    output = await run_supervisor_agent(
-        agent,
-        get_merged_allowlist,
-        drug,
-        get_auto_findings=get_auto_findings,
-    )
+        logger.info("Starting %s (date_before=%s)", drug, date_before)
+        agent, get_merged_allowlist, get_auto_findings = build_supervisor_agent(
+            llm=llm, svc=svc, db=db, date_before=date_before
+        )
+        output = await run_supervisor_agent(
+            agent,
+            get_merged_allowlist,
+            drug,
+            get_auto_findings=get_auto_findings,
+        )
 
-    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-    # Persist the SupervisorOutput payload so the report can be re-rendered later
-    # via `scout render` without re-running the pipeline. Skip for holdout runs.
-    if date_before is None:
-        TEST_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-        payload_path = TEST_REPORTS_DIR / f"{drug}_{timestamp}.json"
-        payload_path.write_text(output.model_dump_json(indent=2), encoding="utf-8")
-        logger.info("Saved payload -> %s", payload_path)
-        click.echo(f"Payload:   {payload_path}")
+        # Persist the SupervisorOutput payload so the report can be re-rendered later
+        # via `scout render` without re-running the pipeline. Skip for holdout runs.
+        if date_before is None:
+            TEST_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+            payload_path = TEST_REPORTS_DIR / f"{drug}_{timestamp}.json"
+            payload_path.write_text(output.model_dump_json(indent=2), encoding="utf-8")
+            logger.info("Saved payload -> %s", payload_path)
+            click.echo(f"Payload:   {payload_path}")
 
-    if not write:
-        click.echo(format_report(output))
-        return
+        if not write:
+            click.echo(format_report(output))
+            return
 
-    write_dir = out_dir / "holdouts" if date_before else out_dir
-    write_dir.mkdir(parents=True, exist_ok=True)
-    cutoff_tag = f"_holdout_{date_before.isoformat()}" if date_before else ""
-    md_path = write_dir / f"{drug}{cutoff_tag}_{timestamp}.md"
-    report_md = format_report(output)
-    if date_before is not None:
-        banner = f"> **HOLDOUT** — date_before={date_before.isoformat()}\n\n"
-        report_md = banner + report_md
-    md_path.write_text(report_md, encoding="utf-8")
-    logger.info("Finished %s -> %s", drug, md_path)
-    click.echo(f"Report:    {md_path}")
+        write_dir = out_dir / "holdouts" if date_before else out_dir
+        write_dir.mkdir(parents=True, exist_ok=True)
+        cutoff_tag = f"_holdout_{date_before.isoformat()}" if date_before else ""
+        md_path = write_dir / f"{drug}{cutoff_tag}_{timestamp}.md"
+        report_md = format_report(output)
+        if date_before is not None:
+            banner = f"> **HOLDOUT** — date_before={date_before.isoformat()}\n\n"
+            report_md = banner + report_md
+        md_path.write_text(report_md, encoding="utf-8")
+        logger.info("Finished %s -> %s", drug, md_path)
+        click.echo(f"Report:    {md_path}")
+
+    finally:
+        shutdown_tracing()
 
 
 @click.group()

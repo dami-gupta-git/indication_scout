@@ -46,6 +46,14 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
 
+    # Tracing (OpenTelemetry -> Langfuse). Opt-in; all optional so absence never
+    # breaks startup. tracing_enabled is the master switch; the langfuse_* values
+    # come from .env. See tracing.py.
+    tracing_enabled: bool = False
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_base_url: str = "https://us.cloud.langfuse.com"
+
     # -- Tunable limits (values come from .env.constants) ----------------------
     # No defaults here — if .env.constants is missing a field, startup fails
     # immediately so you know what to add.

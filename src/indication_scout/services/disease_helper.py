@@ -404,7 +404,7 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
     translation = esearch_data.get("esearchresult", {}).get("querytranslation", "")
 
     if not uids:
-        logger.warning("MeSH resolver: no esearch hit for '%s'", indication)
+        logger.debug("MeSH resolver: no esearch hit for '%s'", indication)
         return None
 
     match = _MESH_PREF_TERM_RE.search(translation)
