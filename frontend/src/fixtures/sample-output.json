@@ -68,7 +68,7 @@
         "target_function": "G-protein coupled receptor for glucagon-like peptide 1 (GLP- 1). Ligand binding triggers activation of a signaling cascade that leads to the activation of adenylyl cyclase and increased intracellular cAMP levels. Plays a role in regulating insulin secretion in response to GLP-1.."
       }
     ],
-    "summary": "Semaglutide acts as a selective GLP1R agonist, with its single target — the Glucagon-Like Peptide 1 Receptor — showing strong disease associations across metabolic conditions. GLP1R has its highest-confidence links to type 2 diabetes mellitus (overall score 0.767) and obesity (0.721), both supported by near-perfect clinical evidence scores, consistent with semaglutide's dual approvals as Ozempic® and Wegovy®. Emerging evidence also connects GLP1R to type 1 diabetes (driven by animal models) and hypertension (driven by clinical data), suggesting pleiotropic cardiovascular and β-cell protective effects that align with semaglutide's observed benefits in cardiovascular outcome trials such as SELECT."
+    "summary": "Semaglutide acts as a selective GLP-1 receptor (GLP1R) agonist, its sole mechanism of action. GLP1R shows its strongest disease associations with type 2 diabetes mellitus (0.767) and obesity (0.721), both supported by near-perfect clinical evidence scores, consistent with semaglutide's approved indications for glycaemic control and weight management. A moderate association with type 1 diabetes (0.531) is largely preclinical, driven by animal model and literature evidence, suggesting investigational potential in preserving β-cell function. The hypertension association (0.482) appears to be a pleiotropic pharmacological effect — supported by clinical trial data but lacking genetic backing — reflecting the cardiovascular benefits observed in semaglutide outcome trials."
   },
   "disease_findings": [
     {
@@ -76,14 +76,15 @@
       "source": "both",
       "literature": {
         "search_results": [
-          "semaglutide AND \"diabetes mellitus, type 1\"",
+          "semaglutide AND \"Diabetes Mellitus, Type 1\"",
           "glucagon-like peptide-1 analogues AND pancreas",
           "blood glucose lowering drugs AND pancreas",
           "GLP-1 receptor agonist AND pancreas",
-          "GLP1R AND \"diabetes mellitus, type 1\"",
-          "ozempic AND \"diabetes mellitus, type 1\"",
-          "wegovy AND \"diabetes mellitus, type 1\"",
-          "GLP-1 agonist AND beta cell function"
+          "GLP1R AND \"Diabetes Mellitus, Type 1\"",
+          "ozempic AND \"Diabetes Mellitus, Type 1\"",
+          "wegovy AND \"Diabetes Mellitus, Type 1\"",
+          "GLP-1 agonist AND beta cell function",
+          "incretin mimetic AND \"Diabetes Mellitus, Type 1\""
         ],
         "pmids": [
           "40550013",
@@ -98,8 +99,8 @@
           "37672701",
           "38403174",
           "41048008",
-          "38231640",
           "38231642",
+          "38231640",
           "38231641",
           "40712645",
           "40937414",
@@ -163,8 +164,8 @@
           "29617641",
           "9519708",
           "20203154",
-          "39589189",
           "24716398",
+          "39589189",
           "26835799",
           "22624171",
           "23955813",
@@ -184,6 +185,7 @@
           "40726451",
           "40022528",
           "39717993",
+          "38275036",
           "33421947",
           "37897727",
           "22945360",
@@ -195,7 +197,21 @@
           "38985854",
           "34608929",
           "40399267",
-          "17098089"
+          "17098089",
+          "38278529",
+          "33595677",
+          "37505282",
+          "38512447",
+          "33662334",
+          "27506222",
+          "29728598",
+          "38317405",
+          "40652453",
+          "40652450",
+          "41264593",
+          "39517127",
+          "33332928",
+          "38805967"
         ],
         "semantic_search_results": [
           {
@@ -232,19 +248,19 @@
           }
         ],
         "evidence_summary": {
-          "summary": "The evidence supports the use of semaglutide as an adjunct therapy in adults with type 1 diabetes, particularly those with obesity or overweight. Two randomized, double-blind trials specifically evaluating semaglutide in type 1 diabetes demonstrated significant improvements in glycemic control and body weight compared to placebo (PMID: 40550013, PMID: 39794615). A third abstract evaluated liraglutide (not semaglutide) in type 1 diabetes and is only partially relevant as context for GLP-1 receptor agonist use in this population (PMID: 28722271).",
+          "summary": "The evidence supports the use of semaglutide as an adjunct therapy in adults with type 1 diabetes, particularly those with obesity or overweight. Two randomized, double-blind trials demonstrated that semaglutide improved glycemic control (time in range) and reduced body weight when added to automated insulin delivery systems in adults with type 1 diabetes (PMID: 40550013, PMID: 39794615). A third abstract examined liraglutide (not semaglutide) in type 1 diabetes and showed anthropometric and metabolic improvements without increased hypoglycemia (PMID: 28722271), providing indirect but not directly applicable evidence for semaglutide.",
           "study_count": 3,
           "strength": "moderate",
           "key_findings": [
-            "In a 26-week double-blind RCT of 72 adults with type 1 diabetes and obesity using automated insulin delivery, 36% of semaglutide-treated patients vs. 0% of placebo patients achieved the composite primary endpoint of time in range >70%, time below range <4%, and ≥5% weight reduction (PMID: 40550013).",
+            "In a 26-week double-blind RCT of 72 adults with type 1 diabetes and obesity (BMI ≥30) using automated insulin delivery, 36% of semaglutide-treated patients vs. 0% of placebo patients achieved the composite primary endpoint of time in range >70%, time below range <4%, and ≥5% weight reduction (PMID: 40550013).",
             "Semaglutide treatment resulted in a least-squares mean difference of -8.8 kg in body weight compared to placebo over 26 weeks in adults with type 1 diabetes and obesity (PMID: 40550013).",
-            "Semaglutide improved CGM-based time in the target glucose range (70-180 mg/dl) by 8.8 percentage points compared to placebo in adults with type 1 diabetes (PMID: 40550013).",
-            "In a randomized, double-blind, crossover trial of 28 adults with type 1 diabetes, semaglutide as adjunct to automated insulin delivery increased time in target glucose range (3.9-10.0 mmol/l) by a mean of 4.8 percentage points compared to placebo (P=0.006) (PMID: 39794615).",
-            "Semaglutide did not increase time spent below 3.9 mmol/l (P=0.19) or below 3.0 mmol/l (P=0.65) compared to placebo in adults with type 1 diabetes using automated insulin delivery (PMID: 39794615).",
-            "Two episodes of recurrent euglycemic ketosis without acidosis occurred during semaglutide use in the crossover trial, though no diabetic ketoacidosis or severe hypoglycemia occurred in either intervention arm (PMID: 39794615).",
-            "No diabetic ketoacidosis was reported and only two severe hypoglycemia events occurred in each group in the 26-week semaglutide trial in type 1 diabetes (PMID: 40550013).",
-            "Addition of liraglutide (a GLP-1 receptor agonist) to basal/bolus insulin for 24 weeks in overweight/obese individuals with type 1 diabetes significantly reduced weight, BMI, waist and hip circumferences, body fatness, and blood pressure without increasing hypoglycemia (PMID: 28722271).",
-            "Once-weekly semaglutide is approved for type 2 diabetes and obesity, but its efficacy and safety in adults with type 1 diabetes were not established prior to the ADJUST-T1D trial (PMID: 40550013)."
+            "Semaglutide improved HbA1c by a least-squares mean difference of -0.3 percentage points compared to placebo in adults with type 1 diabetes and obesity (PMID: 40550013).",
+            "No diabetic ketoacidosis was reported in either the semaglutide or placebo group in the 26-week trial, and severe hypoglycemia events were equal (two per group) (PMID: 40550013).",
+            "In a randomized, double-blind, crossover trial of 28 adults with type 1 diabetes, semaglutide increased time in target glucose range (3.9–10.0 mmol/l) by a mean of 4.8 percentage points compared to placebo (P = 0.006) when used as adjunct to automated insulin delivery (PMID: 39794615).",
+            "Semaglutide did not increase time spent below 3.9 mmol/l (P = 0.19) or below 3.0 mmol/l (P = 0.65) compared to placebo in adults with type 1 diabetes using automated insulin delivery (PMID: 39794615).",
+            "Two episodes of recurrent euglycemic ketosis without acidosis occurred during semaglutide use in the crossover trial, representing a potential safety signal (PMID: 39794615).",
+            "In a 24-week double-blind crossover trial, liraglutide (a GLP-1 receptor agonist, not semaglutide) added to basal/bolus insulin in overweight adults with type 1 diabetes significantly reduced weight, BMI, waist and hip circumferences, body fatness, and blood pressure without increasing hypoglycemia (PMID: 28722271).",
+            "Liraglutide had no treatment effect on HbA1c or insulin dose in overweight adults with type 1 diabetes over 24 weeks (PMID: 28722271)."
           ],
           "supporting_pmids": [
             "40550013",
@@ -252,7 +268,7 @@
             "28722271"
           ]
         },
-        "summary": "Moderate evidence supports investigating semaglutide as an adjunct therapy in type 1 diabetes mellitus (T1DM), based on 3 semantically relevant abstracts retrieved from 110 PubMed records. The evidence strength is rated moderate."
+        "summary": "Moderate evidence supports investigating semaglutide as an adjunct therapy in type 1 diabetes mellitus, primarily through its GLP-1 receptor agonist mechanism."
       },
       "clinical_trials": {
         "search": {
@@ -2437,17 +2453,17 @@
             "wegovy"
           ]
         },
-        "summary": "Semaglutide has 16 trials on record in type 1 diabetes mellitus, spanning Early Phase 1 through Phase 4, and this exact indication does not appear on its FDA labels in this run. Four trials are on record as completed — most notably NCT05205928 (Phase 2/Phase 3), a pivotal-scale study of semaglutide as adjunct to closed-loop insulin therapy with a linked publication (PMID 39794615), and NCT05537233 (Phase 2, PMID 40550013) — neither of which led to approval for this indication. Two Phase 3 programs are actively progressing: NCT06082063 targeting cardiovascular outcomes in T1DM (currently recruiting) and NCT06909006 focused on obesity and insulin resistance in T1DM (not yet recruiting), with no terminated trials and no stopping signals on record for this pair."
+        "summary": "Semaglutide has 16 trials on record in type 1 diabetes mellitus, spanning Early Phase 1 through Phase 4, and this exact indication does not appear on its FDA labels. The completed portfolio includes a pivotal-scale Phase 2/Phase 3 trial (NCT05205928) evaluating semaglutide as an adjunct to closed-loop insulin therapy — with a published readout (PMID 39794615) — and a Phase 2 adjunct therapy trial (NCT05537233, PMID 40550013), neither of which led to approval for this exact indication. The active pipeline is substantial: two Phase 3 trials are underway or imminent (cardiovascular risk reduction and weight/insulin resistance), a Phase 2 trial targets diabetic kidney disease, and a novel Phase 2 program (SHIELD-T1D) is exploring beta-cell preservation in recent-onset T1DM. There are no terminated trials on record, meaning no stopping signals from safety or efficacy concerns exist for this pair, and the competitive landscape in T1DM is moderately crowded with 10 identified competitors including insulin optimization platforms and immunomodulatory agents."
       },
       "blurb": {
-        "stage": "Phase 2 completed (NCT05537233, PMID 40550013; NCT05205928 Phase 2/Phase 3, PMID 39794615); Phase 3 recruiting (NCT06082063, NCT06909006)",
-        "literature": "Moderate; two completed double-blind RCTs showing significant improvements in time-in-range and body weight vs. placebo",
-        "blocker": "No completed Phase 3 efficacy readout for T1DM as primary indication; regulatory pathway not yet established",
-        "active_programs": "2 Phase 3 trials recruiting (cardiovascular outcomes in T1DM; obesity/insulin resistance in T1DM)",
-        "key_risk": "Phase 3 may not replicate Phase 2-scale signals; euglycemic ketosis events noted in Phase 2 crossover trial",
+        "stage": "Phase 2 completed (NCT05537233, PMID 40550013; NCT05205928 Phase 2/Phase 3, PMID 39794615); active Phase 3 pipeline, no approval for T1DM",
+        "literature": "Moderate; two double-blind RCTs with quantified efficacy readouts (time in range, HbA1c, weight) as adjunct to automated insulin delivery",
+        "blocker": "No Phase 3 readout yet for the primary T1DM adjunct indication; euglycemic ketosis signal noted in one crossover trial",
+        "active_programs": "Multiple recruiting/active trials including Phase 3 cardiovascular risk and weight/insulin resistance programs; SHIELD-T1D beta-cell preservation Phase 2",
+        "key_risk": "Phase 3 may not replicate Phase 2 composite endpoint gains; euglycemic ketosis signal requires monitoring at scale",
         "verdict": "Live but bottlenecked",
-        "watch": "NCT06082063 (Phase 3, cardiovascular outcomes in T1DM, recruiting); NCT06909006 (Phase 3, obesity/insulin resistance in T1DM, not yet recruiting)",
-        "prose": "Two completed RCTs demonstrated that semaglutide as adjunct to automated insulin delivery significantly improved time in target glucose range and body weight in adults with T1DM and obesity, with no diabetic ketoacidosis reported, though euglycemic ketosis events were observed in the crossover trial. The hypothesis is live and advancing into Phase 3, but no pivotal readout has been published and the regulatory pathway for T1DM remains open."
+        "watch": "NCT05537233 Phase 2 readout published (PMID 40550013); Phase 3 trials actively recruiting — no specific readout date surfaced this run",
+        "prose": "Two completed RCTs (PMID 40550013, PMID 39794615) demonstrated statistically significant improvements in time in range and body weight as adjunct to automated insulin delivery in adults with T1DM and obesity, with no DKA events and balanced severe hypoglycemia, establishing proof-of-concept. The hypothesis remains open and active — no Phase 3 readout has been published and a euglycemic ketosis signal from the crossover trial represents an unresolved safety question that will need to be addressed at larger scale."
       }
     },
     {
@@ -2455,14 +2471,14 @@
       "source": "competitor",
       "literature": {
         "search_results": [
-          "semaglutide AND \"parkinson disease\"",
+          "semaglutide AND \"Parkinson Disease\"",
           "glucagon-like peptide-1 receptor agonist AND brain",
           "GLP-1 receptor agonist AND neurodegeneration",
-          "GLP1R AND \"parkinson disease\"",
+          "GLP1R AND \"Parkinson Disease\"",
           "GLP1R AND neuroinflammation",
-          "wegovy AND \"parkinson disease\"",
-          "ozempic AND \"parkinson disease\"",
-          "GLP-1 agonist AND neuronal protection"
+          "wegovy AND \"Parkinson Disease\"",
+          "ozempic AND \"Parkinson Disease\"",
+          "GLP-1 agonist AND neuroprotection brain"
         ],
         "pmids": [
           "38612620",
@@ -2547,22 +2563,43 @@
           "41226780",
           "39643213",
           "39586940",
-          "39289339",
           "40479843",
-          "38598580",
-          "39952607",
-          "39486172",
-          "40738791",
-          "33888049",
-          "39858999",
-          "41069980",
-          "39767704",
-          "38931817",
-          "40134421",
-          "42035861",
-          "41876956"
+          "39780249",
+          "38750368",
+          "39059361",
+          "38598572",
+          "31518224",
+          "39321702",
+          "37328112",
+          "38746639",
+          "28781108",
+          "39301360",
+          "40189519",
+          "40172827"
         ],
         "semantic_search_results": [
+          {
+            "pmid": "38598572",
+            "title": "Trial of Lixisenatide in Early Parkinson's Disease.",
+            "abstract": "BACKGROUND: Lixisenatide, a glucagon-like peptide-1 receptor agonist used for the treatment of diabetes, has shown neuroprotective properties in a mouse model of Parkinson's disease. METHODS: In this phase 2, double-blind, randomized, placebo-controlled trial, we assessed the effect of lixisenatide on the progression of motor disability in persons with Parkinson's disease. Participants in whom Parkinson's disease was diagnosed less than 3 years earlier, who were receiving a stable dose of medications to treat symptoms, and who did not have motor complications were randomly assigned in a 1:1 ratio to daily subcutaneous lixisenatide or placebo for 12 months, followed by a 2-month washout period. The primary end point was the change from baseline in scores on the Movement Disorder Society-Unified Parkinson's Disease Rating Scale (MDS-UPDRS) part III (range, 0 to 132, with higher scores indicating greater motor disability), which was assessed in patients in the on-medication state at 12 months. Secondary end points included other MDS-UPDRS subscores at 6, 12, and 14 months and doses of levodopa equivalent. RESULTS: A total of 156 persons were enrolled, with 78 assigned to each group. MDS-UPDRS part III scores at baseline were approximately 15 in both groups. At 12 months, scores on the MDS-UPDRS part III had changed by -0.04 points (indicating improvement) in the lixisenatide group and 3.04 points (indicating worsening disability) in the placebo group (difference, 3.08; 95% confidence interval, 0.86 to 5.30; P = 0.007). At 14 months, after a 2-month washout period, the mean MDS-UPDRS motor scores in the off-medication state were 17.7 (95% CI, 15.7 to 19.7) with lixisenatide and 20.6 (95% CI, 18.5 to 22.8) with placebo. Other results relative to the secondary end points did not differ substantially between the groups. Nausea occurred in 46% of participants receiving lixisenatide, and vomiting occurred in 13%. CONCLUSIONS: In participants with early Parkinson's disease, lixisenatide therapy resulted in less progression of motor disability than placebo at 12 months in a phase 2 trial but was associated with gastrointestinal side effects. Longer and larger trials are needed to determine the effects and safety of lixisenatide in persons with Parkinson's disease. (Funded by the French Ministry of Health and others; LIXIPARK ClinicalTrials.gov number, NCT03439943.).",
+            "similarity": 0.7506104988400272,
+            "pubtype": [
+              "Randomized Controlled Trial",
+              "Clinical Trial, Phase II",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "28781108",
+            "title": "Exenatide once weekly versus placebo in Parkinson's disease: a randomised, double-blind, placebo-controlled trial.",
+            "abstract": "BACKGROUND: Exenatide, a glucagon-like peptide-1 (GLP-1) receptor agonist, has neuroprotective effects in preclinical models of Parkinson's disease. We investigated whether these effects would be apparent in a clinical trial. METHODS: In this single-centre, randomised, double-blind, placebo-controlled trial, patients with moderate Parkinson's disease were randomly assigned (1:1) to receive subcutaneous injections of exenatide 2 mg or placebo once weekly for 48 weeks in addition to their regular medication, followed by a 12-week washout period. Eligible patients were aged 25-75 years, had idiopathic Parkinson's disease as measured by Queen Square Brain Bank criteria, were on dopaminergic treatment with wearing-off effects, and were at Hoehn and Yahr stage 2·5 or less when on treatment. Randomisation was by web-based randomisation with a two strata block design according to disease severity. Patients and investigators were masked to treatment allocation. The primary outcome was the adjusted difference in the Movement Disorders Society Unified Parkinson's Disease Rating Scale (MDS-UPDRS) motor subscale (part 3) in the practically defined off-medication state at 60 weeks. All efficacy analyses were based on a modified intention-to-treat principle, which included all patients who completed any post-randomisation follow-up assessments. The study is registered at ClinicalTrials.gov (NCT01971242) and is completed. FINDINGS: Between June 18, 2014, and March 13, 2015, 62 patients were enrolled and randomly assigned, 32 to exenatide and 30 to placebo. Our primary analysis included 31 patients in the exenatide group and 29 patients in the placebo group. At 60 weeks, off-medication scores on part 3 of the MDS-UPDRS had improved by 1·0 points (95% CI -2·6 to 0·7) in the exenatide group and worsened by 2·1 points (-0·6 to 4·8) in the placebo group, an adjusted mean difference of -3·5 points (-6·7 to -0·3; p=0·0318). Injection site reactions and gastrointestinal symptoms were common adverse events in both groups. Six serious adverse events occurred in the exenatide group and two in the placebo group, although none in either group were judged to be related to the study interventions. INTERPRETATION: Exenatide had positive effects on practically defined off-medication motor scores in Parkinson's disease, which were sustained beyond the period of exposure. Whether exenatide affects the underlying disease pathophysiology or simply induces long-lasting symptomatic effects is uncertain. Exenatide represents a major new avenue for investigation in Parkinson's disease, and effects on everyday symptoms should be examined in longer-term trials. FUNDING: Michael J Fox Foundation for Parkinson's Research.",
+            "similarity": 0.7158587808562887,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial"
+            ]
+          },
           {
             "pmid": "38101901",
             "title": "Safety, tolerability, and efficacy of NLY01 in early untreated Parkinson's disease: a randomised, double-blind, placebo-controlled trial.",
@@ -2573,49 +2610,21 @@
               "Journal Article",
               "Research Support, Non-U.S. Gov't"
             ]
-          },
-          {
-            "pmid": "40835782",
-            "title": "From diabetes to dopamine: Evaluating the disease-modifying potential of GLP-1 receptor agonists in Parkinson's disease. A systematic review and meta-analysis of placebo-controlled trials.",
-            "abstract": "BACKGROUND: While current therapies address symptom management, there is an unmet need for disease-modifying treatments in Parkinson's disease (PD). Glucagon-like peptide-1 receptor agonists (GLP-1 RAs), initially developed for diabetes, have shown neuroprotective properties. AIM: To assess the disease-modifying potential and safety of GLP-1 RAs in PD. METHODS: We followed Cochrane Handbook. We included all randomized controlled trials (RCTs) evaluating GLP-1 RAs in PD that were identified through comprehensive database searches through March 2025. Cochrane's risk-of-bias tool was used to assess the RCTs' quality. A random-effects model was used to calculate mean differences (MDs) and risk ratios (RRs) with their confidence intervals (CIs) and analyze them using R. RESULTS: Our meta-analysis of four placebo-controlled RCTs found that GLP-1 RAs demonstrated a statistically significant overall improvement in ON-medication motor scores (MDS-UPDRS Part III: MD -0.75, 95% CI [-1.50, -0.0009]; P = 0.04). However, this benefit was not consistently observed at individual follow-up time points. In contrast, the pooled analysis for OFF-medication motor scores showed no significant overall improvement (MD -1.39; P = 0.16), despite considerable heterogeneity; only the 60-week follow-up showed a significant benefit (MD -3.0; P = 0.005). No significant differences were found for health-related quality of life (PDQ-39), other MDS-UPDRS domains (Part I, Part II, or Part IV), or Levodopa equivalent daily dose. GLP-1 RAs were associated with significantly higher rates of gastrointestinal adverse events (loss of appetite, nausea, vomiting, dyspepsia, gastroesophageal reflux) and weight loss. CONCLUSIONS: Current evidence does not sufficiently support the routine use of GLP-1 RAs for motor improvement in PD.",
-            "similarity": 0.695671225791352,
-            "pubtype": [
-              "Journal Article",
-              "Systematic Review",
-              "Meta-Analysis"
-            ]
-          },
-          {
-            "pmid": "41448692",
-            "title": "Disease-modifying effect, safety and optimal dose of oral semaglutide tablets for patients with Parkinson's disease (MOST-ABLE study): protocol for a randomised, double-blind, placebo-controlled study.",
-            "abstract": "INTRODUCTION: Accumulating evidence suggests that glucagon-like peptide-1 (GLP-1) receptor agonists may have therapeutic effects against Parkinson's disease (PD); however, clinical evidence has not yet been established and remains controversial. This clinical study aims to assess the efficacy, disease-modifying effects, safety and optimal dose of oral semaglutide tablets, a GLP-1 receptor agonist, in idiopathic patients with PD. METHODS AND ANALYSIS: The MOST-ABLE study is a phase 2, multicentre, double-blind, randomised, placebo-controlled trial of oral semaglutide tablets in 99 participants with PD. Patients with PD (Hoehn & Yahr stages 1-2.5) at eight sites in Japan will be randomly assigned in a 1:1:1 ratio to one of three groups: oral semaglutide tablets (7 mg or 14 mg) or placebo. The study drugs will be administered once daily as an add-on to conventional medical treatment for PD. After 36 weeks of treatment, the participants will be treated without the study drugs for 12 weeks. The efficacy outcomes include Movement Disorder Society-Unified Parkinson's Disease Rating Scale (MDS-UPDRS), Parkinson's Disease Questionnaire-39, cognitive tests and dopamine transporter imaging. The primary endpoint is the change in the MDS-UPDRS part 3 score in the practically defined off-medication state from baseline at 48 weeks between the treatment allocation groups. The safety and tolerability will also be evaluated. ETHICS AND DISSEMINATION: The study protocol was approved by the Pharmaceuticals and Medical Devices Agency of Japan and the study was approved by the institutional review boards at the University of Osaka Hospital and each study site. All participants are required to provide informed consent. The results will be disseminated in peer-reviewed journals, presented at scientific meetings and presented to patients in a lay summary format. TRIAL REGISTRATION NUMBER: jRCT2051230090 (https://jrct.mhlw.go.jp/latest-detail/jRCT2051230090), universal trial number U1111-1271-3794.",
-            "similarity": 0.8114427761291833,
-            "pubtype": [
-              "Journal Article",
-              "Clinical Trial Protocol"
-            ]
           }
         ],
         "evidence_summary": {
-          "summary": "The evidence for repurposing semaglutide (a GLP-1 receptor agonist) for Parkinson's disease is mixed and inconclusive. A meta-analysis of four placebo-controlled RCTs of GLP-1 RAs in PD found only a marginal statistically significant improvement in ON-medication motor scores (MDS-UPDRS Part III: MD -0.75, P=0.04) with no consistent benefit across individual time points, and concluded that current evidence does not sufficiently support routine use of GLP-1 RAs for motor improvement in PD (PMID: 40835782). A phase 2 RCT of oral semaglutide tablets (MOST-ABLE study) is currently underway in Japan to specifically assess efficacy, disease-modifying effects, and optimal dosing of oral semaglutide in PD patients, with results not yet available (PMID: 41448692). A related GLP-1 RA (NLY01, a pegylated exenatide) failed to show improvement over placebo in motor or non-motor features in a 36-week RCT (PMID: 38101901).",
-          "study_count": 3,
-          "strength": "weak",
+          "summary": "The provided abstracts contain no data on semaglutide for Parkinson's disease. All three abstracts examine other GLP-1 receptor agonists — lixisenatide (PMID: 38598572), exenatide (PMID: 28781108), and NLY01 (a pegylated exenatide derivative) (PMID: 38101901) — in Parkinson's disease trials. While these related agents show mixed results (lixisenatide and exenatide showed some motor benefit, NLY01 did not), none of the abstracts mention semaglutide, and no evidence for semaglutide specifically in Parkinson's disease can be derived from the provided literature.",
+          "study_count": 0,
+          "strength": "none",
           "key_findings": [
-            "A meta-analysis of four placebo-controlled RCTs found GLP-1 RAs showed a statistically significant but marginal overall improvement in ON-medication motor scores (MDS-UPDRS Part III: MD -0.75, 95% CI [-1.50, -0.0009]; P=0.04), but this benefit was not consistently observed at individual follow-up time points (PMID: 40835782).",
-            "The pooled analysis for OFF-medication motor scores showed no significant overall improvement (MD -1.39; P=0.16), with only the 60-week follow-up showing a significant benefit (MD -3.0; P=0.005) (PMID: 40835782).",
-            "No significant differences were found for health-related quality of life (PDQ-39), MDS-UPDRS Parts I, II, or IV, or Levodopa equivalent daily dose in the GLP-1 RA meta-analysis (PMID: 40835782).",
-            "The meta-analysis concluded that current evidence does not sufficiently support the routine use of GLP-1 RAs for motor improvement in PD (PMID: 40835782).",
-            "GLP-1 RAs were associated with significantly higher rates of gastrointestinal adverse events (loss of appetite, nausea, vomiting, dyspepsia, gastroesophageal reflux) and weight loss compared to placebo (PMID: 40835782).",
-            "The MOST-ABLE study is a phase 2, multicentre, double-blind, randomised, placebo-controlled trial specifically evaluating oral semaglutide tablets (7 mg or 14 mg) in 99 PD patients, with the primary endpoint being change in MDS-UPDRS part 3 score in the off-medication state at 48 weeks; results are not yet available (PMID: 41448692).",
-            "NLY01 (a brain-penetrant, pegylated, longer-lasting GLP-1 receptor agonist based on exenatide) at 2.5 mg and 5.0 mg did not differ from placebo in change in MDS-UPDRS parts II and III sum scores at 36 weeks in a randomised, double-blind, placebo-controlled trial of 255 early untreated PD patients (PMID: 38101901).",
-            "A subgroup analysis in the NLY01 trial raised the possibility of motor benefit in younger participants, but the authors noted further study is needed to determine whether these exploratory observations are replicable (PMID: 38101901)."
+            "No abstract among the three provided mentions semaglutide; all trials tested other GLP-1 receptor agonists (lixisenatide, exenatide, NLY01) (PMIDs: 38598572, 28781108, 38101901).",
+            "Lixisenatide reduced MDS-UPDRS part III score progression compared to placebo in early Parkinson's disease at 12 months (PMID: 38598572), but this finding pertains to lixisenatide, not semaglutide.",
+            "Exenatide showed improved off-medication MDS-UPDRS motor scores versus placebo at 60 weeks (PMID: 28781108), but this finding pertains to exenatide, not semaglutide.",
+            "NLY01 (pegylated exenatide) at 2.5 mg and 5.0 mg did not differ from placebo on MDS-UPDRS parts II and III at 36 weeks (PMID: 38101901), but this finding pertains to NLY01, not semaglutide."
           ],
-          "supporting_pmids": [
-            "40835782",
-            "41448692"
-          ]
+          "supporting_pmids": []
         },
-        "summary": "Evidence synthesis complete for semaglutide in Parkinson's disease. Strength: weak. Based on 3 semantically relevant abstracts retrieved from 96 PubMed candidates across 8 queries."
+        "summary": "Evidence synthesis complete. The pipeline retrieved 95 PubMed abstracts across 8 queries for semaglutide in Parkinson's disease. Semantic re-ranking identified 3 topically relevant abstracts (top cosine similarity: 0.75), but the synthesizer returned an evidence strength of \"none,\" indicating that the retrieved abstracts did not yield sufficient direct or mechanistic evidence to support a repurposing hypothesis for semaglutide in Parkinson's disease based on the current PubMed literature captured in this run."
       },
       "clinical_trials": {
         "search": {
@@ -2891,17 +2900,17 @@
             "wegovy"
           ]
         },
-        "summary": "Semaglutide in Parkinson's disease is an early-stage repurposing hypothesis with very limited trial activity. This exact indication does not appear on semaglutide's FDA labels in this run. Only one trial is on record — NCT03659682, a Phase 2 study titled \"GLP1R in Parkinson's Disease,\" which also covers inflammation as a mesh term and currently carries an UNKNOWN status, meaning it ran but its outcome is not determinable from the registry. There are no completed trials and no terminated trials for this pair, so there are no stopping signals on record, but equally no published pivotal readouts linked through CT.gov.\n\nThe mechanistic rationale centers on GLP-1 receptor (GLP1R) signaling and its potential neuroprotective effects — the single trial's title explicitly names GLP1R — consistent with broader interest in GLP-1 agonists as disease-modifying agents in neurodegeneration. The competitive landscape for Parkinson's disease includes 8 active competitor programs, indicating a moderately active space, though none of the leading programs appear to be GLP-1 agonists based on the landscape data.\n\nOverall, semaglutide × Parkinson's disease represents a biologically motivated but clinically unvalidated repurposing opportunity: there is only one Phase 2 trial on record with an unknown outcome, no completed trials, and no regulatory progression to date. The hypothesis remains open and largely untested at scale."
+        "summary": "Semaglutide in Parkinson's disease is an early-stage repurposing hypothesis with very limited clinical trial activity. This exact indication does not appear on semaglutide's FDA labels in this run. Only one trial is on record — NCT03659682, a Phase 2 study titled \"GLP1R in Parkinson's Disease,\" which targets GLP-1 receptor engagement and inflammation in Parkinson's disease. This trial carries an UNKNOWN status on CT.gov, meaning it ran but its outcome cannot be determined from the registry record alone. There are no completed trials, no terminated trials, and no stopping signals on record for this pair.\n\nThe competitive landscape for Parkinson's disease lists 8 active competitor programs, reflecting a moderately active space with ongoing drug development. Semaglutide's position in this landscape is nascent — a single Phase 2 signal with no Phase 3 activity and no published readout linked from CT.gov for NCT03659682. The GLP-1 receptor agonist mechanism has attracted scientific interest in neurodegeneration (given potential neuroprotective and anti-inflammatory effects), but the clinical evidence base for semaglutide specifically in Parkinson's disease remains thin. This pair warrants monitoring for Phase 2 readout data before any stronger repurposing conclusion can be drawn."
       },
       "blurb": {
-        "stage": "One Phase 2 trial on record (NCT03659682, UNKNOWN status); no completed trials, no readout",
-        "literature": "Weak; meta-analysis of GLP-1 RAs in PD found only marginal motor improvement (MDS-UPDRS Part III MD -0.75, P=0.04), not consistently observed across time points; authors concluded evidence does not support routine use",
-        "blocker": "No completed semaglutide-specific trial readout; class-level meta-analysis inconclusive; related GLP-1 RA (NLY01) failed in Phase 2 RCT",
-        "active_programs": "MOST-ABLE study (oral semaglutide, Phase 2, Japan) underway per literature; NCT03659682 status UNKNOWN",
-        "key_risk": "Class-level evidence is inconclusive and a related GLP-1 RA (NLY01) failed to show benefit in a 255-patient RCT; semaglutide-specific data absent",
-        "verdict": "Live but bottlenecked",
-        "watch": "MOST-ABLE study (oral semaglutide Phase 2, Japan; primary endpoint MDS-UPDRS Part III off-medication at 48 weeks; PMID 41448692)",
-        "prose": "The repurposing hypothesis for semaglutide in Parkinson's disease is biologically motivated but clinically unvalidated: the only CT.gov-registered semaglutide trial carries an UNKNOWN status with no linked readout, and a class-level meta-analysis of four GLP-1 RA RCTs found only a marginal and inconsistent motor benefit that the authors concluded does not support routine use. A related GLP-1 RA (NLY01) failed to show benefit over placebo in a 255-patient Phase 2 RCT, raising questions about whether the class effect is sufficient to drive meaningful disease modification in PD."
+        "stage": "Single Phase 2 trial on record (NCT03659682) with UNKNOWN status; no completed trial, no published readout linked",
+        "literature": "None; retrieved abstracts cover lixisenatide, exenatide, and NLY01 — no semaglutide-specific Parkinson's data identified",
+        "blocker": "No completed efficacy readout for semaglutide specifically; Phase 2 trial status unknown",
+        "active_programs": "None active on record for semaglutide; 8 competitor programs identified in the space",
+        "key_risk": "Class-level GLP-1 evidence is mixed (NLY01 failed; lixisenatide and exenatide showed modest motor benefit) — semaglutide-specific translation is undemonstrated",
+        "verdict": "Untested",
+        "watch": "NCT03659682 Phase 2 (UNKNOWN status) — outcome not determinable from registry record this run",
+        "prose": "The only semaglutide-specific Parkinson's trial on record (NCT03659682, Phase 2) carries an UNKNOWN CT.gov status with no linked publication, leaving the hypothesis entirely without a clinical readout for this drug. Class-level evidence from other GLP-1 receptor agonists is mixed — lixisenatide and exenatide showed some motor benefit in small trials while NLY01 (pegylated exenatide) did not differ from placebo — meaning the semaglutide hypothesis rests on mechanistic extrapolation rather than demonstrated efficacy."
       }
     },
     {
@@ -2909,14 +2918,14 @@
       "source": "both",
       "literature": {
         "search_results": [
-          "semaglutide AND \"non-alcoholic fatty liver disease\"",
-          "glucagon-like peptide-1 receptor agonist AND liver",
-          "GLP-1 agonist AND liver",
-          "GLP1R AND \"non-alcoholic fatty liver disease\"",
-          "blood glucose lowering drugs AND liver",
-          "ozempic AND \"non-alcoholic fatty liver disease\"",
-          "wegovy AND \"non-alcoholic fatty liver disease\"",
-          "GLP-1 receptor agonist AND hepatic steatosis"
+          "semaglutide AND \"Non-alcoholic Fatty Liver Disease\"",
+          "GLP-1 receptor agonist AND liver",
+          "glucagon-like peptide-1 agonist AND liver",
+          "GLP1R AND \"Non-alcoholic Fatty Liver Disease\"",
+          "ozempic AND \"Non-alcoholic Fatty Liver Disease\"",
+          "wegovy AND \"Non-alcoholic Fatty Liver Disease\"",
+          "blood glucose lowering drugs AND liver steatosis",
+          "GLP-1 agonist AND hepatic lipid metabolism"
         ],
         "pmids": [
           "38851997",
@@ -2939,40 +2948,41 @@
           "38852583",
           "38869512",
           "35693370",
-          "40499738",
-          "40736113",
           "38843460",
+          "39096914",
           "37562748",
-          "35907261",
-          "37276988",
+          "40839273",
+          "36675217",
+          "39283612",
+          "40499738",
+          "38447814",
+          "39002641",
+          "38858523",
+          "40555243",
+          "38555202",
           "40022548",
           "38856224",
-          "41547366",
-          "38857788",
-          "39096914",
-          "39002641",
-          "40344943",
+          "32291277",
           "38847460",
-          "39344853",
-          "40268291",
-          "40828048",
-          "41178710",
-          "22236411",
-          "39289339",
           "17928588",
-          "34773257",
-          "36675217",
-          "33421947",
-          "36356832",
-          "40466247",
-          "32478287",
-          "38555202",
+          "39289339",
+          "38650100",
+          "40736113",
+          "29728598",
+          "35907261",
+          "41178710",
+          "41547366",
+          "39344853",
+          "40563436",
+          "40828048",
+          "38057297",
           "37700498",
           "39420429",
           "34552561",
           "37498367",
           "40474833",
           "27181498",
+          "32478287",
           "38367045",
           "33352183",
           "25356042",
@@ -2980,36 +2990,44 @@
           "26072069",
           "30961499",
           "35030323",
-          "33877366",
-          "26310198",
-          "40320164",
-          "39460967",
-          "28729031",
-          "36547931",
-          "36423374",
-          "32360561",
-          "17344789",
-          "24746837",
-          "38767097",
-          "40316155",
-          "15929862",
-          "17712719",
-          "39796627",
-          "36369969",
-          "39218222",
-          "10500926",
-          "19028559",
-          "16260581",
           "37061196",
           "36568109",
-          "39283612",
+          "39304265",
+          "27885969",
+          "33877366",
+          "24751931",
+          "23017722",
+          "36992825",
+          "39212900",
+          "40945251",
+          "36051336",
+          "31963560",
+          "40366062",
+          "15151470",
+          "27573470",
+          "34754380",
+          "41202380",
+          "34410573",
+          "36423374",
+          "38504118",
+          "36819350",
+          "33421947",
           "39752752",
-          "38447814",
-          "37364164",
-          "40364529",
-          "26608256",
-          "35054924",
-          "38692395"
+          "39709140",
+          "29486523",
+          "39693850",
+          "39607493",
+          "38220031",
+          "38583231",
+          "28867301",
+          "39357599",
+          "28413961",
+          "39135603",
+          "40550339",
+          "39266553",
+          "40180281",
+          "34016612",
+          "38861859"
         ],
         "semantic_search_results": [
           {
@@ -3052,20 +3070,20 @@
           }
         ],
         "evidence_summary": {
-          "summary": "The evidence strongly supports repurposing semaglutide for non-alcoholic fatty liver disease (NASH/MASH). A phase 3 trial showed that 62.9% of semaglutide-treated patients achieved resolution of steatohepatitis without worsening of fibrosis versus 34.3% with placebo, and 36.8% achieved fibrosis reduction versus 22.4% with placebo (PMID: 40305708). A phase 2 trial demonstrated NASH resolution in 59% of patients receiving semaglutide 0.4 mg versus 17% with placebo, though fibrosis improvement did not reach statistical significance (PMID: 33185364). However, in the specific subpopulation of patients with NASH-related compensated cirrhosis, semaglutide did not significantly improve fibrosis or achieve NASH resolution versus placebo (PMID: 36934740).",
+          "summary": "The evidence strongly supports repurposing semaglutide for non-alcoholic fatty liver disease (NASH/MASH). A phase 3 trial showed that 62.9% of semaglutide-treated patients achieved resolution of steatohepatitis without worsening of fibrosis versus 34.3% with placebo, and 36.8% achieved fibrosis reduction versus 22.4% with placebo (PMID: 40305708). A phase 2 trial demonstrated NASH resolution in 59% of patients receiving semaglutide 0.4 mg versus 17% with placebo (PMID: 33185364). However, a separate phase 2 trial in patients with NASH-related compensated cirrhosis found no statistically significant improvement in fibrosis or NASH resolution with semaglutide versus placebo (PMID: 36934740), suggesting efficacy may be limited in the cirrhotic subpopulation.",
           "study_count": 3,
           "strength": "strong",
           "key_findings": [
-            "In a phase 3 RCT of 800 patients with MASH and fibrosis stage 2 or 3, resolution of steatohepatitis without worsening of fibrosis occurred in 62.9% of semaglutide-treated patients versus 34.3% of placebo patients (estimated difference 28.7 percentage points, P<0.001) (PMID: 40305708)",
+            "In a phase 3 trial (part 1 interim analysis, n=800), resolution of steatohepatitis without worsening of fibrosis occurred in 62.9% of semaglutide-treated patients versus 34.3% of placebo patients (estimated difference 28.7 percentage points, P<0.001) (PMID: 40305708)",
             "In the same phase 3 trial, reduction in liver fibrosis without worsening of steatohepatitis occurred in 36.8% of semaglutide patients versus 22.4% of placebo patients (estimated difference 14.4 percentage points, P<0.001) (PMID: 40305708)",
             "Combined resolution of steatohepatitis and reduction in liver fibrosis was achieved in 32.7% of semaglutide patients versus 16.1% of placebo patients in the phase 3 trial (P<0.001) (PMID: 40305708)",
             "Mean body weight change was -10.5% with semaglutide versus -2.0% with placebo in the phase 3 trial (P<0.001) (PMID: 40305708)",
-            "In a phase 2 trial of 320 patients with biopsy-confirmed NASH, NASH resolution with no worsening of fibrosis was achieved in 59% of patients receiving semaglutide 0.4 mg versus 17% in the placebo group (P<0.001) (PMID: 33185364)",
+            "In a phase 2 trial, NASH resolution with no worsening of fibrosis was achieved in 59% of patients receiving semaglutide 0.4 mg versus 17% in the placebo group (P<0.001) (PMID: 33185364)",
             "In the phase 2 trial, improvement in fibrosis stage occurred in 43% of the semaglutide 0.4 mg group versus 33% of the placebo group, but this difference was not statistically significant (P=0.48) (PMID: 33185364)",
             "Mean percent weight loss was 13% in the semaglutide 0.4 mg group versus 1% in the placebo group in the phase 2 trial (PMID: 33185364)",
-            "In patients with NASH-related compensated cirrhosis, semaglutide 2.4 mg did not significantly improve fibrosis (11% vs 29% with placebo, OR 0.28, p=0.087) or achieve NASH resolution (p=0.29) versus placebo after 48 weeks (PMID: 36934740)",
-            "Gastrointestinal adverse events including nausea (42% vs 11%), constipation (22% vs 12%), and vomiting (15% vs 2%) were more common with semaglutide 0.4 mg than placebo in the phase 2 trial (PMID: 33185364)",
-            "Nausea was the most common adverse event in the NASH cirrhosis trial, occurring in 45% of semaglutide patients versus 17% of placebo patients (PMID: 36934740)"
+            "In a phase 2 trial of patients with NASH-related compensated cirrhosis, semaglutide did not significantly improve fibrosis (11% vs 29% with placebo, OR 0.28, p=0.087) or achieve NASH resolution (p=0.29) versus placebo (PMID: 36934740)",
+            "Gastrointestinal adverse events including nausea, diarrhea, and vomiting were more common with semaglutide than placebo across trials (PMID: 40305708, PMID: 33185364, PMID: 36934740)",
+            "In the phase 2 cirrhosis trial, hepatic and renal function remained stable and there were no decompensating events or deaths in either group (PMID: 36934740)"
           ],
           "supporting_pmids": [
             "40305708",
@@ -3073,7 +3091,7 @@
             "36934740"
           ]
         },
-        "summary": "Semaglutide shows strong evidence for repurposing in non-alcoholic fatty liver disease (NAFLD), based on synthesized PubMed literature. The drug's GLP-1 receptor agonist mechanism appears to drive meaningful hepatic benefits across multiple study types."
+        "summary": "Semaglutide shows strong evidence for potential repurposing in non-alcoholic fatty liver disease (NAFLD), based on synthesized PubMed literature."
       },
       "clinical_trials": {
         "search": {
@@ -6139,7 +6157,7 @@
             "wegovy"
           ]
         },
-        "summary": "Semaglutide has 23 trials on record in NAFLD/NASH spanning Phase 1 through Phase 4, with no terminated trials and no stopping signals of any kind. The program is anchored by a well-published Phase 2 NASH trial (NCT02970942, seven linked PMIDs) and a pivotal Phase 3 trial (NCT04822181, ACTIVE_NOT_RECRUITING) that has completed enrollment and whose readout is pending — this is the key event for regulatory progression. This exact indication does not appear on semaglutide's FDA labels in this run, though the supervisor should reconcile against the MASH/NASH naming shift and resmetirom's 2024 approval, which has raised the competitive and regulatory bar in this space."
+        "summary": "Semaglutide has a broad and mature clinical program in NAFLD/NASH, with 23 trials on record spanning Phase 1 through Phase 4 and no terminated trials. The pivotal Phase 3 trial (NCT04822181, ESSENCE) is active but not yet recruiting and its outcome is not yet available from the registry; a well-published Phase 2 trial (NCT02970942, 7 linked PMIDs) provided the positive signal that supported Phase 3 progression. This exact indication does not appear on semaglutide's FDA labels in this run, though the supervisor should reconcile this against the recently approved MASH label, which may cover an overlapping or renamed subtype. The competitive landscape includes 9 active competitors, and semaglutide's combination studies with cilofexor/firsocostat and NNC0194-0499 reflect the industry push toward multi-mechanism regimens targeting fibrosis."
       },
       "blurb": {
         "stage": "",
@@ -6149,7 +6167,1182 @@
         "key_risk": "",
         "verdict": "",
         "watch": "",
-        "prose": "Semaglutide is FDA-approved for MASH/non-alcoholic steatohepatitis; NAFLD as a broader term encompasses earlier-stage patients (e.g., steatosis without confirmed NASH) not covered by the approved indication, but the trial and literature artifacts retrieved in this run cannot reliably separate the NAFLD-only population from the approved MASH subtype."
+        "prose": "Semaglutide is FDA-approved for non-alcoholic steatohepatitis (NASH/MASH) with moderate to advanced fibrosis; NAFLD is the broader parent term encompassing earlier-stage and non-NASH patients, and the trial record (23 trials) cannot be separated from the approved subtype in this run."
+      }
+    },
+    {
+      "disease": "nutritional disorder",
+      "source": "competitor",
+      "literature": {
+        "search_results": [
+          "semaglutide AND \"Nutrition Disorders\"",
+          "glucagon-like peptide-1 analogues AND body weight",
+          "GLP-1 receptor agonist AND nutritional status",
+          "GLP1R AND \"Nutrition Disorders\"",
+          "Ozempic AND \"Nutrition Disorders\"",
+          "Wegovy AND \"Nutrition Disorders\"",
+          "blood glucose lowering drugs AND appetite regulation",
+          "GLP-1 agonist AND metabolic disorders"
+        ],
+        "pmids": [
+          "39040467",
+          "38776037",
+          "42152320",
+          "38316982",
+          "39555826",
+          "40401903",
+          "37188932",
+          "40022548",
+          "33068776",
+          "37364710",
+          "40549887",
+          "41931049",
+          "26132939",
+          "22236411",
+          "20203154",
+          "39751188",
+          "27030669",
+          "38454010",
+          "30122305",
+          "36883831",
+          "22236410",
+          "36706758",
+          "25202980",
+          "40736113",
+          "41328178",
+          "37780624",
+          "42117035",
+          "41368199",
+          "18347527",
+          "40694751",
+          "41373949",
+          "40454499",
+          "34444712",
+          "42171350",
+          "41066871",
+          "38631315",
+          "26385462",
+          "41118524",
+          "41767340",
+          "39303739",
+          "38421026",
+          "26683903",
+          "42037905",
+          "37960222",
+          "24731666",
+          "39457671",
+          "19857367",
+          "8190772",
+          "41834752",
+          "23046862",
+          "39114288",
+          "38843460",
+          "38015216",
+          "31767182",
+          "34310013",
+          "38937282",
+          "35579691",
+          "38741261",
+          "34497589",
+          "40149944",
+          "36706749",
+          "33421947",
+          "37657738",
+          "32077010",
+          "34981502",
+          "39002641",
+          "40489581",
+          "32396843",
+          "39592891"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "30122305",
+            "title": "Efficacy and safety of semaglutide compared with liraglutide and placebo for weight loss in patients with obesity: a randomised, double-blind, placebo and active controlled, dose-ranging, phase 2 trial.",
+            "abstract": "BACKGROUND: Obesity is a major public health issue, and new pharmaceuticals for weight management are needed. Therefore, we evaluated the efficacy and safety of the glucagon-like peptide-1 (GLP-1) analogue semaglutide in comparison with liraglutide and a placebo in promoting weight loss. METHODS: We did a randomised, double-blind, placebo and active controlled, multicentre, dose-ranging, phase 2 trial. The study was done in eight countries involving 71 clinical sites. Eligible participants were adults (≥18 years) without diabetes and with a body-mass index (BMI) of 30 kg/m2 or more. We randomly assigned participants (6:1) to each active treatment group (ie, semaglutide [0·05 mg, 0·1 mg, 0·2 mg, 0·3 mg, or 0·4 mg; initiated at 0·05 mg per day and incrementally escalated every 4 weeks] or liraglutide [3·0 mg; initiated at 0·6 mg per day and escalated by 0·6 mg per week]) or matching placebo group (equal injection volume and escalation schedule to active treatment group) using a block size of 56. All treatment doses were delivered once-daily via subcutaneous injections. Participants and investigators were masked to the assigned study treatment but not the target dose. The primary endpoint was percentage weight loss at week 52. The primary analysis was done using intention-to-treat ANCOVA estimation with missing data derived from the placebo pool. This study is registered with ClinicalTrials.gov, number NCT02453711. FINDINGS: Between Oct 1, 2015, and Feb 11, 2016, 957 individuals were randomly assigned (102-103 participants per active treatment group and 136 in the pooled placebo group). Mean baseline characteristics included age 47 years, bodyweight 111·5 kg, and BMI 39·3 kg/m2. Bodyweight data were available for 891 (93%) of 957 participants at week 52. Estimated mean weight loss was -2·3% for the placebo group versus -6·0% (0·05 mg), -8·6% (0·1 mg), -11·6% (0·2 mg), -11·2% (0·3 mg), and -13·8% (0·4 mg) for the semaglutide groups. All semaglutide groups versus placebo were significant (unadjusted p≤0·0010), and remained significant after adjustment for multiple testing (p≤0·0055). Mean bodyweight reductions for 0·2 mg or more of semaglutide versus liraglutide were all significant (-13·8% to -11·2% vs -7·8%). Estimated weight loss of 10% or more occurred in 10% of participants receiving placebo compared with 37-65% receiving 0·1 mg or more of semaglutide (p<0·0001 vs placebo). All semaglutide doses were generally well tolerated, with no new safety concerns. The most common adverse events were dose-related gastrointestinal symptoms, primarily nausea, as seen previously with GLP-1 receptor agonists. INTERPRETATION: In combination with dietary and physical activity counselling, semaglutide was well tolerated over 52 weeks and showed clinically relevant weight loss compared with placebo at all doses. FUNDING: Novo Nordisk A/S.",
+            "similarity": 0.7027326227267308,
+            "pubtype": [
+              "Clinical Trial, Phase II",
+              "Comparative Study",
+              "Journal Article",
+              "Multicenter Study",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "37188932",
+            "title": "Effect of the glucagon-like peptide-1 receptor agonist liraglutide, compared to caloric restriction, on appetite, dietary intake, body fat distribution and cardiometabolic biomarkers: A randomized trial in adults with obesity and prediabetes.",
+            "abstract": "AIMS: To investigate the hypothesis that weight loss with the glucagon-like peptide-1 receptor agonist (GLP-1RA) liraglutide alone would lead to a greater reduction in the proportion of fat to lean tissue mass when compared to caloric restriction (CR) alone, as well as when compared to treatment with sitagliptin, a dipeptidyl peptidase-4 (DPP-4) inhibitor, that also enhances GLP-1 activity - to determine the independent effects of each treatment. METHODS: A total of 88 adults with obesity and prediabetes were randomized to 14 weeks of intervention with CR (-390 kcal/d), liraglutide (1.8 mg/d), or the dipeptidyl peptidase-4 inhibitor sitagliptin (100 mg/d) as a weight-neutral comparator. Changes between groups in appetite and hunger ratings measured via visual analogue scales, dietary intakes, body weight, body composition via dual energy x-ray absorptiometry, and resting energy expenditure via indirect calorimetry were assessed using the Kruskal-Wallis test or Pearson's chi-squared test. RESULTS: Weight loss ≥5% of baseline body weight occurred in 44% of participants in the CR group, 22% of the liraglutide group and 5% of the sitagliptin group (p = 0.02). The ratio of fat to lean mass decreased by 6.5% in the CR group, 2.2% in the liraglutide group, and 0% in the sitagliptin group (p = 0.02). Visceral fat reduced by 9.5% in the CR group, 4.8% in the liraglutide group, and 0% in the sitagliptin group (p = 0.04). A spontaneous reduction in dietary simple carbohydrates in the CR group was associated with improved homeostatic model assessment of insulin resistance score (HOMA-IR). CONCLUSIONS: Although both liraglutide and CR are valuable strategies for cardiometabolic risk reduction, CR was associated with greater weight loss and more favourable improvements in body composition than treatment with liraglutide alone. Differences in the response to each of these interventions enables patients to be stratified to the most optimal intervention for their personal risk factors.",
+            "similarity": 0.57568978386636,
+            "pubtype": [
+              "Randomized Controlled Trial",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't",
+              "Research Support, N.I.H., Extramural"
+            ]
+          },
+          {
+            "pmid": "26132939",
+            "title": "A Randomized, Controlled Trial of 3.0 mg of Liraglutide in Weight Management.",
+            "abstract": "BACKGROUND: Obesity is a chronic disease with serious health consequences, but weight loss is difficult to maintain through lifestyle intervention alone. Liraglutide, a glucagon-like peptide-1 analogue, has been shown to have potential benefit for weight management at a once-daily dose of 3.0 mg, injected subcutaneously. METHODS: We conducted a 56-week, double-blind trial involving 3731 patients who did not have type 2 diabetes and who had a body-mass index (BMI; the weight in kilograms divided by the square of the height in meters) of at least 30 or a BMI of at least 27 if they had treated or untreated dyslipidemia or hypertension. We randomly assigned patients in a 2:1 ratio to receive once-daily subcutaneous injections of liraglutide at a dose of 3.0 mg (2487 patients) or placebo (1244 patients); both groups received counseling on lifestyle modification. The coprimary end points were the change in body weight and the proportions of patients losing at least 5% and more than 10% of their initial body weight. RESULTS: At baseline, the mean (±SD) age of the patients was 45.1±12.0 years, the mean weight was 106.2±21.4 kg, and the mean BMI was 38.3±6.4; a total of 78.5% of the patients were women and 61.2% had prediabetes. At week 56, patients in the liraglutide group had lost a mean of 8.4±7.3 kg of body weight, and those in the placebo group had lost a mean of 2.8±6.5 kg (a difference of -5.6 kg; 95% confidence interval, -6.0 to -5.1; P<0.001, with last-observation-carried-forward imputation). A total of 63.2% of the patients in the liraglutide group as compared with 27.1% in the placebo group lost at least 5% of their body weight (P<0.001), and 33.1% and 10.6%, respectively, lost more than 10% of their body weight (P<0.001). The most frequently reported adverse events with liraglutide were mild or moderate nausea and diarrhea. Serious events occurred in 6.2% of the patients in the liraglutide group and in 5.0% of the patients in the placebo group. CONCLUSIONS: In this study, 3.0 mg of liraglutide, as an adjunct to diet and exercise, was associated with reduced body weight and improved metabolic control. (Funded by Novo Nordisk; SCALE Obesity and Prediabetes NN8022-1839 ClinicalTrials.gov number, NCT01272219.).",
+            "similarity": 0.5669975565689396,
+            "pubtype": [
+              "Comparative Study",
+              "Journal Article",
+              "Multicenter Study",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "The provided abstracts do not directly address semaglutide or any GLP-1 receptor agonist as a treatment for 'nutritional disorder' as a defined disease entity. The abstracts focus on obesity and weight management: semaglutide demonstrated dose-dependent weight loss in adults with obesity (PMID: 30122305), while the other two abstracts concern liraglutide for obesity/prediabetes (PMID: 26132939, PMID: 37188932). None of the abstracts mention 'nutritional disorder' as a diagnosis, indication, or outcome, making it impossible to assess the repurposing hypothesis from this literature.",
+          "study_count": 0,
+          "strength": "none",
+          "key_findings": [
+            "No abstract in the provided set mentions 'nutritional disorder' as a target condition, diagnosis, or outcome measure (PMIDs: 30122305, 37188932, 26132939).",
+            "Semaglutide was evaluated exclusively for weight loss in adults with obesity without diabetes in a phase 2 RCT (PMID: 30122305).",
+            "Liraglutide was evaluated for weight management in adults with obesity and prediabetes, not for nutritional disorders (PMID: 26132939, PMID: 37188932)."
+          ],
+          "supporting_pmids": []
+        },
+        "summary": "The full pipeline (build_drug_profile → expand_search_terms → fetch_and_cache → semantic_search → synthesize) was executed for semaglutide in nutritional disorder. Despite retrieving 69 PubMed abstracts across 8 queries and achieving a top semantic similarity of 0.70, the synthesizer returned an evidence strength of \"none\" — meaning the top-ranked abstracts did not yield sufficient, coherent evidence to support a repurposing hypothesis for semaglutide in nutritional disorder as a distinct indication. The retrieved literature likely reflects semaglutide's established roles in metabolic contexts (e.g., obesity, diabetes) without directly addressing nutritional disorder as a primary target condition."
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 5,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 0
+          },
+          "trials": [
+            {
+              "nct_id": "NCT03548935",
+              "title": "STEP 1: Research Study Investigating How Well Semaglutide Works in People Suffering From Overweight or Obesity",
+              "brief_summary": "This study will look at the change in participants' body weight from the start to the end of the study. The weight loss in participants taking semaglutide (a new medicine) will be compared to the weight loss of participants taking \"dummy\" medicine. In addition to taking the medicine, participants will have talks with study staff about healthy food choices, how to be more physically active and what you can do to lose weight. Participants will either get semaglutide or \"dummy\" medicine - which treatment participants get, is decided by chance. Participants will need to take 1 injection once a week. The study medicine is injected with a thin needle in a skin fold in the stomach, thigh or upper arm. The study has two phases: A main phase and an extension phase.The main phase will last for about 1.5 years. Participants will have 15 clinic visits and 10 phone calls with the study doctor. Extension phase: Approximately 300 participants will continue in the extension phase in the following countries only: Canada, Germany, the UK and selected sites in the US and Japan. These participants will be in the study for about 2.5 years.They will not receive treatment, but will attend another 5 follow-up visits with the study doctor.",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Metabolism and Nutrition Disorder",
+                "Overweight or Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Semaglutide",
+                  "description": "Participants will receive semaglutide subcutaneous (s.c.; under the skin) injection(s) once-weekly as well as diet and physical activity counselling for 68 weeks. Dose escalation of semaglutide will take place as follows: 0.25 mg from week 1 to 4, 0.5 mg from week 5 to 8, 1.0 mg from week 9 to 12, 1.7 mg from week 13 to 16 and 2.4 mg from week 17 to week 68."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo (semaglutide)",
+                  "description": "Participants will receive semaglutide matching placebo s.c. injection(s) once-weekly as well as diet and physical activity counselling for 68 weeks."
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 1961,
+              "start_date": "2018-06-04",
+              "completion_date": "2020-03-30",
+              "primary_outcomes": [
+                {
+                  "measure": "Change in Body Weight (%)",
+                  "time_frame": "Baseline (week 0) to week 68"
+                },
+                {
+                  "measure": "Participants Who Achieve 5 or More Percent Body Weight Reduction (Yes/no)",
+                  "time_frame": "After week 68"
+                }
+              ],
+              "references": [
+                "32441473",
+                "33567185",
+                "40980163",
+                "39316288",
+                "39226070",
+                "36876594",
+                "36801984",
+                "36200477",
+                "35724304",
+                "35441470",
+                "30122305"
+              ]
+            },
+            {
+              "nct_id": "NCT02453711",
+              "title": "Investigation of Safety and Efficacy of Once-daily Semaglutide in Obese Subjects Without Diabetes Mellitus",
+              "brief_summary": "This trial is conducted globally. The aim of this trial is to investigate safety and efficacy of once-daily semaglutide in obese subjects without diabetes mellitus.",
+              "phase": "Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Metabolism and Nutrition Disorder",
+                "Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "semaglutide",
+                  "description": "Once-daily subcutaneous (s.c., under the skin) administration with dose escalation."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "liraglutide",
+                  "description": "Once-daily subcutaneous (s.c., under the skin) administration with dose escalation."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "placebo",
+                  "description": "Once-daily subcutaneous (s.c., under the skin) administration."
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 957,
+              "start_date": "2015-10-01",
+              "completion_date": "2017-03-30",
+              "primary_outcomes": [
+                {
+                  "measure": "Relative Change in Body Weight (%)",
+                  "time_frame": "Week 0, Week 52"
+                }
+              ],
+              "references": [
+                "30993900",
+                "30122305"
+              ]
+            },
+            {
+              "nct_id": "NCT03548987",
+              "title": "Research Study Investigating How Well Semaglutide Works in People Suffering From Overweight or Obesity",
+              "brief_summary": "This study will look at the change in participant's body weight from the start to the end of the study. This is to compare the effect on body weight in people taking semaglutide (a new medicine) and people taking \"dummy\" medicine. In addition to taking the medicine, the participant will have talks with study staff about healthy food choices, how to be more physically active and what a participant can do to lose weight.\n\nThe participant will get semaglutide for the first 20 weeks. Then the participant will get either semaglutide or \"dummy\" medicine - which treatment the participant gets after the 20 weeks is decided by chance. The participants will need to take 1 injection once a week. The study medicine is injected with a thin needle in a skin fold in the stomach, thigh or upper arm. The study will last for about 1.5 years.",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Metabolism and Nutrition Disorder",
+                "Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Semaglutide",
+                  "description": "Subcutaneous (under the skin) injection of semaglutide once-weekly."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Subcutaneous (under the skin) injection of semaglutide placebo once-weekly."
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 902,
+              "start_date": "2018-06-04",
+              "completion_date": "2020-02-22",
+              "primary_outcomes": [
+                {
+                  "measure": "Change From Randomisation to Week 68 in Body Weight (%)",
+                  "time_frame": "Randomisation (week 20) to week 68"
+                }
+              ],
+              "references": [
+                "32441473",
+                "33755728",
+                "37605636",
+                "36200477",
+                "35724304",
+                "30122305"
+              ]
+            },
+            {
+              "nct_id": "NCT03574584",
+              "title": "A Research Study of NNC0165-1562 and Semaglutide in People Who Are Overweight or Obese",
+              "brief_summary": "The study is investigating new medicines for weight control in people with high body weight. The study looks at how the study medicines work in the body. Participants will get semaglutide and either NNC0165-1562 or \"dummy\" medicine -which treatment participants get is decided by chance. Participants will get 2 injections per week for 5 months. A study nurse at the clinic will inject the medicine with a thin needle in a skin fold in the stomach. The study will last for about 7 months. Participants will have 27 visits to the clinic.",
+              "phase": "Phase 1",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Metabolism and Nutrition Disorders",
+                "Overweight or Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "NNC0165-1562",
+                  "description": "Participants will receive NNC0165-1562 subcutaneous (s.c., under the skin) injection(s) once-weekly for 20 weeks. The dose will be escalated over 16 weeks to a final dose level that will be maintained for 4 weeks."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Semaglutide",
+                  "description": "Participants will receive semaglutide s.c. injection(s) once-weekly for 20 weeks. The dose will be escalated over 16 weeks to a final dose level that will be maintained for 4 weeks."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo (NNC0165-1562)",
+                  "description": "Participants will receive placebo (NNC0165-1562) s.c. injection(s) once-weekly for 20 weeks."
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 37,
+              "start_date": "2018-06-18",
+              "completion_date": "2019-07-27",
+              "primary_outcomes": [
+                {
+                  "measure": "Number of treatment emergent adverse events (TEAEs)",
+                  "time_frame": "Week 0-25"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT02079870",
+              "title": "Trial Investigating the Effect of Semaglutide on Energy Intake, Appetite Sensations, Postprandial Glucose and Triglyceride Metabolism and Gastric Emptying in Obese Subjects Compared With Placebo",
+              "brief_summary": "This trial is conducted in Europe. The aim of the trial is to investigate the effect of semaglutide on energy intake, appetite sensations, postprandial glucose and triglyceride metabolism and gastric emptying in obese subjects compared with placebo.",
+              "phase": "Phase 1",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Diabetes",
+                "Metabolism and Nutrition Disorder",
+                "Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D003920",
+                  "term": "Diabetes Mellitus"
+                },
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D044882",
+                  "term": "Glucose Metabolism Disorders"
+                },
+                {
+                  "id": "D008659",
+                  "term": "Metabolic Diseases"
+                },
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D004700",
+                  "term": "Endocrine System Diseases"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "semaglutide",
+                  "description": "Solution for subcutaneous (s.c. - under the skin) injection. 0.25 mg semaglutide once weekly for four weeks, 0.5 mg semaglutide once weekly for four weeks followed by 1.0 mg semaglutide once weekly for five weeks"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "placebo",
+                  "description": "Solution for subcutaneous (s.c. - under the skin) injection"
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 30,
+              "start_date": "2014-03-06",
+              "completion_date": "2015-01-07",
+              "primary_outcomes": [
+                {
+                  "measure": "Ad libitum energy intake during a lunch meal (following a standardised breakfast meal)",
+                  "time_frame": "After 12 weeks of treatment"
+                }
+              ],
+              "references": [
+                "28266779",
+                "28941314"
+              ]
+            }
+          ]
+        },
+        "completed": {
+          "total_count": 5,
+          "trials": [
+            {
+              "nct_id": "NCT03548935",
+              "title": "STEP 1: Research Study Investigating How Well Semaglutide Works in People Suffering From Overweight or Obesity",
+              "brief_summary": "This study will look at the change in participants' body weight from the start to the end of the study. The weight loss in participants taking semaglutide (a new medicine) will be compared to the weight loss of participants taking \"dummy\" medicine. In addition to taking the medicine, participants will have talks with study staff about healthy food choices, how to be more physically active and what you can do to lose weight. Participants will either get semaglutide or \"dummy\" medicine - which treatment participants get, is decided by chance. Participants will need to take 1 injection once a week. The study medicine is injected with a thin needle in a skin fold in the stomach, thigh or upper arm. The study has two phases: A main phase and an extension phase.The main phase will last for about 1.5 years. Participants will have 15 clinic visits and 10 phone calls with the study doctor. Extension phase: Approximately 300 participants will continue in the extension phase in the following countries only: Canada, Germany, the UK and selected sites in the US and Japan. These participants will be in the study for about 2.5 years.They will not receive treatment, but will attend another 5 follow-up visits with the study doctor.",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Metabolism and Nutrition Disorder",
+                "Overweight or Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Semaglutide",
+                  "description": "Participants will receive semaglutide subcutaneous (s.c.; under the skin) injection(s) once-weekly as well as diet and physical activity counselling for 68 weeks. Dose escalation of semaglutide will take place as follows: 0.25 mg from week 1 to 4, 0.5 mg from week 5 to 8, 1.0 mg from week 9 to 12, 1.7 mg from week 13 to 16 and 2.4 mg from week 17 to week 68."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo (semaglutide)",
+                  "description": "Participants will receive semaglutide matching placebo s.c. injection(s) once-weekly as well as diet and physical activity counselling for 68 weeks."
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 1961,
+              "start_date": "2018-06-04",
+              "completion_date": "2020-03-30",
+              "primary_outcomes": [
+                {
+                  "measure": "Change in Body Weight (%)",
+                  "time_frame": "Baseline (week 0) to week 68"
+                },
+                {
+                  "measure": "Participants Who Achieve 5 or More Percent Body Weight Reduction (Yes/no)",
+                  "time_frame": "After week 68"
+                }
+              ],
+              "references": [
+                "32441473",
+                "33567185",
+                "40980163",
+                "39316288",
+                "39226070",
+                "36876594",
+                "36801984",
+                "36200477",
+                "35724304",
+                "35441470",
+                "30122305"
+              ]
+            },
+            {
+              "nct_id": "NCT02453711",
+              "title": "Investigation of Safety and Efficacy of Once-daily Semaglutide in Obese Subjects Without Diabetes Mellitus",
+              "brief_summary": "This trial is conducted globally. The aim of this trial is to investigate safety and efficacy of once-daily semaglutide in obese subjects without diabetes mellitus.",
+              "phase": "Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Metabolism and Nutrition Disorder",
+                "Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "semaglutide",
+                  "description": "Once-daily subcutaneous (s.c., under the skin) administration with dose escalation."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "liraglutide",
+                  "description": "Once-daily subcutaneous (s.c., under the skin) administration with dose escalation."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "placebo",
+                  "description": "Once-daily subcutaneous (s.c., under the skin) administration."
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 957,
+              "start_date": "2015-10-01",
+              "completion_date": "2017-03-30",
+              "primary_outcomes": [
+                {
+                  "measure": "Relative Change in Body Weight (%)",
+                  "time_frame": "Week 0, Week 52"
+                }
+              ],
+              "references": [
+                "30993900",
+                "30122305"
+              ]
+            },
+            {
+              "nct_id": "NCT03548987",
+              "title": "Research Study Investigating How Well Semaglutide Works in People Suffering From Overweight or Obesity",
+              "brief_summary": "This study will look at the change in participant's body weight from the start to the end of the study. This is to compare the effect on body weight in people taking semaglutide (a new medicine) and people taking \"dummy\" medicine. In addition to taking the medicine, the participant will have talks with study staff about healthy food choices, how to be more physically active and what a participant can do to lose weight.\n\nThe participant will get semaglutide for the first 20 weeks. Then the participant will get either semaglutide or \"dummy\" medicine - which treatment the participant gets after the 20 weeks is decided by chance. The participants will need to take 1 injection once a week. The study medicine is injected with a thin needle in a skin fold in the stomach, thigh or upper arm. The study will last for about 1.5 years.",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Metabolism and Nutrition Disorder",
+                "Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Semaglutide",
+                  "description": "Subcutaneous (under the skin) injection of semaglutide once-weekly."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Subcutaneous (under the skin) injection of semaglutide placebo once-weekly."
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 902,
+              "start_date": "2018-06-04",
+              "completion_date": "2020-02-22",
+              "primary_outcomes": [
+                {
+                  "measure": "Change From Randomisation to Week 68 in Body Weight (%)",
+                  "time_frame": "Randomisation (week 20) to week 68"
+                }
+              ],
+              "references": [
+                "32441473",
+                "33755728",
+                "37605636",
+                "36200477",
+                "35724304",
+                "30122305"
+              ]
+            },
+            {
+              "nct_id": "NCT03574584",
+              "title": "A Research Study of NNC0165-1562 and Semaglutide in People Who Are Overweight or Obese",
+              "brief_summary": "The study is investigating new medicines for weight control in people with high body weight. The study looks at how the study medicines work in the body. Participants will get semaglutide and either NNC0165-1562 or \"dummy\" medicine -which treatment participants get is decided by chance. Participants will get 2 injections per week for 5 months. A study nurse at the clinic will inject the medicine with a thin needle in a skin fold in the stomach. The study will last for about 7 months. Participants will have 27 visits to the clinic.",
+              "phase": "Phase 1",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Metabolism and Nutrition Disorders",
+                "Overweight or Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "NNC0165-1562",
+                  "description": "Participants will receive NNC0165-1562 subcutaneous (s.c., under the skin) injection(s) once-weekly for 20 weeks. The dose will be escalated over 16 weeks to a final dose level that will be maintained for 4 weeks."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Semaglutide",
+                  "description": "Participants will receive semaglutide s.c. injection(s) once-weekly for 20 weeks. The dose will be escalated over 16 weeks to a final dose level that will be maintained for 4 weeks."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo (NNC0165-1562)",
+                  "description": "Participants will receive placebo (NNC0165-1562) s.c. injection(s) once-weekly for 20 weeks."
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 37,
+              "start_date": "2018-06-18",
+              "completion_date": "2019-07-27",
+              "primary_outcomes": [
+                {
+                  "measure": "Number of treatment emergent adverse events (TEAEs)",
+                  "time_frame": "Week 0-25"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT02079870",
+              "title": "Trial Investigating the Effect of Semaglutide on Energy Intake, Appetite Sensations, Postprandial Glucose and Triglyceride Metabolism and Gastric Emptying in Obese Subjects Compared With Placebo",
+              "brief_summary": "This trial is conducted in Europe. The aim of the trial is to investigate the effect of semaglutide on energy intake, appetite sensations, postprandial glucose and triglyceride metabolism and gastric emptying in obese subjects compared with placebo.",
+              "phase": "Phase 1",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Diabetes",
+                "Metabolism and Nutrition Disorder",
+                "Obesity"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D003920",
+                  "term": "Diabetes Mellitus"
+                },
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D044882",
+                  "term": "Glucose Metabolism Disorders"
+                },
+                {
+                  "id": "D008659",
+                  "term": "Metabolic Diseases"
+                },
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D004700",
+                  "term": "Endocrine System Diseases"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "semaglutide",
+                  "description": "Solution for subcutaneous (s.c. - under the skin) injection. 0.25 mg semaglutide once weekly for four weeks, 0.5 mg semaglutide once weekly for four weeks followed by 1.0 mg semaglutide once weekly for five weeks"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "placebo",
+                  "description": "Solution for subcutaneous (s.c. - under the skin) injection"
+                }
+              ],
+              "sponsor": "Novo Nordisk A/S",
+              "enrollment": 30,
+              "start_date": "2014-03-06",
+              "completion_date": "2015-01-07",
+              "primary_outcomes": [
+                {
+                  "measure": "Ad libitum energy intake during a lunch meal (following a standardised breakfast meal)",
+                  "time_frame": "After 12 weeks of treatment"
+                }
+              ],
+              "references": [
+                "28266779",
+                "28941314"
+              ]
+            }
+          ]
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 443,
+          "competitors": [
+            {
+              "sponsor": "Fresenius Kabi",
+              "drug_name": "SMOFlipid® (lipid injectable emulsion)",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 100,
+              "most_recent_start": "2024-10-28"
+            },
+            {
+              "sponsor": "University of California, San Francisco",
+              "drug_name": "Azithromycin",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 3000,
+              "most_recent_start": "2024-10-23"
+            },
+            {
+              "sponsor": "Pfizer",
+              "drug_name": "PF-08653944",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 2,
+              "statuses": [
+                "RECRUITING",
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 1953,
+              "most_recent_start": "2026-06-30"
+            },
+            {
+              "sponsor": "Eli Lilly and Company",
+              "drug_name": "Orforglipron",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 800,
+              "most_recent_start": "2025-09-15"
+            },
+            {
+              "sponsor": "Pfizer",
+              "drug_name": "PF-08653945",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 872,
+              "most_recent_start": "2026-05-11"
+            },
+            {
+              "sponsor": "Yu Zhang",
+              "drug_name": "Traditional deep-fried Youtiao",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "UNKNOWN"
+              ],
+              "total_enrollment": 150,
+              "most_recent_start": "2025-03-01"
+            },
+            {
+              "sponsor": "Corbus Pharmaceuticals Inc.",
+              "drug_name": "CRB-913",
+              "drug_type": "Drug",
+              "max_phase": "Phase 1",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 252,
+              "most_recent_start": "2025-12-04"
+            },
+            {
+              "sponsor": "MBX Biosciences",
+              "drug_name": "MBX 4291",
+              "drug_type": "Drug",
+              "max_phase": "Phase 1",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 124,
+              "most_recent_start": "2025-09-03"
+            }
+          ],
+          "phase_distribution": {
+            "Phase 3": 3,
+            "Phase 2": 2,
+            "Phase 1": 2,
+            "Phase 4": 2
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT07595549",
+              "sponsor": "Pfizer",
+              "drug": "PF-08653944",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07575932",
+              "sponsor": "Pfizer",
+              "drug": "PF-08653945",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07400653",
+              "sponsor": "Pfizer",
+              "drug": "PF-08653944",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07310901",
+              "sponsor": "Corbus Pharmaceuticals Inc.",
+              "drug": "CRB-913",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07153471",
+              "sponsor": "Eli Lilly and Company",
+              "drug": "Orforglipron",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07142707",
+              "sponsor": "MBX Biosciences",
+              "drug": "MBX 4291",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06422429",
+              "sponsor": "Yu Zhang",
+              "drug": "Traditional deep-fried Youtiao",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06049680",
+              "sponsor": "Fresenius Kabi",
+              "drug": "SMOFlipid® (lipid injectable emulsion)",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT06010719",
+              "sponsor": "University of California, San Francisco",
+              "drug": "Azithromycin",
+              "phase": "Phase 4"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "semaglutide",
+            "nn-9535",
+            "nn9535",
+            "nnc 0113-0217",
+            "nnc-0113-0217",
+            "ozempic",
+            "rybelsus",
+            "semaglutida",
+            "wegovy"
+          ]
+        },
+        "summary": "Semaglutide has 5 trials on record for nutritional disorder (all completed, spanning Phase 1–3), with all trials tagged to obesity/overweight under the MeSH umbrella of \"Nutrition Disorders.\" The two completed Phase 3 trials — STEP 1 (NCT03548935) and NCT03548987 — both carry extensive CT.gov-linked publication records (multiple PMIDs each), indicating robust published readouts. This exact indication label does not appear on semaglutide's FDA labels in this run, but this almost certainly reflects a superset/taxonomy mismatch: semaglutide holds well-known approvals in obesity and overweight, which are the actual conditions studied across all five trials. There are no terminated trials and no stopping signals on record. The competitive landscape includes 8 competitors in this space. The supervisor should reconcile whether the approved obesity/overweight indications already subsume the \"nutritional disorder\" MeSH category, as this appears to be a labeling terminology question rather than a genuine repurposing gap."
+      },
+      "blurb": {
+        "stage": "",
+        "literature": "",
+        "blocker": "",
+        "active_programs": "",
+        "key_risk": "",
+        "verdict": "",
+        "watch": "",
+        "prose": "Semaglutide is FDA-approved for obesity, overweight, and morbid obesity; 'nutritional disorder' is the MeSH parent category under which all five on-record trials were tagged, and the trial record cannot be separated from the approved subtypes in this run."
       }
     },
     {
@@ -6157,14 +7350,14 @@
       "source": "competitor",
       "literature": {
         "search_results": [
-          "semaglutide AND \"cardiovascular diseases\"",
+          "semaglutide AND \"Cardiovascular Diseases\"",
           "glucagon-like peptide-1 analogues AND heart",
           "GLP-1 receptor agonist AND heart",
-          "GLP1R AND \"cardiovascular diseases\"",
-          "ozempic AND \"cardiovascular diseases\"",
-          "wegovy AND \"cardiovascular diseases\"",
-          "blood glucose lowering drugs AND cardiovascular",
-          "GLP-1 agonist AND cardiac"
+          "GLP1R AND \"Cardiovascular Diseases\"",
+          "Ozempic AND \"Cardiovascular Diseases\"",
+          "Wegovy AND \"Cardiovascular Diseases\"",
+          "blood glucose lowering drugs AND heart",
+          "GLP-1 agonist AND cardiovascular outcomes"
         ],
         "pmids": [
           "27633186",
@@ -6202,9 +7395,9 @@
           "40447342",
           "33261539",
           "36335326",
+          "28489279",
           "39496023",
           "17472410",
-          "30291013",
           "34497589",
           "31422062",
           "36977782",
@@ -6242,33 +7435,34 @@
           "37679419",
           "38740993",
           "32598218",
-          "35568946",
+          "31236801",
+          "35894768",
+          "29735306",
           "31479706",
           "26310198",
-          "35029936",
+          "25260374",
           "40320164",
           "39460755",
-          "32738493",
-          "38594810",
-          "38558257",
-          "27928947",
-          "24655910",
+          "38554713",
+          "32404204",
+          "29368701",
+          "39780223",
+          "39095227",
+          "35029936",
           "33201636",
-          "30607467",
-          "31044622",
-          "38525540",
-          "29804832",
-          "41247648",
-          "28447076",
+          "38594810",
+          "9915665",
+          "39114288",
+          "36841762",
           "37952217",
+          "35344001",
           "38976257",
-          "39888616",
-          "37366315",
-          "38029929",
-          "39963952",
-          "37625003",
-          "33320179",
-          "37505282"
+          "39735270",
+          "40196933",
+          "31401015",
+          "36751934",
+          "40169145",
+          "39888616"
         ],
         "semantic_search_results": [
           {
@@ -6307,18 +7501,20 @@
           }
         ],
         "evidence_summary": {
-          "summary": "The evidence strongly supports repurposing semaglutide for cardiovascular disease. In patients with type 2 diabetes at high cardiovascular risk, semaglutide reduced the composite of cardiovascular death, nonfatal myocardial infarction, or nonfatal stroke compared to placebo (hazard ratio 0.74; PMID: 27633186). In patients with overweight/obesity and established cardiovascular disease without diabetes, semaglutide reduced major adverse cardiovascular events by 20% (PMID: 38796653), and further reduced MACE and composite heart failure endpoints in those with and without clinical heart failure, regardless of heart failure subtype (PMID: 39181597).",
+          "summary": "The evidence strongly supports repurposing semaglutide for cardiovascular disease. In patients with type 2 diabetes at high cardiovascular risk, semaglutide reduced the composite of cardiovascular death, nonfatal myocardial infarction, or nonfatal stroke compared to placebo (hazard ratio 0.74; PMID: 27633186). In patients with overweight/obesity and established cardiovascular disease without diabetes, semaglutide reduced major adverse cardiovascular events by 20% and improved outcomes in those with and without heart failure, including both heart failure with preserved and reduced ejection fraction (PMID: 38796653, PMID: 39181597).",
           "study_count": 3,
           "strength": "strong",
           "key_findings": [
-            "In 3297 patients with type 2 diabetes at high cardiovascular risk, semaglutide reduced the primary composite outcome (cardiovascular death, nonfatal MI, or nonfatal stroke) with a hazard ratio of 0.74 (95% CI 0.58–0.95; P<0.001 for noninferiority) compared to placebo (PMID: 27633186)",
-            "Nonfatal stroke occurred in 1.6% of semaglutide patients versus 2.7% of placebo patients (hazard ratio 0.61; 95% CI 0.38–0.99; P=0.04) in patients with type 2 diabetes (PMID: 27633186)",
-            "The SELECT trial reported a 20% reduction in major adverse cardiovascular events with semaglutide 2.4 mg versus placebo in patients with overweight/obesity and established cardiovascular disease without diabetes (PMID: 38796653)",
-            "In patients with atherosclerotic cardiovascular disease and a history of heart failure, semaglutide reduced MACE with a hazard ratio of 0.72 (95% CI 0.60–0.87) compared to placebo (PMID: 39181597)",
-            "Semaglutide reduced the composite heart failure endpoint (cardiovascular death or hospitalisation or urgent hospital visit for heart failure) with a hazard ratio of 0.79 (95% CI 0.64–0.98) in patients with heart failure at enrolment (PMID: 39181597)",
-            "Semaglutide improved MACE outcomes in both heart failure with reduced ejection fraction (HR 0.65, 95% CI 0.49–0.87) and heart failure with preserved ejection fraction (HR 0.69, 95% CI 0.51–0.91) subgroups (PMID: 39181597)",
-            "Serious adverse events were less frequent with semaglutide versus placebo, regardless of heart failure subtype (PMID: 39181597)",
-            "Retinopathy complications were significantly higher in the semaglutide group versus placebo in patients with type 2 diabetes (hazard ratio 1.76; 95% CI 1.11–2.78; P=0.02), representing a safety concern (PMID: 27633186)"
+            "In 3297 patients with type 2 diabetes at high cardiovascular risk, semaglutide reduced the primary composite outcome (cardiovascular death, nonfatal MI, or nonfatal stroke) with a hazard ratio of 0.74 (95% CI 0.58–0.95; P<0.001 for noninferiority) compared to placebo (PMID: 27633186).",
+            "Nonfatal stroke occurred in 1.6% of semaglutide patients versus 2.7% of placebo patients (hazard ratio 0.61; 95% CI 0.38–0.99; P=0.04) in patients with type 2 diabetes (PMID: 27633186).",
+            "Retinopathy complications were significantly higher in the semaglutide group versus placebo (hazard ratio 1.76; 95% CI 1.11–2.78; P=0.02) in patients with type 2 diabetes (PMID: 27633186).",
+            "The SELECT trial reported a 20% reduction in major adverse cardiovascular events with semaglutide versus placebo in patients with overweight/obesity and established cardiovascular disease without diabetes (PMID: 38796653).",
+            "In the SELECT trial, semaglutide reduced MACE in patients with a history of heart failure at enrolment (HR 0.72, 95% CI 0.60–0.87) compared to placebo, with no significant interaction by heart failure subtype (PMID: 39181597).",
+            "Semaglutide reduced the composite heart failure endpoint (cardiovascular death or hospitalisation/urgent visit for heart failure) in patients with heart failure (HR 0.79, 95% CI 0.64–0.98) compared to placebo in the SELECT trial (PMID: 39181597).",
+            "In patients with heart failure with reduced ejection fraction, semaglutide reduced MACE with HR 0.65 (95% CI 0.49–0.87), and in heart failure with preserved ejection fraction with HR 0.69 (95% CI 0.51–0.91) compared to placebo (PMID: 39181597).",
+            "Semaglutide reduced cardiovascular death in patients with heart failure at enrolment (HR 0.76, 95% CI 0.59–0.97) and all-cause death (HR 0.81, 95% CI 0.66–1.00) compared to placebo in the SELECT trial (PMID: 39181597).",
+            "Serious adverse events were less frequent with semaglutide versus placebo regardless of heart failure subtype in the SELECT trial (PMID: 39181597).",
+            "In the SELECT trial, semaglutide reduced the composite kidney endpoint (HR 0.78; 95% CI 0.63–0.96; P=0.02) in patients with overweight/obesity and established cardiovascular disease without diabetes (PMID: 38796653)."
           ],
           "supporting_pmids": [
             "27633186",
@@ -6326,7 +7522,7 @@
             "39181597"
           ]
         },
-        "summary": "Semaglutide shows strong evidence for cardiovascular benefit based on the synthesized PubMed literature. The drug profile identifies it as a GLP-1 receptor agonist, and the retrieved abstracts support its role in reducing major adverse cardiovascular events (MACE), including cardiovascular death, non-fatal myocardial infarction, and non-fatal stroke, particularly in patients with type 2 diabetes and established cardiovascular disease or high cardiovascular risk. Semantic search returned highly relevant abstracts (top similarity: 0.79), and synthesis confirmed strong evidence strength across multiple studies. Key findings include cardiovascular outcome benefits, improvements in cardiometabolic risk factors (e.g., weight reduction, blood pressure, lipid profiles), and anti-inflammatory and atheroprotective mechanisms linked to GLP-1 receptor activation. The evidence base supports semaglutide as a drug with meaningful cardiovascular protective effects beyond glycemic control."
+        "summary": "Strong evidence supports semaglutide's role in cardiovascular disease, based on 3 high-relevance abstracts retrieved and synthesized from PubMed. The evidence strength is rated strong, reflecting consistent findings across the retrieved literature regarding semaglutide's cardiovascular effects, likely mediated through its GLP-1 receptor agonist mechanism."
       },
       "clinical_trials": {
         "search": {
@@ -8035,7 +9231,7 @@
             "wegovy"
           ]
         },
-        "summary": "This exact indication (\"cardiovascular disease\" as a broad label) does not appear on semaglutide's FDA labels in this run. The supervisor should note that semaglutide does carry an FDA-approved cardiovascular risk-reduction indication in adults with established cardiovascular disease and obesity/overweight (based on the SELECT trial), so the broad label \"cardiovascular disease\" may represent a superset relationship rather than a true gap.\n\nThe trial record for semaglutide × cardiovascular disease spans 13 trials in total, ranging from Phase 1 through Phase 4 and including several \"Not Applicable\" (real-world/observational) studies. No trials have been terminated for this pair, so there are no stopping signals on record.\n\nTwo trials are recorded as completed. The first (NCT06779929, Not Applicable/observational) is a comparative effectiveness study of tirzepatide versus dulaglutide or semaglutide on major cardiovascular events in Type 2 diabetes, with a published readout linked (PMID 37758044). The second (NCT05193578, Phase 2) examined semaglutide for neuroleptic-related prediabetes and cardiovascular risk in patients with schizophrenia, with two linked publications (PMIDs 40900607 and 38503415). Neither completed trial is a standalone Phase 3 cardiovascular outcomes trial for semaglutide under this broad indication label — the pivotal SELECT CVOT (obesity + CV disease) is likely indexed under a different indication string and would need to be checked separately.\n\nAmong the active portfolio, notable programs include REDEFINE 3 (NCT05669755, Phase 3, active not recruiting), which is studying CagriSema (cagrilintide + semaglutide) in people with cardiovascular disease, and a Phase 3 multifactorial intervention trial in Type 1 diabetes with cardiovascular endpoints (NCT06082063, recruiting). A Phase 4 hemodynamic pilot study comparing semaglutide and tirzepatide (DECODE, NCT07483801) is not yet recruiting. The competitive landscape for cardiovascular disease includes 8 active competitor programs. Overall, the broad \"cardiovascular disease\" label for semaglutide reflects a mature, active space where semaglutide is already a key comparator drug in head-to-head and real-world studies; the supervisor should reconcile this against the approved SELECT indication (CV risk reduction in obesity) before drawing repurposing conclusions."
+        "summary": "Semaglutide has 13 trials on record in cardiovascular disease, spanning Phase 1 through Phase 4 and observational designs, with no terminated trials and no stopping signals on record. This exact broad indication does not appear on semaglutide's FDA labels in this run, but this is almost certainly a label-wording mismatch: semaglutide (Wegovy) received FDA approval in 2024 for cardiovascular risk reduction in obesity/overweight with established CVD, and Ozempic carries a cardiovascular outcomes label in Type 2 diabetes — the supervisor should reconcile these narrower approvals against the broad query. The active pipeline includes the Phase 3 REDEFINE 3 trial of the CagriSema combination and a Phase 3 multifactorial intervention in Type 1 diabetes, while real-world comparative effectiveness studies (DASH-CKMH, SURPASS CVOT — the latter with a published readout at PMID 37758044) are actively benchmarking semaglutide against tirzepatide and other GLP-1/SGLT2 agents in a moderately competitive landscape of 8 identified competitors."
       },
       "blurb": {
         "stage": "",
@@ -8045,1177 +9241,7 @@
         "key_risk": "",
         "verdict": "",
         "watch": "",
-        "prose": "Semaglutide is FDA-approved for reduction of major adverse cardiovascular events and cardiovascular death in adults with established cardiovascular disease and obesity/overweight; the broad 'cardiovascular disease' label is a superset of this approved indication, and the trial record (13 trials) is contaminated by data from the approved SELECT population and cannot be separated in this run."
-      }
-    },
-    {
-      "disease": "nutritional disorder",
-      "source": "competitor",
-      "literature": {
-        "search_results": [
-          "semaglutide AND \"nutrition disorders\"",
-          "glucagon-like peptide-1 receptor agonist AND body",
-          "GLP-1 receptor agonist AND \"nutrition disorders\"",
-          "GLP1R AND \"nutrition disorders\"",
-          "blood glucose lowering drugs AND nutrition",
-          "Ozempic AND \"nutrition disorders\"",
-          "Wegovy AND \"nutrition disorders\"",
-          "GLP-1 agonist AND metabolic disorders"
-        ],
-        "pmids": [
-          "39040467",
-          "38776037",
-          "42152320",
-          "29617641",
-          "40186344",
-          "39719170",
-          "37188932",
-          "36977782",
-          "39344838",
-          "39058274",
-          "37678163",
-          "40858197",
-          "40960239",
-          "31565876",
-          "40401903",
-          "38642585",
-          "39305981",
-          "39626095",
-          "36579723",
-          "37828829",
-          "37264711",
-          "38629387",
-          "38810863",
-          "38910884",
-          "36175609",
-          "41861108",
-          "35568946",
-          "40544432",
-          "26086329",
-          "39354480",
-          "38892603",
-          "37960222",
-          "32139381",
-          "38956041",
-          "29337017",
-          "38521386",
-          "41432725",
-          "34981503",
-          "28836175",
-          "37229639",
-          "34182866",
-          "28116648",
-          "17344789",
-          "24935464",
-          "34166734",
-          "31766916",
-          "39114288",
-          "38843460",
-          "38015216",
-          "31767182",
-          "34310013",
-          "38937282",
-          "35579691",
-          "38741261",
-          "34497589",
-          "40149944",
-          "36706749",
-          "33421947",
-          "37657738",
-          "36706758",
-          "32077010",
-          "34981502",
-          "39002641",
-          "40489581",
-          "32396843",
-          "39592891"
-        ],
-        "semantic_search_results": [
-          {
-            "pmid": "40544432",
-            "title": "Cagrilintide-Semaglutide in Adults with Overweight or Obesity and Type 2 Diabetes.",
-            "abstract": "BACKGROUND: Cagrilintide and semaglutide have each been shown to induce weight loss as monotherapies. Data are needed on the coadministration of cagrilintide and semaglutide (called CagriSema) for weight management in adults with type 2 diabetes, including those in a subgroup who are undergoing continuous glucose monitoring. METHODS: In this phase 3a, double-blind, randomized, placebo-controlled trial conducted in 12 countries, we assigned adults with a body-mass index of 27 or more, a glycated hemoglobin level of 7 to 10%, and type 2 diabetes in a 3:1 ratio to receive once-weekly cagrilintide-semaglutide (2.4 mg each) or placebo, along with lifestyle intervention, for 68 weeks. The two primary end points were the percent change in body weight and the percentage of patients with a weight reduction of at least 5%. Additional end points were changes in glycemic measures and safety assessments. Effect estimates were calculated with the use of the treatment-policy estimand (consistent with the intention-to-treat principle). RESULTS: A total of 1206 patients underwent randomization to either the cagrilintide-semaglutide group (904 patients) or the placebo group (302 patients). The estimated mean change in body weight from baseline to week 68 was -13.7% in the cagrilintide-semaglutide group and -3.4% in the placebo group (estimated difference, -10.4 percentage points; 95% confidence interval, -11.2 to -9.5; P<0.001). More patients in the cagrilintide-semaglutide group than in the placebo group had a weight reduction of 5% or more (P<0.001); the same was true of reductions of at least 10%, 15%, and 20% (P<0.001 for the last comparison). The percentage of patients who had a glycated hemoglobin level of 6.5% or less was 73.5% in the cagrilintide-semaglutide group and 15.9% in the placebo group. Gastrointestinal adverse events were reported by 72.5% of the patients in the cagrilintide-semaglutide group and 34.4% in the placebo group, most of which were transient and mild or moderate in severity. CONCLUSIONS: Once-weekly cagrilintide-semaglutide (at a dose of 2.4 mg each) resulted in a significantly lower body weight than placebo in adults with obesity and type 2 diabetes. (Funded by Novo Nordisk; REDEFINE 2 ClinicalTrials.gov number, NCT05394519.).",
-            "similarity": 0.6616454164528901,
-            "pubtype": [
-              "Journal Article",
-              "Randomized Controlled Trial",
-              "Clinical Trial, Phase III",
-              "Multicenter Study"
-            ]
-          },
-          {
-            "pmid": "40960239",
-            "title": "Orforglipron, an Oral Small-Molecule GLP-1 Receptor Agonist for Obesity Treatment.",
-            "abstract": "BACKGROUND: Orforglipron, a small-molecule, nonpeptide oral glucagon-like peptide-1 (GLP-1) receptor agonist, is being investigated as a treatment for obesity. METHODS: In this phase 3, multinational, randomized, double-blind trial, we examined the safety and efficacy of once-daily orforglipron at doses of 6 mg, 12 mg, or 36 mg, as compared with placebo (assigned in a 3:3:3:4 ratio) as an adjunct to healthy diet and physical activity for 72 weeks. All the patients had obesity without diabetes mellitus. The primary end point was the percent change in body weight from baseline to week 72, as assessed according to the treatment-regimen estimand in the intention-to-treat population. RESULTS: A total of 3127 patients underwent randomization. The mean change in body weight from baseline to week 72 was -7.5% (95% confidence interval [CI], -8.2 to -6.8) with 6 mg of orforglipron, -8.4% (95% CI, -9.1 to -7.7) with 12 mg of orforglipron, and -11.2% (95% CI, -12.0 to -10.4) with 36 mg of orforglipron, as compared with -2.1% (95% CI, -2.8 to -1.4) with placebo (P<0.001 for all comparisons with placebo). Among the patients in the orforglipron 36-mg group, 54.6% had a reduction of 10% or more, 36.0% had a reduction of 15% or more, and 18.4% had a reduction of 20% or more, as compared with 12.9%, 5.9%, and 2.8% of the patients, respectively, in the placebo group. Waist circumference, systolic blood pressure, triglyceride levels, and non-HDL cholesterol levels significantly improved with orforglipron treatment as compared with placebo. Adverse events resulted in treatment discontinuation in 5.3 to 10.3% of the patients in the orforglipron groups and in 2.7% of those in the placebo group. The most common adverse events with orforglipron were gastrointestinal effects, which were mostly mild to moderate. CONCLUSIONS: In adults with obesity, 72-week treatment with orforglipron led to significantly greater reductions in body weight than placebo; the adverse-event profile was consistent with that of other GLP-1 receptor agonists. (Funded by Eli Lilly; ATTAIN-1 ClinicalTrials.gov number, NCT05869903.).",
-            "similarity": 0.5982657987641585,
-            "pubtype": [
-              "Journal Article",
-              "Randomized Controlled Trial",
-              "Multicenter Study",
-              "Clinical Trial, Phase III"
-            ]
-          },
-          {
-            "pmid": "37188932",
-            "title": "Effect of the glucagon-like peptide-1 receptor agonist liraglutide, compared to caloric restriction, on appetite, dietary intake, body fat distribution and cardiometabolic biomarkers: A randomized trial in adults with obesity and prediabetes.",
-            "abstract": "AIMS: To investigate the hypothesis that weight loss with the glucagon-like peptide-1 receptor agonist (GLP-1RA) liraglutide alone would lead to a greater reduction in the proportion of fat to lean tissue mass when compared to caloric restriction (CR) alone, as well as when compared to treatment with sitagliptin, a dipeptidyl peptidase-4 (DPP-4) inhibitor, that also enhances GLP-1 activity - to determine the independent effects of each treatment. METHODS: A total of 88 adults with obesity and prediabetes were randomized to 14 weeks of intervention with CR (-390 kcal/d), liraglutide (1.8 mg/d), or the dipeptidyl peptidase-4 inhibitor sitagliptin (100 mg/d) as a weight-neutral comparator. Changes between groups in appetite and hunger ratings measured via visual analogue scales, dietary intakes, body weight, body composition via dual energy x-ray absorptiometry, and resting energy expenditure via indirect calorimetry were assessed using the Kruskal-Wallis test or Pearson's chi-squared test. RESULTS: Weight loss ≥5% of baseline body weight occurred in 44% of participants in the CR group, 22% of the liraglutide group and 5% of the sitagliptin group (p = 0.02). The ratio of fat to lean mass decreased by 6.5% in the CR group, 2.2% in the liraglutide group, and 0% in the sitagliptin group (p = 0.02). Visceral fat reduced by 9.5% in the CR group, 4.8% in the liraglutide group, and 0% in the sitagliptin group (p = 0.04). A spontaneous reduction in dietary simple carbohydrates in the CR group was associated with improved homeostatic model assessment of insulin resistance score (HOMA-IR). CONCLUSIONS: Although both liraglutide and CR are valuable strategies for cardiometabolic risk reduction, CR was associated with greater weight loss and more favourable improvements in body composition than treatment with liraglutide alone. Differences in the response to each of these interventions enables patients to be stratified to the most optimal intervention for their personal risk factors.",
-            "similarity": 0.57568978386636,
-            "pubtype": [
-              "Randomized Controlled Trial",
-              "Journal Article",
-              "Research Support, Non-U.S. Gov't",
-              "Research Support, N.I.H., Extramural"
-            ]
-          }
-        ],
-        "evidence_summary": {
-          "summary": "The provided abstracts do not directly assess semaglutide for 'nutritional disorder' as a defined disease entity. PMID 40544432 evaluates cagrilintide-semaglutide combination therapy for weight management in adults with obesity and type 2 diabetes, showing significant body weight reduction (-13.7% vs -3.4% placebo), but this targets obesity/T2D rather than a nutritional disorder per se. PMID 37188932 examines liraglutide (not semaglutide) for obesity and prediabetes. PMID 40960239 concerns orforglipron, not semaglutide. The retrieved literature is insufficient to assess semaglutide specifically for nutritional disorder as a distinct diagnosis.",
-          "study_count": 1,
-          "strength": "none",
-          "key_findings": [
-            "Cagrilintide-semaglutide (2.4 mg each, once-weekly) resulted in a mean body weight change of -13.7% vs -3.4% with placebo over 68 weeks in adults with obesity and type 2 diabetes (PMID: 40544432)",
-            "73.5% of patients in the cagrilintide-semaglutide group achieved HbA1c ≤6.5% vs 15.9% in the placebo group (PMID: 40544432)",
-            "Gastrointestinal adverse events were reported in 72.5% of the cagrilintide-semaglutide group vs 34.4% in the placebo group, mostly transient and mild-to-moderate (PMID: 40544432)",
-            "PMID 40960239 evaluates orforglipron (not semaglutide) for obesity, and PMID 37188932 evaluates liraglutide (not semaglutide) for obesity and prediabetes; neither abstract provides evidence for semaglutide in nutritional disorder"
-          ],
-          "supporting_pmids": []
-        },
-        "summary": "Evidence strength: none. The pipeline retrieved 66 PubMed abstracts via 8 semaglutide-focused queries, but semantic re-ranking against the \"semaglutide + nutritional disorder\" pair yielded only 3 topically relevant abstracts (top cosine similarity: 0.66), and synthesis returned an evidence strength of \"none.\" The retrieved literature does not provide sufficient direct evidence to support or refute semaglutide as a repurposing candidate for nutritional disorders based on the abstracts captured in this run."
-      },
-      "clinical_trials": {
-        "search": {
-          "total_count": 5,
-          "by_status": {
-            "RECRUITING": 0,
-            "ACTIVE_NOT_RECRUITING": 0,
-            "WITHDRAWN": 0,
-            "UNKNOWN": 0
-          },
-          "trials": [
-            {
-              "nct_id": "NCT03548935",
-              "title": "STEP 1: Research Study Investigating How Well Semaglutide Works in People Suffering From Overweight or Obesity",
-              "brief_summary": "This study will look at the change in participants' body weight from the start to the end of the study. The weight loss in participants taking semaglutide (a new medicine) will be compared to the weight loss of participants taking \"dummy\" medicine. In addition to taking the medicine, participants will have talks with study staff about healthy food choices, how to be more physically active and what you can do to lose weight. Participants will either get semaglutide or \"dummy\" medicine - which treatment participants get, is decided by chance. Participants will need to take 1 injection once a week. The study medicine is injected with a thin needle in a skin fold in the stomach, thigh or upper arm. The study has two phases: A main phase and an extension phase.The main phase will last for about 1.5 years. Participants will have 15 clinic visits and 10 phone calls with the study doctor. Extension phase: Approximately 300 participants will continue in the extension phase in the following countries only: Canada, Germany, the UK and selected sites in the US and Japan. These participants will be in the study for about 2.5 years.They will not receive treatment, but will attend another 5 follow-up visits with the study doctor.",
-              "phase": "Phase 3",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Metabolism and Nutrition Disorder",
-                "Overweight or Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Semaglutide",
-                  "description": "Participants will receive semaglutide subcutaneous (s.c.; under the skin) injection(s) once-weekly as well as diet and physical activity counselling for 68 weeks. Dose escalation of semaglutide will take place as follows: 0.25 mg from week 1 to 4, 0.5 mg from week 5 to 8, 1.0 mg from week 9 to 12, 1.7 mg from week 13 to 16 and 2.4 mg from week 17 to week 68."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Placebo (semaglutide)",
-                  "description": "Participants will receive semaglutide matching placebo s.c. injection(s) once-weekly as well as diet and physical activity counselling for 68 weeks."
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 1961,
-              "start_date": "2018-06-04",
-              "completion_date": "2020-03-30",
-              "primary_outcomes": [
-                {
-                  "measure": "Change in Body Weight (%)",
-                  "time_frame": "Baseline (week 0) to week 68"
-                },
-                {
-                  "measure": "Participants Who Achieve 5 or More Percent Body Weight Reduction (Yes/no)",
-                  "time_frame": "After week 68"
-                }
-              ],
-              "references": [
-                "32441473",
-                "33567185",
-                "40980163",
-                "39316288",
-                "39226070",
-                "36876594",
-                "36801984",
-                "36200477",
-                "35724304",
-                "35441470",
-                "30122305"
-              ]
-            },
-            {
-              "nct_id": "NCT02453711",
-              "title": "Investigation of Safety and Efficacy of Once-daily Semaglutide in Obese Subjects Without Diabetes Mellitus",
-              "brief_summary": "This trial is conducted globally. The aim of this trial is to investigate safety and efficacy of once-daily semaglutide in obese subjects without diabetes mellitus.",
-              "phase": "Phase 2",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Metabolism and Nutrition Disorder",
-                "Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "semaglutide",
-                  "description": "Once-daily subcutaneous (s.c., under the skin) administration with dose escalation."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "liraglutide",
-                  "description": "Once-daily subcutaneous (s.c., under the skin) administration with dose escalation."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "placebo",
-                  "description": "Once-daily subcutaneous (s.c., under the skin) administration."
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 957,
-              "start_date": "2015-10-01",
-              "completion_date": "2017-03-30",
-              "primary_outcomes": [
-                {
-                  "measure": "Relative Change in Body Weight (%)",
-                  "time_frame": "Week 0, Week 52"
-                }
-              ],
-              "references": [
-                "30993900",
-                "30122305"
-              ]
-            },
-            {
-              "nct_id": "NCT03548987",
-              "title": "Research Study Investigating How Well Semaglutide Works in People Suffering From Overweight or Obesity",
-              "brief_summary": "This study will look at the change in participant's body weight from the start to the end of the study. This is to compare the effect on body weight in people taking semaglutide (a new medicine) and people taking \"dummy\" medicine. In addition to taking the medicine, the participant will have talks with study staff about healthy food choices, how to be more physically active and what a participant can do to lose weight.\n\nThe participant will get semaglutide for the first 20 weeks. Then the participant will get either semaglutide or \"dummy\" medicine - which treatment the participant gets after the 20 weeks is decided by chance. The participants will need to take 1 injection once a week. The study medicine is injected with a thin needle in a skin fold in the stomach, thigh or upper arm. The study will last for about 1.5 years.",
-              "phase": "Phase 3",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Metabolism and Nutrition Disorder",
-                "Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Semaglutide",
-                  "description": "Subcutaneous (under the skin) injection of semaglutide once-weekly."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Placebo",
-                  "description": "Subcutaneous (under the skin) injection of semaglutide placebo once-weekly."
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 902,
-              "start_date": "2018-06-04",
-              "completion_date": "2020-02-22",
-              "primary_outcomes": [
-                {
-                  "measure": "Change From Randomisation to Week 68 in Body Weight (%)",
-                  "time_frame": "Randomisation (week 20) to week 68"
-                }
-              ],
-              "references": [
-                "32441473",
-                "33755728",
-                "37605636",
-                "36200477",
-                "35724304",
-                "30122305"
-              ]
-            },
-            {
-              "nct_id": "NCT03574584",
-              "title": "A Research Study of NNC0165-1562 and Semaglutide in People Who Are Overweight or Obese",
-              "brief_summary": "The study is investigating new medicines for weight control in people with high body weight. The study looks at how the study medicines work in the body. Participants will get semaglutide and either NNC0165-1562 or \"dummy\" medicine -which treatment participants get is decided by chance. Participants will get 2 injections per week for 5 months. A study nurse at the clinic will inject the medicine with a thin needle in a skin fold in the stomach. The study will last for about 7 months. Participants will have 27 visits to the clinic.",
-              "phase": "Phase 1",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Metabolism and Nutrition Disorders",
-                "Overweight or Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "NNC0165-1562",
-                  "description": "Participants will receive NNC0165-1562 subcutaneous (s.c., under the skin) injection(s) once-weekly for 20 weeks. The dose will be escalated over 16 weeks to a final dose level that will be maintained for 4 weeks."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Semaglutide",
-                  "description": "Participants will receive semaglutide s.c. injection(s) once-weekly for 20 weeks. The dose will be escalated over 16 weeks to a final dose level that will be maintained for 4 weeks."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Placebo (NNC0165-1562)",
-                  "description": "Participants will receive placebo (NNC0165-1562) s.c. injection(s) once-weekly for 20 weeks."
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 37,
-              "start_date": "2018-06-18",
-              "completion_date": "2019-07-27",
-              "primary_outcomes": [
-                {
-                  "measure": "Number of treatment emergent adverse events (TEAEs)",
-                  "time_frame": "Week 0-25"
-                }
-              ],
-              "references": []
-            },
-            {
-              "nct_id": "NCT02079870",
-              "title": "Trial Investigating the Effect of Semaglutide on Energy Intake, Appetite Sensations, Postprandial Glucose and Triglyceride Metabolism and Gastric Emptying in Obese Subjects Compared With Placebo",
-              "brief_summary": "This trial is conducted in Europe. The aim of the trial is to investigate the effect of semaglutide on energy intake, appetite sensations, postprandial glucose and triglyceride metabolism and gastric emptying in obese subjects compared with placebo.",
-              "phase": "Phase 1",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Diabetes",
-                "Metabolism and Nutrition Disorder",
-                "Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D003920",
-                  "term": "Diabetes Mellitus"
-                },
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D044882",
-                  "term": "Glucose Metabolism Disorders"
-                },
-                {
-                  "id": "D008659",
-                  "term": "Metabolic Diseases"
-                },
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D004700",
-                  "term": "Endocrine System Diseases"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "semaglutide",
-                  "description": "Solution for subcutaneous (s.c. - under the skin) injection. 0.25 mg semaglutide once weekly for four weeks, 0.5 mg semaglutide once weekly for four weeks followed by 1.0 mg semaglutide once weekly for five weeks"
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "placebo",
-                  "description": "Solution for subcutaneous (s.c. - under the skin) injection"
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 30,
-              "start_date": "2014-03-06",
-              "completion_date": "2015-01-07",
-              "primary_outcomes": [
-                {
-                  "measure": "Ad libitum energy intake during a lunch meal (following a standardised breakfast meal)",
-                  "time_frame": "After 12 weeks of treatment"
-                }
-              ],
-              "references": [
-                "28266779",
-                "28941314"
-              ]
-            }
-          ]
-        },
-        "completed": {
-          "total_count": 5,
-          "trials": [
-            {
-              "nct_id": "NCT03548935",
-              "title": "STEP 1: Research Study Investigating How Well Semaglutide Works in People Suffering From Overweight or Obesity",
-              "brief_summary": "This study will look at the change in participants' body weight from the start to the end of the study. The weight loss in participants taking semaglutide (a new medicine) will be compared to the weight loss of participants taking \"dummy\" medicine. In addition to taking the medicine, participants will have talks with study staff about healthy food choices, how to be more physically active and what you can do to lose weight. Participants will either get semaglutide or \"dummy\" medicine - which treatment participants get, is decided by chance. Participants will need to take 1 injection once a week. The study medicine is injected with a thin needle in a skin fold in the stomach, thigh or upper arm. The study has two phases: A main phase and an extension phase.The main phase will last for about 1.5 years. Participants will have 15 clinic visits and 10 phone calls with the study doctor. Extension phase: Approximately 300 participants will continue in the extension phase in the following countries only: Canada, Germany, the UK and selected sites in the US and Japan. These participants will be in the study for about 2.5 years.They will not receive treatment, but will attend another 5 follow-up visits with the study doctor.",
-              "phase": "Phase 3",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Metabolism and Nutrition Disorder",
-                "Overweight or Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Semaglutide",
-                  "description": "Participants will receive semaglutide subcutaneous (s.c.; under the skin) injection(s) once-weekly as well as diet and physical activity counselling for 68 weeks. Dose escalation of semaglutide will take place as follows: 0.25 mg from week 1 to 4, 0.5 mg from week 5 to 8, 1.0 mg from week 9 to 12, 1.7 mg from week 13 to 16 and 2.4 mg from week 17 to week 68."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Placebo (semaglutide)",
-                  "description": "Participants will receive semaglutide matching placebo s.c. injection(s) once-weekly as well as diet and physical activity counselling for 68 weeks."
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 1961,
-              "start_date": "2018-06-04",
-              "completion_date": "2020-03-30",
-              "primary_outcomes": [
-                {
-                  "measure": "Change in Body Weight (%)",
-                  "time_frame": "Baseline (week 0) to week 68"
-                },
-                {
-                  "measure": "Participants Who Achieve 5 or More Percent Body Weight Reduction (Yes/no)",
-                  "time_frame": "After week 68"
-                }
-              ],
-              "references": [
-                "32441473",
-                "33567185",
-                "40980163",
-                "39316288",
-                "39226070",
-                "36876594",
-                "36801984",
-                "36200477",
-                "35724304",
-                "35441470",
-                "30122305"
-              ]
-            },
-            {
-              "nct_id": "NCT02453711",
-              "title": "Investigation of Safety and Efficacy of Once-daily Semaglutide in Obese Subjects Without Diabetes Mellitus",
-              "brief_summary": "This trial is conducted globally. The aim of this trial is to investigate safety and efficacy of once-daily semaglutide in obese subjects without diabetes mellitus.",
-              "phase": "Phase 2",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Metabolism and Nutrition Disorder",
-                "Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "semaglutide",
-                  "description": "Once-daily subcutaneous (s.c., under the skin) administration with dose escalation."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "liraglutide",
-                  "description": "Once-daily subcutaneous (s.c., under the skin) administration with dose escalation."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "placebo",
-                  "description": "Once-daily subcutaneous (s.c., under the skin) administration."
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 957,
-              "start_date": "2015-10-01",
-              "completion_date": "2017-03-30",
-              "primary_outcomes": [
-                {
-                  "measure": "Relative Change in Body Weight (%)",
-                  "time_frame": "Week 0, Week 52"
-                }
-              ],
-              "references": [
-                "30993900",
-                "30122305"
-              ]
-            },
-            {
-              "nct_id": "NCT03548987",
-              "title": "Research Study Investigating How Well Semaglutide Works in People Suffering From Overweight or Obesity",
-              "brief_summary": "This study will look at the change in participant's body weight from the start to the end of the study. This is to compare the effect on body weight in people taking semaglutide (a new medicine) and people taking \"dummy\" medicine. In addition to taking the medicine, the participant will have talks with study staff about healthy food choices, how to be more physically active and what a participant can do to lose weight.\n\nThe participant will get semaglutide for the first 20 weeks. Then the participant will get either semaglutide or \"dummy\" medicine - which treatment the participant gets after the 20 weeks is decided by chance. The participants will need to take 1 injection once a week. The study medicine is injected with a thin needle in a skin fold in the stomach, thigh or upper arm. The study will last for about 1.5 years.",
-              "phase": "Phase 3",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Metabolism and Nutrition Disorder",
-                "Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Semaglutide",
-                  "description": "Subcutaneous (under the skin) injection of semaglutide once-weekly."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Placebo",
-                  "description": "Subcutaneous (under the skin) injection of semaglutide placebo once-weekly."
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 902,
-              "start_date": "2018-06-04",
-              "completion_date": "2020-02-22",
-              "primary_outcomes": [
-                {
-                  "measure": "Change From Randomisation to Week 68 in Body Weight (%)",
-                  "time_frame": "Randomisation (week 20) to week 68"
-                }
-              ],
-              "references": [
-                "32441473",
-                "33755728",
-                "37605636",
-                "36200477",
-                "35724304",
-                "30122305"
-              ]
-            },
-            {
-              "nct_id": "NCT03574584",
-              "title": "A Research Study of NNC0165-1562 and Semaglutide in People Who Are Overweight or Obese",
-              "brief_summary": "The study is investigating new medicines for weight control in people with high body weight. The study looks at how the study medicines work in the body. Participants will get semaglutide and either NNC0165-1562 or \"dummy\" medicine -which treatment participants get is decided by chance. Participants will get 2 injections per week for 5 months. A study nurse at the clinic will inject the medicine with a thin needle in a skin fold in the stomach. The study will last for about 7 months. Participants will have 27 visits to the clinic.",
-              "phase": "Phase 1",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Metabolism and Nutrition Disorders",
-                "Overweight or Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "NNC0165-1562",
-                  "description": "Participants will receive NNC0165-1562 subcutaneous (s.c., under the skin) injection(s) once-weekly for 20 weeks. The dose will be escalated over 16 weeks to a final dose level that will be maintained for 4 weeks."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Semaglutide",
-                  "description": "Participants will receive semaglutide s.c. injection(s) once-weekly for 20 weeks. The dose will be escalated over 16 weeks to a final dose level that will be maintained for 4 weeks."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Placebo (NNC0165-1562)",
-                  "description": "Participants will receive placebo (NNC0165-1562) s.c. injection(s) once-weekly for 20 weeks."
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 37,
-              "start_date": "2018-06-18",
-              "completion_date": "2019-07-27",
-              "primary_outcomes": [
-                {
-                  "measure": "Number of treatment emergent adverse events (TEAEs)",
-                  "time_frame": "Week 0-25"
-                }
-              ],
-              "references": []
-            },
-            {
-              "nct_id": "NCT02079870",
-              "title": "Trial Investigating the Effect of Semaglutide on Energy Intake, Appetite Sensations, Postprandial Glucose and Triglyceride Metabolism and Gastric Emptying in Obese Subjects Compared With Placebo",
-              "brief_summary": "This trial is conducted in Europe. The aim of the trial is to investigate the effect of semaglutide on energy intake, appetite sensations, postprandial glucose and triglyceride metabolism and gastric emptying in obese subjects compared with placebo.",
-              "phase": "Phase 1",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Diabetes",
-                "Metabolism and Nutrition Disorder",
-                "Obesity"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D003920",
-                  "term": "Diabetes Mellitus"
-                },
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D044882",
-                  "term": "Glucose Metabolism Disorders"
-                },
-                {
-                  "id": "D008659",
-                  "term": "Metabolic Diseases"
-                },
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D004700",
-                  "term": "Endocrine System Diseases"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "semaglutide",
-                  "description": "Solution for subcutaneous (s.c. - under the skin) injection. 0.25 mg semaglutide once weekly for four weeks, 0.5 mg semaglutide once weekly for four weeks followed by 1.0 mg semaglutide once weekly for five weeks"
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "placebo",
-                  "description": "Solution for subcutaneous (s.c. - under the skin) injection"
-                }
-              ],
-              "sponsor": "Novo Nordisk A/S",
-              "enrollment": 30,
-              "start_date": "2014-03-06",
-              "completion_date": "2015-01-07",
-              "primary_outcomes": [
-                {
-                  "measure": "Ad libitum energy intake during a lunch meal (following a standardised breakfast meal)",
-                  "time_frame": "After 12 weeks of treatment"
-                }
-              ],
-              "references": [
-                "28266779",
-                "28941314"
-              ]
-            }
-          ]
-        },
-        "terminated": {
-          "total_count": 0,
-          "trials": []
-        },
-        "landscape": {
-          "total_trial_count": 443,
-          "competitors": [
-            {
-              "sponsor": "Fresenius Kabi",
-              "drug_name": "SMOFlipid® (lipid injectable emulsion)",
-              "drug_type": "Drug",
-              "max_phase": "Phase 4",
-              "trial_count": 1,
-              "statuses": [
-                "RECRUITING"
-              ],
-              "total_enrollment": 100,
-              "most_recent_start": "2024-10-28"
-            },
-            {
-              "sponsor": "University of California, San Francisco",
-              "drug_name": "Azithromycin",
-              "drug_type": "Drug",
-              "max_phase": "Phase 4",
-              "trial_count": 1,
-              "statuses": [
-                "RECRUITING"
-              ],
-              "total_enrollment": 3000,
-              "most_recent_start": "2024-10-23"
-            },
-            {
-              "sponsor": "Pfizer",
-              "drug_name": "PF-08653944",
-              "drug_type": "Drug",
-              "max_phase": "Phase 3",
-              "trial_count": 2,
-              "statuses": [
-                "RECRUITING",
-                "NOT_YET_RECRUITING"
-              ],
-              "total_enrollment": 1953,
-              "most_recent_start": "2026-06-30"
-            },
-            {
-              "sponsor": "Eli Lilly and Company",
-              "drug_name": "Orforglipron",
-              "drug_type": "Drug",
-              "max_phase": "Phase 3",
-              "trial_count": 1,
-              "statuses": [
-                "RECRUITING"
-              ],
-              "total_enrollment": 800,
-              "most_recent_start": "2025-09-15"
-            },
-            {
-              "sponsor": "Pfizer",
-              "drug_name": "PF-08653945",
-              "drug_type": "Drug",
-              "max_phase": "Phase 2",
-              "trial_count": 1,
-              "statuses": [
-                "NOT_YET_RECRUITING"
-              ],
-              "total_enrollment": 872,
-              "most_recent_start": "2026-05-11"
-            },
-            {
-              "sponsor": "Yu Zhang",
-              "drug_name": "Traditional deep-fried Youtiao",
-              "drug_type": "Drug",
-              "max_phase": "Phase 2",
-              "trial_count": 1,
-              "statuses": [
-                "UNKNOWN"
-              ],
-              "total_enrollment": 150,
-              "most_recent_start": "2025-03-01"
-            },
-            {
-              "sponsor": "Corbus Pharmaceuticals Inc.",
-              "drug_name": "CRB-913",
-              "drug_type": "Drug",
-              "max_phase": "Phase 1",
-              "trial_count": 1,
-              "statuses": [
-                "ACTIVE_NOT_RECRUITING"
-              ],
-              "total_enrollment": 252,
-              "most_recent_start": "2025-12-04"
-            },
-            {
-              "sponsor": "MBX Biosciences",
-              "drug_name": "MBX 4291",
-              "drug_type": "Drug",
-              "max_phase": "Phase 1",
-              "trial_count": 1,
-              "statuses": [
-                "RECRUITING"
-              ],
-              "total_enrollment": 124,
-              "most_recent_start": "2025-09-03"
-            }
-          ],
-          "phase_distribution": {
-            "Phase 3": 3,
-            "Phase 2": 2,
-            "Phase 1": 2,
-            "Phase 4": 2
-          },
-          "recent_starts": [
-            {
-              "nct_id": "NCT07595549",
-              "sponsor": "Pfizer",
-              "drug": "PF-08653944",
-              "phase": "Phase 3"
-            },
-            {
-              "nct_id": "NCT07575932",
-              "sponsor": "Pfizer",
-              "drug": "PF-08653945",
-              "phase": "Phase 2"
-            },
-            {
-              "nct_id": "NCT07400653",
-              "sponsor": "Pfizer",
-              "drug": "PF-08653944",
-              "phase": "Phase 3"
-            },
-            {
-              "nct_id": "NCT07310901",
-              "sponsor": "Corbus Pharmaceuticals Inc.",
-              "drug": "CRB-913",
-              "phase": "Phase 1"
-            },
-            {
-              "nct_id": "NCT07153471",
-              "sponsor": "Eli Lilly and Company",
-              "drug": "Orforglipron",
-              "phase": "Phase 3"
-            },
-            {
-              "nct_id": "NCT07142707",
-              "sponsor": "MBX Biosciences",
-              "drug": "MBX 4291",
-              "phase": "Phase 1"
-            },
-            {
-              "nct_id": "NCT06422429",
-              "sponsor": "Yu Zhang",
-              "drug": "Traditional deep-fried Youtiao",
-              "phase": "Phase 2"
-            },
-            {
-              "nct_id": "NCT06049680",
-              "sponsor": "Fresenius Kabi",
-              "drug": "SMOFlipid® (lipid injectable emulsion)",
-              "phase": "Phase 4"
-            },
-            {
-              "nct_id": "NCT06010719",
-              "sponsor": "University of California, San Francisco",
-              "drug": "Azithromycin",
-              "phase": "Phase 4"
-            }
-          ]
-        },
-        "approval": {
-          "is_approved": false,
-          "label_found": true,
-          "matched_indication": null,
-          "drug_names_checked": [
-            "semaglutide",
-            "nn-9535",
-            "nn9535",
-            "nnc 0113-0217",
-            "nnc-0113-0217",
-            "ozempic",
-            "rybelsus",
-            "semaglutida",
-            "wegovy"
-          ]
-        },
-        "summary": "Semaglutide has 5 trials on record under the \"nutritional disorder\" MeSH umbrella, spanning Phase 1 through Phase 3, all recorded as completed with no terminations or stopping signals. The two completed Phase 3 trials — STEP 1 (NCT03548935) and a companion STEP trial (NCT03548987) — both target overweight/obesity and carry extensive CT.gov-linked publication records (multiple PMIDs each), indicating published readouts exist. This exact indication label does not appear on semaglutide's FDA labels in this run, but the underlying conditions studied (overweight, obesity) align closely with semaglutide's known regulatory history; the supervisor should determine whether the approved obesity/overweight indication constitutes a superset of \"nutritional disorder.\" The clinical program is mature and fully executed, with 8 competitors identified in the broader landscape, making this a well-characterized rather than novel repurposing opportunity."
-      },
-      "blurb": {
-        "stage": "",
-        "literature": "",
-        "blocker": "",
-        "active_programs": "",
-        "key_risk": "",
-        "verdict": "",
-        "watch": "",
-        "prose": "The 'nutritional disorder' MeSH umbrella in the trial registry is populated entirely by obesity and overweight trials (STEP 1, STEP 2, and related studies), which correspond directly to semaglutide's approved Wegovy indication; this label does not represent a distinct uncovered population and the trial record is fully contaminated by the approved indication."
+        "prose": "Semaglutide holds FDA approvals for major adverse cardiovascular events and cardiovascular death reduction; 'cardiovascular disease' is the broader parent term and the 13-trial record is contaminated by the approved subtypes, making a scope-narrowed analysis not feasible in this run."
       }
     },
     {
@@ -9223,14 +9249,14 @@
       "source": "mechanism",
       "literature": {
         "search_results": [
-          "semaglutide AND \"diabetes mellitus\"",
+          "semaglutide AND \"Diabetes Mellitus\"",
           "glucagon-like peptide-1 analogues AND pancreas",
           "blood glucose lowering drugs AND pancreas",
           "GLP-1 receptor agonist AND pancreas",
-          "GLP1R AND \"diabetes mellitus\"",
-          "ozempic AND \"diabetes mellitus\"",
-          "wegovy AND \"diabetes mellitus\"",
-          "GLP-1 agonist AND beta cell function"
+          "GLP1R AND \"Diabetes Mellitus\"",
+          "ozempic AND \"Diabetes Mellitus\"",
+          "wegovy AND \"Diabetes Mellitus\"",
+          "GLP-1 agonist AND glucose homeostasis AND pancreas"
         ],
         "pmids": [
           "29756388",
@@ -9312,12 +9338,12 @@
           "27667667",
           "38632474",
           "23431286",
+          "32961860",
           "41178710",
           "40996853",
           "21950636",
           "39777709",
           "16484515",
-          "32961860",
           "21707956",
           "22236411",
           "25456646",
@@ -9331,17 +9357,24 @@
           "40537987",
           "29049653",
           "38206146",
-          "33421947",
           "37897727",
-          "22945360",
-          "32543261",
-          "39665969",
-          "39983043",
-          "41052246",
-          "38985854",
-          "34608929",
-          "40399267",
-          "17098089"
+          "25834231",
+          "26876794",
+          "24373234",
+          "23638493",
+          "26699764",
+          "41165809",
+          "40722684",
+          "39138162",
+          "31539596",
+          "21061499",
+          "40332747",
+          "9928026",
+          "22553894",
+          "21061498",
+          "40314189",
+          "39594592",
+          "40657828"
         ],
         "semantic_search_results": [
           {
@@ -9383,18 +9416,18 @@
           }
         ],
         "evidence_summary": {
-          "summary": "The evidence strongly supports semaglutide for treating diabetes mellitus. A phase 2 RCT demonstrated that oral semaglutide produced dose-dependent reductions in HbA1c (-0.7% to -1.9%) versus placebo (-0.3%) in type 2 diabetes patients (PMID: 29049653). A 26-week double-blind RCT showed semaglutide also improved glycemic control in adults with type 1 diabetes, reducing HbA1c by -0.3 percentage points and increasing time in range by 8.8 percentage points versus placebo (PMID: 40550013). An indirect treatment comparison further confirmed semaglutide's HbA1c-lowering efficacy in type 2 diabetes patients with obesity, while also showing tirzepatide achieved statistically significantly greater HbA1c reductions than semaglutide (PMID: 40537987).",
+          "summary": "The evidence strongly supports semaglutide for treating diabetes mellitus. A phase 2 RCT demonstrated that oral semaglutide produced dose-dependent reductions in HbA1c (-0.7% to -1.9%) compared to placebo (-0.3%) in patients with type 2 diabetes (PMID: 29049653). A 26-week double-blind RCT further showed semaglutide improved glycemic control in adults with type 1 diabetes and obesity, reducing HbA1c by -0.3 percentage points and increasing time in range by 8.8 percentage points versus placebo (PMID: 40550013). An indirect treatment comparison also confirmed semaglutide's efficacy in reducing HbA1c in patients with type 2 diabetes and obesity, while noting tirzepatide produced statistically greater HbA1c reductions (PMID: 40537987).",
           "study_count": 3,
           "strength": "strong",
           "key_findings": [
-            "Oral semaglutide produced dose-dependent HbA1c reductions ranging from -0.7% to -1.9% versus -0.3% for placebo in type 2 diabetes patients over 26 weeks, with all doses except 2.5 mg achieving p<0.001 significance (PMID: 29049653)",
-            "Subcutaneous semaglutide 1.0 mg once-weekly reduced HbA1c by -1.9% in type 2 diabetes patients over 26 weeks (PMID: 29049653)",
-            "Oral semaglutide at doses of 10 mg or more produced statistically significant body weight reductions versus placebo (ETD range -0.9 to -5.7 kg; P<0.001) in type 2 diabetes patients (PMID: 29049653)",
-            "In adults with type 1 diabetes and obesity using automated insulin delivery, once-weekly semaglutide up to 1 mg reduced HbA1c by -0.3 percentage points (95% CI, -0.6 to -0.05) versus placebo over 26 weeks (PMID: 40550013)",
-            "Semaglutide significantly improved CGM-based time in range (70-180 mg/dl) by 8.8 percentage points (95% CI, 3.9 to 13.7) versus placebo in type 1 diabetes patients (PMID: 40550013)",
-            "36% of type 1 diabetes patients on semaglutide achieved the composite outcome of >70% time in range, <4% time below range, and ≥5% weight reduction, versus 0% in the placebo group (P<0.001) (PMID: 40550013)",
-            "In an indirect treatment comparison, semaglutide 2.4 mg once-weekly reduced HbA1c in type 2 diabetes patients with obesity, though tirzepatide 10 and 15 mg were associated with statistically significantly greater HbA1c reductions than semaglutide (PMID: 40537987)",
-            "No diabetic ketoacidosis was reported and only two severe hypoglycemia events occurred in each group in the type 1 diabetes semaglutide trial, suggesting an acceptable safety profile (PMID: 40550013)"
+            "Oral semaglutide produced dose-dependent HbA1c reductions ranging from -0.7% to -1.9% versus -0.3% for placebo over 26 weeks in patients with type 2 diabetes (PMID: 29049653)",
+            "All oral semaglutide doses (except 2.5 mg at P=0.01) showed statistically significant HbA1c reductions versus placebo (P<0.001) in type 2 diabetes patients (PMID: 29049653)",
+            "Subcutaneous semaglutide 1.0 mg once-weekly reduced HbA1c by -1.9% in patients with type 2 diabetes over 26 weeks (PMID: 29049653)",
+            "In adults with type 1 diabetes and obesity, once-weekly semaglutide up to 1 mg reduced HbA1c by -0.3 percentage points versus placebo over 26 weeks (PMID: 40550013)",
+            "Semaglutide increased CGM time in range (70-180 mg/dl) by 8.8 percentage points versus placebo in adults with type 1 diabetes and obesity (PMID: 40550013)",
+            "36% of patients with type 1 diabetes in the semaglutide group achieved the primary composite outcome (time in range >70%, time below range <4%, and ≥5% weight reduction) versus 0% in the placebo group (PMID: 40550013)",
+            "No diabetic ketoacidosis was reported and only two severe hypoglycemia events occurred in each group in the type 1 diabetes trial (PMID: 40550013)",
+            "In an indirect treatment comparison, semaglutide 2.4 mg reduced HbA1c in patients with type 2 diabetes and obesity, though tirzepatide 10 and 15 mg were associated with statistically significantly greater HbA1c reductions versus semaglutide (PMID: 40537987)"
           ],
           "supporting_pmids": [
             "29049653",
@@ -9402,7 +9435,7 @@
             "40537987"
           ]
         },
-        "summary": "Strong evidence supports semaglutide for diabetes mellitus based on synthesized PubMed literature."
+        "summary": "Strong evidence supports semaglutide for diabetes mellitus based on synthesized PubMed abstracts."
       },
       "clinical_trials": {
         "search": {
@@ -17516,7 +17549,7 @@
             "wegovy"
           ]
         },
-        "summary": "Semaglutide in diabetes mellitus is not a repurposing opportunity — it is the drug's primary, commercially established indication, with 334 trials on record spanning through Phase 4, 195 completed trials (including at least 30 completed Phase 3 trials in the top 50 shown), and multiple published pivotal readouts (e.g., NCT03914326 with six linked PMIDs). The FDA label specificity mismatch (\"diabetes mellitus\" vs. the narrower \"type 2 diabetes mellitus\" on the label) is a labeling artifact rather than evidence of an unmet approval gap. Only 4 trials were terminated, none due to semaglutide's own safety or efficacy — the one safety-flagged termination (NCT05579977) was driven by a co-investigational agent (PF-07081532), not semaglutide itself. A notable exploratory signal outside this indication is the DREAM study (NCT05768945), which assessed semaglutide vs. DPP4 inhibitors in the context of Alzheimer's disease, suggesting active repurposing interest in CNS indications."
+        "summary": "Semaglutide in diabetes mellitus is a fully mature, commercially established indication with 334 trials on record spanning Phase 2 through Phase 4, including 195 completed trials and at least 30 completed Phase 3 trials — among them the SOUL cardiovascular outcomes trial (NCT03914326) with six linked publications. The exact string \"diabetes mellitus\" did not match semaglutide's FDA labels in this run, but this is a likely superset/naming issue given semaglutide's well-known approval for type 2 diabetes mellitus. Only 4 trials were terminated, none attributable to semaglutide's own safety or efficacy — the one safety-coded stop (NCT05579977) was driven by a combination partner drug (PF-07081532), not semaglutide itself. A notable secondary signal is NCT05768945 (DREAM study), a completed observational study explicitly framed as a repurposing analysis comparing semaglutide to DPP4 inhibitors for Alzheimer's disease risk in diabetic patients, which may represent a genuine repurposing lead worth further investigation."
       },
       "blurb": null
     }
@@ -17525,8 +17558,8 @@
     "type 1 diabetes mellitus",
     "parkinson disease",
     "non-alcoholic fatty liver disease",
-    "cardiovascular disease",
-    "nutritional disorder"
+    "nutritional disorder",
+    "cardiovascular disease"
   ],
-  "summary": "Ranked repurposing signals for semaglutide:\n\n1. type 1 diabetes mellitus — moderate literature (two completed RCTs with quantified efficacy readouts, PMIDs 40550013 and 39794615); Phase 2 completed, Phase 3 recruiting\n2. parkinson disease — weak literature (meta-analysis of GLP-1 RAs shows marginal motor benefit, inconclusive; one Phase 2 trial with UNKNOWN status); early-stage, no readout\n\nDemoted — approval relationship:\n- non-alcoholic fatty liver disease (broader term; potentially relevant uncovered population not separable from approved subtype MASH/non-alcoholic steatohepatitis in this run)\n- cardiovascular disease (broader term; potentially relevant uncovered population not separable from approved subtype major adverse cardiovascular events/cardiovascular death in this run)\n- nutritional disorder (broader term; trial record contaminated by approved subtype obesity/overweight)\n- diabetes mellitus (broader term; trial record contaminated by approved subtype type 2 diabetes mellitus)\n\nEvidence gate exclusions: (none)"
+  "summary": "Ranked repurposing signals for semaglutide:\n\n1. type 1 diabetes mellitus — moderate literature, two RCTs with quantified efficacy readouts; Phase 2 completed, active Phase 3 pipeline\n2. parkinson disease — no usable literature (GLP-1 class evidence only, no semaglutide-specific data); Phase 2 UNKNOWN-status, no completed trial, no readout\n\nEvidence gate exclusions: parkinson disease (literature strength=none, no completed trial readout for semaglutide specifically)\n\nDemoted — approval relationship:\n  non-alcoholic fatty liver disease (broader term; potentially relevant uncovered population not separable from approved subtype non-alcoholic steatohepatitis / MASH in this run)\n  nutritional disorder (broader term; potentially relevant uncovered population not separable from approved subtype obesity/overweight in this run)\n  cardiovascular disease (broader term; potentially relevant uncovered population not separable from approved subtype major adverse cardiovascular events / cardiovascular death in this run)\n  diabetes mellitus (broader term; trial record contaminated by approved subtype type 2 diabetes mellitus)"
 }

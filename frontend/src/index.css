@@ -88,6 +88,14 @@ body {
   padding: 1.5rem 2rem;
 }
 
+.drug-title {
+  margin: 0 0 0.5rem;
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: #111827;
+}
+
 .hint,
 .muted {
   color: #6b7280;
@@ -562,4 +570,57 @@ body {
 .comparison-grid tr:focus-visible {
   outline: 2px solid #2d6cdf;
   outline-offset: -2px;
+}
+
+/* ---- KPI band / tabs wrapping ---- */
+.kpis,
+.metrics {
+  flex-wrap: wrap;
+}
+
+/* Tabs scroll horizontally rather than overflowing on narrow widths. */
+.tabs {
+  overflow-x: auto;
+}
+
+/* ---- Responsive: collapse the sidebar to a top bar on narrow screens ---- */
+@media (max-width: 768px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid #e2e4e8;
+  }
+
+  .main {
+    padding: 1rem;
+  }
+
+  .metrics {
+    gap: 1.5rem;
+  }
+
+  /* The network graph needs a fixed height; shrink it on small screens. */
+  .mech-graph {
+    height: 320px;
+  }
+
+  /* Two-column mechanism layout stacks. */
+  .mech-cols {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+/* ---- Respect reduced-motion: drop the donut/graph transitions & spinners ---- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

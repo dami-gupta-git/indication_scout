@@ -116,21 +116,44 @@ export function App() {
         <StatusBanner status={state.status} error={state.error} />
         {result && (
           <>
+            <h1 className="drug-title">
+              {(state.data?.drug_name ?? "").toUpperCase()}
+            </h1>
             <KpiBand result={result} />
-            <nav className="tabs" role="tablist">
+            <nav className="tabs" role="tablist" aria-label="Analysis sections">
               {TABS.map((t) => (
                 <button
                   key={t}
+                  id={`tab-${t}`}
                   role="tab"
                   aria-selected={tab === t}
+                  aria-controls="tabpanel"
+                  tabIndex={tab === t ? 0 : -1}
                   className={tab === t ? "active" : ""}
                   onClick={() => setTab(t)}
+                  onKeyDown={(e) => {
+                    // Arrow keys move between tabs (WAI-ARIA tabs pattern).
+                    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+                    e.preventDefault();
+                    const i = TABS.indexOf(tab);
+                    const next =
+                      e.key === "ArrowRight"
+                        ? TABS[(i + 1) % TABS.length]
+                        : TABS[(i - 1 + TABS.length) % TABS.length];
+                    setTab(next);
+                    document.getElementById(`tab-${next}`)?.focus();
+                  }}
                 >
                   {t}
                 </button>
               ))}
             </nav>
-            <section role="tabpanel" className="tabpanel">
+            <section
+              id="tabpanel"
+              role="tabpanel"
+              aria-labelledby={`tab-${tab}`}
+              className="tabpanel"
+            >
               <TabContent
                 tab={tab}
                 result={result}
