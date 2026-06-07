@@ -40,8 +40,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         postgresql-client \
     && rm -rf /var/lib/apt/lists/*
 
+# Install CPU-only PyTorch first, from PyTorch's CPU wheel index. Without this,
+# sentence-transformers pulls the default torch, which drags in the multi-GB
+# CUDA/NVIDIA GPU stack (nvidia-*-cu13, triton, ...) — useless on a CPU host and
+# enough to blow the image past several GB / hit build disk limits.
+RUN pip install --index-url https://download.pytorch.org/whl/cpu torch
+
 # Install Python deps. Copy only the project metadata first so the dependency
-# layer caches unless pyproject changes.
+# layer caches unless pyproject changes. torch is already satisfied above, so
+# this resolves the CPU build rather than the GPU one.
 COPY pyproject.toml ./
 COPY README.md ./
 COPY src/ ./src/
