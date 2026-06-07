@@ -10,6 +10,10 @@ import { FilterChips } from "./FilterChips";
 
 const ROW_LIMIT = 25;
 
+// Label used for trials with an empty phase string — matches the funnel so a
+// click there and the "Unknown" chip select the same rows.
+const UNKNOWN_PHASE = "Unknown";
+
 type Key = "title" | "phase" | "overall_status";
 
 const ACCESSORS: Record<Key, Accessor<Trial>> = {
@@ -18,16 +22,31 @@ const ACCESSORS: Record<Key, Accessor<Trial>> = {
   overall_status: (t) => t.overall_status,
 };
 
+const phaseLabel = (t: Trial): string => t.phase || UNKNOWN_PHASE;
+
 // Order-preserving distinct values for a chip set, skipping empties.
 function distinct(values: string[]): string[] {
   return [...new Set(values.filter((v) => v))];
 }
 
-export function CompletedTrialsTable({ trials }: { trials: Trial[] }) {
-  const [phase, setPhase] = useState<string | null>(null);
+export function CompletedTrialsTable({
+  trials,
+  phase: phaseProp,
+  onPhaseChange,
+}: {
+  trials: Trial[];
+  // Optional controlled phase filter (driven by the phase funnel). When omitted
+  // the table manages its own phase state.
+  phase?: string | null;
+  onPhaseChange?: (phase: string | null) => void;
+}) {
+  const [phaseInternal, setPhaseInternal] = useState<string | null>(null);
+  const controlled = phaseProp !== undefined;
+  const phase = controlled ? phaseProp : phaseInternal;
+  const setPhase = controlled ? (onPhaseChange ?? (() => {})) : setPhaseInternal;
   const [status, setStatus] = useState<string | null>(null);
 
-  const phaseOptions = useMemo(() => distinct(trials.map((t) => t.phase)), [trials]);
+  const phaseOptions = useMemo(() => distinct(trials.map(phaseLabel)), [trials]);
   const statusOptions = useMemo(
     () => distinct(trials.map((t) => t.overall_status)),
     [trials],
@@ -37,7 +56,7 @@ export function CompletedTrialsTable({ trials }: { trials: Trial[] }) {
     () =>
       trials.filter(
         (t) =>
-          (phase === null || t.phase === phase) &&
+          (phase === null || phaseLabel(t) === phase) &&
           (status === null || t.overall_status === status),
       ),
     [trials, phase, status],

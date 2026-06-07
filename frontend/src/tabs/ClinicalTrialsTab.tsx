@@ -1,11 +1,15 @@
-// Clinical Trials tab. Focus-disease driven: KPIs, status breakdown,
-// completed/terminated/competitor tables, NCT links. Static tables + a textual
-// status breakdown stand in for the bar chart for now.
+// Clinical Trials tab. Focus-disease driven: KPIs, status donut, clickable
+// phase funnel that filters the completed-trials table, terminated cards, and
+// the competitor table.
 
-import type { SupervisorOutput } from "../types";
+import { useState } from "react";
+import type { CandidateFindings, SupervisorOutput } from "../types";
 import { NctLink } from "../components/links";
 import { CompletedTrialsTable } from "../tables/CompletedTrialsTable";
 import { CompetitorsTable } from "../tables/CompetitorsTable";
+import { StatusDonut } from "../charts/StatusDonut";
+import { PhaseFunnel } from "../charts/PhaseFunnel";
+import { phaseSlices, statusSlices } from "../charts/chartData";
 
 const TERMINATED_LIMIT = 15;
 
@@ -27,11 +31,19 @@ export function ClinicalTrialsTab({
     return <p className="hint">Selected disease has no findings.</p>;
   }
 
+  // Keyed on the disease so the funnel/table phase filter resets on switch.
+  return <TrialsBody key={focusDisease} finding={finding} />;
+}
+
+function TrialsBody({ finding }: { finding: CandidateFindings }) {
+  // Phase filter shared between the phase funnel and the completed-trials table.
+  const [phaseFilter, setPhaseFilter] = useState<string | null>(null);
+
   const ct = finding.clinical_trials;
 
   return (
     <div className="trials">
-      <h3>Clinical trials — {focusDisease}</h3>
+      <h3>Clinical trials — {finding.disease}</h3>
       <p className="caption">Source: {finding.source}</p>
 
       {ct === null ? (
@@ -49,26 +61,29 @@ export function ClinicalTrialsTab({
             />
           </div>
 
-          {ct.search && Object.keys(ct.search.by_status).length > 0 && (
+          {ct.search && ct.search.total_count > 0 && (
             <>
               <h4>Status breakdown</h4>
-              <ul className="status-breakdown">
-                {Object.entries(ct.search.by_status)
-                  .sort((a, b) => b[1] - a[1])
-                  .map(([status, count]) => (
-                    <li key={status}>
-                      <span className="status-name">{status}</span>
-                      <span className="status-count">{count}</span>
-                    </li>
-                  ))}
-              </ul>
+              <StatusDonut
+                slices={statusSlices(ct.search.by_status)}
+                total={ct.search.total_count}
+              />
             </>
           )}
 
           {ct.completed && ct.completed.trials.length > 0 && (
             <>
               <h4>Completed trials ({ct.completed.total_count} total)</h4>
-              <CompletedTrialsTable trials={ct.completed.trials} />
+              <PhaseFunnel
+                slices={phaseSlices(ct.completed.trials)}
+                active={phaseFilter}
+                onSelect={setPhaseFilter}
+              />
+              <CompletedTrialsTable
+                trials={ct.completed.trials}
+                phase={phaseFilter}
+                onPhaseChange={setPhaseFilter}
+              />
             </>
           )}
 

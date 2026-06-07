@@ -252,22 +252,97 @@ body {
   border-radius: 4px;
 }
 
-/* ---- Status breakdown ---- */
-.status-breakdown {
+/* ---- Status donut ---- */
+.donut {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.donut-total {
+  font-size: 1.4rem;
+  font-weight: 600;
+  fill: #1a1a1a;
+}
+
+.donut-legend {
   list-style: none;
   padding: 0;
-  max-width: 360px;
+  margin: 0;
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.85rem;
 }
 
-.status-breakdown li {
+.donut-legend li {
   display: flex;
-  justify-content: space-between;
-  padding: 0.2rem 0;
-  border-bottom: 1px solid #f0f1f4;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.status-count {
+.donut-legend .swatch {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 2px;
+  flex: none;
+}
+
+/* ---- Phase funnel (clickable) ---- */
+.funnel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  max-width: 520px;
+  margin: 0.5rem 0;
+}
+
+.funnel-bar {
+  display: grid;
+  grid-template-columns: 130px 1fr 2rem;
+  align-items: center;
+  gap: 0.6rem;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 0.2rem 0.4rem;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+}
+
+.funnel-bar:hover {
+  background: #f5f7fb;
+}
+
+.funnel-bar.active {
+  border-color: #2d6cdf;
+  background: #eef4ff;
+}
+
+.funnel-label {
+  font-size: 0.85rem;
+  color: #4b5563;
+}
+
+.funnel-track {
+  background: #eef0f3;
+  border-radius: 4px;
+  height: 1.1rem;
+  overflow: hidden;
+}
+
+.funnel-fill {
+  display: block;
+  height: 100%;
+  background: #2d6cdf;
+  border-radius: 4px;
+}
+
+.funnel-count {
+  font-size: 0.85rem;
   font-weight: 600;
+  text-align: right;
 }
 
 /* ---- Misc ---- */
