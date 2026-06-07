@@ -245,4 +245,4 @@ This codebase was created with the help of [Claude Code](https://claude.com/clau
 MIT
 
 
-IN progress: Railway deploy US
+IN progress: Railway deploy US area
