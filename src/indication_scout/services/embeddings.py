@@ -11,10 +11,19 @@ rather than just keyword matches.
 
 The model is lazy-loaded on first call to embed() and reused for the lifetime
 of the process — loading takes ~10s and uses ~500MB RAM, so we only do it once.
+
+On first deployment the model is not yet present in the persistent volume
+(HF_HOME=/data/hf). _get_model() detects this by checking whether the
+huggingface_hub snapshot directory for the model exists. If it does not, the
+model is downloaded (local_files_only=False); on every subsequent start the
+cached copy is used with local_files_only=True so no outbound traffic is
+required.
 """
 
 import asyncio
 import logging
+import os
+from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
 
@@ -42,8 +51,31 @@ def _model_lock() -> asyncio.Lock:
     return _MODEL_LOCK
 
 
+def _is_model_cached(model_name: str) -> bool:
+    """Return True if the model snapshot directory exists in the HF cache.
+
+    huggingface_hub stores downloaded models under:
+        <HF_HOME>/hub/models--<org>--<name>/snapshots/
+
+    The HF_HOME env var defaults to ~/.cache/huggingface when not set.
+    We check for the presence of the snapshots directory (and that it is
+    non-empty) rather than individual files so the check stays valid across
+    model revisions.
+    """
+    hf_home = Path(os.environ.get("HF_HOME", Path.home() / ".cache" / "huggingface"))
+    # Convert "FremyCompany/BioLORD-2023" -> "models--FremyCompany--BioLORD-2023"
+    cache_dir_name = "models--" + model_name.replace("/", "--")
+    snapshots_dir = hf_home / "hub" / cache_dir_name / "snapshots"
+    return snapshots_dir.is_dir() and any(snapshots_dir.iterdir())
+
+
 def _get_model() -> SentenceTransformer:
     """Return the singleton model, instantiating it on first call.
+
+    On first deployment the model files are absent from the persistent volume,
+    so we download them (local_files_only=False). On subsequent starts the
+    cached snapshot is used with local_files_only=True, keeping the service
+    fully air-gapped after the initial download.
 
     Not safe to call concurrently — use embed_async() which holds _model_lock
     across both model initialisation and encode().
@@ -51,8 +83,17 @@ def _get_model() -> SentenceTransformer:
     global _model
     if _model is None:
         model_name = get_settings().embedding_model
-        logger.info("Loading embedding model %s", model_name)
-        _model = SentenceTransformer(model_name, local_files_only=True)
+        if _is_model_cached(model_name):
+            logger.info(
+                "Loading embedding model %s from local cache", model_name
+            )
+            _model = SentenceTransformer(model_name, local_files_only=True)
+        else:
+            logger.info(
+                "Embedding model %s not found in cache — downloading", model_name
+            )
+            _model = SentenceTransformer(model_name, local_files_only=False)
+            logger.info("Embedding model %s downloaded and cached", model_name)
     return _model
 
 
