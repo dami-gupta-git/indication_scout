@@ -18,6 +18,6 @@ dockerfilePath = "Dockerfile"
 [deploy]
 # Health check: Railway waits for this to pass before routing traffic.
 healthcheckPath = "/health"
-healthcheckTimeout = 300
+healthcheckTimeout = 500
 restartPolicyType = "on_failure"
 restartPolicyMaxRetries = 3
