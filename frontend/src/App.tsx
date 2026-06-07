@@ -10,6 +10,7 @@ import { MechanismTab } from "./tabs/MechanismTab";
 import { ClinicalTrialsTab } from "./tabs/ClinicalTrialsTab";
 import { LiteratureTab } from "./tabs/LiteratureTab";
 import { LandingHero } from "./LandingHero";
+import { LoadingState } from "./LoadingState";
 import sampleOutput from "./fixtures/sample-output.json";
 
 const TABS = ["Overview", "Mechanism", "Clinical Trials", "Literature"] as const;
@@ -120,6 +121,7 @@ export function App() {
 
       <main className="main">
         {state.status === "idle" && <LandingHero onPickExample={pickExample} />}
+        {busy && <LoadingState drug={drug} />}
         <StatusBanner status={state.status} error={state.error} />
         {result && (
           <>
@@ -177,12 +179,7 @@ export function App() {
 
 function StatusBanner({ status, error }: { status: string; error: string | null }) {
   if (status === "idle") return null; // landing hero covers the idle state
-  if (status === "pending" || status === "running")
-    return (
-      <p className="banner running" role="status" aria-live="polite">
-        Analysing… this may take several minutes.
-      </p>
-    );
+  if (status === "pending" || status === "running") return null; // LoadingState covers it
   if (status === "error")
     return (
       <p className="banner error" role="alert">
