@@ -2,7 +2,12 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cancelAnalysis, createAnalysis, getAnalysis } from "./api";
-import { TERMINAL_STATUSES, type AnalysisStatus, type JobStatus } from "./types";
+import {
+  TERMINAL_STATUSES,
+  type AnalysisStatus,
+  type JobStatus,
+  type SupervisorOutput,
+} from "./types";
 
 const POLL_INTERVAL_MS = 1500;
 
@@ -72,5 +77,23 @@ export function useAnalysis() {
     setState(INITIAL);
   }, []);
 
-  return { state, run, stop, reset };
+  // Dev-only: inject a SupervisorOutput payload directly as a finished job,
+  // bypassing the POST/poll cycle. Lets the UI render without the pipeline.
+  const loadSample = useCallback((result: SupervisorOutput) => {
+    clearTimer();
+    setState({
+      jobId: "sample",
+      status: "done",
+      data: {
+        job_id: "sample",
+        drug_name: result.drug_name,
+        status: "done",
+        result,
+        error: null,
+      },
+      error: null,
+    });
+  }, []);
+
+  return { state, run, stop, reset, loadSample };
 }

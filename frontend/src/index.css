@@ -59,6 +59,14 @@ body {
   background: #b23a48;
 }
 
+.sidebar button.dev-sample {
+  margin-top: 0.75rem;
+  width: 100%;
+  background: none;
+  color: #6b7280;
+  border: 1px dashed #cfd2d8;
+}
+
 .focus {
   margin-top: 1.5rem;
   border: 1px solid #e2e4e8;
@@ -253,6 +261,13 @@ body {
 }
 
 /* ---- Misc ---- */
+/* The summary is a newline-separated ranked list from the supervisor; preserve
+   its line breaks (HTML would otherwise collapse them) while still wrapping. */
+.summary {
+  white-space: pre-wrap;
+  line-height: 1.6;
+}
+
 .marker.investigated {
   color: #1d6b35;
 }
@@ -260,4 +275,45 @@ body {
 .candidate-list,
 .pmid-list {
   line-height: 1.7;
+}
+
+/* ---- Comparison grid ---- */
+.comparison-grid .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.sort-header {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: #4b5563;
+  cursor: pointer;
+}
+
+.sort-header.active {
+  color: #2d6cdf;
+}
+
+.comparison-grid tbody tr {
+  cursor: pointer;
+}
+
+.comparison-grid tbody tr:hover {
+  background: #f5f7fb;
+}
+
+.comparison-grid tr.focused {
+  background: #e7eefc;
+}
+
+.comparison-grid tr.focused td:first-child {
+  box-shadow: inset 3px 0 0 #2d6cdf;
+}
+
+.comparison-grid tr:focus-visible {
+  outline: 2px solid #2d6cdf;
+  outline-offset: -2px;
 }

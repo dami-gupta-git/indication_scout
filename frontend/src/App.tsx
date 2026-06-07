@@ -8,12 +8,13 @@ import { OverviewTab } from "./tabs/OverviewTab";
 import { MechanismTab } from "./tabs/MechanismTab";
 import { ClinicalTrialsTab } from "./tabs/ClinicalTrialsTab";
 import { LiteratureTab } from "./tabs/LiteratureTab";
+import sampleOutput from "./fixtures/sample-output.json";
 
 const TABS = ["Overview", "Mechanism", "Clinical Trials", "Literature"] as const;
 type Tab = (typeof TABS)[number];
 
 export function App() {
-  const { state, run, stop } = useAnalysis();
+  const { state, run, stop, loadSample } = useAnalysis();
   const [drug, setDrug] = useState("");
   const [tab, setTab] = useState<Tab>("Overview");
   const [focusDisease, setFocusDisease] = useState<string | null>(null);
@@ -49,6 +50,17 @@ export function App() {
             </button>
           )}
         </form>
+
+        {import.meta.env.DEV && (
+          <button
+            type="button"
+            className="dev-sample"
+            onClick={() => loadSample(sampleOutput as unknown as SupervisorOutput)}
+            disabled={busy}
+          >
+            Load sample data (dev)
+          </button>
+        )}
 
         {result && (
           <fieldset className="focus">
@@ -96,7 +108,12 @@ export function App() {
               ))}
             </nav>
             <section role="tabpanel" className="tabpanel">
-              <TabContent tab={tab} result={result} focusDisease={focusDisease} />
+              <TabContent
+                tab={tab}
+                result={result}
+                focusDisease={focusDisease}
+                onFocus={setFocusDisease}
+              />
             </section>
           </>
         )}
@@ -157,14 +174,16 @@ function TabContent({
   tab,
   result,
   focusDisease,
+  onFocus,
 }: {
   tab: Tab;
   result: SupervisorOutput;
   focusDisease: string | null;
+  onFocus: (disease: string) => void;
 }) {
   switch (tab) {
     case "Overview":
-      return <OverviewTab result={result} focusDisease={focusDisease} />;
+      return <OverviewTab result={result} focusDisease={focusDisease} onFocus={onFocus} />;
     case "Mechanism":
       return <MechanismTab result={result} />;
     case "Clinical Trials":
