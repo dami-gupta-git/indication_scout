@@ -144,3 +144,120 @@ body {
 .tabpanel {
   padding-top: 1rem;
 }
+
+/* ---- Badges (shared visual encoding) ---- */
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.badge.strength-strong {
+  background: #d7f0dd;
+  color: #1d6b35;
+}
+.badge.strength-moderate {
+  background: #fdf0d0;
+  color: #8a6100;
+}
+.badge.strength-weak {
+  background: #fde4e4;
+  color: #a23030;
+}
+.badge.strength-none {
+  background: #ececec;
+  color: #6b7280;
+}
+
+.badge.verdict {
+  background: #e7eefc;
+  color: #2d4fa3;
+}
+
+.badge.source {
+  background: #eef0f3;
+  color: #4b5563;
+  text-transform: capitalize;
+}
+
+/* ---- Tables ---- */
+.table-scroll {
+  overflow-x: auto;
+}
+
+.tabpanel table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9rem;
+}
+
+.tabpanel th,
+.tabpanel td {
+  text-align: left;
+  padding: 0.4rem 0.6rem;
+  border-bottom: 1px solid #ececef;
+  vertical-align: top;
+}
+
+.tabpanel th {
+  font-weight: 600;
+  color: #4b5563;
+  border-bottom: 2px solid #e2e4e8;
+}
+
+/* ---- Cards (terminated trials, mechanism candidates) ---- */
+.card {
+  border: 1px solid #e2e4e8;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  margin: 0.5rem 0;
+}
+
+.caption {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0.25rem 0 0;
+}
+
+/* ---- Mechanism tab ---- */
+.mech-cols {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 1.5rem;
+}
+
+.mech-col code {
+  background: #f0f1f4;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+}
+
+/* ---- Status breakdown ---- */
+.status-breakdown {
+  list-style: none;
+  padding: 0;
+  max-width: 360px;
+}
+
+.status-breakdown li {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.2rem 0;
+  border-bottom: 1px solid #f0f1f4;
+}
+
+.status-count {
+  font-weight: 600;
+}
+
+/* ---- Misc ---- */
+.marker.investigated {
+  color: #1d6b35;
+}
+
+.candidate-list,
+.pmid-list {
+  line-height: 1.7;
+}

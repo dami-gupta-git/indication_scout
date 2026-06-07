@@ -1,4 +1,4 @@
-"""Analyses routes (PLAN_react.md §2.3, T2.2–T2.5).
+"""Analyses routes.
 
 Blocking runner inside an asyncio background task; the frontend polls `GET` for status/result.
 No orchestration touch — the runner calls the existing blocking `run_analysis`.

@@ -1,4 +1,4 @@
-"""Request/response schemas for the analyses API (PLAN_react.md T2.1, §2.4).
+"""Request/response schemas for the analyses API.
 
 The response wraps the existing `SupervisorOutput` — its shape is NOT re-derived here.
 """

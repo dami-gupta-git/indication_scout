@@ -1,4 +1,4 @@
-"""On-demand drill-down routes (PLAN_react.md §2.4b, T2.6).
+"""On-demand drill-down routes.
 
 Thin wrappers over existing data-source clients, fetched when the user clicks into something.
 INTEGRITY: these only enrich entities the analysis already surfaced — they introduce no new

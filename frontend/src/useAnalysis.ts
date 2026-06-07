@@ -1,5 +1,4 @@
 // Run-flow hook: submit a drug → poll status until terminal → expose result.
-// Polling is the Phase 1-8 path (SSE replaces it in Phase 9).
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { cancelAnalysis, createAnalysis, getAnalysis } from "./api";

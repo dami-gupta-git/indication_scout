@@ -1,9 +1,8 @@
 """Analysis runner — invokes the supervisor agent for a drug, outside any UI.
 
 The single shared entry point for running the pipeline: both the CLI (`scout find`) and the
-FastAPI layer call `run_analysis`. No duplicate agent-building wiring. Phase 1 of PLAN_react.md
-uses the existing blocking `run_supervisor_agent` (`ainvoke`) — no orchestration touch. Phase 9
-swaps the inner call to a streaming variant.
+FastAPI layer call `run_analysis`. No duplicate agent-building wiring. Uses the existing blocking
+`run_supervisor_agent` (`ainvoke`).
 """
 
 import logging
@@ -51,8 +50,7 @@ async def run_analysis(
 
     Normalizes the drug name at the entry point (cache keys, tools, sub-agents, logs all see the
     same lowercased form), owns the DB session lifecycle (opened per run, always closed), and
-    threads `date_before` for holdout runs. Blocking `ainvoke` path — no orchestration touch
-    (PLAN_react.md Phase 1).
+    threads `date_before` for holdout runs. Blocking `ainvoke` path.
     """
     drug = normalize_drug_name(drug_name)
     db = next(get_db())

@@ -1,10 +1,13 @@
-// Layout shell + run flow (Phase 4, T4.3-T4.6). Sidebar drives the analysis;
-// the main panel shows progress / error / the result tabs. Tab *content* is
-// Phase 5 — here the tabs render from the final payload at a basic level.
+// Layout shell + run flow. Sidebar drives the analysis; the main panel shows
+// progress / error / the result tabs rendered from the final payload.
 
 import { useState } from "react";
 import { useAnalysis } from "./useAnalysis";
 import type { SupervisorOutput } from "./types";
+import { OverviewTab } from "./tabs/OverviewTab";
+import { MechanismTab } from "./tabs/MechanismTab";
+import { ClinicalTrialsTab } from "./tabs/ClinicalTrialsTab";
+import { LiteratureTab } from "./tabs/LiteratureTab";
 
 const TABS = ["Overview", "Mechanism", "Clinical Trials", "Literature"] as const;
 type Tab = (typeof TABS)[number];
@@ -59,15 +62,15 @@ export function App() {
               />
               All
             </label>
-            {result.top_diseases.map((d) => (
-              <label key={d}>
+            {result.disease_findings.map((f) => (
+              <label key={f.disease}>
                 <input
                   type="radio"
                   name="focus"
-                  checked={focusDisease === d}
-                  onChange={() => setFocusDisease(d)}
+                  checked={focusDisease === f.disease}
+                  onChange={() => setFocusDisease(f.disease)}
                 />
-                {d}
+                {f.disease}
               </label>
             ))}
           </fieldset>
@@ -122,12 +125,21 @@ function StatusBanner({ status, error }: { status: string; error: string | null 
 }
 
 function KpiBand({ result }: { result: SupervisorOutput }) {
+  // Mirrors app.py's top-band metrics.
+  const totalTrials = result.disease_findings.reduce(
+    (sum, f) => sum + (f.clinical_trials?.search?.total_count ?? 0),
+    0,
+  );
+  const totalStudies = result.disease_findings.reduce(
+    (sum, f) => sum + (f.literature?.evidence_summary?.study_count ?? 0),
+    0,
+  );
   return (
     <div className="kpis">
-      <Kpi label="Drug" value={result.drug_name} />
-      <Kpi label="Candidates" value={String(result.candidate_diseases.length)} />
-      <Kpi label="Top diseases" value={String(result.top_diseases.length)} />
-      <Kpi label="Analysed" value={String(result.disease_findings.length)} />
+      <Kpi label="Candidate diseases" value={String(result.candidate_diseases.length)} />
+      <Kpi label="Investigated" value={String(result.disease_findings.length)} />
+      <Kpi label="Total trials" value={String(totalTrials)} />
+      <Kpi label="Total studies" value={String(totalStudies)} />
     </div>
   );
 }
@@ -141,7 +153,6 @@ function Kpi({ label, value }: { label: string; value: string }) {
   );
 }
 
-// Placeholder tab rendering — Phase 5 builds the real per-tab content.
 function TabContent({
   tab,
   result,
@@ -151,21 +162,14 @@ function TabContent({
   result: SupervisorOutput;
   focusDisease: string | null;
 }) {
-  if (tab === "Overview") {
-    return (
-      <div>
-        <p>{result.summary || "No summary."}</p>
-        <ul>
-          {result.disease_findings
-            .filter((f) => !focusDisease || f.disease === focusDisease)
-            .map((f) => (
-              <li key={f.disease}>
-                {f.disease} <span className="muted">({f.source})</span>
-              </li>
-            ))}
-        </ul>
-      </div>
-    );
+  switch (tab) {
+    case "Overview":
+      return <OverviewTab result={result} focusDisease={focusDisease} />;
+    case "Mechanism":
+      return <MechanismTab result={result} />;
+    case "Clinical Trials":
+      return <ClinicalTrialsTab result={result} focusDisease={focusDisease} />;
+    case "Literature":
+      return <LiteratureTab result={result} focusDisease={focusDisease} />;
   }
-  return <p className="hint">{tab} — coming in Phase 5.</p>;
 }

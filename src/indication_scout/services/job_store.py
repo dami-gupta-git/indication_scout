@@ -1,11 +1,10 @@
-"""In-memory job store for analysis runs (PLAN_react.md T1.2, §2.2).
+"""In-memory job store for analysis runs.
 
 Backs the async job model: `POST /api/analyses` creates a `Job` and launches the runner in a
 background `asyncio.Task`; the frontend polls `GET /api/analyses/{job_id}` for status/result.
 
-In-memory by design (confirmed decision §0): jobs live in a module-level dict keyed by `job_id`,
-lost on restart, no persisted history. Single-worker only — multiple uvicorn workers would not
-share this dict. The Phase 9 event queue (streaming) is added to `Job` later; not present here.
+In-memory by design: jobs live in a module-level dict keyed by `job_id`, lost on restart, no
+persisted history. Single-worker only — multiple uvicorn workers would not share this dict.
 """
 
 import logging
