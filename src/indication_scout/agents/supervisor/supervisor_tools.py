@@ -813,6 +813,9 @@ def build_supervisor_tools(
     # candidate the holdout is testing, so we remove the LLM's ability to skip by auto-investigating
     # the top-10.
     HOLDOUT_INVESTIGATION_CAP = 10
+    # Non-holdout fan-out cap. Mirrors the prompt's "investigate up to a maximum of 6" so the
+    # parallel path investigates the same candidate set the serial path would.
+    FANOUT_INVESTIGATION_CAP = 6
 
     @tool(response_format="content_and_artifact")
     async def investigate_top_candidates(
@@ -835,8 +838,13 @@ def build_supervisor_tools(
         drug_name = normalize_drug_name(drug_name)
 
         # Top-N from the merged allowlist. Insertion order preserves find_candidates's competitor
-        # ranking, with mechanism-promoted entries appended in analyze_mechanism's order.
-        top_n = list(allowed_diseases.items())[:HOLDOUT_INVESTIGATION_CAP]
+        # ranking, with mechanism-promoted entries appended in analyze_mechanism's order. Holdout
+        # uses a wider cap (recover obvious candidates); non-holdout fan-out matches the serial
+        # path's per-run investigation ceiling (the prompt's "up to 6") so output parity holds.
+        # supervisor_candidate_cap is NOT used here — it only trims the final ranked list, not how
+        # many diseases get investigated.
+        cap = HOLDOUT_INVESTIGATION_CAP if date_before is not None else FANOUT_INVESTIGATION_CAP
+        top_n = list(allowed_diseases.items())[:cap]
         if not top_n:
             return "No candidates in allowlist; nothing to investigate.", []
 
@@ -1210,8 +1218,10 @@ def build_supervisor_tools(
         get_drug_briefing,
         finalize_supervisor,
     ]
-    if date_before is not None:
-        # Holdout-only: insert investigate_top_candidates before finalize so
-        # the LLM can see it after seed-phase tools but before terminating.
+    if date_before is not None or get_settings().supervisor_fanout:
+        # Insert investigate_top_candidates before finalize so the LLM can see it
+        # after seed-phase tools but before terminating. Enabled in holdout mode
+        # (recover "obvious" candidates) and when supervisor_fanout is set (parallel
+        # fan-out for speed; see config.Settings.supervisor_fanout).
         tools.insert(-1, investigate_top_candidates)
     return tools, get_merged_allowlist, get_auto_findings
