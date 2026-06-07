@@ -3,8 +3,8 @@
 // _render_blurb layout (Stage / Literature / Constraint / Active programs /
 // Key risk / Assessment), shown only for non-empty fields.
 
-import type { CandidateBlurb } from "../types";
-import { VerdictTag } from "../components/Badge";
+import type { CandidateBlurb, EvidenceStrength } from "../types";
+import { VerdictTag, StrengthBadge } from "../components/Badge";
 
 // (field on CandidateBlurb, display label) — order matches the report formatter.
 const FIELDS: [keyof CandidateBlurb, string][] = [
@@ -19,10 +19,12 @@ export function SummaryBlurbCard({
   rank,
   disease,
   blurb,
+  strength,
 }: {
   rank: number;
   disease: string;
   blurb: CandidateBlurb;
+  strength: EvidenceStrength | null;
 }) {
   const rows = FIELDS.map(([key, label]) => [label, blurb[key].trim()] as const).filter(
     ([, value]) => value,
@@ -44,10 +46,18 @@ export function SummaryBlurbCard({
           </div>
         ))}
         {verdict && (
-          <div className="blurb-row" key="Assessment">
-            <dt>Assessment</dt>
+          <div className="blurb-row" key="Verdict">
+            <dt>Verdict</dt>
             <dd>
               <VerdictTag verdict={verdict} />
+            </dd>
+          </div>
+        )}
+        {strength && (
+          <div className="blurb-row" key="Evidence">
+            <dt>Evidence</dt>
+            <dd>
+              <StrengthBadge strength={strength} />
             </dd>
           </div>
         )}

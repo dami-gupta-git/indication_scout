@@ -27,17 +27,32 @@ export function OverviewTab({
   const rankedBlurbs = result.top_diseases
     .map((disease) => ({ disease, blurb: findingByDisease.get(disease)?.blurb }))
     .filter((x) => x.blurb != null && hasStructuredBlurb(x.blurb))
-    .map((x, i) => ({ rank: i + 1, disease: x.disease, blurb: x.blurb }));
+    .map((x, i) => ({
+      rank: i + 1,
+      disease: x.disease,
+      blurb: x.blurb,
+      strength: findingByDisease.get(x.disease)?.literature?.evidence_summary?.strength ?? null,
+    }));
   const footer = extractSummaryFooter(result.summary);
 
   return (
     <div className="overview">
+      <h3>Candidates at a Glance</h3>
+      <p className="caption">Click a row to focus that disease in the other tabs.</p>
+      <ComparisonGrid result={result} focusDisease={focusDisease} onFocus={onFocus} />
+
       <h3>Summary</h3>
       {rankedBlurbs.length > 0 ? (
         <>
           <div className="blurb-cards">
-            {rankedBlurbs.map(({ rank, disease, blurb }) => (
-              <SummaryBlurbCard key={disease} rank={rank} disease={disease} blurb={blurb!} />
+            {rankedBlurbs.map(({ rank, disease, blurb, strength }) => (
+              <SummaryBlurbCard
+                key={disease}
+                rank={rank}
+                disease={disease}
+                blurb={blurb!}
+                strength={strength}
+              />
             ))}
           </div>
           {footer && <p className="summary-footer">{footer}</p>}
@@ -47,10 +62,6 @@ export function OverviewTab({
       ) : (
         <p className="muted">No summary produced.</p>
       )}
-
-      <h3>Disease comparison</h3>
-      <p className="caption">Click a row to focus that disease in the other tabs.</p>
-      <ComparisonGrid result={result} focusDisease={focusDisease} onFocus={onFocus} />
 
       <h3>Candidate diseases</h3>
       {result.candidate_diseases.length > 0 ? (
