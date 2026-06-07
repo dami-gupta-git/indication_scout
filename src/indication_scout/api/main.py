@@ -1,5 +1,7 @@
 """FastAPI application."""
 
+import logging
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -8,6 +10,8 @@ from indication_scout import __version__
 from indication_scout.api.routes.analyses import router as analyses_router
 from indication_scout.api.routes.drilldown import router as drilldown_router
 from indication_scout.constants import CORS_ALLOW_ORIGINS, FRONTEND_DIST_DIR
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(
     title="IndicationScout API",
@@ -24,6 +28,23 @@ app.add_middleware(
 
 app.include_router(analyses_router)
 app.include_router(drilldown_router)
+
+
+@app.on_event("startup")
+async def preload_embedding_model() -> None:
+    """Pre-load the embedding model on startup so it's ready for requests.
+
+    The BioLORD-2023 model is ~500 MB and takes ~10 s to download on first
+    deployment. Loading it here — before the server begins accepting traffic —
+    means the download happens once at startup rather than on the first
+    analysis request, preventing that request from timing out and returning a
+    502 to the client.
+    """
+    from indication_scout.services.embeddings import embed_async
+
+    logger.info("Pre-loading embedding model...")
+    await embed_async(["warmup"])
+    logger.info("Embedding model ready")
 
 
 @app.get("/health")
