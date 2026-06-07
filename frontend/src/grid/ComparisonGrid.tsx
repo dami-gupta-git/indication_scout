@@ -41,7 +41,7 @@ export function ComparisonGrid({
   );
 
   if (rows.length === 0) {
-    return <p className="muted">No investigated diseases to compare.</p>;
+    return <p className="muted">No candidate diseases to compare.</p>;
   }
 
   const toggleSort = (key: SortKey) => {

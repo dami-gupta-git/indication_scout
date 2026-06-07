@@ -153,6 +153,19 @@ body {
   padding-top: 1rem;
 }
 
+/* Comfortable prose: looser line height and a readable measure so summary
+   paragraphs don't run cramped edge-to-edge. Tight helpers (.caption) and
+   list lines opt out below. */
+.tabpanel p {
+  line-height: 1.65;
+  max-width: 70ch;
+}
+
+.tabpanel p.caption {
+  line-height: 1.4;
+  max-width: none;
+}
+
 /* ---- Badges (shared visual encoding) ---- */
 .badge {
   display: inline-block;
@@ -275,6 +288,72 @@ body {
 .candidate-list,
 .pmid-list {
   line-height: 1.7;
+}
+
+/* ---- Summary blurb cards ---- */
+.blurb-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.blurb-card {
+  border: 1px solid #e2e4e8;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+}
+
+.blurb-title {
+  margin: 0 0 0.75rem;
+  text-transform: capitalize;
+}
+
+.blurb-fields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  border-top: 1px solid #ececef;
+}
+
+.blurb-row {
+  display: contents;
+}
+
+/* Bottom border on every cell renders horizontal row separators (the light
+   bordered-table look), since grid items can't carry a shared row border. */
+.blurb-fields dt,
+.blurb-fields dd {
+  padding: 0.55rem 1rem;
+  border-bottom: 1px solid #ececef;
+}
+
+.blurb-fields dt {
+  font-weight: 600;
+  color: #4b5563;
+}
+
+.blurb-fields dd {
+  margin: 0;
+  padding-left: 0;
+}
+
+.blurb-watch {
+  margin: 0.75rem 0 0;
+}
+
+.blurb-prose {
+  margin: 0.5rem 0 0;
+  font-style: italic;
+  color: #374151;
+  line-height: 1.5;
+}
+
+.summary-footer {
+  white-space: pre-wrap;
+  margin-top: 1rem;
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
 }
 
 /* ---- Filter chips ---- */

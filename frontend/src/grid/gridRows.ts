@@ -3,6 +3,7 @@
 // without a DOM. One row per investigated disease (disease_findings).
 
 import type { EvidenceStrength, SupervisorOutput } from "../types";
+import { hasStructuredBlurb } from "../overview/blurb";
 
 export interface GridRow {
   disease: string;
@@ -25,22 +26,28 @@ const STRENGTH_RANK: Record<EvidenceStrength, number> = {
   strong: 3,
 };
 
-/** Build one row per investigated disease from the supervisor payload. */
+/**
+ * Build one row per genuine candidate disease. Demoted/approval-relationship
+ * entries (prose-only blurb, or no blurb) are excluded — consistent with the
+ * Overview summary cards — so the grid compares real repurposing candidates.
+ */
 export function buildGridRows(result: SupervisorOutput): GridRow[] {
-  return result.disease_findings.map((f) => {
-    const search = f.clinical_trials?.search ?? null;
-    return {
-      disease: f.disease,
-      source: f.source,
-      verdict: f.blurb?.verdict ?? "",
-      strength: f.literature?.evidence_summary?.strength ?? null,
-      totalTrials: search ? search.total_count : null,
-      competitors: f.clinical_trials?.landscape
-        ? f.clinical_trials.landscape.competitors.length
-        : null,
-      recruiting: search ? (search.by_status["RECRUITING"] ?? 0) : null,
-    };
-  });
+  return result.disease_findings
+    .filter((f) => f.blurb != null && hasStructuredBlurb(f.blurb))
+    .map((f) => {
+      const search = f.clinical_trials?.search ?? null;
+      return {
+        disease: f.disease,
+        source: f.source,
+        verdict: f.blurb?.verdict ?? "",
+        strength: f.literature?.evidence_summary?.strength ?? null,
+        totalTrials: search ? search.total_count : null,
+        competitors: f.clinical_trials?.landscape
+          ? f.clinical_trials.landscape.competitors.length
+          : null,
+        recruiting: search ? (search.by_status["RECRUITING"] ?? 0) : null,
+      };
+    });
 }
 
 // Comparable scalar for a cell; null sorts last regardless of direction.
