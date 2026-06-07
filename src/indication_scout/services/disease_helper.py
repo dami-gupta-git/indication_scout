@@ -11,7 +11,6 @@ import asyncio
 import json
 import logging
 import random
-import re
 import sys
 from pathlib import Path
 from typing import Any, TypedDict
@@ -354,7 +353,6 @@ async def _ncbi_get_json(
     )
 
 
-_MESH_PREF_TERM_RE = re.compile(r'"([^"]+)"\[MeSH Terms\]')
 _MESH_RESOLVER_SEMAPHORE: asyncio.Semaphore | None = None
 
 
@@ -368,10 +366,13 @@ def _mesh_semaphore() -> asyncio.Semaphore:
 async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
     """Resolve an indication to (descriptor_id, preferred_term) via MeSH ATM.
 
-    Parses the preferred term from esearch's `querytranslation` because
-    esummary on the MeSH db returns empty records for valid UIDs.
+    esearch (sorted by relevance) returns candidate MeSH record UIDs; esummary
+    on each yields its descriptor id (`ds_meshui`, the canonical D-number) and
+    preferred heading (`ds_meshterms[0]`). We take the first esummary record
+    that is a descriptor with a valid D-number — this skips non-descriptor
+    records (qualifiers, supplementary concepts) that esearch can rank in.
     """
-    cache_params = {"indication": indication.strip().lower(), "v": 3}
+    cache_params = {"indication": indication.strip().lower(), "v": 4}
     cached = cache_get("mesh_resolver", cache_params, DEFAULT_CACHE_DIR)
     if cached is not None:
         return tuple(cached) if isinstance(cached, list) else cached
@@ -382,7 +383,12 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
         "db": "mesh",
         "term": indication,
         "retmode": "json",
-        "retmax": 1,
+        # Fetch several candidates sorted by relevance: the top idlist entry
+        # without a sort can be a narrower variant (e.g. "hypertension" returns
+        # the pulmonary-hypertension descriptor first), so rank by relevance and
+        # pick the first true descriptor below.
+        "retmax": 5,
+        "sort": "relevance",
     }
     if api_key:
         esearch_params["api_key"] = api_key
@@ -401,33 +407,63 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
                 break
             await asyncio.sleep(2)
 
-    translation = esearch_data.get("esearchresult", {}).get("querytranslation", "")
+        if not uids:
+            logger.debug("MeSH resolver: no esearch hit for '%s'", indication)
+            return None
 
-    if not uids:
-        logger.debug("MeSH resolver: no esearch hit for '%s'", indication)
-        return None
+        esummary_params: dict[str, Any] = {
+            "db": "mesh",
+            "id": ",".join(uids),
+            "retmode": "json",
+        }
+        if api_key:
+            esummary_params["api_key"] = api_key
 
-    match = _MESH_PREF_TERM_RE.search(translation)
-    if not match:
+        await asyncio.sleep(0.1)
+        async with PubMedClient._get_semaphore():
+            esummary_data = await _ncbi_get_json(
+                session, NCBI_ESUMMARY_URL, esummary_params, indication
+            )
+
+    result = esummary_data.get("result", {})
+    # Walk uids in esearch (relevance) order; take the first record that is a
+    # MeSH descriptor with a D-number and a preferred heading.
+    descriptor_id: str | None = None
+    preferred_term: str | None = None
+    for uid in uids:
+        record = result.get(uid)
+        if not isinstance(record, dict):
+            continue
+        meshui = record.get("ds_meshui")
+        meshterms = record.get("ds_meshterms")
+        if (
+            record.get("ds_recordtype") == "descriptor"
+            and isinstance(meshui, str)
+            and meshui.startswith("D")
+            and isinstance(meshterms, list)
+            and meshterms
+            and meshterms[0]
+        ):
+            descriptor_id = meshui
+            preferred_term = meshterms[0]
+            break
+
+    if descriptor_id is None or preferred_term is None:
         logger.warning(
-            "MeSH resolver: ATM did not produce a MeSH-Terms translation for "
-            "'%s' (translation=%r)",
+            "MeSH resolver: no descriptor record with a D-number for '%s' (uids=%s)",
             indication,
-            translation,
+            uids,
         )
         return None
 
-    preferred_term = match.group(1)
-    mesh_id = uids[0]
-
     logger.info(
-        "MeSH resolver: '%s' → uid=%s pref=%r",
+        "MeSH resolver: '%s' → descriptor=%s pref=%r",
         indication,
-        mesh_id,
+        descriptor_id,
         preferred_term,
     )
 
-    resolved = (mesh_id, preferred_term)
+    resolved = (descriptor_id, preferred_term)
     cache_set(
         "mesh_resolver",
         cache_params,

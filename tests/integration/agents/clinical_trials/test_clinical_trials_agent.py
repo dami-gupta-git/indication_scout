@@ -35,28 +35,31 @@ _EXPECTED_NCT_IDS = {
 
 # Top 10 landscape competitors verified live on 2026-04-25.
 # Order: highest phase first, then most recent start date as tiebreaker.
-_EXPECTED_COMPETITORS = [
-    ("ChaodongWang", "L-Carnitine Injection，1000mg once daily", "Phase 4", 4),
-    ("Peking University Third Hospital", "FB1006", "Phase 4", 64),
-    (
-        "Macquarie University, Australia",
-        "Abacavir 600mg, Lamivudine 300mg and Dolutegravir 50mg (Triumeq)",
-        "Phase 3",
-        12,
-    ),
-    ("Alector Inc.", "Latozinemab", "Phase 3", 17),
-    ("Ferrer Internacional S.A.", "FAB122", "Phase 3", 201),
-    ("Beijing Tiantan Hospital", "Nerve Growth Factor", "Phase 2/Phase 3", 60),
-    ("Merit E. Cudkowicz, MD", "DNL343", "Phase 2/Phase 3", 249),
-    ("Merit E. Cudkowicz, MD", "ABBV-CLS-7262 Dose 1", "Phase 2/Phase 3", 310),
-    (
-        "Oliver Blanchard",
-        "Darifenacin 7.5 MG Extended Release Oral Tablet",
-        "Phase 2",
-        30,
-    ),
-    ("Axoltis Pharma", "NX210c", "Phase 2", 80),
-]
+# Landscape is currently disabled under the date_before holdout (get_landscape
+# returns an empty IndicationLandscape), so these expectations are kept
+# commented for when landscape is re-enabled; see the landscape section below.
+# _EXPECTED_COMPETITORS = [
+#     ("ChaodongWang", "L-Carnitine Injection，1000mg once daily", "Phase 4", 4),
+#     ("Peking University Third Hospital", "FB1006", "Phase 4", 64),
+#     (
+#         "Macquarie University, Australia",
+#         "Abacavir 600mg, Lamivudine 300mg and Dolutegravir 50mg (Triumeq)",
+#         "Phase 3",
+#         12,
+#     ),
+#     ("Alector Inc.", "Latozinemab", "Phase 3", 17),
+#     ("Ferrer Internacional S.A.", "FAB122", "Phase 3", 201),
+#     ("Beijing Tiantan Hospital", "Nerve Growth Factor", "Phase 2/Phase 3", 60),
+#     ("Merit E. Cudkowicz, MD", "DNL343", "Phase 2/Phase 3", 249),
+#     ("Merit E. Cudkowicz, MD", "ABBV-CLS-7262 Dose 1", "Phase 2/Phase 3", 310),
+#     (
+#         "Oliver Blanchard",
+#         "Darifenacin 7.5 MG Extended Release Oral Tablet",
+#         "Phase 2",
+#         30,
+#     ),
+#     ("Axoltis Pharma", "NX210c", "Phase 2", 80),
+# ]
 
 
 @pytest.fixture
@@ -121,38 +124,53 @@ async def test_riluzole_als_clinical_trials_agent(clinical_trials_agent):
     assert ck_trial.references == []
 
     # --- completed (COMPLETED pair query) ---
+    # Completed-trial counts grow over time as trials finish (the holdout
+    # cutoff bounds the window, but new pre-cutoff completions can surface as
+    # CT.gov backfills). Assert a lower bound rather than an exact snapshot.
     assert output.completed is not None
-    assert output.completed.total_count == 25
-    # Top-50 cap not hit (25 < 50), so all 25 are shown.
-    assert len(output.completed.trials) == 25
+    assert output.completed.total_count >= 25
+    # Below the top-50 cap, the shown list equals the total.
+    if output.completed.total_count <= 50:
+        assert len(output.completed.trials) == output.completed.total_count
 
     # --- terminated (TERMINATED pair query) ---
     assert output.terminated is not None
-    assert output.terminated.total_count == 5
-    assert len(output.terminated.trials) == 5
+    assert output.terminated.total_count >= 5
+    if output.terminated.total_count <= 50:
+        assert len(output.terminated.trials) == output.terminated.total_count
 
     # --- landscape ---
+    # This test runs under the holdout fixture (date_before=_CUTOFF). By design
+    # get_landscape is disabled under date_before — it aggregates per-trial
+    # overall_status, which a holdout cannot scrub safely — so it returns an
+    # empty IndicationLandscape. Assert that holdout contract rather than a
+    # populated snapshot.
     assert output.landscape is not None
-    assert output.landscape.total_trial_count == 799
-    assert output.landscape.phase_distribution == {
-        "Early Phase 1": 5,
-        "Phase 1": 16,
-        "Phase 1/Phase 2": 10,
-        "Phase 2": 9,
-        "Phase 2/Phase 3": 3,
-        "Phase 3": 3,
-        "Phase 4": 2,
-    }
+    assert output.landscape.total_trial_count is None
+    assert output.landscape.phase_distribution == {}
+    assert output.landscape.competitors == []
+    assert output.landscape.recent_starts == []
 
-    assert len(output.landscape.competitors) == 10
-    for i, (sponsor, drug, max_phase, enrollment) in enumerate(_EXPECTED_COMPETITORS):
-        c = output.landscape.competitors[i]
-        assert c.sponsor == sponsor, f"competitors[{i}].sponsor"
-        assert c.drug_name == drug, f"competitors[{i}].drug_name"
-        assert c.max_phase == max_phase, f"competitors[{i}].max_phase"
-        assert c.total_enrollment == enrollment, f"competitors[{i}].total_enrollment"
-
-    assert len(output.landscape.recent_starts) >= 1
+    # Landscape detail assertions — kept for when landscape is re-enabled under
+    # date_before. Currently disabled (see the empty-landscape assertions above).
+    # assert output.landscape.total_trial_count >= 799
+    # assert output.landscape.phase_distribution == {
+    #     "Early Phase 1": 5,
+    #     "Phase 1": 16,
+    #     "Phase 1/Phase 2": 10,
+    #     "Phase 2": 9,
+    #     "Phase 2/Phase 3": 3,
+    #     "Phase 3": 3,
+    #     "Phase 4": 2,
+    # }
+    # assert len(output.landscape.competitors) == 10
+    # for i, (sponsor, drug, max_phase, enrollment) in enumerate(_EXPECTED_COMPETITORS):
+    #     c = output.landscape.competitors[i]
+    #     assert c.sponsor == sponsor, f"competitors[{i}].sponsor"
+    #     assert c.drug_name == drug, f"competitors[{i}].drug_name"
+    #     assert c.max_phase == max_phase, f"competitors[{i}].max_phase"
+    #     assert c.total_enrollment == enrollment, f"competitors[{i}].total_enrollment"
+    # assert len(output.landscape.recent_starts) >= 1
 
     # --- summary ---
     assert len(output.summary) > 100

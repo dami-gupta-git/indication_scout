@@ -147,16 +147,19 @@ async def test_get_completed_content_string_sildenafil_hfpef():
         "Phase distribution (shown): Phase 4=1, Phase 3=2, Phase 2/Phase 3=1\n"
         "Trials shown (top 20 by enrollment):\n"
         "  NCT00763867 | Phase 3          | "
+        "refs: 23478662, 38533961, 35358904, 32150314, 31805424, 31272568, "
+        "28214792, 28194841, 27072860, 25104521, 24833648, 24162898, 22991405 | "
         "mesh: Heart Failure; Heart Failure, Diastolic | "
         "Evaluating the Effectiveness of Sildenafil at Improving Health Outcomes "
         "and Exercise Ability in People With Diastolic Heart Failure (The RELAX Study)\n"
-        "  NCT01046838 | Phase 4          | mesh: Heart Failure, Diastolic | "
+        "  NCT01046838 | Phase 4          | refs: 36356959, 23406672 | "
+        "mesh: Heart Failure, Diastolic | "
         "SIDAMI - Sildenafil and Diastolic Dysfunction After Acute Myocardial "
         "Infarction (AMI)\n"
-        "  NCT01726049 | Phase 3          | "
+        "  NCT01726049 | Phase 3          | refs: 27873388, 26188003 | "
         "mesh: Heart Failure, Diastolic; Hypertension, Pulmonary | "
         "Sildenafil in HFpEF (Heart Failure With Preserved Ejection Fraction) and PH\n"
-        "  NCT01156636 | Phase 2/Phase 3  | "
+        "  NCT01156636 | Phase 2/Phase 3  | refs: 21709061 | "
         "mesh: Hypertension, Pulmonary; Heart Failure, Diastolic | "
         "Phosphodiesterase-5 (PDE5) Inhibition and Pulmonary Hypertension in "
         "Diastolic Heart Failure"
@@ -192,15 +195,11 @@ async def test_get_terminated_content_string_sildenafil_stroke():
 
     artifact = msg.artifact
     assert isinstance(artifact, TerminatedTrialsResult)
-    assert artifact.total_count == 2
-    assert len(artifact.trials) == 2
-    # Spot-check both trials' classification + why_stopped (the columns the
-    # content string exposes).
-    nct_452582 = next(t for t in artifact.trials if t.nct_id == "NCT00452582")
-    assert nct_452582.phase == "Phase 1"
-    assert nct_452582.enrollment == 20
-    assert nct_452582.why_stopped == "Failure to recruit in expected time period."
-    assert _classify_stop_reason(nct_452582.why_stopped) == "other"
+    # Only NCT02628847 remains: NCT00452582 was terminated AFTER the holdout
+    # cutoff (_CUTOFF = 2025-01-01), so the holdout scrubber drops it (it was
+    # not yet terminated as of the cutoff). The content string notes the drop.
+    assert artifact.total_count == 1
+    assert len(artifact.trials) == 1
     nct_628847 = next(t for t in artifact.trials if t.nct_id == "NCT02628847")
     assert nct_628847.phase == "Phase 1"
     assert nct_628847.enrollment == 11
@@ -208,16 +207,14 @@ async def test_get_terminated_content_string_sildenafil_stroke():
     assert _classify_stop_reason(nct_628847.why_stopped) == "enrollment"
 
     expected_content = (
-        "Terminated for sildenafil × stroke: 2 total "
-        "(0 safety/efficacy in shown set)\n"
-        "Phase distribution (shown): Phase 1=2\n"
+        "Terminated for sildenafil × stroke: 1 total "
+        "(0 safety/efficacy in shown set); dropped 1 post-cutoff "
+        "termination(s) (not yet terminated at cutoff)\n"
+        "Phase distribution (shown): Phase 1=1\n"
         "Trials shown (top 20 by enrollment):\n"
-        "  NCT00452582 | Phase 1          | "
-        "stop (raw): Failure to recruit in expected time period. | "
-        "mesh: Ischemic Stroke | "
-        "Sildenafil (Viagra) Treatment of Subacute Ischemic Stroke\n"
-        "    why_stopped: Failure to recruit in expected time period.\n"
         "  NCT02628847 | Phase 1          | stop: enrollment | "
+        "refs: 23118941, 15746452, 12411660, 17188664, 18356548, 18418368, "
+        "21903952, 19717023 | "
         "mesh: Stroke | "
         "Sildenafil and Stroke Recovery\n"
         "    why_stopped: Recruitment was problematic"
@@ -307,8 +304,8 @@ async def test_supervisor_view_terminated_table_sildenafil_stroke():
     NCT00452582 which has no completion_date), mesh, title, and indented
     why_stopped.
 
-    Borda rank: NCT02628847 (worst enrollment but has end-date so beats
-    NCT00452582 which has end=None → worst recency rank).
+    Only NCT02628847 remains: NCT00452582 was terminated after the holdout
+    cutoff (_CUTOFF = 2025-01-01) and is dropped by the holdout scrubber.
     """
     tools = build_clinical_trials_tools(date_before=_CUTOFF)
     get_terminated = next(t for t in tools if t.name == "get_terminated")
@@ -323,10 +320,10 @@ async def test_supervisor_view_terminated_table_sildenafil_stroke():
     terminated_trials = msg.artifact.trials
 
     phase_dist = _phase_distribution(terminated_trials)
-    assert phase_dist == "Phase 1=2"
+    assert phase_dist == "Phase 1=1"
 
     top = _borda_rank_by_enrollment_and_recency(terminated_trials, k=10)
-    assert [t.nct_id for t in top] == ["NCT02628847", "NCT00452582"]
+    assert [t.nct_id for t in top] == ["NCT02628847"]
 
     table = _format_trial_table(
         top,
@@ -347,11 +344,6 @@ async def test_supervisor_view_terminated_table_sildenafil_stroke():
         "  NCT02628847 | Phase 1          | stop: enrollment | "
         "start 2012-03 | end 2016-10 | mesh: Stroke | "
         "Sildenafil and Stroke Recovery\n"
-        "    why_stopped: Recruitment was problematic\n"
-        "  NCT00452582 | Phase 1          | "
-        "stop (raw): Failure to recruit in expected time period. | "
-        "start 2005-04 | end ? | mesh: Ischemic Stroke | "
-        "Sildenafil (Viagra) Treatment of Subacute Ischemic Stroke\n"
-        "    why_stopped: Failure to recruit in expected time period."
+        "    why_stopped: Recruitment was problematic"
     )
     assert table == expected_table

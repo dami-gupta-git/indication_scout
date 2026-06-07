@@ -44,15 +44,16 @@ def _tool_map(tools: list) -> dict:
 
 
 def _allowlist_state(tools: dict) -> tuple[dict, dict]:
-    """Reach the closure-scoped allowlist dicts behind analyze_mechanism.
+    """Reach the closure-scoped allowlist dicts behind find_candidates.
 
-    The tool's outer coroutine wraps _analyze_mechanism_impl in a try/finally that
-    sets the seed-phase asyncio.Event; the impl is what actually closes over
-    allowed_diseases / allowed_efo_ids. Walk one layer down to find them.
+    The competitor-seed + mechanism-merge logic that populates the allowlist now
+    lives in _find_candidates_impl, which closes over both allowed_diseases and
+    allowed_efo_ids. The outer find_candidates coroutine wraps that impl (plus
+    the seed-phase asyncio.Event); walk one layer down to the impl to find them.
     """
-    am = tools["analyze_mechanism"]
-    outer = dict(zip(am.coroutine.__code__.co_freevars, am.coroutine.__closure__))
-    impl = outer["_analyze_mechanism_impl"].cell_contents
+    fc = tools["find_candidates"]
+    outer = dict(zip(fc.coroutine.__code__.co_freevars, fc.coroutine.__closure__))
+    impl = outer["_find_candidates_impl"].cell_contents
     inner = dict(zip(impl.__code__.co_freevars, impl.__closure__))
     return (
         inner["allowed_diseases"].cell_contents,
@@ -77,6 +78,21 @@ def _preset_mechanism_gate(tools: dict) -> None:
     outer["analyze_mechanism_done"].cell_contents.set()
 
 
+def _preset_both_gates(tools: dict) -> None:
+    """Pre-set both seed-phase events (find_candidates_done + analyze_mechanism_done).
+
+    analyze_literature / analyze_clinical_trials block on BOTH events before doing
+    anything (so parallel tool calls can't race ahead of the seed phase). Tests that
+    invoke those tools in isolation — without first calling find_candidates /
+    analyze_mechanism — must pre-set both, or the awaits block forever. Both events
+    are closed over by the analyze_literature wrapper, so read them from there.
+    """
+    al = tools["analyze_literature"]
+    closure = dict(zip(al.coroutine.__code__.co_freevars, al.coroutine.__closure__))
+    closure["find_candidates_done"].cell_contents.set()
+    closure["analyze_mechanism_done"].cell_contents.set()
+
+
 @pytest.fixture
 def llm():
     return ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
@@ -85,17 +101,15 @@ def llm():
 # ------------------------------------------------------------------
 # find_candidates — Open Targets + ChEMBL + openFDA seeding
 #
-# Reuses the metformin candidates verified live on 2026-04-08 in
-# test_supervisor_agent.py.
+# Metformin competitor candidates from Open Targets. This is a live,
+# drift-prone set, so we assert a small stable subset rather than the full
+# list. Re-verified against the live find_candidates output on 2026-06-06.
 # ------------------------------------------------------------------
 
 _DRUG = "metformin"
 _EXPECTED_CANDIDATES_SUBSET = {
     "polycystic ovary syndrome",
     "gestational diabetes",
-    "metabolic syndrome",
-    "insulin resistance",
-    "prostate cancer",
 }
 
 # TODO: fill in expected metformin aliases from a live ChEMBL run
@@ -188,6 +202,12 @@ async def test_analyze_rejects_unlisted_disease(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
+    # analyze_literature / analyze_clinical_trials await both seed-phase events
+    # before the reject check. This test invokes them in isolation (no
+    # find_candidates / analyze_mechanism call), so pre-set both events or the
+    # awaits block forever. The allowlist stays empty, so the nonsense disease
+    # is correctly rejected.
+    _preset_both_gates(tools)
 
     msg = await tools[tool_name].ainvoke(
         _tc(tool_name, drug_name=_DRUG, disease_name="not-a-real-disease")
@@ -244,9 +264,7 @@ async def test_analyze_mechanism_dedups_against_competitor_allowlist(
     # seed-phase tools must run concurrently (mirrors how the LLM invokes them in
     # parallel in production).
     await asyncio.gather(
-        tools["find_candidates"].ainvoke(
-            _tc("find_candidates", drug_name=_MERGE_DRUG)
-        ),
+        tools["find_candidates"].ainvoke(_tc("find_candidates", drug_name=_MERGE_DRUG)),
         tools["analyze_mechanism"].ainvoke(
             _tc("analyze_mechanism", drug_name=_MERGE_DRUG)
         ),
@@ -327,9 +345,9 @@ async def test_analyze_mechanism_promotes_mechanism_only_candidates(
         for k, (_, source) in allowed_diseases.items()
         if source in ("competitor", "both")
     }
-    assert competitor_or_both_keys, (
-        f"find_candidates should seed competitor entries for {_MECH_ONLY_DRUG}"
-    )
+    assert (
+        competitor_or_both_keys
+    ), f"find_candidates should seed competitor entries for {_MECH_ONLY_DRUG}"
 
     mechanism_only_keys = {
         k for k, (_, source) in allowed_diseases.items() if source == "mechanism"

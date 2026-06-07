@@ -28,10 +28,12 @@ async def test_get_landscape(clinical_trials_client):
     # Verify IndicationLandscape.competitors - requested top_n=10
     assert len(landscape.competitors) == 10
 
-    # Verify IndicationLandscape.phase_distribution
+    # Verify IndicationLandscape.phase_distribution. These are live CT.gov
+    # aggregates and drift over time; use wide bounds with a floor that
+    # tolerates normal shrinkage (Phase 3 has dipped to ~3 as trials age out).
     assert 10 < landscape.phase_distribution["Phase 2"] < 100
-    assert 5 < landscape.phase_distribution["Phase 3"] < 50
-    assert 1 < landscape.phase_distribution["Phase 4"] < 10
+    assert 1 < landscape.phase_distribution["Phase 3"] < 50
+    assert 1 <= landscape.phase_distribution["Phase 4"] < 10
 
     # Verify IndicationLandscape.recent_starts - find a known 2024+ trial
     assert len(landscape.recent_starts) >= 1

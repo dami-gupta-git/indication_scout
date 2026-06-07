@@ -179,9 +179,19 @@ def build_clinical_trials_tools(
             if scrubbed_n
             else ""
         )
+        # Per-status breakdown from the artifact's by_status (see
+        # agent_data_contracts.md). Rendered from the SearchTrialsResult field
+        # so header and artifact stay consistent.
+        bs = result.by_status
+        status_breakdown = (
+            f" (recruiting={bs.get('RECRUITING', 0)}, "
+            f"active={bs.get('ACTIVE_NOT_RECRUITING', 0)}, "
+            f"withdrawn={bs.get('WITHDRAWN', 0)}, "
+            f"unknown={bs.get('UNKNOWN', 0)})"
+        )
         header = (
             f"Search for {drug} × {indication}: {result.total_count} trials"
-            f"{cap_note}{scrub_note}"
+            f"{status_breakdown}{cap_note}{scrub_note}"
         )
         phase_dist = _phase_distribution(result.trials)
         table = _format_trial_table(

@@ -118,8 +118,14 @@ async def test_merge_duplicate_diseases():
         for group in all_merged
     ), f"Expected obesity variants to be merged, got: {result['merge']}"
 
-    assert "narcolepsy" not in result["remove"]
-    assert "obesity" in result["remove"]
+    # `remove` is for diseases equivalent to the drug's EXISTING indications
+    # (here ["type 2 diabetes mellitus"]) — not for merge aliases. None of the
+    # input diseases matches that indication, so nothing should be removed.
+    # (Merge dedup is expressed entirely via the `merge` map above.)
+    assert result["remove"] == [], (
+        f"Expected no removals (no input matches an existing indication), "
+        f"got: {result['remove']}"
+    )
 
 
 async def test_llm_normalize_disease_batch_returns_correct_forms(tmp_path):
