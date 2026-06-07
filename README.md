@@ -243,3 +243,6 @@ This codebase was created with the help of [Claude Code](https://claude.com/clau
 ## License
 
 MIT
+
+
+IN progress: Railway deploy
