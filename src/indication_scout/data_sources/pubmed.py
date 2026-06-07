@@ -50,8 +50,11 @@ class PubMedClient(BaseClient):
     # Process-wide concurrency cap on NCBI eutils requests. Class-level so the
     # bound holds across the multiple PubMedClient instances the supervisor
     # spins up in parallel (each RetrievalService call creates a new client).
-    # Created lazily so the semaphore binds to the running event loop.
+    # Created lazily and rebound when the running event loop changes — an
+    # asyncio.Semaphore binds to the loop it is created on, so a cached one
+    # would raise "bound to a different event loop" on a second asyncio.run().
     _request_semaphore: asyncio.Semaphore | None = None
+    _semaphore_loop: asyncio.AbstractEventLoop | None = None
 
     def __init__(self, cache_dir: Path = DEFAULT_CACHE_DIR) -> None:
         super().__init__()
@@ -66,8 +69,10 @@ class PubMedClient(BaseClient):
 
     @classmethod
     def _get_semaphore(cls) -> asyncio.Semaphore:
-        if cls._request_semaphore is None:
+        loop = asyncio.get_running_loop()
+        if cls._request_semaphore is None or cls._semaphore_loop is not loop:
             cls._request_semaphore = asyncio.Semaphore(PUBMED_MAX_CONCURRENT_REQUESTS)
+            cls._semaphore_loop = loop
         return cls._request_semaphore
 
     def _inject_api_key(self, params: dict[str, Any]) -> dict[str, Any]:

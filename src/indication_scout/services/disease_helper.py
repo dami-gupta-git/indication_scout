@@ -354,12 +354,18 @@ async def _ncbi_get_json(
 
 
 _MESH_RESOLVER_SEMAPHORE: asyncio.Semaphore | None = None
+_MESH_RESOLVER_LOOP: asyncio.AbstractEventLoop | None = None
 
 
 def _mesh_semaphore() -> asyncio.Semaphore:
-    global _MESH_RESOLVER_SEMAPHORE
-    if _MESH_RESOLVER_SEMAPHORE is None:
+    # Rebind when the running event loop changes — an asyncio.Semaphore binds to
+    # the loop it is created on, so a cached one would raise "bound to a
+    # different event loop" on a second asyncio.run().
+    global _MESH_RESOLVER_SEMAPHORE, _MESH_RESOLVER_LOOP
+    loop = asyncio.get_running_loop()
+    if _MESH_RESOLVER_SEMAPHORE is None or _MESH_RESOLVER_LOOP is not loop:
         _MESH_RESOLVER_SEMAPHORE = asyncio.Semaphore(MESH_RESOLVER_MAX_CONCURRENT)
+        _MESH_RESOLVER_LOOP = loop
     return _MESH_RESOLVER_SEMAPHORE
 
 
