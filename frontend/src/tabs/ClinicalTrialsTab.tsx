@@ -4,10 +4,10 @@
 
 import type { SupervisorOutput } from "../types";
 import { NctLink } from "../components/links";
+import { CompletedTrialsTable } from "../tables/CompletedTrialsTable";
+import { CompetitorsTable } from "../tables/CompetitorsTable";
 
-const COMPLETED_LIMIT = 25;
 const TERMINATED_LIMIT = 15;
-const COMPETITOR_LIMIT = 25;
 
 export function ClinicalTrialsTab({
   result,
@@ -68,30 +68,7 @@ export function ClinicalTrialsTab({
           {ct.completed && ct.completed.trials.length > 0 && (
             <>
               <h4>Completed trials ({ct.completed.total_count} total)</h4>
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>NCT</th>
-                      <th>Title</th>
-                      <th>Phase</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ct.completed.trials.slice(0, COMPLETED_LIMIT).map((t) => (
-                      <tr key={t.nct_id}>
-                        <td>
-                          <NctLink nctId={t.nct_id} />
-                        </td>
-                        <td>{t.title}</td>
-                        <td>{t.phase || "Unknown"}</td>
-                        <td>{t.overall_status}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <CompletedTrialsTable trials={ct.completed.trials} />
             </>
           )}
 
@@ -117,28 +94,7 @@ export function ClinicalTrialsTab({
           {ct.landscape && ct.landscape.competitors.length > 0 && (
             <>
               <h4>Competitive landscape ({ct.landscape.competitors.length})</h4>
-              <div className="table-scroll">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Drug</th>
-                      <th>Sponsor</th>
-                      <th>Max phase</th>
-                      <th>Trials</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {ct.landscape.competitors.slice(0, COMPETITOR_LIMIT).map((c, i) => (
-                      <tr key={`${c.drug_name}-${c.sponsor}-${i}`}>
-                        <td>{c.drug_name}</td>
-                        <td>{c.sponsor}</td>
-                        <td>{c.max_phase}</td>
-                        <td>{c.trial_count}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <CompetitorsTable competitors={ct.landscape.competitors} />
             </>
           )}
         </>

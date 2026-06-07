@@ -277,6 +277,46 @@ body {
   line-height: 1.7;
 }
 
+/* ---- Filter chips ---- */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.5rem 0;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.filter-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-right: 0.15rem;
+}
+
+.chip {
+  padding: 0.15rem 0.6rem;
+  border: 1px solid #cfd2d8;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+}
+
+.chip:hover {
+  border-color: #2d6cdf;
+}
+
+.chip.active {
+  background: #2d6cdf;
+  border-color: #2d6cdf;
+  color: #fff;
+}
+
 /* ---- Comparison grid ---- */
 .comparison-grid .num {
   text-align: right;
