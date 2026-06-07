@@ -58,6 +58,10 @@ RUN pip install -e .
 # root at startup, and the fields have no defaults, so the file must be present.
 COPY .env.constants ./
 
+# Committed example snapshots, copied into the volume cache on startup when the
+# cache is empty (fresh deploy) so example chips serve instantly.
+COPY seed_examples/ ./seed_examples/
+
 # Entrypoint waits for Postgres, applies migrations, then execs the CMD.
 COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
 RUN chmod +x /usr/local/bin/entrypoint.sh
