@@ -18,7 +18,7 @@ The Supervisor first calls `find_candidates` (Open Targets competitor analysis) 
 
 ### Top-5 candidate blurbs
 
-After investigating candidates, the Supervisor produces a ranked Summary. For each of the **top 5 ranked candidates**, the Supervisor also writes a **2-sentence interpretive blurb** characterizing the *state of the hypothesis* — live, stalled, niche, untested, post-readout-and-stuck, etc. — grounded in the literature and clinical-trials sub-agent summaries seen during that run. Mechanism content is intentionally excluded from the blurb to keep it focused on clinical evidence. Blurbs are produced by the same `finalize_supervisor` tool call that emits the ranked summary (no extra LLM call) and rendered inline under each disease in the Summary section of both the Markdown report and the Streamlit Overview tab. 
+After investigating candidates, the Supervisor produces a ranked Summary. For each of the **top 5 ranked candidates**, the Supervisor also writes a **2-sentence interpretive blurb** characterizing the *state of the hypothesis* — live, stalled, niche, untested, post-readout-and-stuck, etc. — grounded in the literature and clinical-trials sub-agent summaries seen during that run. Mechanism content is intentionally excluded from the blurb to keep it focused on clinical evidence. Blurbs are produced by the same `finalize_supervisor` tool call that emits the ranked summary (no extra LLM call) and rendered inline under each disease in the Summary section of both the Markdown report and the web UI Overview tab. 
 
 Data sources:
 
@@ -125,19 +125,51 @@ scout --help
 
 
 
-### Streamlit UI
+### Web UI (React + FastAPI)
+
+The web app is two processes: a **FastAPI backend** (the API + agent runner) and a
+**Vite/React frontend** (the UI). In development they run side by side — Vite serves the
+UI on port 5173 and proxies all `/api` requests to uvicorn on port 8000. You open the
+**frontend** URL in your browser; the proxy handles the rest.
+
+**First time only** — install the frontend dependencies:
 
 ```bash
-streamlit run app.py
+cd frontend
+npm install
 ```
 
-Single-page app: enter a drug name, run the supervisor agent, download the Markdown report.
-
-### API
+**Run both servers** (two terminals):
 
 ```bash
+# Terminal 1 — backend (port 8000)
 uvicorn indication_scout.api.main:app --reload
+
+# Terminal 2 — frontend (port 5173)
+cd frontend
+npm run dev
 ```
+
+Then open **http://localhost:5173**, enter a drug name, and click **Analyse**. The UI
+submits the run, polls for status, and renders the result across four tabs (Overview,
+Mechanism, Clinical Trials, Literature). A real run takes several minutes — it queries
+the live data sources and calls the LLM, so `ANTHROPIC_API_KEY` and both env files
+(`.env`, `.env.constants`) must be set up first (see Environment Setup above).
+
+> Single-worker only: jobs are held in an in-memory store keyed by job id, lost on
+> restart. Run uvicorn with a single worker (the default with `--reload`).
+
+The async job API the frontend uses:
+
+| Method & path | Purpose |
+|---------------|---------|
+| `POST /api/analyses` | Start a run for a drug; returns `202` with a `job_id`. |
+| `GET /api/analyses/{job_id}` | Poll status; returns the `SupervisorOutput` payload when done. |
+| `GET /api/analyses/{job_id}/report.md` | The formatted Markdown report for a finished run. |
+| `DELETE /api/analyses/{job_id}` | Cancel a running job. |
+
+**Production build** — `npm run build` (in `frontend/`) emits a static bundle that
+FastAPI serves directly; uvicorn alone then hosts both the API and the UI on port 8000.
 
 ## Development
 
@@ -175,7 +207,7 @@ src/indication_scout/
 │   ├── literature/         # Literature agent (PubMed RAG) — literature_agent.py, literature_tools.py, literature_output.py
 │   ├── clinical_trials/    # Clinical Trials agent (ClinicalTrials.gov + MeSH post-filter) — clinical_trials_agent.py, clinical_trials_tools.py, clinical_trials_output.py
 │   └── mechanism/          # Mechanism agent (Open Targets targets) — mechanism_agent.py, mechanism_tools.py, mechanism_output.py, mechanism_candidates.py, mechanism_row_builder.py
-├── api/             # FastAPI application (main.py, routes/, schemas/) -- /health endpoint only
+├── api/             # FastAPI application (main.py, routes/, schemas/) — /health + async analyses routes (POST/GET/report.md/DELETE) and drill-down routes; serves the built React frontend in prod
 ├── cli/             # Click-based CLI (cli.py) — exposes the `scout` command
 ├── data_sources/    # Async API clients (OpenTargets, ClinicalTrials.gov, PubMed, ChEMBL, FDA, DrugBank stub)
 ├── db/              # SQLAlchemy session factory and declarative base
