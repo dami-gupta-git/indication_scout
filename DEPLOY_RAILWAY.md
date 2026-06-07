@@ -33,6 +33,7 @@ also `CREATE EXTENSION vector`), then starts uvicorn on `$PORT`.
 | `DB_PASSWORD` | any non-empty string (config requires it; the DB itself ignores it) |
 | `SCOUT_CACHE_DIR` | `/data/_cache` |
 | `HF_HOME` | `/data/hf` (model cache dir — not HuggingFace hosting) |
+| `HF_TOKEN` | a HuggingFace read token — avoids the anonymous rate limit on the first model download (see note below) |
 | `ANTHROPIC_API_KEY` | your key |
 | `PUBMED_API_KEY` | your key |
 | `NCBI_API_KEY` | your key |
@@ -55,3 +56,13 @@ and variables persist across deploys; the model downloads once and is cached on
   default for that scheme, so no `+psycopg2` suffix is needed.
 - First request after a cold start is slow (~10s) while BioLORD-2023 loads into
   memory; subsequent requests are fast.
+- **BioLORD model download (`HF_TOKEN`).** On the very first analysis the app
+  downloads BioLORD-2023 from huggingface.co into `/data/hf`. Anonymous requests
+  to the HF Hub are rate-limited, and a throttled/failed download surfaces as
+  "We couldn't connect to 'https://huggingface.co' to load the files, and
+  couldn't find them in the cached files." Set `HF_TOKEN` (a free read token from
+  https://huggingface.co/settings/tokens) to raise the limit and make the first
+  download reliable. Once the model is cached on the `/data` volume it persists
+  across deploys, so the token only matters for that first fetch. (Optional
+  alternative once cached: set `HF_HUB_OFFLINE=1` to skip the hub entirely — but
+  only after the model is present, or loads will fail.)

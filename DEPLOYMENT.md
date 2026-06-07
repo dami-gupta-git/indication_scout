@@ -101,6 +101,7 @@ Secrets/credentials are passed at runtime (never baked into the image):
 | `DB_PASSWORD` | from `.env` | any non-empty string (required by config) |
 | `SCOUT_CACHE_DIR` | unset → `<root>/_cache` | `/data/_cache` |
 | `HF_HOME` | volume `hf_cache` | `/data/hf` |
+| `HF_TOKEN` | optional (model usually already cached) | recommended — avoids the anonymous HF rate limit on first download |
 | `ANTHROPIC_API_KEY`, `PUBMED_API_KEY`, `NCBI_API_KEY`, `OPENFDA_API_KEY` | from `.env` | set as service variables |
 | `PORT` | 8000 (default) | injected by Railway |
 
@@ -133,6 +134,11 @@ the host had files or hardware the container did not.
    `*.txt` pattern.
 5. **Stage selection** — Railway builds the last Dockerfile stage with no override.
    Fixed by ordering the prod `api` stage last.
+6. **HF Hub rate limit on first model download** — the first analysis downloads
+   BioLORD-2023 from huggingface.co; anonymous requests are rate-limited, and a
+   throttled fetch surfaces as "couldn't connect to huggingface.co … and couldn't
+   find them in the cached files." Set `HF_TOKEN` so the first download is
+   reliable. After it caches on `/data` it persists across deploys.
 
 **Lesson:** when something works locally but fails in a container, suspect what is
 actually committed to the repo (gitignore exclusions), not the code.
