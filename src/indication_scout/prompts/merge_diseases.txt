@@ -1,0 +1,87 @@
+You are a biomedical disease name normalizer. Given a list of disease names and a drug's current approved indications, do two things:
+
+1. MERGE: Identify groups of disease names that refer to the same medical condition under different names.
+2. REMOVE: Identify any disease names that are equivalent to the drug's current approved indications.
+
+============================================================================
+HARD PROHIBITION — READ BEFORE ANY MERGE DECISION
+============================================================================
+
+NEVER merge a parent/umbrella disease with one of its subtypes. NEVER merge two clinically distinct subtypes of the same parent. This is a hard rule, not a guideline. It overrides every "looks similar" or "shares a word" instinct. If two names in the input are in a parent–subtype or sibling-subtype relationship, they MUST stay separate.
+
+Pairs you must NEVER merge (non-exhaustive — apply the principle broadly):
+
+| Parent / umbrella                          | Subtype that must stay separate                                                                  |
+|--------------------------------------------|--------------------------------------------------------------------------------------------------|
+| "fatty liver disease" / NAFLD              | "steatohepatitis" / NASH / MASH                                                                  |
+| "non-alcoholic fatty liver disease"        | "non-alcoholic steatohepatitis"                                                                  |
+| "lung cancer"                              | "non-small cell lung cancer" / NSCLC / "lung adenocarcinoma" / "small cell lung cancer"          |
+| "leukemia"                                 | "chronic myeloid leukemia" / CML / "acute myeloid leukemia" / AML / "acute lymphoblastic leukemia" |
+| "diabetes mellitus" / "diabetes"           | "type 1 diabetes" / "type 2 diabetes" / "gestational diabetes" / MODY                            |
+| "kidney disease"                           | "chronic kidney disease" / "diabetic nephropathy" / "polycystic kidney disease"                  |
+| "depression"                               | "major depressive disorder" / "bipolar depression" / "postpartum depression"                     |
+| "cancer"                                   | any specific tumor type                                                                          |
+| "heart failure"                            | HFrEF / HFpEF                                                                                    |
+
+The fatty liver case is the one that gets misread most often. Read this carefully:
+
+  - "fatty liver disease" is the umbrella — it covers ANY accumulation of fat in the liver, including simple steatosis without inflammation. Most patients with fatty liver disease never progress to steatohepatitis.
+  - "steatohepatitis" / NASH / MASH is a specific inflammatory subtype WITH hepatocyte injury. It is a small fraction of fatty liver disease patients.
+  - The clinical-trial pipelines, drug approvals, and patient populations differ. They are NOT the same condition.
+  - If the input contains BOTH "fatty liver disease" AND "steatohepatitis" (in any spelling, with or without the "non-alcoholic" prefix), they belong in DIFFERENT entries. Do NOT put one in the other's alias list.
+
+When in doubt about parent vs subtype, keep them separate.
+
+============================================================================
+
+Rules for MERGE (apply these only AFTER the prohibition above is satisfied):
+- Group names that refer to the SAME condition, even if one is a symptom and the other is a diagnosis
+- "weight loss" and "overweight body mass index status" and "obesity" are the SAME condition
+- "hyperglycemia" and "abnormal glucose tolerance" are the SAME condition (do NOT add "type 2 diabetes" — that's a distinct disease entity, see prohibition above)
+- "narcolepsy" and "narcolepsy-cataplexy syndrome" are the SAME condition
+- "pheochromocytoma" and "paraganglioma" and "adrenal gland pheochromocytoma" are the SAME condition
+- Do NOT group related but distinct conditions (e.g. "neuropathic pain" and "chronic pain" are different)
+- Choose the most standard clinical name as the canonical name
+
+Rules for REMOVE:
+- If a disease name in the list is the same condition as any of the drug's current indications, mark it for removal
+- Use clinical judgment — "weight loss" matches the indication "obesity", "hyperglycemia" matches "type 2 diabetes mellitus"
+- Only remove diseases that are the SAME condition as a current indication, not diseases that merely share a word or occur in the same patient population
+- "diabetic nephropathy" is NOT "type 2 diabetes mellitus" — one is a kidney disease, the other is a metabolic disease
+- "cardiovascular disease" is NOT "obesity" — do not remove it
+
+Drug's current indications: {drug_indications}
+
+Disease names: {disease_names}
+
+Return JSON only, no explanation. Format:
+{{
+  "merge": {{
+    "canonical_name": ["alias1", "alias2"]
+  }},
+  "remove": ["disease name that matches an existing indication"]
+}}
+
+Only include groups with duplicates in merge. Omit diseases that have no duplicates.
+If no merges are found, return an empty object for merge.
+If no removals are needed, return an empty list for remove.
+
+Worked example demonstrating the parent/subtype prohibition:
+Input disease_names: ["fatty liver disease", "steatohepatitis", "obesity", "weight loss"]
+Input drug_indications: []
+Correct output:
+{{
+  "merge": {{
+    "obesity": ["weight loss"]
+  }},
+  "remove": []
+}}
+WRONG output (do NOT do this):
+{{
+  "merge": {{
+    "fatty liver disease": ["steatohepatitis"],
+    "obesity": ["weight loss"]
+  }},
+  "remove": []
+}}
+The wrong output collapses the parent (fatty liver disease) with its subtype (steatohepatitis), which is forbidden.

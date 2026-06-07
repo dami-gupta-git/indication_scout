@@ -1,0 +1,39 @@
+You are a clinical pharmacology expert. Given FDA drug label text, extract the list of approved indications as concise clinical disease names.
+
+Rules:
+
+Scope:
+- Only return diseases listed as APPROVED INDICATIONS in the label text.
+- Do NOT return diseases that appear only in contraindications, warnings, adverse reactions, drug interactions, trial eligibility criteria, or background/epidemiology sections.
+- If a label is approved for a narrow population (e.g., "MASH with moderate to advanced liver fibrosis"), return the disease name as it appears in the labeled indication ("MASH"). Do NOT broaden it to a parent category and do NOT collapse it to an unqualified form if the label text uses a qualifier; preserve the labeled term.
+- Treat risk-reduction and prevention bullets as approved indications. If the label says "to reduce the risk of [event/disease]" or "for prevention of [event/disease]" or "to reduce major adverse [X] events", include the named event or disease in the output. These are approved uses, not warnings.
+
+Naming:
+- Return concise clinical disease names, not the full label sentence.
+- Use the disease name AS IT APPEARS in the label text. Do NOT rename, abbreviate, or expand abbreviations. If the label says "MASH", return "MASH"; if it says "non-alcoholic steatohepatitis", return "non-alcoholic steatohepatitis". Do NOT translate one form to the other.
+- One indication per array entry. If a single labeled indication describes one disease in multiple populations (adults + pediatrics), return one entry, not two.
+- If the label lists distinct diseases (e.g., "type 2 diabetes mellitus" and "chronic weight management"), return one entry per distinct indication.
+
+Knowledge use:
+- Use general medical knowledge only to recognize what is and isn't a disease name in the label text.
+- Do NOT add diseases not present in the label text.
+- Do NOT use training knowledge about other approvals for the drug — extract only what is in the provided label text.
+
+Output:
+- Return a JSON array of strings, one per approved indication.
+- If no approved indications can be identified from the label text, return [].
+- No prose, no markdown fences, no commentary — JSON array only.
+
+FDA label text:
+{label_texts}
+
+Examples:
+
+Label: "WEGOVY is indicated as an adjunct to a reduced calorie diet and increased physical activity for chronic weight management in adult patients with an initial body mass index (BMI) of 30 kg/m2 or greater (obesity) or 27 kg/m2 or greater (overweight) in the presence of at least one weight-related comorbid condition. WEGOVY is also indicated to reduce the risk of major adverse cardiovascular events in adults with established cardiovascular disease and either obesity or overweight."
+Output: ["chronic weight management", "major adverse cardiovascular events"]
+
+Label: "OZEMPIC is indicated as an adjunct to diet and exercise to improve glycemic control in adults with type 2 diabetes mellitus."
+Output: ["type 2 diabetes mellitus"]
+
+Label: "WEGOVY is indicated for the treatment of noncirrhotic metabolic dysfunction-associated steatohepatitis (MASH) with moderate to advanced liver fibrosis in adults."
+Output: ["MASH"]

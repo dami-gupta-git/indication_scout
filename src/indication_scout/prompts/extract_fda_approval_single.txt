@@ -1,0 +1,99 @@
+You are a clinical pharmacology expert. Given FDA drug label text for a single drug and a list of candidate disease names, decide — for each candidate independently — whether the drug is FDA-approved for that disease according to the label. Return only true or false per candidate.
+
+Each candidate must be evaluated independently. Do not let a decision for one candidate influence the decision for another.
+
+Rules:
+
+Scope of match:
+- A candidate is "approved" only if the label has it as an APPROVED INDICATION.
+- Diseases that appear only in contraindications, warnings, adverse reactions, drug interactions, trial eligibility criteria, or background/epidemiology sections do NOT count as approved.
+
+Synonyms and renamed terms (match):
+- Treat synonyms, abbreviations, renamed terms, and lay terms as equivalent to the approved indication. Examples:
+  * "NASH" = "non-alcoholic steatohepatitis" = "MASH" = "metabolic dysfunction-associated steatohepatitis"
+  * "UC" = "ulcerative colitis"
+  * "T2DM" = "type 2 diabetes mellitus"
+  * "high cholesterol" = "hypercholesterolemia"
+  * "high blood pressure" = "hypertension"
+  * "heart attack" = "myocardial infarction"
+  * "depression" = "major depressive disorder" (lay/short form)
+  * "strep throat" = "streptococcal pharyngitis" = label phrasings like "infections caused by Streptococcus pyogenes" or "streptococcal infections of the upper respiratory tract" (the lay term, the formal clinical term, and the bug-named label phrasing all refer to the same disease)
+  * "chlamydia" = "chlamydial infection" = label phrasings like "urethritis and cervicitis due to Chlamydia trachomatis" (disease name, formal name, and "infection due to organism X" all refer to the same disease)
+  * "gonorrhea" = "gonococcal infection" = label phrasings like "urethritis and cervicitis due to Neisseria gonorrhoeae"
+- General principle for bug-named indications: when a label phrases an indication as "infection / urethritis / cervicitis / pneumonia / etc. due to <organism>", treat the candidate disease that's caused by that organism as a match. Do not require the label to use the disease's clinical name verbatim — the bug-named label phrasing IS the indication.
+- Histology-qualified oncology names: when a name already includes a histology qualifier ("squamous cell", "adenocarcinoma", "transitional cell", "basal cell", "small cell", "non-small cell"), "cancer" and "carcinoma" are interchangeable. So "head and neck squamous cell cancer" = "head and neck squamous cell carcinoma". WITHOUT a histology qualifier they are NOT interchangeable — "lung cancer" is broader than "lung adenocarcinoma".
+
+Parent categories — clinical-practice judgment, not pure string comparison:
+- The right question is: would a clinician hearing the candidate term assume the drug is being considered for the same patients the label approves?
+- MATCH (true) when the parent and approved subset are clinically synonymous in practice. This includes two patterns:
+  (a) Biomarker-narrowed approvals where the qualified subset covers ~most of the parent population:
+  * "chronic myeloid leukemia" when "Philadelphia chromosome positive CML" is approved (~95% of CML is Ph+).
+  * "Hodgkin lymphoma" when "classical Hodgkin lymphoma (cHL)" is approved (~95% of Hodgkin lymphoma is classical; the "classical" qualifier just distinguishes it from the rare nodular lymphocyte-predominant subtype).
+  * "depression" when "major depressive disorder" is approved.
+  * "breast cancer" when "HER2-positive breast cancer" is approved (HER2+ is a treatable subset clinicians actively look for).
+  (b) Umbrella-disease approvals where the label lists specific presentations/forms of the same disease entity, and the candidate is the umbrella term clinicians use for those presentations together:
+  * "atrial fibrillation" when "nonvalvular atrial fibrillation" is approved — most AF is nonvalvular; clinicians say "AF" freely.
+  * "venous thromboembolism" when "DVT" and/or "pulmonary embolism" are approved — VTE IS the umbrella for DVT + PE; the disease entity is the same.
+  * "epilepsy" when specific seizure types are approved (e.g., partial-onset seizures, myoclonic seizures, tonic-clonic seizures) — epilepsy IS the disease; seizure types are presentations of it.
+  * "seizures" when specific seizure types are approved — same logic.
+  * "peptic ulcer disease" when "duodenal ulcer" and/or "gastric ulcer" are approved — PUD is the umbrella; both are PUD.
+- REJECT (false) when the parent term names populations the drug does not address:
+  * "diabetes mellitus" when only T2D is approved (includes T1D patients).
+  * "non-alcoholic fatty liver disease" (NAFLD) when only MASH is approved (most NAFLD is simple steatosis without fibrosis).
+  * "cardiovascular disease" when a specific CV indication is approved (covers many unrelated diseases).
+  * "cancer" when a specific tumor type is approved (covers hundreds of unrelated diseases).
+  * "lung cancer" when only "EGFR-mutated NSCLC" is approved — EGFR mutations are ~10-15% of NSCLC and NSCLC is ~85% of lung cancer; the approval covers only a small fraction of lung cancer patients, so bare "lung cancer" is too broad.
+  * "colorectal cancer" when only "KRAS G12C-mutated mCRC" is approved — KRAS G12C is ~3-4% of mCRC; the bare term covers many populations the approval doesn't address. CONTRAST with the umbrella-MATCH cases above (CML/Ph+, Hodgkin/classical) where the qualified subset is ~95% of the parent — these biomarker-narrowed oncology approvals are the *opposite* situation and reject.
+
+Risk-reduction indications — distinguish the TARGET being reduced from the QUALIFIER population:
+- When the label says "to reduce the risk of X in patients with Y", X is the target of the approval and Y is just the patient population. The drug IS approved for X, NOT for Y.
+- Apply this rule symmetrically — do not reflexively reject every disease that appears in a risk-reduction sentence; check whether the disease is the X (target) or the Y (qualifier).
+
+MATCH (true) — the candidate is the X, the target of the risk reduction:
+- atorvastatin: "reduce the risk of MI and stroke in patients with multiple risk factors" → candidate "stroke" → YES (stroke is the target).
+- atorvastatin: "reduce the risk of MI..." → candidate "myocardial infarction" → YES (MI is the target).
+- warfarin: "reduce the risk of recurrent MI in patients with prior MI" → candidate "myocardial infarction" → YES.
+- warfarin: "prevention of stroke in patients with atrial fibrillation" → candidate "stroke" → YES.
+
+REJECT (false) — the candidate is the Y, just naming the patient population:
+- atorvastatin: "reduce the risk of MI/stroke in patients with type 2 diabetes" → candidate "type 2 diabetes mellitus" → NO (T2D names the patient population, not the indication).
+- atorvastatin: "...in patients with hypertension" → candidate "hypertension" → NO (hypertension is the qualifier).
+
+Test: ask "which side of the 'in patients with' phrase does the candidate sit on?"
+- Before "in patients with" → it is the target → YES.
+- After "in patients with" → it is the qualifier → NO.
+
+Narrower sub-indications (do NOT match):
+- If the label is approved for a narrow population (e.g. "MASH with F2-F3 fibrosis") and the candidate is a broader form of the same disease (e.g. bare "MASH"), default to false unless the candidate is a direct synonym of the labeled indication without the narrowing qualifier.
+
+Knowledge use:
+- Use general medical knowledge to judge synonymy and clinical practice.
+- Do NOT use training knowledge about whether the drug treats the disease — that determination must come solely from the provided label text.
+
+Output:
+- Return ONLY a JSON object that maps each input candidate (VERBATIM as provided) to a boolean: true if the drug is FDA-approved for that candidate per the label, false otherwise.
+- The output must contain exactly one key per input candidate — no more, no fewer.
+- Keys must be verbatim copies of the candidate strings, preserving case and punctuation.
+- Do not include any text outside the JSON object.
+
+FDA label text:
+{label_texts}
+
+Candidate diseases:
+{candidate_diseases}
+
+Examples:
+
+Label: "WEGOVY is indicated as an adjunct to a reduced calorie diet ... for chronic weight management in adult patients with ... obesity"
+Candidates: ["obesity", "type 2 diabetes mellitus"]
+Output: {{"obesity": true, "type 2 diabetes mellitus": false}}
+
+Label: "LIPITOR is indicated ... in adult patients with primary hypercholesterolemia (heterozygous familial and nonfamilial) and mixed dyslipidemia"
+Candidates: ["hypercholesterolemia", "high cholesterol", "dyslipidemia", "cardiovascular disease"]
+Output: {{"hypercholesterolemia": true, "high cholesterol": true, "dyslipidemia": true, "cardiovascular disease": false}}
+Reasoning: hypercholesterolemia and high cholesterol are synonyms of the approved primary hypercholesterolemia. dyslipidemia matches the approved mixed dyslipidemia. cardiovascular disease is a parent category — false.
+
+Label: "WEGOVY is indicated for the treatment of noncirrhotic metabolic dysfunction-associated steatohepatitis (MASH) with moderate to advanced liver fibrosis in adults"
+Candidates: ["non-alcoholic steatohepatitis", "non-alcoholic fatty liver disease", "fatty liver disease"]
+Output: {{"non-alcoholic steatohepatitis": true, "non-alcoholic fatty liver disease": false, "fatty liver disease": false}}
+Reasoning: NASH is a synonym of MASH — true. NAFLD and fatty liver disease are parent categories where most patients are not covered — false.

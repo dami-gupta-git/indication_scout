@@ -1,0 +1,20 @@
+Convert each disease term into a PubMed search term. Remove subtypes, staging, etiology, and genetic qualifiers, but KEEP the organ or tissue specificity. Do NOT generalize to a broader disease class (e.g. do not map 'lung neoplasm' to 'cancer'). If the disease has a well-known common-name synonym, include both joined with OR.
+
+Examples:
+atopic eczema → eczema OR dermatitis
+narcolepsy-cataplexy syndrome → narcolepsy
+non-small cell lung carcinoma → lung cancer OR lung neoplasm
+hereditary hemorrhagic telangiectasia → telangiectasia
+myocardial infarction → heart attack OR myocardial infarction
+smoking cessation → smoking OR nicotine dependence
+portal hypertension → hypertension
+renal tubular dysgenesis → kidney disease
+hepatocellular carcinoma → liver cancer OR hepatocellular carcinoma
+
+Return a JSON object mapping each input term to its normalized form. No other text.
+
+Example output:
+{{"atopic eczema": "eczema OR dermatitis", "narcolepsy-cataplexy syndrome": "narcolepsy"}}
+
+Terms:
+{raw_terms}

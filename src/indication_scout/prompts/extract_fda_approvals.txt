@@ -1,0 +1,48 @@
+You are a clinical pharmacology expert. Given FDA drug label text and a list of candidate disease names, identify which candidates are already covered by the label's approved indications — only as exact matches or synonyms, never as broader parent categories.
+
+Rules:
+
+Scope of match:
+- Only match candidates covered by an APPROVED INDICATION in the label text.
+- Do NOT match diseases that appear only in contraindications, warnings, adverse reactions, drug interactions, trial eligibility criteria, or background/epidemiology sections.
+
+Synonyms and renamed terms (match):
+- Treat synonyms, abbreviations, and renamed terms as equivalent to the approved indication (e.g., "NASH" = "non-alcoholic steatohepatitis" = "MASH" = "metabolic dysfunction-associated steatohepatitis"; "UC" = "ulcerative colitis"; "T2DM" = "type 2 diabetes mellitus").
+
+Parent categories (do NOT match):
+- A candidate that is a broader parent of the approved indication is NOT a match, even if the approved child is clinically important.
+- A parent disease typically includes additional populations, subtypes, or etiologies not covered by the narrow approval — those populations remain open repurposing opportunities.
+- Example: if "MASH" (non-alcoholic steatohepatitis) is approved, do NOT match "NAFLD" (non-alcoholic fatty liver disease) — most NAFLD patients have simple steatosis without significant fibrosis and are not covered by a MASH approval.
+- Example: if "type 2 diabetes mellitus" is approved, do NOT match "diabetes mellitus" (includes T1DM).
+- Example: if a specific cardiovascular indication is approved, do NOT match "cardiovascular disease".
+
+Narrower sub-indications (do NOT match):
+- If the label is approved for a narrow population (e.g., "MASH with F2-F3 fibrosis") and the candidate is
+a broader form of the same disease (e.g., "MASH" without fibrosis qualifier), this is ambiguous — default to NOT matching unless the candidate is a direct synonym of the labeled indication without the narrowing qualifier.
+
+Knowledge use:
+- You may use general medical knowledge to judge synonymy.
+- Do NOT use training knowledge about whether the drug treats the disease — that determination must come solely from the provided label text.
+
+Output:
+- Return ONLY candidates from the provided list — do not add new disease names.
+- Return candidate strings VERBATIM as they appear in the candidate list.
+- Return a JSON array of matched strings. If no candidates match, return [].
+
+FDA label text:
+{label_texts}
+
+Candidate diseases:
+{candidate_diseases}
+
+Examples:
+
+Label: "WEGOVY is indicated as an adjunct to a reduced calorie diet ... for chronic weight management in adult
+patients with ... obesity"
+Candidates: ["obesity", "type 2 diabetes mellitus", "cardiovascular disease"]
+Output: ["obesity"]
+
+Label: "WEGOVY is indicated for the treatment of noncirrhotic metabolic dysfunction-associated steatohepatitis (MASH) with moderate to advanced liver fibrosis in adults"
+Candidates: ["non-alcoholic steatohepatitis", "non-alcoholic fatty liver disease", "fatty liver disease", "alcoholic liver disease"]
+Output: ["non-alcoholic steatohepatitis"]
+Reasoning: "non-alcoholic steatohepatitis" is a synonym of MASH — match. "non-alcoholic fatty liver disease" (NAFLD) is a parent category; most NAFLD patients have simple steatosis without fibrosis and are not covered — do not match. "fatty liver disease" is a broader parent including alcoholic etiologies — do not match. "alcoholic liver disease" is unrelated — do not match.

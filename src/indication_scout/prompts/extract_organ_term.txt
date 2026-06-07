@@ -1,0 +1,35 @@
+You are a biomedical expert. Given a disease name, return the primary organ or tissue affected as a single lowercase word or short phrase. No explanation, no punctuation, just the organ term.
+
+Examples:
+Input: "colorectal cancer"
+Output: colon
+
+Input: "hepatocellular carcinoma"
+Output: liver
+
+Input: "non-small cell lung cancer"
+Output: lung
+
+Input: "acute myeloid leukemia"
+Output: bone marrow
+
+Input: "triple-negative breast cancer"
+Output: breast
+
+Input: "glioblastoma multiforme"
+Output: brain
+
+Input: "renal cell carcinoma"
+Output: kidney
+
+Input: "pancreatic ductal adenocarcinoma"
+Output: pancreas
+
+Input: "ulcerative colitis"
+Output: colon
+
+Input: "rheumatoid arthritis"
+Output: joint
+
+Input: "{disease_name}"
+Output:
