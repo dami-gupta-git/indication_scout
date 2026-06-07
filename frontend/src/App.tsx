@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useAnalysis } from "./useAnalysis";
-import { getReportMarkdown } from "./api";
+import { getReportMarkdown, getExample } from "./api";
 import type { SupervisorOutput } from "./types";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MechanismTab } from "./tabs/MechanismTab";
@@ -35,8 +35,19 @@ export function App() {
     if (name) run(name);
   };
 
-  const pickExample = (name: string) => {
+  const pickExample = async (name: string) => {
     setDrug(name);
+    // Serve the backend's cached example run; on a corrupt/error response,
+    // fall back to a live run.
+    try {
+      const status = await getExample(name);
+      if (status.result) {
+        loadSample(status.result);
+        return;
+      }
+    } catch {
+      // fall through to a live run
+    }
     run(name);
   };
 

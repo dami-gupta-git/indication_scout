@@ -27,7 +27,19 @@ DEFAULT_CACHE_DIR: Path = (
     else _PROJECT_ROOT / "_cache"
 )
 TEST_CACHE_DIR: Path = _PROJECT_ROOT / "_cache_test"
-CACHE_TTL: int = 5 * 86400  # 5 days in seconds
+CACHE_TTL: int = 60 * 86400  # 60 days (relaxed: portfolio project, save time/tokens)
+
+# -- Landing-page example cache ---------------------------------------------
+# Drugs shown as one-click examples on the landing page. Each is run once and
+# its full SupervisorOutput is cached on the persistent volume; a cached run
+# older than EXAMPLE_CACHE_TTL_SECONDS is re-run lazily on the next request.
+EXAMPLE_DRUGS: tuple[str, ...] = ("metformin", "semaglutide", "bupropion", "sildenafil")
+EXAMPLE_CACHE_TTL_SECONDS: int = 30 * 86400  # 30 days
+EXAMPLE_CACHE_DIR: Path = DEFAULT_CACHE_DIR / "examples"
+# Committed seed snapshots copied into EXAMPLE_CACHE_DIR on startup when the
+# persistent volume is empty (e.g. a fresh Railway deploy). captured_at.json
+# holds {drug: epoch_seconds} so the seeded cache mtime reflects capture date.
+EXAMPLE_SEED_DIR: Path = _PROJECT_ROOT / "seed_examples"
 
 # -- Hardcoded FDA approvals (used during temporal holdouts) ----------------
 # When the pipeline is run with --date-before, the live FDA-label lookup is
@@ -52,7 +64,7 @@ CLINICAL_TRIALS_FETCH_MAX: int = 50
 # Per-source cache TTL for ClinicalTrials.gov pair-scoped queries
 # (get_completed_trials / get_terminated_trials). Longer than the global
 # CACHE_TTL because trial status transitions are slow.
-CLINICAL_TRIALS_CACHE_TTL: int = 14 * 86400  # 14 days in seconds
+CLINICAL_TRIALS_CACHE_TTL: int = 60 * 86400  # 60 days (relaxed: portfolio project, save time/tokens)
 
 # -- PubMed / NCBI ----------------------------------------------------------
 NCBI_BASE_URL: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
@@ -71,7 +83,7 @@ PUBMED_SEARCH_SLEEP_SECONDS: float = 1.0
 # -- MeSH resolver ----------------------------------------------------------
 NCBI_ESEARCH_URL: str = f"{NCBI_BASE_URL}/esearch.fcgi"
 NCBI_ESUMMARY_URL: str = f"{NCBI_BASE_URL}/esummary.fcgi"
-MESH_RESOLVER_TTL_SECONDS: int = 60 * 60 * 24 * 30  # 30 days
+MESH_RESOLVER_TTL_SECONDS: int = 60 * 60 * 24 * 60  # 60 days (relaxed: portfolio project, save time/tokens)
 MESH_RESOLVER_MAX_CONCURRENT: int = 5
 
 # -- Clinical stage ranking (Open Targets) ----------------------------------

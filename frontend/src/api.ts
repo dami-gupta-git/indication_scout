@@ -31,6 +31,10 @@ export async function cancelAnalysis(jobId: string): Promise<void> {
   }
 }
 
+export async function getExample(drug: string): Promise<AnalysisStatus> {
+  return asJson<AnalysisStatus>(await fetch(`/api/examples/${encodeURIComponent(drug)}`));
+}
+
 export async function getReportMarkdown(jobId: string): Promise<string> {
   const resp = await fetch(`/api/analyses/${jobId}/report.md`);
   if (!resp.ok) throw new Error(`Report unavailable: ${resp.status}`);
