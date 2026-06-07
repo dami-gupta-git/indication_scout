@@ -41,8 +41,9 @@ describe("sortGridRows", () => {
 
   it("orders strength by quality, not alphabetically", () => {
     const sorted = sortGridRows(rows, "strength", "desc");
-    // moderate (rank 2) before weak (rank 1)
-    expect(sorted.map((r) => r.strength)).toEqual(["moderate", "weak"]);
+    // moderate (rank 2) before none (rank 0) — quality order, not alphabetical
+    // ("moderate" < "none" alphabetically, so this also guards against that).
+    expect(sorted.map((r) => r.strength)).toEqual(["moderate", "none"]);
   });
 
   it("sinks null cells to the bottom regardless of direction", () => {

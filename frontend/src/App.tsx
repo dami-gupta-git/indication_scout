@@ -9,6 +9,7 @@ import { OverviewTab } from "./tabs/OverviewTab";
 import { MechanismTab } from "./tabs/MechanismTab";
 import { ClinicalTrialsTab } from "./tabs/ClinicalTrialsTab";
 import { LiteratureTab } from "./tabs/LiteratureTab";
+import { LandingHero } from "./LandingHero";
 import sampleOutput from "./fixtures/sample-output.json";
 
 const TABS = ["Overview", "Mechanism", "Clinical Trials", "Literature"] as const;
@@ -31,6 +32,11 @@ export function App() {
     e.preventDefault();
     const name = drug.trim();
     if (name) run(name);
+  };
+
+  const pickExample = (name: string) => {
+    setDrug(name);
+    run(name);
   };
 
   const downloadReport = async () => {
@@ -113,6 +119,7 @@ export function App() {
       </aside>
 
       <main className="main">
+        {state.status === "idle" && <LandingHero onPickExample={pickExample} />}
         <StatusBanner status={state.status} error={state.error} />
         {result && (
           <>
@@ -169,7 +176,7 @@ export function App() {
 }
 
 function StatusBanner({ status, error }: { status: string; error: string | null }) {
-  if (status === "idle") return <p className="hint">Enter a drug name to begin.</p>;
+  if (status === "idle") return null; // landing hero covers the idle state
   if (status === "pending" || status === "running")
     return (
       <p className="banner running" role="status" aria-live="polite">
