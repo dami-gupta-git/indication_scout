@@ -252,6 +252,12 @@ body {
   border-radius: 4px;
 }
 
+.mech-graph {
+  border: 1px solid #e2e4e8;
+  border-radius: 8px;
+  margin: 0.5rem 0 1rem;
+}
+
 /* ---- Status donut ---- */
 .donut {
   display: flex;

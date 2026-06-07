@@ -1,9 +1,18 @@
-// Mechanism tab: summary, molecular targets, MoA table, and mechanism-derived
-// repurposing candidates.
+// Mechanism tab: summary, drug→target→disease network graph, molecular targets,
+// MoA table, and mechanism-derived repurposing candidates.
 
 import type { SupervisorOutput } from "../types";
+import { MechanismGraph } from "../graph/MechanismGraph";
 
-export function MechanismTab({ result }: { result: SupervisorOutput }) {
+export function MechanismTab({
+  result,
+  focusDisease,
+  onFocus,
+}: {
+  result: SupervisorOutput;
+  focusDisease: string | null;
+  onFocus: (disease: string) => void;
+}) {
   const mech = result.mechanism;
   if (mech === null) {
     return <p className="muted">Mechanism analysis not run.</p>;
@@ -15,6 +24,10 @@ export function MechanismTab({ result }: { result: SupervisorOutput }) {
     <div className="mechanism">
       <h3>Mechanistic analysis</h3>
       {mech.summary && <p>{mech.summary}</p>}
+
+      <h4>Drug → target → disease network</h4>
+      <p className="caption">Click a disease node to focus it in the other tabs.</p>
+      <MechanismGraph result={result} focusDisease={focusDisease} onFocus={onFocus} />
 
       <div className="mech-cols">
         <div className="mech-col targets">

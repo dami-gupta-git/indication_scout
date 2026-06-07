@@ -185,7 +185,7 @@ function TabContent({
     case "Overview":
       return <OverviewTab result={result} focusDisease={focusDisease} onFocus={onFocus} />;
     case "Mechanism":
-      return <MechanismTab result={result} />;
+      return <MechanismTab result={result} focusDisease={focusDisease} onFocus={onFocus} />;
     case "Clinical Trials":
       return <ClinicalTrialsTab result={result} focusDisease={focusDisease} />;
     case "Literature":
