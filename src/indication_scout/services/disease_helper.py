@@ -378,7 +378,7 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
     that is a descriptor with a valid D-number — this skips non-descriptor
     records (qualifiers, supplementary concepts) that esearch can rank in.
     """
-    cache_params = {"indication": indication.strip().lower(), "v": 4}
+    cache_params = {"indication": indication.strip().lower()}
     cached = cache_get("mesh_resolver", cache_params, DEFAULT_CACHE_DIR)
     if cached is not None:
         return tuple(cached) if isinstance(cached, list) else cached
