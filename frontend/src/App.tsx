@@ -73,9 +73,16 @@ export function App() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <button type="button" className="home" onClick={goHome} title="Back to start">
-          IndicationScout
+        <button type="button" className="home-btn" onClick={goHome} title="Home" aria-label="Home">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M12 3 2 12h3v8h6v-6h2v6h6v-8h3z"
+            />
+          </svg>
+          <span>Home</span>
         </button>
+        <h1>IndicationScout</h1>
         <form onSubmit={submit}>
           <label htmlFor="drug">Drug</label>
           <input

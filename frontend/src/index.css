@@ -28,20 +28,23 @@ body {
   margin-top: 0;
 }
 
-/* Title doubles as a home button — styled as the heading, not a button. */
-.sidebar button.home {
-  font-size: 1.25rem;
-  font-weight: 700;
-  margin: 0 0 1rem;
-  padding: 0;
-  background: none;
-  color: inherit;
-  text-align: left;
+/* Home button above the title. */
+.sidebar button.home-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: auto;
+  margin: 0 0 0.75rem;
+  padding: 0.4rem 0.7rem;
+  background: #2d6cdf;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.9rem;
   cursor: pointer;
 }
 
-.sidebar button.home:hover {
-  color: #2d6cdf;
+.sidebar button.home-btn:hover {
+  background: #2057c0;
 }
 
 .sidebar form {
