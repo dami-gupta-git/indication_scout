@@ -3,6 +3,7 @@
 
 import { useState } from "react";
 import { useAnalysis } from "./useAnalysis";
+import { getReportMarkdown } from "./api";
 import type { SupervisorOutput } from "./types";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MechanismTab } from "./tabs/MechanismTab";
@@ -21,11 +22,27 @@ export function App() {
 
   const busy = state.status === "pending" || state.status === "running";
   const result = state.data?.result ?? null;
+  // The .md report is formatted backend-side; the dev "sample" job has no
+  // server-side job, so the download is only available for real finished runs.
+  const canDownload =
+    state.status === "done" && state.jobId !== null && state.jobId !== "sample";
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const name = drug.trim();
     if (name) run(name);
+  };
+
+  const downloadReport = async () => {
+    if (!state.jobId) return;
+    const md = await getReportMarkdown(state.jobId);
+    const drugName = state.data?.drug_name ?? "report";
+    const url = URL.createObjectURL(new Blob([md], { type: "text/markdown" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `indication_scout_${drugName.replace(/\s+/g, "_")}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -86,6 +103,12 @@ export function App() {
               </label>
             ))}
           </fieldset>
+        )}
+
+        {canDownload && (
+          <button type="button" className="download" onClick={downloadReport}>
+            Download report (.md)
+          </button>
         )}
       </aside>
 

@@ -67,6 +67,12 @@ body {
   border: 1px dashed #cfd2d8;
 }
 
+.sidebar button.download {
+  margin-top: 1.5rem;
+  width: 100%;
+  background: #1d6b35;
+}
+
 .focus {
   margin-top: 1.5rem;
   border: 1px solid #e2e4e8;
