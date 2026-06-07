@@ -89,6 +89,11 @@ class Settings(BaseSettings):
 
     # Supervisor
     supervisor_candidate_cap: int
+    # When true, the supervisor exposes investigate_top_candidates in non-holdout
+    # runs and the prompt directs the LLM to call it once instead of investigating
+    # each candidate serially. Trades the per-candidate ReAct loop for a single
+    # parallel fan-out. Intended for smoke testing.
+    supervisor_fanout: bool
 
     # Mechanism
     mechanism_signal_threshold: float

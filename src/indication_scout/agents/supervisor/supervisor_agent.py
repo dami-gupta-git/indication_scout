@@ -27,10 +27,30 @@ logger = logging.getLogger(__name__)
 _PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 
 
-def _load_system_prompt(holdout_mode: bool) -> str:
-    """Return the supervisor system prompt for production or holdout mode."""
+# Appended to the non-holdout prompt when supervisor_fanout is on. Overrides WORKFLOW step 2's
+# serial per-candidate investigation with a single parallel fan-out call. Kept out of
+# supervisor.txt so the default prompt is byte-identical when the flag is off.
+_FANOUT_DIRECTIVE = """
+
+# FAN-OUT MODE (overrides WORKFLOW step 2)
+Do NOT call analyze_literature / analyze_clinical_trials per candidate. Instead, after
+find_candidates and analyze_mechanism complete, call investigate_top_candidates ONCE. It runs
+literature and clinical trials for every candidate in parallel. Then call get_drug_briefing and
+finalize_supervisor as usual, ranking from the results investigate_top_candidates returned.
+"""
+
+
+def _load_system_prompt(holdout_mode: bool, fanout: bool = False) -> str:
+    """Return the supervisor system prompt for production or holdout mode.
+
+    When `fanout` is set (non-holdout only), append the fan-out directive so the LLM calls
+    investigate_top_candidates once instead of investigating each candidate serially.
+    """
     name = "supervisor_holdout.txt" if holdout_mode else "supervisor.txt"
-    return (_PROMPTS_DIR / name).read_text()
+    prompt = (_PROMPTS_DIR / name).read_text()
+    if fanout and not holdout_mode:
+        prompt = prompt + _FANOUT_DIRECTIVE
+    return prompt
 
 
 # Production prompt loaded at import time. Importers (e.g. scripts/probe_supervisor_t2dm.py)
@@ -54,11 +74,17 @@ def build_supervisor_agent(llm, svc, db, date_before: date | None = None):
     tools, get_merged_allowlist, get_auto_findings = build_supervisor_tools(
         llm=llm, svc=svc, db=db, date_before=date_before
     )
+    fanout = date_before is None and get_settings().supervisor_fanout
     prompt_file = (
         "supervisor_holdout.txt" if date_before is not None else "supervisor.txt"
     )
-    logger.info("supervisor prompt: %s (date_before=%s)", prompt_file, date_before)
-    prompt = _load_system_prompt(holdout_mode=date_before is not None)
+    logger.info(
+        "supervisor prompt: %s (date_before=%s, fanout=%s)",
+        prompt_file,
+        date_before,
+        fanout,
+    )
+    prompt = _load_system_prompt(holdout_mode=date_before is not None, fanout=fanout)
     agent = create_react_agent(model=llm, tools=tools, prompt=prompt)
     return agent, get_merged_allowlist, get_auto_findings
 

@@ -115,9 +115,8 @@ When creating a plan:
 - [ ] Suggest changes that need to be made to the unit and integration tests
 
 ## Plan Tracking Workflow
-- When asked to design or plan a feature, write the plan to `PLAN.md` in the **project root** as a checklist (`- [ ]` items) before touching any code.
-- While implementing, mark each step complete (`- [x]`) in `PLAN.md` as it is finished.
-- After a feature is done, leave `PLAN.md` in place as a record; overwrite it when the next plan starts.
+- When asked to design or plan a feature, write the plan to `PLAN_<something>.md` in the **project root** as a checklist (`- [ ]` items) before touching any code.
+- While implementing, mark each step complete (`- [x]`) in `PLAN_<something>.md` as it is finished.
 
 ## Design & Implementation Guidelines
 - Favor clear, explicit control flow over clever patterns.

@@ -9,6 +9,8 @@ from fastapi.staticfiles import StaticFiles
 from indication_scout import __version__
 from indication_scout.api.routes.analyses import router as analyses_router
 from indication_scout.api.routes.drilldown import router as drilldown_router
+from indication_scout.api.routes.examples import router as examples_router
+from indication_scout.api.routes.examples import seed_example_cache
 from indication_scout.constants import CORS_ALLOW_ORIGINS, FRONTEND_DIST_DIR
 
 logger = logging.getLogger(__name__)
@@ -28,6 +30,13 @@ app.add_middleware(
 
 app.include_router(analyses_router)
 app.include_router(drilldown_router)
+app.include_router(examples_router)
+
+
+@app.on_event("startup")
+async def seed_examples() -> None:
+    """Seed the example cache from committed snapshots when the volume is empty."""
+    seed_example_cache()
 
 
 @app.on_event("startup")
