@@ -153,17 +153,14 @@ body {
   padding-top: 1rem;
 }
 
-/* Comfortable prose: looser line height and a readable measure so summary
-   paragraphs don't run cramped edge-to-edge. Tight helpers (.caption) and
-   list lines opt out below. */
+/* Comfortable prose: looser line height so summary paragraphs don't read
+   cramped. Full width — no measure cap. Tight helpers (.caption) opt out. */
 .tabpanel p {
   line-height: 1.65;
-  max-width: 70ch;
 }
 
 .tabpanel p.caption {
   line-height: 1.4;
-  max-width: none;
 }
 
 /* ---- Badges (shared visual encoding) ---- */
