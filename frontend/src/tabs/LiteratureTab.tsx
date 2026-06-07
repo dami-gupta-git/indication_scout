@@ -2,7 +2,6 @@
 // key findings, supporting PMID links.
 
 import type { SupervisorOutput } from "../types";
-import { StrengthBadge } from "../components/Badge";
 import { PmidLink } from "../components/links";
 
 export function LiteratureTab({
@@ -34,16 +33,16 @@ export function LiteratureTab({
         <p className="muted">No evidence summary available.</p>
       ) : (
         <>
-          <div className="kpis">
-            <div className="kpi">
-              <span className="kpi-value">
-                <StrengthBadge strength={lit.strength} />
+          <div className="metrics">
+            <div className="metric">
+              <span className="metric-label">Evidence strength</span>
+              <span className={`metric-value strength-text strength-${lit.strength}`}>
+                {lit.strength.charAt(0).toUpperCase() + lit.strength.slice(1)}
               </span>
-              <span className="kpi-label">Evidence strength</span>
             </div>
-            <div className="kpi">
-              <span className="kpi-value">{lit.study_count}</span>
-              <span className="kpi-label">Study count</span>
+            <div className="metric">
+              <span className="metric-label">Study count</span>
+              <span className="metric-value">{lit.study_count}</span>
             </div>
           </div>
 

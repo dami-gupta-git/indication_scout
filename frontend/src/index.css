@@ -362,6 +362,49 @@ body {
   line-height: 1.7;
 }
 
+/* Looser spacing between key-finding bullets so they don't read cramped. */
+.tabpanel ul li {
+  margin-bottom: 0.5rem;
+  line-height: 1.5;
+}
+
+/* ---- Metrics (Streamlit st.metric style: small label over a large value) ---- */
+.metrics {
+  display: flex;
+  gap: 3rem;
+  margin: 1rem 0 1.5rem;
+}
+
+.metric {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.metric-label {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.metric-value {
+  font-size: 2rem;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.strength-text.strength-strong {
+  color: #1d6b35;
+}
+.strength-text.strength-moderate {
+  color: #8a6100;
+}
+.strength-text.strength-weak {
+  color: #a23030;
+}
+.strength-text.strength-none {
+  color: #6b7280;
+}
+
 /* ---- Summary blurb cards ---- */
 .blurb-cards {
   display: flex;

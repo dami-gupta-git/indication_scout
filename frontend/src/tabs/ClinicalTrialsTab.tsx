@@ -52,7 +52,7 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
         <>
           {ct.summary && <p>{ct.summary}</p>}
 
-          <div className="kpis">
+          <div className="metrics">
             <Kpi label="Total trials" value={ct.search?.total_count ?? 0} />
             <Kpi label="Recruiting" value={ct.search?.by_status["RECRUITING"] ?? 0} />
             <Kpi
@@ -120,9 +120,9 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
 
 function Kpi({ label, value }: { label: string; value: number }) {
   return (
-    <div className="kpi">
-      <span className="kpi-value">{value}</span>
-      <span className="kpi-label">{label}</span>
+    <div className="metric">
+      <span className="metric-label">{label}</span>
+      <span className="metric-value">{value}</span>
     </div>
   );
 }
