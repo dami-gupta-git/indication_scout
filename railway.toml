@@ -1,0 +1,23 @@
+# Railway deploy config. Railway auto-detects the Dockerfile from the connected
+# GitHub repo and builds its last stage, which is the prod `api` stage (UI
+# bundled, no --reload). Railway has no key to pick a multi-stage target, so the
+# Dockerfile is ordered with `api` last on purpose — do not reorder.
+#
+# Set the rest in the Railway dashboard (Variables + Volume), see DEPLOY_RAILWAY.md:
+#   DATABASE_URL=${{Postgres.DATABASE_URL}}
+#   DB_PASSWORD=<any non-empty>
+#   SCOUT_CACHE_DIR=/data/_cache
+#   HF_HOME=/data/hf
+#   ANTHROPIC_API_KEY / PUBMED_API_KEY / NCBI_API_KEY / OPENFDA_API_KEY
+# Mount a persistent volume at /data.
+
+[build]
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+# Health check: Railway waits for this to pass before routing traffic.
+healthcheckPath = "/health"
+healthcheckTimeout = 300
+restartPolicyType = "on_failure"
+restartPolicyMaxRetries = 3

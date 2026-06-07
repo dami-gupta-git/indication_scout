@@ -1,0 +1,40 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+build/
+dist/
+
+# Node / frontend build artefacts (rebuilt inside the image)
+frontend/node_modules/
+frontend/dist/
+frontend/.tsnode/
+frontend/.vite/
+**/*.tsbuildinfo
+
+# Local caches & data (mounted as volumes at runtime, not baked in)
+_cache/
+_cache_test/
+.deepeval/
+
+# Local env / secrets (passed via compose env_file at runtime)
+.env
+
+# Tooling / IDE / VCS
+.git/
+.idea/
+.vscode/
+.DS_Store
+
+# Experiment + report output that does not belong in the image
+src/indication_scout/runners/wandb/
+snapshots/
+reports/
+test_reports/
+metrics/
+notebooks/
+session_bak/

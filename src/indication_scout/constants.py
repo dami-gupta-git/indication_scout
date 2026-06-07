@@ -8,6 +8,7 @@ This file holds values that are structurally fixed: URLs, lookup maps,
 keyword lists, and directory paths.
 """
 
+import os
 from pathlib import Path
 
 # -- LLM defaults -----------------------------------------------------------
@@ -18,7 +19,13 @@ DEFAULT_LLM_MODEL: str = "claude-sonnet-4-6"
 # that a single _cache/ directory is used regardless of the working directory
 # from which tests or scripts are launched.
 _PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
-DEFAULT_CACHE_DIR: Path = _PROJECT_ROOT / "_cache"
+# Defaults to <root>/_cache; override via SCOUT_CACHE_DIR so the cache can live
+# on a mounted persistent volume (e.g. Railway) instead of inside the image.
+DEFAULT_CACHE_DIR: Path = (
+    Path(os.environ["SCOUT_CACHE_DIR"])
+    if os.environ.get("SCOUT_CACHE_DIR")
+    else _PROJECT_ROOT / "_cache"
+)
 TEST_CACHE_DIR: Path = _PROJECT_ROOT / "_cache_test"
 CACHE_TTL: int = 5 * 86400  # 5 days in seconds
 

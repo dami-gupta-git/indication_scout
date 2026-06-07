@@ -1,0 +1,84 @@
+# Dev override. Use with:
+#   docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+#
+# Differences from prod:
+#   - api runs the api-dev target (no baked-in frontend bundle) with uvicorn
+#     --reload, and bind-mounts src/ so edits restart the server live.
+#   - frontend runs the Vite dev server on :5173 with HMR, proxying /api -> api.
+#   - test / test-int services run the unit and integration suites.
+services:
+  api:
+    build:
+      context: .
+      target: api-dev
+    volumes:
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+      - scout_cache:/app/_cache
+      - hf_cache:/hf-cache
+
+  frontend:
+    image: node:20-slim
+    working_dir: /frontend
+    command: sh -c "npm install && npm run dev -- --host 0.0.0.0"
+    environment:
+      # Point Vite's /api proxy at the api service instead of localhost:8000.
+      VITE_API_PROXY_TARGET: http://api:8000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/frontend
+      # Keep node_modules inside the container so the host platform's modules
+      # (e.g. macOS) don't shadow the Linux build.
+      - frontend_node_modules:/frontend/node_modules
+    depends_on:
+      - api
+
+  # Unit tests: no network, no DB. One-shot; run with `--profile test`.
+  test:
+    build:
+      context: .
+      target: api-dev
+    profiles: ["test"]
+    env_file:
+      - .env
+    environment:
+      CONSTANTS_FILE: .env.constants.test
+    # Skip the migrate-and-serve entrypoint; unit tests need neither.
+    entrypoint: []
+    command: pytest tests/unit/
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - scout_cache:/app/_cache
+      - hf_cache:/hf-cache
+
+  # Integration tests: need scout_test (migrated) + real API keys + network.
+  # Run with `--profile test`.
+  test-int:
+    build:
+      context: .
+      target: api-dev
+    profiles: ["test"]
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+psycopg2://scout:${DB_PASSWORD}@db:5432/scout
+      TEST_DATABASE_URL: postgresql+psycopg2://scout:${DB_PASSWORD}@db:5432/scout_test
+      CONSTANTS_FILE: .env.constants.integration
+    # Reuse the entrypoint to wait for the DB and migrate scout (main) first,
+    # then migrate scout_test before running the suite.
+    command: >
+      sh -c "DATABASE_URL=$$TEST_DATABASE_URL alembic upgrade head &&
+             pytest tests/integration/"
+    volumes:
+      - ./src:/app/src
+      - ./tests:/app/tests
+      - scout_cache:/app/_cache
+      - hf_cache:/hf-cache
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  frontend_node_modules:
