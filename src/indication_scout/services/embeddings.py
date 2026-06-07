@@ -25,11 +25,21 @@ logger = logging.getLogger(__name__)
 # Module-level singleton. None until the first call to embed().
 _model: SentenceTransformer | None = None
 
-# Serialises concurrent calls to model.encode() which is not thread-safe.
-_embed_lock = asyncio.Lock()
+# Serialises model init + encode(). Created lazily and rebound when the running
+# event loop changes — an asyncio.Lock binds to the loop it is created on, so a
+# cached one would raise "bound to a different event loop" on a second
+# asyncio.run() (e.g. a second Streamlit "Analyse" click).
+_MODEL_LOCK: asyncio.Lock | None = None
+_MODEL_LOCK_LOOP: asyncio.AbstractEventLoop | None = None
 
 
-_model_lock = asyncio.Lock()
+def _model_lock() -> asyncio.Lock:
+    global _MODEL_LOCK, _MODEL_LOCK_LOOP
+    loop = asyncio.get_running_loop()
+    if _MODEL_LOCK is None or _MODEL_LOCK_LOOP is not loop:
+        _MODEL_LOCK = asyncio.Lock()
+        _MODEL_LOCK_LOOP = loop
+    return _MODEL_LOCK
 
 
 def _get_model() -> SentenceTransformer:
@@ -80,5 +90,5 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
     Returns:
         Same as embed().
     """
-    async with _model_lock:
+    async with _model_lock():
         return embed(texts)
