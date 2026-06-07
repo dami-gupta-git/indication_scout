@@ -17,7 +17,7 @@ const TABS = ["Overview", "Mechanism", "Clinical Trials", "Literature"] as const
 type Tab = (typeof TABS)[number];
 
 export function App() {
-  const { state, run, stop, loadSample } = useAnalysis();
+  const { state, run, stop, loadSample, reset } = useAnalysis();
   const [drug, setDrug] = useState("");
   const [tab, setTab] = useState<Tab>("Overview");
   const [focusDisease, setFocusDisease] = useState<string | null>(null);
@@ -28,6 +28,13 @@ export function App() {
   // server-side job, so the download is only available for real finished runs.
   const canDownload =
     state.status === "done" && state.jobId !== null && state.jobId !== "sample";
+
+  const goHome = () => {
+    reset();
+    setDrug("");
+    setTab("Overview");
+    setFocusDisease(null);
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,7 +73,9 @@ export function App() {
   return (
     <div className="layout">
       <aside className="sidebar">
-        <h1>IndicationScout</h1>
+        <button type="button" className="home" onClick={goHome} title="Back to start">
+          IndicationScout
+        </button>
         <form onSubmit={submit}>
           <label htmlFor="drug">Drug</label>
           <input

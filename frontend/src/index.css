@@ -28,6 +28,22 @@ body {
   margin-top: 0;
 }
 
+/* Title doubles as a home button — styled as the heading, not a button. */
+.sidebar button.home {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0 0 1rem;
+  padding: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sidebar button.home:hover {
+  color: #2d6cdf;
+}
+
 .sidebar form {
   display: flex;
   flex-direction: column;
