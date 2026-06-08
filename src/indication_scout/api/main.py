@@ -81,7 +81,7 @@ async def _log_client_ip(request: Request, call_next):
         )
         location = await _geolocate(client_ip)
         logger.warning(
-            "request from %s (%s): %s %s",
+            "[VISITOR-LOCATION] request from %s (%s): %s %s",
             client_ip,
             location or "unknown location",
             request.method,
