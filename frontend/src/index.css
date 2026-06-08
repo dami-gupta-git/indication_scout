@@ -1,6 +1,10 @@
 :root {
   font-family: system-ui, -apple-system, sans-serif;
   color: #1a1a1a;
+  /* Stop iOS Safari from auto-inflating text (it blows up the sidebar/focus
+     list after layout changes on mobile). Keep text at the author-set size. */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 * {
