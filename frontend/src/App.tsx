@@ -83,6 +83,7 @@ export function App() {
           <span>Home</span>
         </button>
         <h1>IndicationScout</h1>
+        <div className="poc-banner">Proof of Concept</div>
         <form onSubmit={submit}>
           <label htmlFor="drug">Pick a drug</label>
           <input
@@ -93,7 +94,7 @@ export function App() {
             disabled={busy}
           />
           <button type="submit" disabled={busy || !drug.trim()}>
-            {busy ? "Analysing…" : "Analyze"}
+            {busy ? "Analyzing…" : "Analyze"}
           </button>
           {busy && (
             <button type="button" className="stop" onClick={stop}>
@@ -170,6 +171,7 @@ export function App() {
       </aside>
 
       <main className="main">
+        <div className="poc-banner poc-banner-main">Proof of Concept</div>
         {state.status === "idle" && <LandingHero onPickExample={pickExample} />}
         {busy && <LoadingState drug={drug} />}
         <StatusBanner status={state.status} error={state.error} />

@@ -6,7 +6,7 @@
 
 const STEPS = [
   "Surfacing candidate diseases",
-  "Analysing molecular mechanism (Open Targets)",
+  "Analyzing molecular mechanism (Open Targets)",
   "Searching clinical trials (ClinicalTrials.gov)",
   "Synthesizing literature evidence (PubMed)",
   "Ranking and writing the summary",
@@ -19,7 +19,7 @@ export function LoadingState({ drug }: { drug: string }) {
         <span className="spinner" aria-hidden="true" />
         <div>
           <p className="loading-title">
-            Analysing {drug ? <strong>{drug}</strong> : "…"}
+            Analyzing {drug ? <strong>{drug}</strong> : "…"}
           </p>
           <p className="loading-sub">
             Coordinated agents are pulling live evidence — this usually takes a few minutes.
