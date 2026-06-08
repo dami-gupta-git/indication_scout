@@ -47,9 +47,8 @@ async def run_mechanism_agent(
 ) -> MechanismOutput:
     """Invoke the agent and assemble a MechanismOutput from the run.
 
-    `date_before` gates the FDA approval drop-filter so a holdout doesn't use
-    post-cutoff approvals to discard candidates that weren't yet approved at
-    the cutoff. OpenTargets associations themselves have no date filter.
+    `date_before` gates the FDA approval drop-filter so a holdout doesn't use post-cutoff approvals to discard
+    candidates that weren't yet approved at the cutoff. OpenTargets associations themselves have no date filter.
     """
     result = await agent.ainvoke(
         {"messages": [HumanMessage(content=f"Analyze the targets of {drug_name}")]}
