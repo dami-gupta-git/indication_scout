@@ -969,6 +969,14 @@ body {
     font-size: 1.4rem;
   }
 
+  /* Disease Scorecard: hide the last 3 numeric columns (Trials, Competitors,
+     Recruiting) on mobile — not enough width. Keeps Rank/Disease/Verdict/
+     Evidence, which carry the at-a-glance signal. */
+  .comparison-grid th:nth-child(n + 5),
+  .comparison-grid td:nth-child(n + 5) {
+    display: none;
+  }
+
   /* On mobile, surface the example chips at the top of the hero — they're the
      primary call to action and read better above the intro text. */
   .hero {
