@@ -33,7 +33,20 @@ logger = logging.getLogger(__name__)
 # select_top_candidates trims to MECHANISM_TOP_CANDIDATES after filtering.
 _ASSOCIATIONS_PER_TARGET = 15
 
-SYSTEM_PROMPT = ""
+SYSTEM_PROMPT = """\
+You analyze a drug's molecular targets to surface disease associations for repurposing.
+
+Steps:
+1. Call get_drug to fetch the drug's mechanisms of action and targets.
+2. From those targets, pick the 3 MOST CONSEQUENTIAL ones — the targets that best
+   define the drug's primary pharmacology. When many targets are near-duplicate
+   subunits of one complex (e.g. the NDUF* / MT-ND* subunits of mitochondrial
+   Complex I), treat the complex as a single target and pick just one representative;
+   do not call get_target_associations on every subunit. Call get_target_associations
+   on at most 3 targets.
+3. Call finalize_analysis with a 3-4 sentence plain-text summary of the findings.
+
+Do not call get_target_associations on more than 3 targets."""
 
 
 def build_mechanism_agent(llm) -> object:

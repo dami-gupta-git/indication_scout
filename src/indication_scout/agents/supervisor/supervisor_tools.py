@@ -865,7 +865,7 @@ def build_supervisor_tools(
     HOLDOUT_INVESTIGATION_CAP = 10
     # Non-holdout fan-out cap. Mirrors the prompt's "investigate up to a maximum of 6" so the
     # parallel path investigates the same candidate set the serial path would.
-    FANOUT_INVESTIGATION_CAP = 6
+    FANOUT_INVESTIGATION_CAP = 3
 
     @tool(response_format="content_and_artifact")
     async def investigate_top_candidates(
