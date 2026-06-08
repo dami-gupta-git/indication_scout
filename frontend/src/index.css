@@ -977,6 +977,23 @@ body {
     display: none;
   }
 
+  /* Badges (verdict/evidence pills): shrink and let long verdict text wrap so
+     it isn't crammed against the rounded edges in the narrow scorecard cells.
+     A softer radius reads better than a pill once the text wraps. */
+  .comparison-grid .badge {
+    font-size: 0.72rem;
+    padding: 0.15rem 0.45rem;
+    border-radius: 8px;
+    white-space: normal;
+    line-height: 1.3;
+  }
+
+  /* Tighten the scorecard cells so the badges have room. */
+  .comparison-grid th,
+  .comparison-grid td {
+    padding: 0.4rem 0.4rem;
+  }
+
   /* On mobile, surface the example chips at the top of the hero — they're the
      primary call to action and read better above the intro text. */
   .hero {
