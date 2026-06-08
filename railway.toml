@@ -16,7 +16,11 @@ builder = "dockerfile"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-# Health check: Railway waits for this to pass before routing traffic.
+# Health check: Railway polls GET http://localhost:8000/health before routing
+# traffic. The healthcheck server (healthcheck.py) starts in a daemon thread
+# inside the Streamlit process on port 8000, independently of Streamlit's own
+# port (8501). healthcheckTimeout is generous to allow for cold-start model
+# downloads on first deploy.
 healthcheckPath = "/health"
 healthcheckTimeout = 500
 restartPolicyType = "on_failure"

@@ -7,6 +7,11 @@ Run with:
     streamlit run app.py
 """
 
+# healthcheck MUST be imported first so the HTTP server on port 8000 is up
+# before Streamlit initialises. Railway polls /health to decide when the
+# deployment is ready to receive traffic.
+import healthcheck  # noqa: F401
+
 import asyncio
 import logging
 import os
