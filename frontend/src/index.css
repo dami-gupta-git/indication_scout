@@ -152,6 +152,12 @@ body {
   color: #111827;
 }
 
+/* The sidebar copy of the drug title is desktop-hidden; mobile shows it instead
+   of the main one so the title sits at the top of the collapsed top bar. */
+.drug-title-mobile {
+  display: none;
+}
+
 .hint,
 .muted {
   color: #6b7280;
@@ -1045,6 +1051,16 @@ body {
 
   .drug-title {
     font-size: 1.4rem;
+  }
+
+  /* Show the sidebar copy at the top of the collapsed top bar; hide the one in
+     main so the title appears above the Focus disease picker. */
+  .drug-title-mobile {
+    display: block;
+  }
+
+  .main .drug-title {
+    display: none;
   }
 
   /* Disease Scorecard: the 7-column table doesn't fit a phone. Swap it for the

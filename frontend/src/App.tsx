@@ -39,7 +39,7 @@ export function App() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const name = drug.trim();
-    if (name) pickExample(name);
+    if (name) run(name);
   };
 
   const pickExample = async (name: string) => {
@@ -93,7 +93,7 @@ export function App() {
             disabled={busy}
           />
           <button type="submit" disabled={busy || !drug.trim()}>
-            {busy ? "Analysing…" : "Analyse"}
+            {busy ? "Analysing…" : "Analyze"}
           </button>
           {busy && (
             <button type="button" className="stop" onClick={stop}>
@@ -103,7 +103,7 @@ export function App() {
         </form>
 
         <div className="sidebar-examples">
-          <span className="sidebar-examples-label">Or try an example</span>
+          <span className="sidebar-examples-label">Or load an example</span>
           <div className="sidebar-examples-chips">
             {EXAMPLES.map((name) => (
               <button
@@ -128,6 +128,12 @@ export function App() {
           >
             Load sample data (dev)
           </button>
+        )}
+
+        {result && (
+          <h1 className="drug-title drug-title-mobile">
+            {(state.data?.drug_name ?? "").toUpperCase()}
+          </h1>
         )}
 
         {result && (
