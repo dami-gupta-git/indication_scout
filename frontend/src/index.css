@@ -882,6 +882,25 @@ body {
 
 /* ---- Mobile / narrow screens ---- */
 @media (max-width: 768px) {
+  /* Scale every rem-based size down at once — the rem values are tuned for
+     desktop and read too large on a phone. */
+  html {
+    font-size: 87.5%; /* 16px -> 14px base */
+  }
+
+  /* The landing hero is the largest text; shrink it further. */
+  .hero-mark {
+    font-size: 2.25rem;
+  }
+
+  .hero-title {
+    font-size: 1.9rem;
+  }
+
+  .hero-tagline {
+    font-size: 1rem;
+  }
+
   /* Stack the fixed two-column layout: sidebar on top, main below. */
   .layout {
     grid-template-columns: 1fr;
