@@ -2,7 +2,8 @@
 
 import logging
 
-from fastapi import FastAPI
+import httpx
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -37,6 +38,57 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_geo_cache: dict[str, str] = {}
+
+
+async def _geolocate(ip: str) -> str:
+    """Return "City, Region, Country" for an IP via ip-api.com, cached per IP.
+
+    Returns "" on private/local IPs or any lookup failure — geolocation is best-effort
+    and must never break a request.
+    """
+    if ip in _geo_cache:
+        return _geo_cache[ip]
+    location = ""
+    try:
+        async with httpx.AsyncClient(timeout=2.0) as client:
+            resp = await client.get(
+                f"http://ip-api.com/json/{ip}",
+                params={"fields": "status,city,regionName,country"},
+            )
+        data = resp.json()
+        if data.get("status") == "success":
+            parts = [data.get("city"), data.get("regionName"), data.get("country")]
+            location = ", ".join(p for p in parts if p)
+    except Exception as e:
+        logger.debug("geolocation failed for %s: %s", ip, e)
+    _geo_cache[ip] = location
+    return location
+
+
+@app.middleware("http")
+async def _log_client_ip(request: Request, call_next):
+    # Skip the high-frequency analysis polling endpoint to avoid log spam.
+    if not request.url.path.startswith("/api/analyses/"):
+        # Behind Railway's proxy the real client IP is the first entry of X-Forwarded-For;
+        # fall back to the direct peer when the header is absent (e.g. local dev).
+        forwarded = request.headers.get("x-forwarded-for")
+        client_ip = (
+            forwarded.split(",")[0].strip()
+            if forwarded
+            else (request.client.host if request.client else "unknown")
+        )
+        location = await _geolocate(client_ip)
+        logger.info(
+            "request from %s (%s): %s %s",
+            client_ip,
+            location or "unknown location",
+            request.method,
+            request.url.path,
+        )
+    return await call_next(request)
+
 
 app.include_router(analyses_router)
 app.include_router(drilldown_router)
