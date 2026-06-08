@@ -879,3 +879,52 @@ body {
     background-position: -200% 0;
   }
 }
+
+/* ---- Mobile / narrow screens ---- */
+@media (max-width: 768px) {
+  /* Stack the fixed two-column layout: sidebar on top, main below. */
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    border-right: none;
+    border-bottom: 1px solid #e2e4e8;
+    padding: 1rem;
+  }
+
+  .main {
+    padding: 1rem;
+  }
+
+  /* Label/value field grids → single column so long values don't get crushed. */
+  .blurb-fields,
+  .tabpanel .two-col,
+  .evidence-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .blurb-row {
+    grid-template-columns: 1fr;
+  }
+
+  /* Wide comparison/data tables scroll horizontally instead of overflowing. */
+  .table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .drug-title {
+    font-size: 1.4rem;
+  }
+
+  /* KPI band wraps instead of forcing a wide row. */
+  .kpis {
+    flex-wrap: wrap;
+  }
+
+  /* Landing hero's 3 step cards stack vertically. */
+  .hero-steps {
+    grid-template-columns: 1fr;
+  }
+}
