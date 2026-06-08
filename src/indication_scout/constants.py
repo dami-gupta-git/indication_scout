@@ -240,6 +240,13 @@ SUPERVISOR_MIN_PMIDS_NO_TRIALS: int = 5
 # -- openFDA ----------------------------------------------------------------
 OPENFDA_BASE_URL: str = "https://api.fda.gov/drug/label.json"
 OPENFDA_LABEL_LIMIT: int = 5
+# Short TTL for empty/404 label lookups (an alias openFDA doesn't index). Far
+# shorter than CACHE_TTL because an absence can flip to a real label (new
+# approval / new indexing); a found label is stable and keeps CACHE_TTL.
+# Caching the absence kills the per-run re-fetch of obscure aliases that 404
+# (the dominant openFDA cost) while bounding staleness of the flip-to-approved
+# case to a week — an acceptable error of omission.
+OPENFDA_EMPTY_LABEL_TTL: int = 7 * 86400  # 7 days
 
 # Curated per-drug list of candidate disease phrasings to short-circuit as
 # FDA-approved (return True without calling the LLM). Acts strictly as an

@@ -6,6 +6,7 @@ FastAPI layer call `run_analysis`. No duplicate agent-building wiring. Uses the 
 """
 
 import logging
+import time
 from datetime import date
 from pathlib import Path
 
@@ -52,12 +53,34 @@ async def run_analysis(
     same lowercased form), owns the DB session lifecycle (opened per run, always closed), and
     threads `date_before` for holdout runs. Blocking `ainvoke` path.
     """
+    from indication_scout.data_sources.base_client import (
+        api_timing_snapshot,
+        reset_api_timing,
+    )
+
     drug = normalize_drug_name(drug_name)
     db = next(get_db())
+    _t0 = time.perf_counter()
+    reset_api_timing()
     try:
         agent, get_merged_allowlist, get_auto_findings = build_agent(db, date_before=date_before)
         output = await run_supervisor_agent(
             agent, get_merged_allowlist, drug, get_auto_findings=get_auto_findings
+        )
+        total = time.perf_counter() - _t0
+        # External-API breakdown: how much of the run was spent awaiting HTTP responses
+        # (PubMed, ClinicalTrials.gov, OpenTargets, FDA, ChEMBL), per source.
+        api = api_timing_snapshot()
+        api_total = sum(s for _, s in api.values())
+        per_source = ", ".join(
+            f"{src}={secs:.1f}s/{cnt} calls" for src, (cnt, secs) in sorted(api.items())
+        )
+        logger.warning("[TIMING] run_analysis(%s) total: %.1fs", drug, total)
+        logger.warning(
+            "[TIMING] external API total: %.1fs (%.0f%% of run) — %s",
+            api_total,
+            100 * api_total / total if total else 0,
+            per_source or "no calls",
         )
         return output, format_report(output)
     finally:

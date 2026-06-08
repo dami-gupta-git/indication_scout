@@ -8,6 +8,7 @@ find_candidates tool that hits Open Targets directly to surface disease candidat
 import asyncio
 import logging
 import re
+import time
 from datetime import date
 from typing import Literal
 
@@ -588,7 +589,11 @@ def build_supervisor_tools(
         )
         logger.warning("[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name)
 
+        _t0 = time.perf_counter()
         output = await run_literature_agent(lit_agent, drug_name, disease_name)
+        logger.warning(
+            "[TIMING] literature %s: %.1fs", disease_name, time.perf_counter() - _t0
+        )
         strength = (
             output.evidence_summary.strength if output.evidence_summary else "no data"
         )
@@ -639,7 +644,11 @@ def build_supervisor_tools(
             )
 
         # logger.warning("[TOOL] analyze_clinical_trials(drug=%r, disease=%r)", drug_name, disease_name)
+        _t0 = time.perf_counter()
         output = await run_clinical_trials_agent(ct_agent, drug_name, disease_name)
+        logger.warning(
+            "[TIMING] clinical_trials %s: %.1fs", disease_name, time.perf_counter() - _t0
+        )
 
         # Drug-level write-through: when the FDA check matches the candidate
         # against an approved indication, capture it in the supervisor's
@@ -764,10 +773,12 @@ def build_supervisor_tools(
 
     async def _analyze_mechanism_impl(drug_name: str) -> tuple[str, MechanismOutput]:
         drug_name = normalize_drug_name(drug_name)
+        _t0 = time.perf_counter()
         output = await run_mechanism_agent(
             mech_agent, drug_name, date_before=date_before
         )
         logger.warning("[TOOL] analyze_mechanism(drug=%r)", drug_name)
+        logger.warning("[TIMING] analyze_mechanism: %.1fs", time.perf_counter() - _t0)
 
         # Buffer raw mechanism candidates for find_candidates to consume in merge_and_dedup()
         # after both seed tools finish. Centralizing the merge lets the full competitor +
@@ -914,7 +925,13 @@ def build_supervisor_tools(
                     "type": "tool_call",
                 }
             )
+            _t0 = time.perf_counter()
             lit_msg, ct_msg = await asyncio.gather(lit_call, ct_call)
+            logger.warning(
+                "[TIMING] investigate %s: lit+trials took %.1fs",
+                disease,
+                time.perf_counter() - _t0,
+            )
 
             lit_artifact = lit_msg.artifact
             ct_artifact = ct_msg.artifact
@@ -955,7 +972,13 @@ def build_supervisor_tools(
                 "trials_terminated": n_terminated,
             }
 
+        _fan_t0 = time.perf_counter()
         results = await asyncio.gather(*(_invest(d) for d in canonical_diseases))
+        logger.warning(
+            "[TIMING] investigate_top_candidates: %d candidates in parallel took %.1fs",
+            len(canonical_diseases),
+            time.perf_counter() - _fan_t0,
+        )
         artifacts = [a for _, a in results]
 
         # One-line-per-disease compact summary the LLM can rank against.
@@ -1094,7 +1117,9 @@ def build_supervisor_tools(
                 f"literature: {literature or '—'} | blocker: {blocker or '—'}"
             )
         prompt = "Current ranking (top to bottom):\n" + "\n".join(lines)
+        _t0 = time.perf_counter()
         critique = await query_llm(prompt, system=_RANKING_CRITIC_SYSTEM)
+        logger.warning("[TIMING] critique_ranking LLM call: %.1fs", time.perf_counter() - _t0)
         result = critique.strip()
         logger.info(
             "[TOOL] critique_ranking IN (%d candidates):\n%s", len(items), "\n".join(lines)
@@ -1304,6 +1329,8 @@ def build_supervisor_tools(
         """
         return dict(auto_findings)
 
+    fanout = get_settings().supervisor_fanout
+    holdout = date_before is not None
     tools = [
         find_candidates,
         analyze_mechanism,
@@ -1313,10 +1340,16 @@ def build_supervisor_tools(
         critique_ranking,
         finalize_supervisor,
     ]
-    if date_before is not None or get_settings().supervisor_fanout:
+    if holdout or fanout:
         # Insert investigate_top_candidates before finalize so the LLM can see it
         # after seed-phase tools but before terminating. Enabled in holdout mode
         # (recover "obvious" candidates) and when supervisor_fanout is set (parallel
         # fan-out for speed; see config.Settings.supervisor_fanout).
         tools.insert(-1, investigate_top_candidates)
+    if fanout and not holdout:
+        # Force the parallel path: with the per-candidate tools removed, the LLM cannot
+        # investigate serially (it ignores the prompt-level fan-out directive on its own),
+        # so it must call investigate_top_candidates once. Holdout keeps the per-candidate
+        # tools because its flow calls them directly.
+        tools = [t for t in tools if t not in (analyze_literature, analyze_clinical_trials)]
     return tools, get_merged_allowlist, get_auto_findings

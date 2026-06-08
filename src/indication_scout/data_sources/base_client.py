@@ -7,6 +7,7 @@ Provides: retry with exponential backoff and session management.
 import asyncio
 import logging
 import sys
+import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
@@ -20,6 +21,22 @@ from indication_scout.constants import DEFAULT_CACHE_DIR
 logger = logging.getLogger("indication_scout.data_sources")
 
 _settings = get_settings()
+
+# Cumulative external-API timing, keyed by source name → [call_count, total_seconds].
+# Measures wall-clock spent awaiting HTTP responses (network + server), summed across
+# all clients. Read/reset via api_timing_snapshot() / reset_api_timing() to attribute
+# how much of a run is external API calls vs. agent/LLM work.
+_API_TIMING: dict[str, list[float]] = {}
+
+
+def reset_api_timing() -> None:
+    """Clear the cumulative API-timing accumulator (call at the start of a run)."""
+    _API_TIMING.clear()
+
+
+def api_timing_snapshot() -> dict[str, tuple[int, float]]:
+    """Return {source: (call_count, total_seconds)} for external HTTP calls so far."""
+    return {src: (int(c), s) for src, (c, s) in _API_TIMING.items()}
 
 
 def log_data_source_failure(
@@ -180,12 +197,17 @@ class BaseClient(ABC):
             try:
                 session = await self._get_session()
 
+                _api_t0 = time.perf_counter()
                 if method.upper() == "GET":
                     resp = await session.get(url, params=params, headers=headers)
                 else:
                     resp = await session.post(
                         url, json=json_body, params=params, headers=headers
                     )
+                _elapsed = time.perf_counter() - _api_t0
+                acc = _API_TIMING.setdefault(self._source_name, [0.0, 0.0])
+                acc[0] += 1
+                acc[1] += _elapsed
 
                 # Retry on 429/5xx
                 if resp.status in {429, 500, 502, 503, 504}:

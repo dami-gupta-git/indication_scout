@@ -9,6 +9,7 @@ from indication_scout.constants import (
     CACHE_TTL,
     DEFAULT_CACHE_DIR,
     OPENFDA_BASE_URL,
+    OPENFDA_EMPTY_LABEL_TTL,
     OPENFDA_LABEL_LIMIT,
 )
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
@@ -37,8 +38,11 @@ class FDAClient(BaseClient):
         openfda.generic_name. This catches labels where the name is registered
         only under generic_name (e.g. ~5% of metformin labels).
         Returns a flat list of indication text strings across all matching labels.
-        A 404 response (no results) returns [] and is NOT cached, so a later
-        run can re-query in case the absence was transient.
+        A 404 (no label for this alias) or empty result is cached with a short
+        TTL (OPENFDA_EMPTY_LABEL_TTL) — long enough to kill the per-run/per-week
+        re-fetch of obscure aliases that don't resolve, short enough that an
+        absence flipping to a real approval is re-checked within a week. Found
+        labels are cached with the full CACHE_TTL.
 
         Args:
             drug_name: Any drug name — trade name, generic/INN, USAN, etc.
@@ -66,6 +70,15 @@ class FDAClient(BaseClient):
             data = await self._rest_get(OPENFDA_BASE_URL, params=params)
         except DataSourceError as e:
             if e.status_code == 404:
+                # Cache the absence (short TTL) so the same un-indexed alias isn't
+                # re-queried for every disease this run / for the next week.
+                cache_set(
+                    "fda_label",
+                    cache_params,
+                    [],
+                    self.cache_dir,
+                    ttl=OPENFDA_EMPTY_LABEL_TTL,
+                )
                 return []
             raise
 
@@ -74,7 +87,10 @@ class FDAClient(BaseClient):
         for result in results:
             indications.extend(result.get("indications_and_usage", []))
 
-        cache_set("fda_label", cache_params, indications, self.cache_dir, ttl=CACHE_TTL)
+        # Found labels are stable → full TTL; empty results get the short TTL so a
+        # later approval is picked up within a week.
+        ttl = CACHE_TTL if indications else OPENFDA_EMPTY_LABEL_TTL
+        cache_set("fda_label", cache_params, indications, self.cache_dir, ttl=ttl)
         return indications
 
     async def get_all_label_indications(self, drug_names: list[str]) -> list[str]:
