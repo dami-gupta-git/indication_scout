@@ -32,11 +32,13 @@ _PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 # supervisor.txt so the default prompt is byte-identical when the flag is off.
 _FANOUT_DIRECTIVE = """
 
-# FAN-OUT MODE (overrides WORKFLOW step 2)
-Do NOT call analyze_literature / analyze_clinical_trials per candidate. Instead, after
-find_candidates and analyze_mechanism complete, call investigate_top_candidates ONCE. It runs
-literature and clinical trials for every candidate in parallel. Then call get_drug_briefing and
-finalize_supervisor as usual, ranking from the results investigate_top_candidates returned.
+# FAN-OUT MODE (overrides ONLY WORKFLOW step 2)
+For step 2 ONLY: do NOT call analyze_literature / analyze_clinical_trials per candidate. Instead,
+after find_candidates and analyze_mechanism complete, call investigate_top_candidates ONCE — it
+runs literature and clinical trials for every candidate in parallel. Rank from the results it
+returns. All other WORKFLOW steps are UNCHANGED: still call get_drug_briefing (step 3), then
+critique_ranking (step 4, MANDATORY — finalize_supervisor is rejected until critique_ranking has
+run this turn), then finalize_supervisor (step 5).
 """
 
 
