@@ -96,6 +96,39 @@ body {
   background: #1d6b35;
 }
 
+.sidebar-examples {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.sidebar-examples-label {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.sidebar-examples-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.sidebar button.sidebar-example {
+  padding: 0.3rem 0.8rem;
+  border: 1px solid #cfd2d8;
+  border-radius: 999px;
+  background: #fff;
+  color: #1f2937;
+  font-size: 0.85rem;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.sidebar button.sidebar-example:hover:not(:disabled) {
+  border-color: #2d6cdf;
+  color: #2d6cdf;
+}
+
 .focus {
   margin-top: 1.5rem;
   border: 1px solid #e2e4e8;

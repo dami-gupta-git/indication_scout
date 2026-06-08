@@ -1,7 +1,7 @@
 // Landing / empty-state hero shown before any analysis has run. Explains what
 // the tool does and offers example drugs that kick off a run on click.
 
-const EXAMPLES = ["metformin", "semaglutide", "bupropion", "sildenafil"];
+export const EXAMPLES = ["metformin", "semaglutide", "bupropion", "sildenafil"];
 
 const STEPS = [
   {

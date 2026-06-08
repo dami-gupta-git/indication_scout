@@ -9,7 +9,7 @@ import { OverviewTab } from "./tabs/OverviewTab";
 import { MechanismTab } from "./tabs/MechanismTab";
 import { ClinicalTrialsTab } from "./tabs/ClinicalTrialsTab";
 import { LiteratureTab } from "./tabs/LiteratureTab";
-import { LandingHero } from "./LandingHero";
+import { LandingHero, EXAMPLES } from "./LandingHero";
 import { LoadingState } from "./LoadingState";
 import sampleOutput from "./fixtures/sample-output.json";
 
@@ -18,7 +18,7 @@ type Tab = (typeof TABS)[number];
 
 export function App() {
   const { state, run, stop, loadSample, reset } = useAnalysis();
-  const [drug, setDrug] = useState("");
+  const [drug, setDrug] = useState("metformin");
   const [tab, setTab] = useState<Tab>("Overview");
   const [focusDisease, setFocusDisease] = useState<string | null>(null);
 
@@ -31,7 +31,7 @@ export function App() {
 
   const goHome = () => {
     reset();
-    setDrug("");
+    setDrug("metformin");
     setTab("Overview");
     setFocusDisease(null);
   };
@@ -39,7 +39,7 @@ export function App() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     const name = drug.trim();
-    if (name) run(name);
+    if (name) pickExample(name);
   };
 
   const pickExample = async (name: string) => {
@@ -84,7 +84,7 @@ export function App() {
         </button>
         <h1>IndicationScout</h1>
         <form onSubmit={submit}>
-          <label htmlFor="drug">Drug</label>
+          <label htmlFor="drug">Pick a drug</label>
           <input
             id="drug"
             value={drug}
@@ -101,6 +101,23 @@ export function App() {
             </button>
           )}
         </form>
+
+        <div className="sidebar-examples">
+          <span className="sidebar-examples-label">Or try an example</span>
+          <div className="sidebar-examples-chips">
+            {EXAMPLES.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className="sidebar-example"
+                onClick={() => pickExample(name)}
+                disabled={busy}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
 
         {import.meta.env.DEV && (
           <button
