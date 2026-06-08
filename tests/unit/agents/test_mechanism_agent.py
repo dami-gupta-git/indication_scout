@@ -79,7 +79,7 @@ def _tool_msg(name: str, artifact, tool_call_id: str | None = None) -> ToolMessa
 async def test_run_mechanism_agent_assembles_all_fields():
     """run_mechanism_agent extracts tool artifacts and populates all MechanismOutput fields."""
     messages = [
-        HumanMessage(content="Analyse the targets of metformin"),
+        HumanMessage(content="Analyze the targets of metformin"),
         _tool_msg("get_drug", MECHANISMS_OF_ACTION),
         _tool_msg("get_target_associations", {"PRKAA1": ASSOCIATIONS_PRKAA1}),
         _tool_msg("finalize_analysis", NARRATIVE),
@@ -100,7 +100,7 @@ async def test_run_mechanism_agent_assembles_all_fields():
 async def test_run_mechanism_agent_ignores_non_tool_messages():
     """AIMessages and HumanMessages in the history do not affect output assembly."""
     messages = [
-        HumanMessage(content="Analyse the targets of metformin"),
+        HumanMessage(content="Analyze the targets of metformin"),
         AIMessage(content="I will start by fetching the drug."),
         _tool_msg("get_drug", MECHANISMS_OF_ACTION),
         AIMessage(content="Now fetching associations."),
@@ -131,7 +131,7 @@ async def test_run_mechanism_agent_missing_tool_leaves_default(
 ):
     """When a tool's ToolMessage is absent, the corresponding output field stays at its default."""
     all_messages = [
-        HumanMessage(content="Analyse the targets of metformin"),
+        HumanMessage(content="Analyze the targets of metformin"),
         _tool_msg("get_drug", MECHANISMS_OF_ACTION),
         _tool_msg("get_target_associations", {"PRKAA1": ASSOCIATIONS_PRKAA1}),
         _tool_msg("finalize_analysis", NARRATIVE),

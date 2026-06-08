@@ -150,7 +150,7 @@ cd frontend
 npm run dev
 ```
 
-Then open **http://localhost:5173**, enter a drug name, and click **Analyse**. The UI
+Then open **http://localhost:5173**, enter a drug name, and click **Analyze**. The UI
 submits the run, polls for status, and renders the result across four tabs (Overview,
 Mechanism, Clinical Trials, Literature). A real run takes several minutes — it queries
 the live data sources and calls the LLM, so `ANTHROPIC_API_KEY` and both env files

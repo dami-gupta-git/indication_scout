@@ -62,7 +62,7 @@ with st.sidebar:
     )
 
     run_clicked = st.button(
-        "Analyse",
+        "Analyze",
         type="primary",
         disabled=not drug_name.strip(),
         width="stretch",

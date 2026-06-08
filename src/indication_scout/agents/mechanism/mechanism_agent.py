@@ -52,7 +52,7 @@ async def run_mechanism_agent(
     the cutoff. OpenTargets associations themselves have no date filter.
     """
     result = await agent.ainvoke(
-        {"messages": [HumanMessage(content=f"Analyse the targets of {drug_name}")]}
+        {"messages": [HumanMessage(content=f"Analyze the targets of {drug_name}")]}
     )
 
     mechanisms_of_action: list[MechanismOfAction] = []
