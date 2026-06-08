@@ -42,13 +42,19 @@ body {
   letter-spacing: 0.04em;
   text-transform: uppercase;
   text-align: center;
-  background: #f4b6c8;
+  background: #5aa6e0;
   color: #fff;
 }
 
-/* Full-width variant pinned to the top of the main panel (for comparison). */
+/* Full-width variant pinned to the top of the main panel. */
 .poc-banner-main {
   margin: 0 0 1rem;
+}
+
+/* Desktop: show the main-panel banner, hide the sidebar one. Mobile flips this
+   (see the mobile media block). */
+.poc-banner-side {
+  display: none;
 }
 
 /* Home button above the title. */
@@ -1080,6 +1086,15 @@ body {
   }
 
   .main .drug-title {
+    display: none;
+  }
+
+  /* PoC banner: show the sidebar copy (below the title), hide the main one. */
+  .poc-banner-side {
+    display: block;
+  }
+
+  .poc-banner-main {
     display: none;
   }
 

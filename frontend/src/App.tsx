@@ -83,7 +83,7 @@ export function App() {
           <span>Home</span>
         </button>
         <h1>IndicationScout</h1>
-        <div className="poc-banner">Proof of Concept</div>
+        <div className="poc-banner poc-banner-side">Proof of Concept</div>
         <form onSubmit={submit}>
           <label htmlFor="drug">Pick a drug</label>
           <input
