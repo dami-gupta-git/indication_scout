@@ -56,8 +56,42 @@ export function ComparisonGrid({
     }
   };
 
+  const focusProps = (disease: string) => ({
+    role: "button" as const,
+    tabIndex: 0,
+    "aria-selected": disease === focusDisease,
+    onClick: () => onFocus(disease),
+    onKeyDown: (e: React.KeyboardEvent) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        onFocus(disease);
+      }
+    },
+  });
+
   return (
-    <div className="table-scroll">
+    <>
+      {/* Mobile: stacked cards — the 7-column table is unreadable on a phone. */}
+      <ul className="scorecard-cards">
+        {rows.map((row) => (
+          <li
+            key={row.disease}
+            className={`scorecard-card${row.disease === focusDisease ? " focused" : ""}`}
+            {...focusProps(row.disease)}
+          >
+            <div className="scorecard-card-head">
+              <span className="scorecard-rank">{row.rank}</span>
+              <span className="scorecard-disease">{row.disease}</span>
+            </div>
+            <div className="scorecard-card-badges">
+              {row.verdict ? <VerdictTag verdict={row.verdict} /> : <span className="muted">—</span>}
+              {row.strength ? <StrengthBadge strength={row.strength} /> : null}
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      <div className="table-scroll">
       <table className="comparison-grid">
         <thead>
           <tr>
@@ -111,6 +145,7 @@ export function ComparisonGrid({
           })}
         </tbody>
       </table>
-    </div>
+      </div>
+    </>
   );
 }

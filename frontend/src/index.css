@@ -566,6 +566,51 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Mobile-only stacked card version of the scorecard. Hidden on desktop. */
+.scorecard-cards {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.scorecard-card {
+  border: 1px solid #e2e4e8;
+  border-radius: 8px;
+  padding: 0.75rem;
+  margin-bottom: 0.6rem;
+  cursor: pointer;
+}
+
+.scorecard-card.focused {
+  border-color: #2d6cdf;
+  background: #f5f8ff;
+}
+
+.scorecard-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.scorecard-rank {
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.scorecard-disease {
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.scorecard-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
 /* Numeric column headers: align the sort button's label to the right so the
    header lines up with the right-aligned values below it. */
 .comparison-grid th.num .sort-header {
@@ -969,29 +1014,14 @@ body {
     font-size: 1.4rem;
   }
 
-  /* Disease Scorecard: hide the last 3 numeric columns (Trials, Competitors,
-     Recruiting) on mobile — not enough width. Keeps Rank/Disease/Verdict/
-     Evidence, which carry the at-a-glance signal. */
-  .comparison-grid th:nth-child(n + 5),
-  .comparison-grid td:nth-child(n + 5) {
+  /* Disease Scorecard: the 7-column table doesn't fit a phone. Swap it for the
+     stacked card list (hidden on desktop). */
+  .scorecard-cards {
+    display: block;
+  }
+
+  .scorecard-cards + .table-scroll {
     display: none;
-  }
-
-  /* Badges (verdict/evidence pills): shrink and let long verdict text wrap so
-     it isn't crammed against the rounded edges in the narrow scorecard cells.
-     A softer radius reads better than a pill once the text wraps. */
-  .comparison-grid .badge {
-    font-size: 0.72rem;
-    padding: 0.15rem 0.45rem;
-    border-radius: 8px;
-    white-space: normal;
-    line-height: 1.3;
-  }
-
-  /* Tighten the scorecard cells so the badges have room. */
-  .comparison-grid th,
-  .comparison-grid td {
-    padding: 0.4rem 0.4rem;
   }
 
   /* On mobile, surface the example chips at the top of the hero — they're the
