@@ -892,6 +892,32 @@ body {
     font-size: 87.5%; /* 16px -> 14px base */
   }
 
+  /* Kill horizontal overflow at the root. A single too-wide element (a table,
+     a long unbroken id) would otherwise push the page wider than the viewport,
+     making mobile browsers shrink-to-fit — which is what made the sidebar text
+     look blown up when switching to the Mechanism / Clinical Trials tabs. */
+  html,
+  body,
+  .layout,
+  .main {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  /* Long ids / unbroken strings in tab content wrap instead of widening. */
+  .tabpanel {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  /* Any table in the tabs scrolls within its own box, not the page. */
+  .tabpanel table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
   /* The landing hero is the largest text; shrink it further. */
   .hero-mark {
     font-size: 2.25rem;
@@ -939,6 +965,18 @@ body {
 
   .drug-title {
     font-size: 1.4rem;
+  }
+
+  /* On mobile, surface the example chips at the top of the hero — they're the
+     primary call to action and read better above the intro text. */
+  .hero {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .hero-examples {
+    order: -1;
+    margin-bottom: 1.5rem;
   }
 
   /* KPI band wraps instead of forcing a wide row. */

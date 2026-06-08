@@ -26,9 +26,9 @@ export function LandingHero({ onPickExample }: { onPickExample: (drug: string) =
       </div>
       <h1 className="hero-title">Indication Scout</h1>
       <p className="hero-tagline">
-        Agentic drug repurposing. Enter a drug — coordinated AI agents pull live evidence
-        from biomedical databases and characterize the <em>state of the hypothesis</em> for
-        each candidate disease.
+        Agentic drug repurposing. Enter a drug — coordinated AI agents pull live public
+        evidence from biomedical databases, then <em>synthesize and weigh</em> it for each
+        candidate disease.
       </p>
 
       <div className="hero-steps">
