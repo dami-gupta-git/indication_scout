@@ -732,6 +732,8 @@ body {
 .hero-examples-label {
   color: #6b7280;
   font-size: 0.9rem;
+  /* Own line above the chips, so the chips sit together on one row below. */
+  flex-basis: 100%;
 }
 
 .hero-example {
