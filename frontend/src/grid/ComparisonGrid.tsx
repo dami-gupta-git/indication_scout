@@ -64,7 +64,11 @@ export function ComparisonGrid({
             {COLUMNS.map((col) => {
               const active = col.key === sortKey;
               return (
-                <th key={col.key} aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>
+                <th
+                  key={col.key}
+                  className={col.numeric ? "num" : undefined}
+                  aria-sort={active ? (sortDir === "asc" ? "ascending" : "descending") : "none"}
+                >
                   <button
                     type="button"
                     className={`sort-header${active ? " active" : ""}`}

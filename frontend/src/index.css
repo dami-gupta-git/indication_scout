@@ -562,6 +562,13 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Numeric column headers: align the sort button's label to the right so the
+   header lines up with the right-aligned values below it. */
+.comparison-grid th.num .sort-header {
+  width: 100%;
+  text-align: right;
+}
+
 .sort-header {
   background: none;
   border: none;
