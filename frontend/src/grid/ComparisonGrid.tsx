@@ -4,7 +4,7 @@
 
 import { useMemo, useState } from "react";
 import type { SupervisorOutput } from "../types";
-import { StrengthBadge, VerdictTag, SourceTag } from "../components/Badge";
+import { StrengthBadge, VerdictTag } from "../components/Badge";
 import { buildGridRows, sortGridRows, type SortDir, type SortKey } from "./gridRows";
 
 interface Column {
@@ -21,7 +21,6 @@ const COLUMNS: Column[] = [
   { key: "totalTrials", label: "Trials", numeric: true },
   { key: "competitors", label: "Competitors", numeric: true },
   { key: "recruiting", label: "Recruiting", numeric: true },
-  { key: "source", label: "Source", numeric: false },
 ];
 
 export function ComparisonGrid({
@@ -103,9 +102,6 @@ export function ComparisonGrid({
                 <td className="num">{row.totalTrials ?? "—"}</td>
                 <td className="num">{row.competitors ?? "—"}</td>
                 <td className="num">{row.recruiting ?? "—"}</td>
-                <td>
-                  <SourceTag source={row.source} />
-                </td>
               </tr>
             );
           })}
