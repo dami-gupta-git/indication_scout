@@ -6,6 +6,7 @@ import type { EvidenceStrength, SupervisorOutput } from "../types";
 import { hasStructuredBlurb } from "../overview/blurb";
 
 export interface GridRow {
+  rank: number; // 1-based position in top_diseases; ranked candidates first
   disease: string;
   source: "competitor" | "mechanism" | "both";
   verdict: string; // "" when no blurb / un-ranked candidate
@@ -32,11 +33,23 @@ const STRENGTH_RANK: Record<EvidenceStrength, number> = {
  * Overview summary cards — so the grid compares real repurposing candidates.
  */
 export function buildGridRows(result: SupervisorOutput): GridRow[] {
+  // 1-based rank by top_diseases order, restricted to genuine candidates so it
+  // matches the Overview summary-card numbering exactly.
+  const rankByDisease = new Map(
+    result.top_diseases
+      .filter((d) => {
+        const f = result.disease_findings.find((x) => x.disease === d);
+        return f != null && f.blurb != null && hasStructuredBlurb(f.blurb);
+      })
+      .map((d, i) => [d, i + 1] as const),
+  );
+  const unranked = rankByDisease.size + 1;
   return result.disease_findings
     .filter((f) => f.blurb != null && hasStructuredBlurb(f.blurb))
     .map((f) => {
       const search = f.clinical_trials?.search ?? null;
       return {
+        rank: rankByDisease.get(f.disease) ?? unranked,
         disease: f.disease,
         source: f.source,
         verdict: f.blurb?.verdict ?? "",

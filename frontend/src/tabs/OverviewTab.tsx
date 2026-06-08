@@ -37,11 +37,13 @@ export function OverviewTab({
 
   return (
     <div className="overview">
-      <h3>Candidates at a Glance</h3>
+      <h3>Disease Scorecard</h3>
       <p className="caption">Click a row to focus that disease in the other tabs.</p>
       <ComparisonGrid result={result} focusDisease={focusDisease} onFocus={onFocus} />
 
-      <h3>Summary</h3>
+      <hr className="section-divider" />
+
+      <h3>Disease Details</h3>
       {rankedBlurbs.length > 0 ? (
         <>
           <div className="blurb-cards">

@@ -29,8 +29,42 @@ from indication_scout.services.approval_check import (
     list_approved_indications_at,
     list_approved_indications_from_labels,
 )
+from indication_scout.services.llm import query_llm
 
 logger = logging.getLogger(__name__)
+
+# Fresh-context critic for the supervisor's candidate ranking. Given only the
+# blurbs (verdict + evidence + one-line fields), it checks ranking-order
+# integrity against the same signals the supervisor prompt defines and returns
+# advisory findings — it does not re-rank. Kept terse so it judges the ranking,
+# not the prose.
+_RANKING_CRITIC_SYSTEM = """\
+You audit the ORDER of a ranked list of drug-repurposing candidates. You are given \
+the candidates in their current rank order, each with a verdict tag and a few \
+one-line fields. Apply these rules:
+
+CLOSED candidates MUST appear AFTER every non-closed candidate. A candidate is \
+CLOSED when ANY of these hold:
+- its verdict or literature indicates multiple negative randomized trials, or \
+authors recommend against further development;
+- a safety/efficacy termination of this drug x indication;
+- completed Phase 3 of this exact pair with no subsequent regulatory progression \
+(unless approved for a related narrower indication).
+
+ADVERSE-SIGNAL candidates (verdict names an adverse/safety signal, or harm reports \
+outnumber benefit) rank below clean live candidates but above fully CLOSED ones.
+
+POSITIVE signals (a completed trial with a quantified efficacy readout; strong \
+mechanism + active trials + supportive literature with no closing signal) should \
+rank ABOVE neutral candidates (active/recruiting trials alone, absence of negative \
+signals).
+
+Report ONLY ordering violations — cases where a lower-ranked candidate should \
+clearly outrank a higher-ranked one under these rules. Do not rewrite prose or \
+question evidence content. If the order is sound, say so.
+
+Output: a short plain-text list of violations, each naming the two candidates and \
+the rule, or the single line "Ranking is consistent." if there are none."""
 
 
 def _log_disease_banner(title: str, diseases: list[str]) -> None:
@@ -146,6 +180,11 @@ def build_supervisor_tools(
     # blurbs for candidates failing the (0 trials AND <N PMIDs) check). Keyed by lowercase
     # canonical disease name → {"literature": ... | None, "clinical_trials": ... | None}.
     findings_local: dict[str, dict] = {}
+
+    # Ordering gate: finalize_supervisor is rejected until critique_ranking has run this
+    # run, so the ranking is always audited before it is committed. The LLM ignores the
+    # prompt-level "MANDATORY" instruction on its own, so this enforces it in code.
+    critique_state: dict[str, bool] = {"ran": False}
 
     def _drug_key(drug_name: str) -> str:
         return drug_name.lower().strip()
@@ -1024,6 +1063,45 @@ def build_supervisor_tools(
             lines.append("Evidence gate exclusions: " + ", ".join(excluded) + ".")
         return "\n".join(lines)
 
+    @tool
+    async def critique_ranking(blurbs: list[dict] | None = None) -> str:
+        """Audit your candidate ranking ORDER before finalizing.
+
+        Call this AFTER you have drafted your ranked blurbs but BEFORE
+        finalize_supervisor. Pass the same `blurbs` list (in your intended rank
+        order) you plan to finalize with. A separate reviewer checks the order
+        against the RANKING SIGNALS — specifically that CLOSED and adverse-signal
+        candidates do not outrank live ones — and returns any ordering
+        violations it finds. It does NOT re-rank for you; reorder the blurbs
+        yourself to address the findings, then finalize. If it reports the
+        ranking is consistent, finalize as-is.
+
+        Arguments:
+        - blurbs: your draft ranked blurbs, same shape as finalize_supervisor.
+        """
+        critique_state["ran"] = True
+        items = blurbs or []
+        if not items:
+            return "No blurbs provided — nothing to critique."
+        lines: list[str] = []
+        for i, item in enumerate(items, start=1):
+            disease = (item.get("disease") or "").strip() or "(unnamed)"
+            verdict = (item.get("verdict") or "").strip()
+            literature = (item.get("literature") or "").strip()
+            blocker = (item.get("blocker") or "").strip()
+            lines.append(
+                f"{i}. {disease} | verdict: {verdict or '—'} | "
+                f"literature: {literature or '—'} | blocker: {blocker or '—'}"
+            )
+        prompt = "Current ranking (top to bottom):\n" + "\n".join(lines)
+        critique = await query_llm(prompt, system=_RANKING_CRITIC_SYSTEM)
+        result = critique.strip()
+        logger.info(
+            "[TOOL] critique_ranking IN (%d candidates):\n%s", len(items), "\n".join(lines)
+        )
+        logger.info("[TOOL] critique_ranking OUT:\n%s", result)
+        return result
+
     @tool(response_format="content_and_artifact")
     async def finalize_supervisor(
         summary: str, blurbs: list[dict] | None = None
@@ -1059,6 +1137,22 @@ def build_supervisor_tools(
           with empty disease, or empty in BOTH prose AND every structured
           field, is dropped.
         """
+        # Ordering gate: refuse to finalize until the ranking has been audited by
+        # critique_ranking this run. Returns a non-terminal instruction so the agent
+        # loop calls critique_ranking and then retries finalize. (Reject path returns
+        # an empty artifact dict so the content_and_artifact contract holds.)
+        if not critique_state["ran"]:
+            logger.warning(
+                "[TOOL] finalize_supervisor rejected — critique_ranking not called yet"
+            )
+            return (
+                "Cannot finalize yet: you must call critique_ranking exactly once with "
+                "your draft blurbs (in rank order) BEFORE finalize_supervisor. Call "
+                "critique_ranking now, address any ordering violations it reports, then "
+                "call finalize_supervisor again.",
+                {},
+            )
+        logger.info("[TOOL] finalize_supervisor called with %d blurbs", len(blurbs or []))
         validated: list[dict] = []
         structured_keys = (
             "stage",
@@ -1216,6 +1310,7 @@ def build_supervisor_tools(
         analyze_literature,
         analyze_clinical_trials,
         get_drug_briefing,
+        critique_ranking,
         finalize_supervisor,
     ]
     if date_before is not None or get_settings().supervisor_fanout:

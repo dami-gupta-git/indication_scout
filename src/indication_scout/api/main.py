@@ -15,6 +15,16 @@ from indication_scout.constants import CORS_ALLOW_ORIGINS, FRONTEND_DIST_DIR
 
 logger = logging.getLogger(__name__)
 
+
+class _PollingAccessLogFilter(logging.Filter):
+    """Suppress uvicorn access-log lines for the analysis polling endpoint."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "GET /api/analyses/" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(_PollingAccessLogFilter())
+
 app = FastAPI(
     title="IndicationScout API",
     description="API for drug repurposing and indication discovery",
@@ -31,6 +41,22 @@ app.add_middleware(
 app.include_router(analyses_router)
 app.include_router(drilldown_router)
 app.include_router(examples_router)
+
+
+@app.on_event("startup")
+async def start_tracing() -> None:
+    """Wire OpenTelemetry → Langfuse so web-triggered runs are traced (mirrors the CLI)."""
+    from indication_scout.tracing import setup_tracing
+
+    setup_tracing()
+
+
+@app.on_event("shutdown")
+async def stop_tracing() -> None:
+    """Flush buffered spans before the process exits."""
+    from indication_scout.tracing import shutdown_tracing
+
+    shutdown_tracing()
 
 
 @app.on_event("startup")

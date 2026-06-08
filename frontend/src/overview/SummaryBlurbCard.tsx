@@ -39,12 +39,6 @@ export function SummaryBlurbCard({
         {rank}. {disease}
       </h4>
       <dl className="blurb-fields">
-        {rows.map(([label, value]) => (
-          <div className="blurb-row" key={label}>
-            <dt>{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
         {verdict && (
           <div className="blurb-row" key="Verdict">
             <dt>Verdict</dt>
@@ -61,6 +55,12 @@ export function SummaryBlurbCard({
             </dd>
           </div>
         )}
+        {rows.map(([label, value]) => (
+          <div className="blurb-row" key={label}>
+            <dt>{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
       </dl>
       {watch && (
         <p className="blurb-watch">

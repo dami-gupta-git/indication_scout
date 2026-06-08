@@ -462,6 +462,12 @@ body {
   text-transform: capitalize;
 }
 
+.section-divider {
+  border: none;
+  border-top: 3px solid #cfd2d8;
+  margin: 2rem 0 1.5rem;
+}
+
 .blurb-fields {
   margin: 0;
   display: grid;

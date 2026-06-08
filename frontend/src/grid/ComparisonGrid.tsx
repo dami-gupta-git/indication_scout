@@ -14,6 +14,7 @@ interface Column {
 }
 
 const COLUMNS: Column[] = [
+  { key: "rank", label: "Rank", numeric: true },
   { key: "disease", label: "Disease", numeric: false },
   { key: "verdict", label: "Verdict", numeric: false },
   { key: "strength", label: "Evidence", numeric: false },
@@ -32,8 +33,8 @@ export function ComparisonGrid({
   focusDisease: string | null;
   onFocus: (disease: string) => void;
 }) {
-  const [sortKey, setSortKey] = useState<SortKey>("totalTrials");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortKey, setSortKey] = useState<SortKey>("rank");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const rows = useMemo(
     () => sortGridRows(buildGridRows(result), sortKey, sortDir),
@@ -49,9 +50,10 @@ export function ComparisonGrid({
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      // Numeric columns default to descending (highest first); text to ascending.
+      // Rank reads best low-to-high; other numeric columns default to descending
+      // (highest first); text to ascending.
       const col = COLUMNS.find((c) => c.key === key);
-      setSortDir(col?.numeric ? "desc" : "asc");
+      setSortDir(col?.numeric && key !== "rank" ? "desc" : "asc");
     }
   };
 
@@ -94,6 +96,7 @@ export function ComparisonGrid({
                   }
                 }}
               >
+                <td className="num">{row.rank}</td>
                 <td>{row.disease}</td>
                 <td>{row.verdict ? <VerdictTag verdict={row.verdict} /> : <span className="muted">—</span>}</td>
                 <td>{row.strength ? <StrengthBadge strength={row.strength} /> : <span className="muted">—</span>}</td>
