@@ -80,7 +80,7 @@ async def _log_client_ip(request: Request, call_next):
             else (request.client.host if request.client else "unknown")
         )
         location = await _geolocate(client_ip)
-        logger.info(
+        logger.warning(
             "request from %s (%s): %s %s",
             client_ip,
             location or "unknown location",
