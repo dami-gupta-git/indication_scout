@@ -125,6 +125,12 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
     Acquires _model_lock so that concurrent callers (e.g. parallel disease
     iterations in run_rag) do not race during model initialisation or encode().
 
+    embed() is CPU-bound (model.encode blocks for the full batch), so it runs in
+    a worker thread via asyncio.to_thread — otherwise it would freeze the event
+    loop for the whole encode, stalling every other request (health checks,
+    polling, concurrent analyses). The lock still serializes encodes (the model
+    is not safe to run concurrently), but the loop stays free while waiting.
+
     Args:
         texts: Same as embed().
 
@@ -132,4 +138,4 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
         Same as embed().
     """
     async with _model_lock():
-        return embed(texts)
+        return await asyncio.to_thread(embed, texts)
