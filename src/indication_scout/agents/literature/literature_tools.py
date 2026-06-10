@@ -6,6 +6,7 @@ inter-call data via a closure-scoped store dict. No InjectedState, no LangGraph 
 
 import asyncio
 import logging
+import time
 from datetime import date
 
 from langchain_core.tools import tool
@@ -44,9 +45,13 @@ def build_literature_tools(
     async def build_drug_profile(drug_name: str) -> tuple[str, DrugProfile]:
         """Fetch pharmacological profile (gene targets, mechanisms, ATC codes) for a drug. Call
         before expand_search_terms for richer queries."""
+        _t0 = time.perf_counter()
         chembl_id = await _get_chembl(drug_name)
         profile = await svc.build_drug_profile(chembl_id)
         store["drug_profile"] = profile
+        logger.warning(
+            "[TIMING] build_drug_profile %s: %.1fs", drug_name, time.perf_counter() - _t0
+        )
         return (
             f"Profile for {drug_name} ({chembl_id}): "
             f"{len(profile.target_gene_symbols)} targets, "
@@ -60,10 +65,15 @@ def build_literature_tools(
     ) -> tuple[str, list[str]]:
         """Generate diverse PubMed keyword queries. Uses the drug profile if available, otherwise
         builds one on the fly."""
+        _t0 = time.perf_counter()
         chembl_id = await _get_chembl(drug_name)
         profile = store.get("drug_profile") or await svc.build_drug_profile(chembl_id)
         queries = await svc.expand_search_terms(chembl_id, disease_name, profile)
         store["queries"] = queries
+        logger.warning(
+            "[TIMING] expand_search_terms %s: %.1fs", disease_name,
+            time.perf_counter() - _t0,
+        )
         return f"Generated {len(queries)} queries", queries
 
 
@@ -73,8 +83,12 @@ def build_literature_tools(
         queries = store.get("queries", [])
         if not queries:
             return "No queries — call expand_search_terms first.", []
+        _t0 = time.perf_counter()
         pmids = await svc.fetch_and_cache(queries, db, date_before=date_before)
         store["pmids"] = pmids
+        logger.warning(
+            "[TIMING] fetch_and_cache %s: %.1fs", drug_name, time.perf_counter() - _t0
+        )
         return f"Fetched {len(pmids)} PMIDs", pmids
 
     @tool(response_format="content_and_artifact")
@@ -85,11 +99,16 @@ def build_literature_tools(
         pmids = store.get("pmids", [])
         if not pmids:
             return "No PMIDs — call fetch_and_cache first.", []
+        _t0 = time.perf_counter()
         chembl_id = await _get_chembl(drug_name)
         results = await svc.semantic_search(
             disease_name, chembl_id, pmids, db, date_before=date_before
         )
         store["abstracts"] = results
+        logger.warning(
+            "[TIMING] semantic_search %s: %.1fs", disease_name,
+            time.perf_counter() - _t0,
+        )
         top = results[0].similarity if results else 0.0
         return f"Found {len(results)} abstracts (top sim: {top:.2f})", results
 
@@ -99,11 +118,15 @@ def build_literature_tools(
     ) -> tuple[str, EvidenceSummary]:
         """Synthesize abstracts into a structured evidence summary."""
         abstracts = store.get("abstracts", [])
+        _t0 = time.perf_counter()
         chembl_id = await _get_chembl(drug_name)
         evidence = await svc.synthesize(
             chembl_id,
             disease_name,
             abstracts,
+        )
+        logger.warning(
+            "[TIMING] synthesize %s: %.1fs", disease_name, time.perf_counter() - _t0
         )
         # logger.warning(
         #     f"literature agent evidence: {evidence}")
