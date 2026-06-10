@@ -7,7 +7,7 @@ history to pull typed artifacts off the ToolMessages and assembles them into a L
 import logging
 from pathlib import Path
 
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
 from indication_scout.agents.literature.literature_output import LiteratureOutput
@@ -44,6 +44,28 @@ async def run_literature_agent(
     )
     result = await agent.ainvoke(
         {"messages": [HumanMessage(content=f"Analyze {drug_name} in {disease_name}")]}
+    )
+
+    # Per-turn LLM accounting. Each AIMessage is one round-trip to the model; its
+    # usage_metadata gives input tokens (context re-sent that turn) and output
+    # tokens (what it generated). Logged at WARNING so the round-trip breakdown
+    # surfaces — isolates whether loop overhead is many turns, large output, or
+    # context growth. Pure read of the returned history; no loop logic touched.
+    ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
+    total_out = 0
+    for i, msg in enumerate(ai_turns):
+        usage = msg.usage_metadata or {}
+        in_tok = usage.get("input_tokens", 0)
+        out_tok = usage.get("output_tokens", 0)
+        total_out += out_tok
+        called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
+        logger.warning(
+            "[LLMTURN] %s turn %d/%d: in=%d out=%d -> %s",
+            disease_name, i + 1, len(ai_turns), in_tok, out_tok, called,
+        )
+    logger.warning(
+        "[LLMTURN] %s: %d turns, %d total output tokens",
+        disease_name, len(ai_turns), total_out,
     )
 
     # Pull each tool's typed artifact off msg.artifact
