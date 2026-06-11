@@ -15,6 +15,7 @@ from pathlib import Path
 DEFAULT_LLM_MODEL: str = "claude-sonnet-4-6"
 
 # -- Cache ------------------------------------------------------------------
+# (cache dir resolution below; see SCOUT_CACHE_DIR override note)
 # Anchored to the project root (two levels above this package's src/ dir) so
 # that a single _scout_cache/ directory is used regardless of the working directory
 # from which tests or scripts are launched.
