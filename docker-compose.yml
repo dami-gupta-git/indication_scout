@@ -1,6 +1,9 @@
 services:
   db:
     image: pgvector/pgvector:pg16
+    # Give Postgres time to checkpoint and shut down cleanly on stop/down,
+    # so it isn't SIGKILLed mid-WAL (default grace is 10s).
+    stop_grace_period: 60s
     environment:
       POSTGRES_DB: scout
       POSTGRES_USER: scout
@@ -37,7 +40,8 @@ services:
     volumes:
       # Persisted file cache for all data sources (PubMed, FDA, ChEMBL,
       # ClinicalTrials, Open Targets, LLM synthesize steps). Starts empty.
-      - scout_cache:/app/_cache
+      # Mounted at /cache to match SCOUT_CACHE_DIR in .env (and Railway).
+      - scout_cache:/cache
       # HuggingFace model cache so BioLORD-2023 downloads once.
       - hf_cache:/hf-cache
     depends_on:

@@ -14,7 +14,9 @@ services:
     volumes:
       - ./src:/app/src
       - ./alembic:/app/alembic
-      - scout_cache:/app/_cache
+      # Bind-mount the cache to the host project dir so cached files are
+      # browsable on the local machine. Overrides the base named volume.
+      - ./cache:/cache
       - hf_cache:/hf-cache
 
   frontend:
@@ -50,7 +52,6 @@ services:
     volumes:
       - ./src:/app/src
       - ./tests:/app/tests
-      - scout_cache:/app/_cache
       - hf_cache:/hf-cache
 
   # Integration tests: need scout_test (migrated) + real API keys + network.
@@ -74,7 +75,6 @@ services:
     volumes:
       - ./src:/app/src
       - ./tests:/app/tests
-      - scout_cache:/app/_cache
       - hf_cache:/hf-cache
     depends_on:
       db:

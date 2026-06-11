@@ -7,7 +7,7 @@ a clinical milestone (Phase II+) using only **non-clinical** evidence from
 Open Targets, framed as a reproduction of Nelson et al. 2015.
 
 **Result of the investigation: not pursued.** Probes against both
-`_cache/target_evidences/` and `_cache/target/` showed the cache cannot
+`cache/target_evidences/` and `cache/target/` showed the cache cannot
 honestly answer this question. Details below; full session log in
 [../../SESSION_FINDINGS.md](../../SESSION_FINDINGS.md).
 
@@ -111,7 +111,7 @@ calibrated classifier instead of hand-tuned heuristics.
 ### Why this is a sensible ML target
 
 - **Data scale.** 1,305 (target, disease) pairs already cached in
-  `_cache/target_evidences/`. ~15× more examples than the trial-risk
+  `cache/target_evidences/`. ~15× more examples than the trial-risk
   model.
 - **Deterministic labels.** Pulled from the same cache (`clinical`
   evidence records carry the score). No LLM labeling, no manual review,
@@ -126,7 +126,7 @@ calibrated classifier instead of hand-tuned heuristics.
 
 ### Data sources
 
-- `_cache/target_evidences/` — 87 files, one per target. Each entry
+- `cache/target_evidences/` — 87 files, one per target. Each entry
   groups records by disease ID and datatype. 8 datatypes total:
   `clinical`, `genetic_association`, `somatic_mutation`, `animal_model`,
   `rna_expression`, `literature`, `genetic_literature`,

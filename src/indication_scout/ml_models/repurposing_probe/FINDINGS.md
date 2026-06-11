@@ -17,7 +17,7 @@ features at all.**
 
 ## Setup
 
-- **Labels.** `_cache/fda_drug_disease_approval/` over 19 drugs.
+- **Labels.** `cache/fda_drug_disease_approval/` over 19 drugs.
   650 (drug, disease) verdicts: **76 positive, 574 negative** (11.7% pos rate).
   Slightly higher than the SESSION_FINDINGS estimate (60 / 484) because the
   cache grew between sessions.

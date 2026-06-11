@@ -30,7 +30,7 @@ and how to frame the existing work for an interview.
 
 ## Drug-repurposing approval classifier (considered, not pursued)
 
-`_cache/fda_drug_disease_approval/` has 544 (drug, disease) labels —
+`cache/fda_drug_disease_approval/` has 544 (drug, disease) labels —
 60 approved (11%) / 484 not — across 15 drugs. Tempting as a third ML
 target.
 
@@ -41,7 +41,7 @@ populated for the 544 pairs:
 
 | Namespace | Coverage | Note |
 |---|---|---|
-| `_cache/drug/` (OT records) | 13/15 drugs | rituximab and sildenafil missing |
+| `cache/drug/` (OT records) | 13/15 drugs | rituximab and sildenafil missing |
 | `disease→mesh` resolution | 32% of pairs | gates every downstream feature |
 | `ct_completed`/`ct_terminated` | 17% of pairs | sparse |
 | FDA label + indications | 15/15 drugs | populated |
@@ -167,7 +167,7 @@ Nelson 2015 (genetic support ~2× clinical success odds).
    evidence in cache.
 3. Direct API probe: confirmed Open Targets genuinely has no
    mechanistic data for those pairs. Cache wasn't lossy.
-4. Pivoted to `_cache/target/` (36k pairs, no record budget).
+4. Pivoted to `cache/target/` (36k pairs, no record budget).
    Univariate lifts now matched Nelson's direction.
 5. Trained quick LR. **AUC 0.748.** Looked great.
 6. Coefficients told a different story — almost all weight on

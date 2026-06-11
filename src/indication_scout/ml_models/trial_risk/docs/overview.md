@@ -49,10 +49,10 @@ trial → cutoff_date = completion_date - lookback_months
 
 ## Data sources
 
-- `_cache/ct_completed/`, `_cache/ct_terminated/` — labels and trial metadata
-- `_cache/pubmed_search/` — broad PMID lists per (drug-alias, mesh) pair
+- `cache/ct_completed/`, `cache/ct_terminated/` — labels and trial metadata
+- `cache/pubmed_search/` — broad PMID lists per (drug-alias, mesh) pair
 - pgvector `pubmed_abstracts` — abstract text + BioLORD embeddings + pub_date
-- `_cache/trial_risk_lit_signals/` — persisted per-trial signals (skip on rerun)
+- `cache/trial_risk_lit_signals/` — persisted per-trial signals (skip on rerun)
 
 ## Model
 
