@@ -6,7 +6,7 @@
 # Set the rest in the Railway dashboard (Variables + Volume), see DEPLOY_RAILWAY.md:
 #   DATABASE_URL=${{Postgres.DATABASE_URL}}
 #   DB_PASSWORD=<any non-empty>
-#   SCOUT_CACHE_DIR=/data/_cache
+#   SCOUT_CACHE_DIR=/data/_scout_cache
 #   HF_HOME=/data/hf
 #   ANTHROPIC_API_KEY / PUBMED_API_KEY / NCBI_API_KEY / OPENFDA_API_KEY
 # Mount a persistent volume at /data.

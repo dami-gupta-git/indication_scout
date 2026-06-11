@@ -6,7 +6,7 @@ SESSION_FINDINGS.md. The goal is NOT to ship a model — it is to decide
 whether the cached data has signal, or whether (as in the success_classifier
 probe) one feature dominates by leakage.
 
-Inputs (all from _cache/ + pgvector):
+Inputs (all from _scout_cache/ + pgvector):
   - Labels:    fda_drug_disease_approval/*.json  -> (drug, disease, verdict)
   - Diseases:  mesh_resolver/*.json              -> disease -> (mesh_id, mesh_term)
   - Competitors: competitors_merged/*.json       -> chembl_id -> {disease: [drugs]}
@@ -44,7 +44,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 log = logging.getLogger("repurposing_probe")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[4]
-CACHE = PROJECT_ROOT / "_cache"
+CACHE = PROJECT_ROOT / "_scout_cache"
 OUT = Path(__file__).parent / "out"
 OUT.mkdir(exist_ok=True)
 

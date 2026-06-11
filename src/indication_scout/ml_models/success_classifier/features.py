@@ -15,7 +15,7 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
-# All non-clinical datatypes that appear in `_cache/target_evidences/`.
+# All non-clinical datatypes that appear in `_scout_cache/target_evidences/`.
 # Stable order so feature names are stable across runs.
 NON_CLINICAL_DATATYPES = [
     "genetic_association",

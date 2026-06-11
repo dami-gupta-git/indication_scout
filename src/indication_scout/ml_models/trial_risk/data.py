@@ -1,4 +1,4 @@
-"""Load trial records from `_cache/ct_completed/` and `_cache/ct_terminated/`.
+"""Load trial records from `_scout_cache/ct_completed/` and `_scout_cache/ct_terminated/`.
 
 Each cache file groups trials by (drug, mesh_term). We flatten them into one
 record per NCT ID, deduplicating across files (a trial can appear under multiple

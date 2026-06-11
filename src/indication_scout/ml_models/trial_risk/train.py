@@ -1,6 +1,6 @@
 """Train the trial-termination risk classifier.
 
-Loads labeled trials from `_cache/`, computes date-bounded literature signals
+Loads labeled trials from `_scout_cache/`, computes date-bounded literature signals
 via the existing retrieval pipeline, fits a calibrated logistic regression,
 runs leave-one-drug-out cross-validation, and saves the artifact + metrics
 under `models/`.
@@ -349,7 +349,7 @@ def main() -> None:
         "--cache-dir",
         type=Path,
         default=DEFAULT_CACHE_DIR,
-        help="Path to the IndicationScout cache directory (default: project _cache/).",
+        help="Path to the IndicationScout cache directory (default: project _scout_cache/).",
     )
     parser.add_argument(
         "--lookback-months",
