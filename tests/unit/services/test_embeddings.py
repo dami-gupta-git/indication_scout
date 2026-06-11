@@ -1,4 +1,6 @@
-"""Unit tests for services/embeddings — does not do model loading."""
+"""
+Unit tests for services/embeddings — does not do model loading.
+"""
 
 import numpy as np
 import pytest
