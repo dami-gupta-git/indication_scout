@@ -121,6 +121,21 @@ body {
   background: #1d6b35;
 }
 
+.disclaimer {
+  margin-top: 4rem;
+  color: #6b7280;
+  font-size: 0.85rem;
+  font-style: italic;
+  text-align: center;
+}
+
+/* Desktop: the bottom-of-sidebar disclaimer shows; the mobile copy (above the
+   PoC banner) is hidden. The mobile media block flips this. */
+.disclaimer-mobile {
+  display: none;
+  margin-top: 0;
+}
+
 .sidebar-examples {
   margin-top: 1rem;
   display: flex;
@@ -1095,6 +1110,16 @@ body {
   }
 
   .poc-banner-main {
+    display: none;
+  }
+
+  /* Disclaimer: show the copy above the PoC banner, hide the bottom-of-sidebar
+     desktop one. */
+  .disclaimer-mobile {
+    display: block;
+  }
+
+  aside .disclaimer:not(.disclaimer-mobile) {
     display: none;
   }
 

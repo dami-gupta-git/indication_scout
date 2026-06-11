@@ -278,6 +278,8 @@ def format_report(output: SupervisorOutput) -> str:
         f"# IndicationScout Report: {_title_case_disease(drug)}",
         f"_Generated {now}_",
         "",
+        "_Not for clinical use; for research purposes only_",
+        "",
         "---",
         "",
     ]

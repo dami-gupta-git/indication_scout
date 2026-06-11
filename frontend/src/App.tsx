@@ -83,6 +83,9 @@ export function App() {
           <span>Home</span>
         </button>
         <h1>IndicationScout</h1>
+        <p className="disclaimer disclaimer-mobile">
+          Not for clinical use; for research purposes only
+        </p>
         <div className="poc-banner poc-banner-side">Proof of Concept</div>
         <form onSubmit={submit}>
           <label htmlFor="drug">Pick a drug</label>
@@ -168,6 +171,10 @@ export function App() {
             Download report (.md)
           </button>
         )}
+
+        <p className="disclaimer">
+          Not for clinical use; for research purposes only
+        </p>
       </aside>
 
       <main className="main">
