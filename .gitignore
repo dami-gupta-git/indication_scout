@@ -1,0 +1,105 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+node_modules/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+*.bak
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Testing
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+.hypothesis/
+
+# Type checking
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pytype/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Environment variables
+.env
+
+
+# Output files
+*.log
+
+# Ruff
+.ruff_cache/
+
+*.xlsx
+bak/
+for_me/
+planning_docs/
+
+
+*.jsonl
+!.env.example
+
+
+data/
+tmp/
+_scout_cache/
+_scout_cache_test/
+scripts/open_target_pipeline.py
+
+scripts/*tester*
+SESSION*.md
+
+alembic/versions/__pycache__/
+PLAN*.md
+
+.claude/agent-memory/docs-engineer/MEMORY.md
+
+session_bak/
+
+# Track .claude/ despite global gitignore
+!.claude/
+
+src/indication_scout/runners/
+wandb/
+*.docx
+tests/eval.py
+
+uv.lock
+metrics/
