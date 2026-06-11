@@ -6,6 +6,7 @@ for each, and decides when enough evidence has been gathered to stop.
 """
 
 import logging
+import time
 from datetime import date
 from pathlib import Path
 from typing import Literal
@@ -108,12 +109,35 @@ async def run_supervisor_agent(
     result["messages"]; we pull them via the closure and merge into findings_by_disease so the
     renderer sees them like any other investigation. None in non-holdout runs.
     """
+    _agent_t0 = time.perf_counter()
     result = await agent.ainvoke(
         {
             "messages": [
                 HumanMessage(content=f"Find repurposing opportunities for {drug_name}")
             ]
         }
+    )
+    _agent_elapsed = time.perf_counter() - _agent_t0
+
+    # Per-turn LLM accounting for the supervisor's own ReAct loop (same as the
+    # sub-agents). Isolates the supervisor's orchestration round-trips from the
+    # sub-agent time those turns trigger. Each AIMessage is one round-trip; the
+    # tool(s) it calls are the sub-agent invocations. Read-only on result["messages"].
+    _ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
+    _total_out = 0
+    for _i, _msg in enumerate(_ai_turns):
+        _usage = _msg.usage_metadata or {}
+        _in_tok = _usage.get("input_tokens", 0)
+        _out_tok = _usage.get("output_tokens", 0)
+        _total_out += _out_tok
+        _called = ", ".join(tc["name"] for tc in _msg.tool_calls) or "(final)"
+        logger.warning(
+            "[LLMTURN] supervisor turn %d/%d: in=%d out=%d -> %s",
+            _i + 1, len(_ai_turns), _in_tok, _out_tok, _called,
+        )
+    logger.warning(
+        "[LLMTURN] supervisor: %d turns, %d total output tokens, agent loop %.1fs",
+        len(_ai_turns), _total_out, _agent_elapsed,
     )
 
     mechanism: MechanismOutput | None = None

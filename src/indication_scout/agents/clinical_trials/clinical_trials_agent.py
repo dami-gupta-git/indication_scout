@@ -5,9 +5,10 @@ history to pull typed artifacts off the ToolMessages and assembles them into a C
 """
 
 import logging
+import time
 from pathlib import Path
 
-from langchain_core.messages import HumanMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
@@ -39,8 +40,32 @@ async def run_clinical_trials_agent(
     # logger.warning(
     #     "clinical_trials_agent: starting run for %s × %s", drug_name, disease_name
     # )
+    _agent_t0 = time.perf_counter()
     result = await agent.ainvoke(
         {"messages": [HumanMessage(content=f"Analyze {drug_name} in {disease_name}")]}
+    )
+    _agent_elapsed = time.perf_counter() - _agent_t0
+
+    # Per-turn LLM accounting (same as literature/mechanism agents). Each AIMessage
+    # is one round-trip; usage_metadata gives context size and output tokens.
+    # Logged at WARNING to isolate clinical_trials loop overhead from its (partly
+    # uncached) API calls. Read-only on result["messages"].
+    ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
+    total_out = 0
+    for i, msg in enumerate(ai_turns):
+        usage = msg.usage_metadata or {}
+        in_tok = usage.get("input_tokens", 0)
+        out_tok = usage.get("output_tokens", 0)
+        total_out += out_tok
+        called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
+        logger.warning(
+            "[LLMTURN] clinical_trials %s turn %d/%d: in=%d out=%d -> %s",
+            disease_name, i + 1, len(ai_turns), in_tok, out_tok, called,
+        )
+    logger.warning(
+        "[LLMTURN] clinical_trials %s: %d turns, %d total output tokens, "
+        "agent loop %.1fs",
+        disease_name, len(ai_turns), total_out, _agent_elapsed,
     )
 
     artifacts: dict = {
