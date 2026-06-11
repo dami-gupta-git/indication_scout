@@ -34,7 +34,15 @@ def build_gated_react_loop(
     finalize succeeded, otherwise loop back to the model.
     """
     model = llm.bind_tools(tools)
-    system_message = SystemMessage(content=prompt)
+    # Anthropic prompt caching: a cache_control breakpoint on the system block caches
+    # the (static) system prompt + tool definitions, so turns 2+ of the agent loop read
+    # that prefix from cache instead of reprocessing it. Output is unchanged; it cuts
+    # per-turn input-processing latency on a multi-turn loop.
+    system_message = SystemMessage(
+        content=[
+            {"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}}
+        ]
+    )
 
     async def call_model(state: MessagesState) -> dict:
         response = await model.ainvoke([system_message] + state["messages"])
