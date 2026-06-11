@@ -6,7 +6,7 @@
 #   DATABASE_URL=${{Postgres.DATABASE_URL}}
 #   DB_PASSWORD=<any non-empty>
 #   SCOUT_CACHE_DIR=/cache
-#   HF_HOME=/cache/hf
+#   HF_HOME=/cache
 #   ANTHROPIC_API_KEY / PUBMED_API_KEY / NCBI_API_KEY / OPENFDA_API_KEY
 # Mount a persistent volume at /cache.
 
