@@ -12,8 +12,11 @@ from pathlib import Path
 from typing import Literal
 
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from langgraph.prebuilt import create_react_agent
 
+from indication_scout.agents._react_loop import (
+    _trailing_tool_messages,
+    build_gated_react_loop,
+)
 from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 from indication_scout.agents.supervisor.supervisor_output import (
     CandidateBlurb,
@@ -61,6 +64,23 @@ def _load_system_prompt(holdout_mode: bool, fanout: bool = False) -> str:
 SYSTEM_PROMPT = _load_system_prompt(holdout_mode=False)
 
 
+def _finalize_done(messages: list) -> bool:
+    """End the loop once finalize_supervisor has SUCCEEDED this turn.
+
+    finalize_supervisor rejects (empty-dict artifact) until critique_ranking has run, so
+    require both a truthy artifact AND a critique_ranking ToolMessage in history — this
+    preserves the mandatory critique-before-finalize ordering gate. A rejected finalize
+    loops back to the model to call critique_ranking and retry.
+    """
+    critique_ran = any(
+        isinstance(m, ToolMessage) and m.name == "critique_ranking" for m in messages
+    )
+    for m in _trailing_tool_messages(messages):
+        if m.name == "finalize_supervisor" and m.artifact and critique_ran:
+            return True
+    return False
+
+
 def build_supervisor_agent(llm, svc, db, date_before: date | None = None):
     """Return (compiled supervisor agent, get_merged_allowlist, get_auto_findings).
 
@@ -88,7 +108,7 @@ def build_supervisor_agent(llm, svc, db, date_before: date | None = None):
         fanout,
     )
     prompt = _load_system_prompt(holdout_mode=date_before is not None, fanout=fanout)
-    agent = create_react_agent(model=llm, tools=tools, prompt=prompt)
+    agent = build_gated_react_loop(llm, tools, prompt, _finalize_done)
     return agent, get_merged_allowlist, get_auto_findings
 
 

@@ -132,7 +132,7 @@ def build_literature_tools(
         #     f"literature agent evidence: {evidence}")
         return f"Evidence strength: {evidence.strength}", evidence
 
-    @tool(response_format="content_and_artifact")
+    @tool(response_format="content_and_artifact", return_direct=True)
     async def finalize_analysis(summary: str) -> tuple[str, str]:
         """Signal that the analysis is complete. Pass the narrative summary as the argument;
         it is returned as the artifact for downstream assembly into LiteratureOutput.

@@ -118,7 +118,7 @@ def build_mechanism_tools() -> list:
             {target_symbol: top},
         )
 
-    @tool(response_format="content_and_artifact")
+    @tool(response_format="content_and_artifact", return_direct=True)
     async def finalize_analysis(summary: str) -> tuple[str, str]:
         """Signal that the analysis is complete.
 

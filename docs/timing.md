@@ -109,6 +109,27 @@ Note: the `investigate (parallel wall)` column read 0.0s in the raw output — t
 `investigate_top_candidates` `[TIMING]` line is emitted from a logger namespace the bench's
 capture handler didn't catch. Dropped from the table; the per-disease columns are accurate.
 
+## Trailing-turn removal — local run_analysis (2026-06-11)
+
+After applying R1 (eliminate the discarded trailing `(final)` turn): literature + mechanism
+use the prebuilt's `return_direct=True`; clinical_trials + supervisor use a gated ReAct loop
+(`agents/_react_loop.py`) that ends the moment finalize succeeds. Controlled same-session A/B,
+measured locally via `scripts/trailing_turn_bench.py` (calls `run_analysis`), warm cache + warm
+RAG DB, single timed run each after a warm-up; BEFORE = baseline `create_react_agent`, AFTER =
+fixed tree.
+
+| Code | Drug | Total | CT turns | mechanism turns | sub-agent turns/disease | supervisor turns |
+|---|---|---|---|---|---|---|
+| BEFORE (trailing turn present) | metformin | 133.4s | 3 | 4 | 7 | 6 |
+| AFTER (trailing turn removed) | metformin | 95.4s | 2 | 3 | 6 | 5 |
+
+**Δ = 38s (~28%) faster.** Every agent dropped exactly one turn — the discarded trailing turn —
+confirming the fix applies uniformly across all four agent types. clinical_trials went 3→2 (data
+batch + finalize, no trailing summary); the others each lost their post-finalize `(final)` turn.
+The turn-count drop is deterministic; the 38s is one warm run (±15s LLM noise applies, but the
+delta is well outside it and consistent with the predicted 60–90s aggregate scaled to a run with
+3 parallel sub-agent investigations).
+
 ## Caveats
 
 - Earlier sections mix cold/warm, Railway/local, and pre/post fat-tool code — NOT apples-to-apples.
