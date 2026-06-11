@@ -20,7 +20,9 @@ DEFAULT_LLM_MODEL: str = "claude-sonnet-4-6"
 # from which tests or scripts are launched.
 _PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
 # Defaults to <root>/_scout_cache; override via SCOUT_CACHE_DIR so the cache can live
-# on a mounted persistent volume (e.g. Railway) instead of inside the image.
+# on a mounted persistent volume (e.g. Railway) instead of inside the image. When the
+# env var is set it wins outright, so the local rename does not affect prod (Railway
+# uses SCOUT_CACHE_DIR=/cache).
 DEFAULT_CACHE_DIR: Path = (
     Path(os.environ["SCOUT_CACHE_DIR"])
     if os.environ.get("SCOUT_CACHE_DIR")
