@@ -112,7 +112,9 @@ async def test_get_label_indications_caches_result(tmp_path):
     mock_rest_get.assert_awaited_once()
 
 
-async def test_get_label_indications_does_not_cache_404(tmp_path):
+async def test_get_label_indications_caches_404(tmp_path):
+    # A 404 (no label for this alias) is cached with a short TTL so the same
+    # un-indexed alias isn't re-queried every run; the second call hits the cache.
     client = FDAClient(cache_dir=tmp_path)
     mock_rest_get = AsyncMock(side_effect=DataSourceError("openfda", "HTTP 404", 404))
     with patch.object(client, "_rest_get", new=mock_rest_get):
@@ -121,7 +123,7 @@ async def test_get_label_indications_does_not_cache_404(tmp_path):
 
     assert first == []
     assert second == []
-    assert mock_rest_get.await_count == 2
+    assert mock_rest_get.await_count == 1
 
 
 # --- get_all_label_indications ---

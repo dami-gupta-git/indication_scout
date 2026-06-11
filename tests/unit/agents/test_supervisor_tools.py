@@ -418,6 +418,17 @@ async def test_holdout_summary_reconstructed_for_sildenafil_2005():
             "clinical_trials": _make_ct(total, comp, term),
         }
 
+    # Ordering gate: finalize_supervisor is rejected until critique_ranking has
+    # run this session. Empty blurbs short-circuits before any LLM call.
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "test_critique",
+            "type": "tool_call",
+        }
+    )
+
     msg = await by_name["finalize_supervisor"].ainvoke(
         {
             "name": "finalize_supervisor",
