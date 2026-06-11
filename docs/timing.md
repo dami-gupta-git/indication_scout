@@ -130,6 +130,29 @@ The turn-count drop is deterministic; the 38s is one warm run (±15s LLM noise a
 delta is well outside it and consistent with the predicted 60–90s aggregate scaled to a run with
 3 parallel sub-agent investigations).
 
+## CT.gov caching (R3) — local run_analysis (2026-06-11)
+
+Cached the last two uncached ClinicalTrials.gov calls (`search_trials`, `get_landscape`),
+mirroring the existing `ct_completed`/`ct_terminated` pattern. Measured on top of the
+trailing-turn fix (both wins present). Warm metformin, single timed runs:
+
+| Run | Total | External API | CT.gov calls | Notes |
+|---|---|---|---|---|
+| warm A | 87.3s | 1.3s | 0 | fully cached |
+| warm B | 111.4s | 0.8s | 0 | same code, same caches |
+
+Phase split (warm B, 111.4s): mechanism 15.6s, investigate parallel wall 34.6s (slowest disease;
+clinical_trials 26–35s, all LLM generation of the finalize summary), critique 1.7s, supervisor
+glue ~59s.
+
+What caching bought: clinical_trials now makes **0 API calls** warm; external API ~1s; and the
+worst-case CT.gov blowup is gone (a prior warm run hit external API 105.7s / clinical_trials 97.2s
+when these calls were uncached and slow). What it did NOT buy: a lower warm floor — the warm floor
+was never data-bound. The 87s↔111s spread between two identical-code runs is pure LLM
+generation/latency variance (CT data time is ~0 in both). The remaining warm bottleneck is
+**LLM generation in the clinical_trials finalize summary (~26–35s/disease, on the investigate
+critical path) plus supervisor glue (~37–59s, high variance)** — not data, not turn count.
+
 ## Caveats
 
 - Earlier sections mix cold/warm, Railway/local, and pre/post fat-tool code — NOT apples-to-apples.
