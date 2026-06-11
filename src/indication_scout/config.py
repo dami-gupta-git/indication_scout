@@ -119,6 +119,9 @@ class Settings(BaseSettings):
         )
         env_file_encoding = "utf-8"
         frozen = True
+        # Ignore env keys that aren't Settings fields (e.g. SCOUT_CACHE_DIR, which
+        # constants.py reads directly via os.environ).
+        extra = "ignore"
 
 
 @lru_cache

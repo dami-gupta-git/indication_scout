@@ -17,8 +17,8 @@ frontend/.vite/
 **/*.tsbuildinfo
 
 # Local caches & data (mounted as volumes at runtime, not baked in)
-_cache/
-_cache_test/
+cache/
+cache_test/
 .deepeval/
 
 # Local env / secrets (passed via compose env_file at runtime)

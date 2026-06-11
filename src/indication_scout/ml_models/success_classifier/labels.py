@@ -1,7 +1,7 @@
 """Label extraction for the success classifier.
 
 Each (target_id, disease_id) pair gets a binary label derived from its
-`clinical` evidence records in `_scout_cache/target_evidences/`. The clinical
+`clinical` evidence records in `cache/target_evidences/`. The clinical
 records are stripped from the pair before features are computed, so the
 model never sees its own answer.
 
@@ -43,7 +43,7 @@ def _max_clinical_score(records: list[dict]) -> tuple[float, int]:
 
 
 def load_labeled_pairs(cache_dir: Path) -> list[LabeledPair]:
-    """Walk `_scout_cache/target_evidences/*.json` and yield one LabeledPair per
+    """Walk `cache/target_evidences/*.json` and yield one LabeledPair per
     (target, disease) entry.
 
     The pair's `clinical` records are removed from `non_clinical_records` —

@@ -17,19 +17,19 @@ DEFAULT_LLM_MODEL: str = "claude-sonnet-4-6"
 # -- Cache ------------------------------------------------------------------
 # (cache dir resolution below; see SCOUT_CACHE_DIR override note)
 # Anchored to the project root (two levels above this package's src/ dir) so
-# that a single _scout_cache/ directory is used regardless of the working directory
+# that a single cache/ directory is used regardless of the working directory
 # from which tests or scripts are launched.
 _PROJECT_ROOT: Path = Path(__file__).parent.parent.parent
-# Defaults to <root>/_scout_cache; override via SCOUT_CACHE_DIR so the cache can live
+# Defaults to <root>/cache; override via SCOUT_CACHE_DIR so the cache can live
 # on a mounted persistent volume (e.g. Railway) instead of inside the image. When the
 # env var is set it wins outright, so the local rename does not affect prod (Railway
 # uses SCOUT_CACHE_DIR=/cache).
 DEFAULT_CACHE_DIR: Path = (
     Path(os.environ["SCOUT_CACHE_DIR"])
     if os.environ.get("SCOUT_CACHE_DIR")
-    else _PROJECT_ROOT / "_scout_cache"
+    else _PROJECT_ROOT / "cache"
 )
-TEST_CACHE_DIR: Path = _PROJECT_ROOT / "_scout_cache_test"
+TEST_CACHE_DIR: Path = _PROJECT_ROOT / "cache_test"
 CACHE_TTL: int = 60 * 86400  # 60 days (relaxed: portfolio project, save time/tokens)
 
 # -- Landing-page example cache ---------------------------------------------

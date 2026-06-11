@@ -79,8 +79,8 @@ planning_docs/
 
 data/
 tmp/
-_scout_cache/
-_scout_cache_test/
+cache/
+cache_test/
 scripts/open_target_pipeline.py
 
 scripts/*tester*
