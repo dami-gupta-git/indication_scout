@@ -123,6 +123,15 @@ class ClinicalTrialsClient(BaseClient):
         on get_terminated_trials and get_completed_trials respectively to
         avoid surfacing the same number from two places.
         """
+        cache_params = {
+            "drug": drug,
+            "mesh_term": mesh_term,
+            "date_before": date_before.isoformat() if date_before else None,
+        }
+        cached = cache_get("ct_search", cache_params, self.cache_dir)
+        if cached is not None:
+            return SearchTrialsResult.model_validate(cached)
+
         cond = _mesh_cond(mesh_term)
         total_task = self._count_trials_total(
             drug=drug, indication=cond, date_before=date_before
@@ -174,7 +183,7 @@ class ClinicalTrialsClient(BaseClient):
             )
         )
 
-        return SearchTrialsResult(
+        result = SearchTrialsResult(
             total_count=total,
             by_status={
                 "RECRUITING": recruiting,
@@ -184,6 +193,14 @@ class ClinicalTrialsClient(BaseClient):
             },
             trials=trials,
         )
+        cache_set(
+            "ct_search",
+            cache_params,
+            result.model_dump(mode="json"),
+            self.cache_dir,
+            ttl=CLINICAL_TRIALS_CACHE_TTL,
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Public: get_landscape
@@ -207,6 +224,15 @@ class ClinicalTrialsClient(BaseClient):
 
         Total count comes from a single `countTotal` call — exact, no page cap.
         """
+        cache_params = {
+            "mesh_term": mesh_term,
+            "date_before": date_before.isoformat() if date_before else None,
+            "top_n": top_n,
+        }
+        cached = cache_get("ct_landscape", cache_params, self.cache_dir)
+        if cached is not None:
+            return IndicationLandscape.model_validate(cached)
+
         landscape_max = _settings.clinical_trials_landscape_max_trials
         cond = _mesh_cond(mesh_term)
 
@@ -224,7 +250,15 @@ class ClinicalTrialsClient(BaseClient):
 
         (trials, _), total_count = await asyncio.gather(fetch_task, count_task)
 
-        return self._aggregate_landscape(trials, total_count=total_count, top_n=top_n)
+        result = self._aggregate_landscape(trials, total_count=total_count, top_n=top_n)
+        cache_set(
+            "ct_landscape",
+            cache_params,
+            result.model_dump(mode="json"),
+            self.cache_dir,
+            ttl=CLINICAL_TRIALS_CACHE_TTL,
+        )
+        return result
 
     # ------------------------------------------------------------------
     # Public: get_terminated_trials (TERMINATED pair query: count + top-50)
