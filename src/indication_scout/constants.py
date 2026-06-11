@@ -44,6 +44,14 @@ EXAMPLE_CACHE_DIR: Path = DEFAULT_CACHE_DIR / "examples"
 # holds {drug: epoch_seconds} so the seeded cache mtime reflects capture date.
 EXAMPLE_SEED_DIR: Path = _PROJECT_ROOT / "seed_examples"
 
+# -- Seed-report shortcut on analyse ----------------------------------------
+# When a user analyses a drug, a committed seed report under EXAMPLE_SEED_DIR that
+# is younger than SEED_REPORT_TTL_SECONDS (per captured_at.json) is loaded instead
+# of running the agents. SEED_REPORT_SPINNER_SECONDS is a purely cosmetic delay so
+# the load still shows the progress spinner.
+SEED_REPORT_TTL_SECONDS: int = 30 * 86400  # 30 days
+SEED_REPORT_SPINNER_SECONDS: int = 30
+
 # -- Hardcoded FDA approvals (used during temporal holdouts) ----------------
 # When the pipeline is run with --date-before, the live FDA-label lookup is
 # replaced with a hardcoded {drug: [{disease, approved}]} table loaded from

@@ -21,6 +21,19 @@ def fresh_store():
         yield store
 
 
+@pytest.fixture(autouse=True)
+def no_seed_report():
+    """Default the seed-report shortcut to a miss so _execute hits run_analysis.
+
+    Tests that exercise the seed-hit path patch this themselves.
+    """
+    with patch(
+        "indication_scout.api.routes.analyses.load_fresh_seed_report",
+        return_value=None,
+    ):
+        yield
+
+
 # --- _execute lifecycle (background runner) ---
 
 
@@ -64,6 +77,45 @@ async def test_execute_sets_cancelled_on_cancellation(fresh_store):
             await _execute(job)
 
     assert job.status == "cancelled"
+
+
+async def test_execute_serves_seed_report_without_running(fresh_store):
+    """A fresh seed report short-circuits the run: run_analysis is never called."""
+    job = fresh_store.create("metformin")
+    seed = SupervisorOutput(drug_name="metformin", summary="seeded")
+    run = AsyncMock()
+
+    with patch(
+        "indication_scout.api.routes.analyses.load_fresh_seed_report",
+        return_value=seed,
+    ), patch(
+        "indication_scout.api.routes.analyses.run_analysis", new=run
+    ), patch(
+        "indication_scout.api.routes.analyses.asyncio.sleep", new=AsyncMock()
+    ):
+        await _execute(job)
+
+    run.assert_not_awaited()
+    assert job.status == "done"
+    assert job.result is seed
+    assert job.error is None
+
+
+async def test_execute_runs_live_when_no_seed_report(fresh_store):
+    """No seed report falls through to run_analysis."""
+    job = fresh_store.create("metformin")
+    output = SupervisorOutput(drug_name="metformin", summary="live")
+    run = AsyncMock(return_value=(output, "report"))
+
+    with patch(
+        "indication_scout.api.routes.analyses.load_fresh_seed_report",
+        return_value=None,
+    ), patch("indication_scout.api.routes.analyses.run_analysis", new=run):
+        await _execute(job)
+
+    run.assert_awaited_once()
+    assert job.status == "done"
+    assert job.result is output
 
 
 # --- route layer (TestClient) ---

@@ -15,9 +15,11 @@ from indication_scout.api.schemas.analyses import (
     AnalysisRequest,
     AnalysisStatusResponse,
 )
+from indication_scout.constants import SEED_REPORT_SPINNER_SECONDS
 from indication_scout.report.format_report import format_report
 from indication_scout.services.analysis_runner import run_analysis
 from indication_scout.services.job_store import Job, job_store
+from indication_scout.services.seed_reports import load_fresh_seed_report
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,14 @@ async def _execute(job: Job) -> None:
     """Run the analysis for `job`, recording status/result/error. Catches cancellation."""
     job.status = "running"
     try:
+        seed = load_fresh_seed_report(job.drug_name)
+        if seed is not None:
+            # Fresh seed report: skip the agents, hold the spinner briefly, then serve it.
+            logger.info("Job %s served from seed report for %s", job.job_id, job.drug_name)
+            await asyncio.sleep(SEED_REPORT_SPINNER_SECONDS)
+            job.result = seed
+            job.status = "done"
+            return
         output, _ = await run_analysis(job.drug_name)
         job.result = output
         job.status = "done"

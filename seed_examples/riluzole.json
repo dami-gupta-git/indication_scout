@@ -1,0 +1,1444 @@
+{
+  "drug_name": "riluzole",
+  "candidate_diseases": [
+    "epilepsy",
+    "cardiac arrhythmia",
+    "seizure",
+    "neuropathic pain",
+    "migraine disorder"
+  ],
+  "mechanism": {
+    "drug_targets": {
+      "SCN1A": "ENSG00000144285",
+      "SCN5A": "ENSG00000183873",
+      "SCN4A": "ENSG00000007314",
+      "SCN7A": "ENSG00000136546",
+      "SCN2A": "ENSG00000136531",
+      "SCN9A": "ENSG00000169432",
+      "SCN3A": "ENSG00000153253",
+      "SCN11A": "ENSG00000168356",
+      "SCN8A": "ENSG00000196876",
+      "SCN10A": "ENSG00000185313"
+    },
+    "mechanisms_of_action": [
+      {
+        "mechanism_of_action": "Sodium channel alpha subunit blocker",
+        "action_type": "BLOCKER",
+        "target_ids": [
+          "ENSG00000144285",
+          "ENSG00000183873",
+          "ENSG00000007314",
+          "ENSG00000136546",
+          "ENSG00000136531",
+          "ENSG00000169432",
+          "ENSG00000153253",
+          "ENSG00000168356",
+          "ENSG00000196876",
+          "ENSG00000185313"
+        ],
+        "target_symbols": [
+          "SCN1A",
+          "SCN5A",
+          "SCN4A",
+          "SCN7A",
+          "SCN2A",
+          "SCN9A",
+          "SCN3A",
+          "SCN11A",
+          "SCN8A",
+          "SCN10A"
+        ]
+      }
+    ],
+    "candidates": [
+      {
+        "target_symbol": "SCN1A",
+        "action_type": "BLOCKER",
+        "disease_name": "epilepsy",
+        "disease_id": "EFO_0000474",
+        "disease_description": "A brain disorder characterized by episodes of abnormally increased neuronal discharge resulting in transient episodes of sensory or motor neurological dysfunction, or psychic dysfunction. These episodes may or may not be associated with loss of consciousness or convulsions.",
+        "target_function": "Pore-forming subunit of Nav1.1, a voltage-gated sodium (Nav) channel that directly mediates the depolarizing phase of action potentials in excitable membranes. Navs, also called VGSCs (voltage- gated sodium channels) or VDSCs (voltage-dependent sodium channels), operate by switching between closed and open conformations depending on the voltage difference across the membrane. In the open conformation they allow Na(+) ions to selectively pass through the pore, along their electrochemical gradient. The influx of Na(+) ions provokes membrane depolarization, initiating the propagation of electrical signals throughout cells and tissues. By regulating the excitability of neurons, ensures that they respond appropriately to synaptic inputs, maintaining the balance between excitation and inhibition in brain neural circuits. Nav1.1 plays a role in controlling the excitability and action potential propagation from somatosensory neurons, thereby contributing to the sensory perception of mechanically-induced pain.."
+      },
+      {
+        "target_symbol": "SCN2A",
+        "action_type": "BLOCKER",
+        "disease_name": "seizure",
+        "disease_id": "HP_0001250",
+        "disease_description": "A seizure is an intermittent abnormality of nervous system physiology characterized by a transient occurrence of signs and/or symptoms due to abnormal excessive or synchronous neuronal activity in the brain.",
+        "target_function": "Mediates the voltage-dependent sodium ion permeability of excitable membranes. Assuming opened or closed conformations in response to the voltage difference across the membrane, the protein forms a sodium-selective channel through which Na(+) ions may pass in accordance with their electrochemical gradient. Implicated in the regulation of hippocampal replay occurring within sharp wave ripples (SPW-R) important for memory.."
+      },
+      {
+        "target_symbol": "SCN3A",
+        "action_type": "BLOCKER",
+        "disease_name": "epilepsy",
+        "disease_id": "EFO_0000474",
+        "disease_description": "A brain disorder characterized by episodes of abnormally increased neuronal discharge resulting in transient episodes of sensory or motor neurological dysfunction, or psychic dysfunction. These episodes may or may not be associated with loss of consciousness or convulsions.",
+        "target_function": "Pore-forming subunit of Nav1.3, a voltage-gated sodium (Nav) channel that directly mediates the depolarizing phase of action potentials in excitable membranes. Navs, also called VGSCs (voltage- gated sodium channels) or VDSCs (voltage-dependent sodium channels), operate by switching between closed and open conformations depending on the voltage difference across the membrane. In the open conformation they allow Na(+) ions to selectively pass through the pore, along their electrochemical gradient. The influx of Na+ ions provokes membrane depolarization, initiating the propagation of electrical signals throughout cells and tissues. In some secretory cell types, it also participates in cell excitability through membrane depolarization and regulates cells responsiveness to stimuli triggering secretion. For instance, it controls the release of serotonin/5-hydroxytryptamine by enterochromaffin cells and is required for both glucagon- and glucose- induced insulin secretion in pancreatic endocrine cells.."
+      },
+      {
+        "target_symbol": "SCN1A",
+        "action_type": "BLOCKER",
+        "disease_name": "seizure",
+        "disease_id": "HP_0001250",
+        "disease_description": "A seizure is an intermittent abnormality of nervous system physiology characterized by a transient occurrence of signs and/or symptoms due to abnormal excessive or synchronous neuronal activity in the brain.",
+        "target_function": "Pore-forming subunit of Nav1.1, a voltage-gated sodium (Nav) channel that directly mediates the depolarizing phase of action potentials in excitable membranes. Navs, also called VGSCs (voltage- gated sodium channels) or VDSCs (voltage-dependent sodium channels), operate by switching between closed and open conformations depending on the voltage difference across the membrane. In the open conformation they allow Na(+) ions to selectively pass through the pore, along their electrochemical gradient. The influx of Na(+) ions provokes membrane depolarization, initiating the propagation of electrical signals throughout cells and tissues. By regulating the excitability of neurons, ensures that they respond appropriately to synaptic inputs, maintaining the balance between excitation and inhibition in brain neural circuits. Nav1.1 plays a role in controlling the excitability and action potential propagation from somatosensory neurons, thereby contributing to the sensory perception of mechanically-induced pain.."
+      },
+      {
+        "target_symbol": "SCN8A",
+        "action_type": "BLOCKER",
+        "disease_name": "seizure",
+        "disease_id": "HP_0001250",
+        "disease_description": "A seizure is an intermittent abnormality of nervous system physiology characterized by a transient occurrence of signs and/or symptoms due to abnormal excessive or synchronous neuronal activity in the brain.",
+        "target_function": "Pore-forming subunit of a voltage-gated sodium channel complex assuming opened or closed conformations in response to the voltage difference across membranes and through which sodium ions selectively pass along their electrochemical gradient. Contributes to neuronal excitability by regulating action potential threshold and propagation.."
+      }
+    ],
+    "summary": "Riluzole acts primarily as a voltage-gated sodium channel alpha subunit blocker, with its most pharmacologically consequential targets being SCN1A, SCN2A, and SCN8A. Across all three targets, the strongest disease associations are epileptic and neurodevelopmental disorders: SCN1A is most strongly linked to Dravet syndrome and generalized epilepsy with febrile seizures (overall scores up to 0.87), SCN2A to developmental and epileptic encephalopathy type 11 and benign familial infantile seizures (up to 0.84), and SCN8A to developmental and epileptic encephalopathy type 13 and seizure disorders (up to 0.84). These findings strongly support repurposing riluzole for refractory epilepsy syndromes — particularly SCN-gain-of-function channelopathies like SCN8A-DEE — where its sodium channel-blocking mechanism could directly counteract pathological hyperexcitability. Additionally, SCN2A's association with bipolar disorder (0.72) hints at a potential psychiatric repurposing angle worth further investigation."
+  },
+  "disease_findings": [
+    {
+      "disease": "seizure",
+      "source": "both",
+      "literature": {
+        "search_results": [
+          "riluzole AND \"Seizures\"",
+          "other nervous system drugs AND brain",
+          "sodium channel blocker AND brain",
+          "sodium channel alpha subunit inhibition AND brain",
+          "SCN1A AND \"Seizures\"",
+          "SCN2A AND \"Seizures\"",
+          "SCN8A AND \"Seizures\"",
+          "rilutek AND \"Seizures\"",
+          "teglutik AND \"Seizures\""
+        ],
+        "pmids": [
+          "20301664",
+          "39539628",
+          "36436594",
+          "27534393",
+          "20015615",
+          "40230689",
+          "10425092",
+          "39467455",
+          "11463511",
+          "37514193",
+          "19426166",
+          "11113304",
+          "11070180",
+          "35366788",
+          "2050198",
+          "12151762",
+          "10027876",
+          "15565488",
+          "25256961",
+          "25258535",
+          "39962245",
+          "37231000",
+          "29772289",
+          "38284540",
+          "40802746",
+          "40317512",
+          "40957853",
+          "31744750",
+          "20399573",
+          "40231558",
+          "32736018",
+          "38876110",
+          "32563287",
+          "38112280",
+          "20417575",
+          "30240518",
+          "1958504",
+          "32687414",
+          "23831053",
+          "40876124",
+          "40849530",
+          "15831717",
+          "38967655",
+          "12834914",
+          "16158388",
+          "11911860",
+          "7830074",
+          "12105145",
+          "11306014",
+          "9054261",
+          "30261623",
+          "40848130",
+          "10781102",
+          "10570051",
+          "7757466",
+          "11134619",
+          "7475242",
+          "15274641",
+          "12835116",
+          "18991662",
+          "19692609",
+          "40482731",
+          "8887969",
+          "2547381",
+          "15833746",
+          "30125271",
+          "11422459",
+          "22983350",
+          "29692722",
+          "8391120",
+          "10514834",
+          "32715162",
+          "2443496",
+          "34750860",
+          "8663157",
+          "40622667",
+          "9603190",
+          "9760702",
+          "9295379",
+          "31904117",
+          "35074891",
+          "35696452",
+          "24076350",
+          "28202706",
+          "40634438",
+          "34843701",
+          "24014518",
+          "37467479",
+          "21248271",
+          "37206664",
+          "17347258",
+          "40521631",
+          "15880351",
+          "20301494",
+          "23398611",
+          "30659983",
+          "28880996",
+          "29429462",
+          "33189882",
+          "29691040",
+          "28379373",
+          "35431799",
+          "31904126",
+          "40963013",
+          "31924505",
+          "35483386",
+          "31618474",
+          "31904120",
+          "34850743",
+          "39032529",
+          "40694750",
+          "30361185",
+          "38539105",
+          "37429183",
+          "38651838",
+          "24579881",
+          "39596607",
+          "35417276",
+          "34431999",
+          "40110302",
+          "39435659",
+          "37160367",
+          "27559564",
+          "39158034",
+          "41623181",
+          "35802036",
+          "33658654",
+          "38464208",
+          "25227913",
+          "38802994",
+          "35234610",
+          "37440794",
+          "31174070",
+          "33822038",
+          "32090326",
+          "31675620",
+          "39556335",
+          "31943325",
+          "18689289",
+          "40534930",
+          "25149665",
+          "28193882",
+          "32968789",
+          "34478772",
+          "17507170",
+          "26005122",
+          "34553376"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "20399573",
+            "title": "Randomized double-blind placebo-controlled trial of bevacizumab therapy for radiation necrosis of the central nervous system.",
+            "abstract": "PURPOSE: To conduct a controlled trial of bevacizumab for the treatment of symptomatic radiation necrosis of the brain. METHODS AND MATERIALS: A total of 14 patients were entered into a placebo-controlled randomized double-blind study of bevacizumab for the treatment of central nervous system radiation necrosis. All patients were required to have radiographic or biopsy proof of central nervous system radiation necrosis and progressive neurologic symptoms or signs. Eligible patients had undergone irradiation for head-and-neck carcinoma, meningioma, or low- to mid-grade glioma. Patients were randomized to receive intravenous saline or bevacizumab at 3-week intervals. The magnetic resonance imaging findings 3 weeks after the second treatment and clinical signs and symptoms defined the response or progression. RESULTS: The volumes of necrosis estimated on T(2)-weighted fluid-attenuated inversion recovery and T(1)-weighted gadolinium-enhanced magnetic resonance imaging scans demonstrated that although no patient receiving placebo responded (0 of 7), all bevacizumab-treated patients did so (5 of 5 randomized and 7 of 7 crossover) with decreases in T(2)-weighted fluid-attenuated inversion recovery and T(1)-weighted gadolinium-enhanced volumes and a decrease in endothelial transfer constant. All bevacizumab-treated patients-and none of the placebo-treated patients-showed improvement in neurologic symptoms or signs. At a median of 10 months after the last dose of bevacizumab in patients receiving all four study doses, only 2 patients had experienced a recurrence of magnetic resonance imaging changes consistent with progressive radiation necrosis; one patient received a single additional dose of bevacizumab and the other patient received two doses. CONCLUSION: The Class I evidence of bevacizumab efficacy from the present study in the treatment of central nervous system radiation necrosis justifies consideration of this treatment option for people with radiation necrosis secondary to the treatment of head-and-neck cancer and brain cancer.",
+            "similarity": 0.3723783549279861,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, N.I.H., Extramural",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "15565488",
+            "title": "Interactions between riluzole and conventional antiepileptic drugs -- a comparison of results obtained in the subthreshold method and isobolographic analysis.",
+            "abstract": "The exact types of pharmacodynamic interactions between riluzole and conventional antiepileptic drugs were evaluated in two available ways, the subthreshold and isobolographic analysis. Maximal electroshock test in mice was used as an animal model for generalized tonic-clonic convulsions. In the first method, riluzole (1.25-2.5 mg/kg) significantly raised the electroconvulsive threshold in mice. The drug administered at its subprotective dose of 0.3125 mg/kg enhanced the antiseizure activity of carbamazepine and phenobarbital, while, when applied at the higher dose of 0.625 mg/kg, it potentiated also the action of valproate and diphenylhydantoin. Riluzole (0.625) alone and in combinations with antiepileptic drugs did not produced any motor or log-term memory deficit. Results obtained from isobolographic analysis determined pure additive interaction between riluzole and all used conventional antiepileptic drugs. Since riluzole did not change plasma concentrations of co-administered antiepileptics, pharmacokinetic interactions, at least in terms of their free plasma levels, do not seem probable. The results of the present study confirm significant antiseizure properties of riluzole in the model of generalized tonic-clonic epileptic attacks. Moreover, comparison of effects obtained from both methods evaluating drug interactions strongly indicates a crucial role of the isobolographic analysis in verification and supplementation data achieved from the subthreshold method.",
+            "similarity": 0.7382392974677211,
+            "pubtype": [
+              "Comparative Study",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "17507170",
+            "title": "Anti-glutamatergic effect of riluzole: comparison with valproic acid.",
+            "abstract": "Riluzole, an anti-amyotrophic lateral sclerosis drug, known to decrease presynaptic glutamate release, is viewed as a candidate supplementary medication for epilepsy. In the present study, we compared the effects of riluzole and valproate (VPA) in the pilocarpine-induced limbic seizure model and in the gamma-hydroxybutyrate lactone (GBL)-induced absence seizure model. We applied immunohistochemical study for vesicular transporter 1 (VGLUT1) and extracellular recording in the rat dentate gyrus of both pilocarpine- and GBL-induced seizure models to measure effects of riluzole and VPA. Both VPA and riluzole treatments reduced VGLUT1 immunoreactivity. Riluzole treatment completely inhibited pre-ictal spikes and spike-wave discharges in the pilocarpine- and GBL-induced epilepsy models, whereas VPA partially inhibited these phenomena. In both seizure models, the anti-epileptic effects of VPA and riluzole are basically related to anti-glutamatergic (reducing field excitatory postsynaptic potential slope and excitability ratio), not GABAergic (paired-pulse inhibition) effect. Riluzole was more effective at reducing seizure activity in both epilepsy models than VPA. These results suggest that riluzole is a potential antiepileptic drug with activity against limbic seizure and absence seizure.",
+            "similarity": 0.6740783150075098,
+            "pubtype": [
+              "Comparative Study",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "The evidence from two preclinical studies supports the potential repurposing of riluzole for seizure treatment. Riluzole demonstrated antiseizure properties in the maximal electroshock test in mice and showed additive interactions with conventional antiepileptic drugs without pharmacokinetic interference (PMID: 15565488). Additionally, riluzole completely inhibited pre-ictal spikes and spike-wave discharges in both pilocarpine-induced limbic seizure and GBL-induced absence seizure models in rats, outperforming valproic acid (PMID: 17507170). PMID: 20399573 is irrelevant as it concerns bevacizumab for radiation necrosis and provides no evidence regarding riluzole or seizures.",
+          "study_count": 2,
+          "strength": "weak",
+          "key_findings": [
+            "Riluzole (1.25-2.5 mg/kg) significantly raised the electroconvulsive threshold in mice in the maximal electroshock test (PMID: 15565488)",
+            "Riluzole at subprotective doses enhanced the antiseizure activity of carbamazepine and phenobarbital, and at higher doses also potentiated valproate and diphenylhydantoin (PMID: 15565488)",
+            "Isobolographic analysis determined pure additive interactions between riluzole and all conventional antiepileptic drugs tested, with no pharmacokinetic interactions detected via plasma concentration measurements (PMID: 15565488)",
+            "Riluzole alone and in combinations with antiepileptic drugs did not produce motor or long-term memory deficits in mice (PMID: 15565488)",
+            "Riluzole treatment completely inhibited pre-ictal spikes and spike-wave discharges in the pilocarpine-induced limbic seizure model and the GBL-induced absence seizure model in rats (PMID: 17507170)",
+            "Riluzole was more effective at reducing seizure activity in both epilepsy models than valproic acid (PMID: 17507170)",
+            "Both riluzole and VPA reduced VGLUT1 immunoreactivity, and the anti-epileptic effects of both drugs were related to anti-glutamatergic effects rather than GABAergic effects (PMID: 17507170)"
+          ],
+          "supporting_pmids": [
+            "15565488",
+            "17507170"
+          ]
+        },
+        "summary": "Evidence strength: weak"
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 0,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 0
+          },
+          "trials": []
+        },
+        "completed": {
+          "total_count": 0,
+          "trials": []
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 745,
+          "competitors": [
+            {
+              "sponsor": "Azurity Pharmaceuticals",
+              "drug_name": "Zonisamide Oral Product",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 40,
+              "most_recent_start": "2026-09"
+            },
+            {
+              "sponsor": "Elizabeth Donner",
+              "drug_name": "Epidiolex 100 mg/mL Oral Solution",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 25,
+              "most_recent_start": "2026-06-01"
+            },
+            {
+              "sponsor": "Rapport Therapeutics Inc.",
+              "drug_name": "RAP-219",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 2,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 645,
+              "most_recent_start": "2026-06"
+            },
+            {
+              "sponsor": "Nebraska Methodist Health System",
+              "drug_name": "Levetiracetam",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 1240,
+              "most_recent_start": "2026-01-01"
+            },
+            {
+              "sponsor": "Fundació Institut de Recerca de l'Hospital de la Santa Creu i Sant Pau",
+              "drug_name": "Levetiracetam 500mg",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 120,
+              "most_recent_start": "2025-12-22"
+            },
+            {
+              "sponsor": "Ayal A. Aizer, MD",
+              "drug_name": "Levetiracetam (Keppra)",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 150,
+              "most_recent_start": "2025-12-23"
+            },
+            {
+              "sponsor": "George Washington University",
+              "drug_name": "Glycerol Tributyrate",
+              "drug_type": "Drug",
+              "max_phase": "Phase 1/Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 24,
+              "most_recent_start": "2026-10"
+            },
+            {
+              "sponsor": "Biohaven Therapeutics Ltd.",
+              "drug_name": "BHV-7000",
+              "drug_type": "Drug",
+              "max_phase": "Phase 1",
+              "trial_count": 1,
+              "statuses": [
+                "ENROLLING_BY_INVITATION"
+              ],
+              "total_enrollment": 5,
+              "most_recent_start": "2026-01-15"
+            },
+            {
+              "sponsor": "University of Texas Southwestern Medical Center",
+              "drug_name": "COBENFY KarXT (50/20 mg)",
+              "drug_type": "Drug",
+              "max_phase": "Early Phase 1",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 50,
+              "most_recent_start": "2026-10"
+            }
+          ],
+          "phase_distribution": {
+            "Phase 1/Phase 2": 1,
+            "Early Phase 1": 1,
+            "Phase 4": 2,
+            "Phase 3": 4,
+            "Phase 1": 1,
+            "Phase 2": 1
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT06792500",
+              "sponsor": "George Washington University",
+              "drug": "Glycerol Tributyrate",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07228338",
+              "sponsor": "University of Texas Southwestern Medical Center",
+              "drug": "COBENFY KarXT (50/20 mg)",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT06534502",
+              "sponsor": "Azurity Pharmaceuticals",
+              "drug": "Zonisamide Oral Product",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07594119",
+              "sponsor": "Rapport Therapeutics Inc.",
+              "drug": "RAP-219",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT06924827",
+              "sponsor": "Elizabeth Donner",
+              "drug": "Epidiolex 100 mg/mL Oral Solution",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07563881",
+              "sponsor": "Rapport Therapeutics Inc.",
+              "drug": "RAP-219",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07262268",
+              "sponsor": "Biohaven Therapeutics Ltd.",
+              "drug": "BHV-7000",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07220902",
+              "sponsor": "Nebraska Methodist Health System",
+              "drug": "Levetiracetam",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07130786",
+              "sponsor": "Ayal A. Aizer, MD",
+              "drug": "Levetiracetam (Keppra)",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07234695",
+              "sponsor": "Fundació Institut de Recerca de l'Hospital de la Santa Creu i Sant Pau",
+              "drug": "Levetiracetam 500mg",
+              "phase": "Phase 3"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "riluzole",
+            "bhv-0223",
+            "exservan",
+            "nsc-753433",
+            "nsc-759823",
+            "rilutek",
+            "riluzol",
+            "riluzole zentiva",
+            "rp 54274",
+            "rp-54274",
+            "teglutik",
+            "tiglutik",
+            "tiglutik kit"
+          ]
+        },
+        "summary": "There is no clinical trial evidence for riluzole in seizure: the registry returned zero trials across all statuses — no recruiting, completed, or terminated studies — and this exact indication does not appear on the drug's FDA labels in this run. The seizure landscape has 9 active competitor programs on record, meaning the indication is being pursued clinically, but riluzole has no documented footprint in this space. With no trial history and no approval signal, there is no registry-level evidence to support or refute a repurposing hypothesis for riluzole in seizure at this time."
+      },
+      "blurb": {
+        "stage": "Rationale-only, no trials",
+        "literature": "Weak, observational and preclinical reports",
+        "blocker": "No clinical trial program on record",
+        "active_programs": "None active",
+        "key_risk": "No clinical validation; hypothesis untested in controlled trials",
+        "verdict": "Untested",
+        "watch": "",
+        "prose": "The literature signal for riluzole in seizure is weak, with no completed randomized trials on record and evidence limited to preclinical and observational reports. The hypothesis remains biologically plausible given riluzole's sodium channel-blocking mechanism, but no dedicated clinical development program has been initiated."
+      }
+    },
+    {
+      "disease": "epilepsy",
+      "source": "both",
+      "literature": {
+        "search_results": [
+          "riluzole AND \"Epilepsy\"",
+          "other nervous system drugs AND brain",
+          "sodium channel blocker AND brain",
+          "sodium channel alpha subunit inhibition AND brain",
+          "SCN1A AND \"Epilepsy\"",
+          "SCN2A AND \"Epilepsy\"",
+          "SCN8A AND \"Epilepsy\"",
+          "rilutek AND \"Epilepsy\"",
+          "BHV-0223 AND \"Epilepsy\""
+        ],
+        "pmids": [
+          "20301664",
+          "36436594",
+          "39539628",
+          "37062836",
+          "38967655",
+          "40230689",
+          "37514193",
+          "39467455",
+          "1915583",
+          "33442870",
+          "11463511",
+          "20015615",
+          "30964046",
+          "12151762",
+          "37782796",
+          "23707481",
+          "42003125",
+          "17507170",
+          "30656647",
+          "28779378",
+          "39962245",
+          "37231000",
+          "29772289",
+          "38284540",
+          "40802746",
+          "40317512",
+          "40957853",
+          "31744750",
+          "20399573",
+          "40231558",
+          "32736018",
+          "38876110",
+          "32563287",
+          "38112280",
+          "20417575",
+          "30240518",
+          "1958504",
+          "32687414",
+          "23831053",
+          "40876124",
+          "40849530",
+          "15831717",
+          "12834914",
+          "16158388",
+          "11911860",
+          "7830074",
+          "12105145",
+          "11306014",
+          "9054261",
+          "30261623",
+          "40848130",
+          "10781102",
+          "10570051",
+          "7757466",
+          "11134619",
+          "7475242",
+          "15274641",
+          "12835116",
+          "18991662",
+          "19692609",
+          "40482731",
+          "8887969",
+          "2547381",
+          "15833746",
+          "30125271",
+          "11422459",
+          "22983350",
+          "29692722",
+          "8391120",
+          "10514834",
+          "32715162",
+          "2443496",
+          "34750860",
+          "8663157",
+          "40622667",
+          "9603190",
+          "9760702",
+          "9295379",
+          "15880351",
+          "35074891",
+          "34218210",
+          "37741152",
+          "33756436",
+          "28202706",
+          "20831750",
+          "24076350",
+          "40178659",
+          "38513571",
+          "39336815",
+          "31009440",
+          "35338956",
+          "24014518",
+          "21248271",
+          "17347258",
+          "37451178",
+          "23801004",
+          "37467479",
+          "31054517",
+          "37578743",
+          "35431799",
+          "31904126",
+          "31904117",
+          "31924505",
+          "29691040",
+          "29655203",
+          "28379373",
+          "39032529",
+          "40963013",
+          "33914194",
+          "36865317",
+          "36750385",
+          "38722169",
+          "37008993",
+          "40894722",
+          "31618474",
+          "39637100",
+          "35872622",
+          "34986624",
+          "27559564",
+          "34353676",
+          "34431999",
+          "38802994",
+          "28212175",
+          "38802989",
+          "40110302",
+          "31402610",
+          "39158034",
+          "41380541",
+          "31904118",
+          "38845412",
+          "37901435",
+          "35037686",
+          "39435659",
+          "26410685",
+          "41017705",
+          "17659475",
+          "30469496",
+          "32968789",
+          "35835895",
+          "31550457"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "20399573",
+            "title": "Randomized double-blind placebo-controlled trial of bevacizumab therapy for radiation necrosis of the central nervous system.",
+            "abstract": "PURPOSE: To conduct a controlled trial of bevacizumab for the treatment of symptomatic radiation necrosis of the brain. METHODS AND MATERIALS: A total of 14 patients were entered into a placebo-controlled randomized double-blind study of bevacizumab for the treatment of central nervous system radiation necrosis. All patients were required to have radiographic or biopsy proof of central nervous system radiation necrosis and progressive neurologic symptoms or signs. Eligible patients had undergone irradiation for head-and-neck carcinoma, meningioma, or low- to mid-grade glioma. Patients were randomized to receive intravenous saline or bevacizumab at 3-week intervals. The magnetic resonance imaging findings 3 weeks after the second treatment and clinical signs and symptoms defined the response or progression. RESULTS: The volumes of necrosis estimated on T(2)-weighted fluid-attenuated inversion recovery and T(1)-weighted gadolinium-enhanced magnetic resonance imaging scans demonstrated that although no patient receiving placebo responded (0 of 7), all bevacizumab-treated patients did so (5 of 5 randomized and 7 of 7 crossover) with decreases in T(2)-weighted fluid-attenuated inversion recovery and T(1)-weighted gadolinium-enhanced volumes and a decrease in endothelial transfer constant. All bevacizumab-treated patients-and none of the placebo-treated patients-showed improvement in neurologic symptoms or signs. At a median of 10 months after the last dose of bevacizumab in patients receiving all four study doses, only 2 patients had experienced a recurrence of magnetic resonance imaging changes consistent with progressive radiation necrosis; one patient received a single additional dose of bevacizumab and the other patient received two doses. CONCLUSION: The Class I evidence of bevacizumab efficacy from the present study in the treatment of central nervous system radiation necrosis justifies consideration of this treatment option for people with radiation necrosis secondary to the treatment of head-and-neck cancer and brain cancer.",
+            "similarity": 0.37777632123431315,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, N.I.H., Extramural",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "17507170",
+            "title": "Anti-glutamatergic effect of riluzole: comparison with valproic acid.",
+            "abstract": "Riluzole, an anti-amyotrophic lateral sclerosis drug, known to decrease presynaptic glutamate release, is viewed as a candidate supplementary medication for epilepsy. In the present study, we compared the effects of riluzole and valproate (VPA) in the pilocarpine-induced limbic seizure model and in the gamma-hydroxybutyrate lactone (GBL)-induced absence seizure model. We applied immunohistochemical study for vesicular transporter 1 (VGLUT1) and extracellular recording in the rat dentate gyrus of both pilocarpine- and GBL-induced seizure models to measure effects of riluzole and VPA. Both VPA and riluzole treatments reduced VGLUT1 immunoreactivity. Riluzole treatment completely inhibited pre-ictal spikes and spike-wave discharges in the pilocarpine- and GBL-induced epilepsy models, whereas VPA partially inhibited these phenomena. In both seizure models, the anti-epileptic effects of VPA and riluzole are basically related to anti-glutamatergic (reducing field excitatory postsynaptic potential slope and excitability ratio), not GABAergic (paired-pulse inhibition) effect. Riluzole was more effective at reducing seizure activity in both epilepsy models than VPA. These results suggest that riluzole is a potential antiepileptic drug with activity against limbic seizure and absence seizure.",
+            "similarity": 0.6815515379727155,
+            "pubtype": [
+              "Comparative Study",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "1915583",
+            "title": "Anticonvulsant and sleep-waking influences of riluzole in a rat model of absence epilepsy.",
+            "abstract": "Six WAG/Rij rats, an animal model of human absence epilepsy, were injected intraperitoneally with riluzole. At 4 mg/kg, riluzole decreased the number, mean duration and spike-frequency of the spontaneously occurring discharges for 3 h. Riluzole also increased slow wave sleep at the expense of waking. As riluzole at 3 mg/kg decreased the number and spike-frequency of the discharges without inducing a sedative effect, this compound could be of therapeutic interest in human absence epilepsy.",
+            "similarity": 0.6770872928112046,
+            "pubtype": [
+              "Journal Article"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "Two of the three provided abstracts offer relevant preclinical evidence supporting riluzole as a candidate antiepileptic drug. Riluzole completely inhibited pre-ictal spikes and spike-wave discharges in both pilocarpine-induced limbic seizure and GBL-induced absence seizure rat models, outperforming valproic acid (PMID: 17507170). In WAG/Rij rats, a model of human absence epilepsy, riluzole at 3 mg/kg reduced the number and spike-frequency of spontaneous discharges without sedative effects (PMID: 1915583). The third abstract (PMID: 20399573) concerns bevacizumab for radiation necrosis and is entirely irrelevant to riluzole or epilepsy.",
+          "study_count": 2,
+          "strength": "weak",
+          "key_findings": [
+            "Riluzole completely inhibited pre-ictal spikes and spike-wave discharges in the pilocarpine-induced limbic seizure model, whereas valproic acid only partially inhibited these phenomena (PMID: 17507170)",
+            "Riluzole completely inhibited spike-wave discharges in the GBL-induced absence seizure model and was more effective than valproic acid in both epilepsy models (PMID: 17507170)",
+            "Both valproic acid and riluzole reduced VGLUT1 immunoreactivity, and their anti-epileptic effects were related to anti-glutamatergic rather than GABAergic mechanisms (PMID: 17507170)",
+            "In WAG/Rij rats (a model of human absence epilepsy), riluzole at 4 mg/kg decreased the number, mean duration, and spike-frequency of spontaneous discharges for 3 hours (PMID: 1915583)",
+            "Riluzole at 3 mg/kg decreased the number and spike-frequency of discharges in WAG/Rij rats without inducing a sedative effect, suggesting potential therapeutic interest in human absence epilepsy (PMID: 1915583)",
+            "Riluzole increased slow wave sleep at the expense of waking at the 4 mg/kg dose in WAG/Rij rats (PMID: 1915583)"
+          ],
+          "supporting_pmids": [
+            "17507170",
+            "1915583"
+          ]
+        },
+        "summary": "Evidence strength: weak"
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 0,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 0
+          },
+          "trials": []
+        },
+        "completed": {
+          "total_count": 0,
+          "trials": []
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 2215,
+          "competitors": [
+            {
+              "sponsor": "Azurity Pharmaceuticals",
+              "drug_name": "Zonisamide Oral Product",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 40,
+              "most_recent_start": "2026-09"
+            },
+            {
+              "sponsor": "Elizabeth Donner",
+              "drug_name": "Epidiolex 100 mg/mL Oral Solution",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 25,
+              "most_recent_start": "2026-06-01"
+            },
+            {
+              "sponsor": "Hugo W. Moser Research Institute at Kennedy Krieger, Inc.",
+              "drug_name": "methylphenidate hydrochloride (Jornay PM)",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 25,
+              "most_recent_start": "2026-05"
+            },
+            {
+              "sponsor": "Rapport Therapeutics Inc.",
+              "drug_name": "RAP-219",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 312,
+              "most_recent_start": "2026-06"
+            },
+            {
+              "sponsor": "Ono Pharmaceutical Co., Ltd.",
+              "drug_name": "Cenobamate (tablet) for 12 to < 18 year olds",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 20,
+              "most_recent_start": "2026-05-30"
+            },
+            {
+              "sponsor": "University of Manitoba",
+              "drug_name": "Placebo",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 90,
+              "most_recent_start": "2026-07-27"
+            },
+            {
+              "sponsor": "Shanghai UniXell Biotechnology Co., Ltd",
+              "drug_name": "UX-GIP001",
+              "drug_type": "Drug",
+              "max_phase": "Phase 1",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 12,
+              "most_recent_start": "2026-05-20"
+            },
+            {
+              "sponsor": "University of Texas Southwestern Medical Center",
+              "drug_name": "COBENFY KarXT (50/20 mg)",
+              "drug_type": "Drug",
+              "max_phase": "Early Phase 1",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 50,
+              "most_recent_start": "2026-10"
+            },
+            {
+              "sponsor": "Xuanwu Hospital, Beijing",
+              "drug_name": "Everolimus",
+              "drug_type": "Drug",
+              "max_phase": "Early Phase 1",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 5,
+              "most_recent_start": "2026-07-01"
+            },
+            {
+              "sponsor": "Brigham and Women's Hospital",
+              "drug_name": "Cenobamate",
+              "drug_type": "Drug",
+              "max_phase": "Early Phase 1",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 10,
+              "most_recent_start": "2026-06"
+            }
+          ],
+          "phase_distribution": {
+            "Early Phase 1": 3,
+            "Phase 4": 3,
+            "Phase 2": 1,
+            "Phase 3": 2,
+            "Phase 1": 1
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT07228338",
+              "sponsor": "University of Texas Southwestern Medical Center",
+              "drug": "COBENFY KarXT (50/20 mg)",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT06534502",
+              "sponsor": "Azurity Pharmaceuticals",
+              "drug": "Zonisamide Oral Product",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07023744",
+              "sponsor": "University of Manitoba",
+              "drug": "Placebo",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07095933",
+              "sponsor": "Xuanwu Hospital, Beijing",
+              "drug": "Everolimus",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT06352723",
+              "sponsor": "Brigham and Women's Hospital",
+              "drug": "Cenobamate",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07594119",
+              "sponsor": "Rapport Therapeutics Inc.",
+              "drug": "RAP-219",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT06924827",
+              "sponsor": "Elizabeth Donner",
+              "drug": "Epidiolex 100 mg/mL Oral Solution",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07594158",
+              "sponsor": "Ono Pharmaceutical Co., Ltd.",
+              "drug": "Cenobamate (tablet) for 12 to < 18 year olds",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07572812",
+              "sponsor": "Shanghai UniXell Biotechnology Co., Ltd",
+              "drug": "UX-GIP001",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07594652",
+              "sponsor": "Hugo W. Moser Research Institute at Kennedy Krieger, Inc.",
+              "drug": "methylphenidate hydrochloride (Jornay PM)",
+              "phase": "Phase 4"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "riluzole",
+            "bhv-0223",
+            "exservan",
+            "nsc-753433",
+            "nsc-759823",
+            "rilutek",
+            "riluzol",
+            "riluzole zentiva",
+            "rp 54274",
+            "rp-54274",
+            "teglutik",
+            "tiglutik",
+            "tiglutik kit"
+          ]
+        },
+        "summary": "Riluzole has no registered clinical trial activity in epilepsy — zero trials across all statuses on CT.gov — and this exact indication does not appear on its FDA labels. There are no completed, terminated, or active trials to draw any clinical signal from, meaning the repurposing hypothesis is entirely untested at the clinical level. The epilepsy landscape is competitive with 10 active competitor programs identified, so any new entrant would face a crowded field; however, the complete absence of prior clinical work means there are no stopping signals or efficacy readouts to weigh against the mechanistic rationale (riluzole's glutamate-modulating and sodium-channel-blocking properties could theoretically be relevant to seizure suppression, but this remains purely preclinical conjecture based on available registry data)."
+      },
+      "blurb": {
+        "stage": "Rationale-only, no trials",
+        "literature": "Weak, observational and preclinical reports",
+        "blocker": "No clinical trial program on record",
+        "active_programs": "None active",
+        "key_risk": "No clinical validation; hypothesis untested in controlled trials",
+        "verdict": "Untested",
+        "watch": "",
+        "prose": "The literature signal for riluzole in epilepsy is weak, with no completed trials on record and evidence confined to preclinical and observational data. No dedicated clinical development program for this indication has been identified in this run."
+      }
+    },
+    {
+      "disease": "cardiac arrhythmia",
+      "source": "competitor",
+      "literature": {
+        "search_results": [
+          "riluzole AND \"Arrhythmias, Cardiac\"",
+          "nervous system drugs AND heart",
+          "sodium channel blocker AND heart",
+          "sodium channel antagonist AND cardiac",
+          "SCN5A AND \"Arrhythmias, Cardiac\"",
+          "SCN1A AND \"Arrhythmias, Cardiac\"",
+          "rilutek AND \"Arrhythmias, Cardiac\"",
+          "exservan AND \"Arrhythmias, Cardiac\"",
+          "sodium channel inhibition AND arrhythmia"
+        ],
+        "pmids": [
+          "24256163",
+          "25538156",
+          "10796057",
+          "21124787",
+          "37678938",
+          "18694365",
+          "8439119",
+          "38103633",
+          "3886751",
+          "2871803",
+          "39498795",
+          "6545991",
+          "4402889",
+          "3913496",
+          "17384461",
+          "22687510",
+          "34418640",
+          "15649244",
+          "28925890",
+          "26033907",
+          "25174932",
+          "19149731",
+          "40693369",
+          "8531612",
+          "6137841",
+          "38702961",
+          "29990839",
+          "31774463",
+          "39660576",
+          "41562906",
+          "31914330",
+          "28709698",
+          "11790929",
+          "29748178",
+          "23702286",
+          "14607450",
+          "25772290",
+          "22723299",
+          "29127493",
+          "8026023",
+          "12208117",
+          "27765191",
+          "28238302",
+          "14978516",
+          "8573554",
+          "24713422",
+          "27586293",
+          "26903377",
+          "33515676",
+          "29042254",
+          "39276399",
+          "19442209",
+          "10849875",
+          "41353348",
+          "28473457",
+          "34734981",
+          "30153324",
+          "29929989",
+          "27401036",
+          "39104320",
+          "28727929",
+          "18032528",
+          "25376899",
+          "11120378",
+          "12814325",
+          "32893267",
+          "37122208",
+          "39973098",
+          "34649699",
+          "32533946",
+          "35130036",
+          "35394010",
+          "41213870",
+          "38244712",
+          "20645984",
+          "35163304",
+          "37965733",
+          "20091048",
+          "25186574",
+          "40543898",
+          "36524479",
+          "19041666",
+          "19377496",
+          "28294644",
+          "38875491",
+          "39862709",
+          "32207228",
+          "24155976",
+          "38430092",
+          "18251840",
+          "30146492",
+          "26749013",
+          "23524966",
+          "34161902",
+          "23570977",
+          "23524959",
+          "18251842",
+          "40829586",
+          "40239882",
+          "38639742",
+          "35628543",
+          "32453071",
+          "37701589",
+          "23292167",
+          "32418916",
+          "32003781",
+          "28336914",
+          "15320470",
+          "27498076",
+          "8387886",
+          "28428622",
+          "21616062",
+          "36908162"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "38702961",
+            "title": "Safety and efficacy of long-term sodium channel blocker therapy for early rhythm control: the EAST-AFNET 4 trial.",
+            "abstract": "AIMS: Clinical concerns exist about the potential proarrhythmic effects of the sodium channel blockers (SCBs) flecainide and propafenone in patients with cardiovascular disease. Sodium channel blockers were used to deliver early rhythm control (ERC) therapy in EAST-AFNET 4. METHODS AND RESULTS: We analysed the primary safety outcome (death, stroke, or serious adverse events related to rhythm control therapy) and primary efficacy outcome (cardiovascular death, stroke, and hospitalization for worsening of heart failure (HF) or acute coronary syndrome) during SCB intake for patients with ERC (n = 1395) in EAST-AFNET 4. The protocol discouraged flecainide and propafenone in patients with reduced left ventricular ejection fraction and suggested stopping therapy upon QRS prolongation >25% on therapy. Flecainide or propafenone was given to 689 patients [age 69 (8) years; CHA2DS2-VASc 3.2 (1); 177 with HF; 41 with prior myocardial infarction, coronary artery bypass graft, or percutaneous coronary intervention; 26 with left ventricular hypertrophy >15 mm; median therapy duration 1153 [237, 1828] days]. The primary efficacy outcome occurred less often in patients treated with SCB [3/100 (99/3316) patient-years] than in patients who never received SCB [SCBnever 4.9/100 (150/3083) patient-years, P < 0.001]. There were numerically fewer primary safety outcomes in patients receiving SCB [2.9/100 (96/3359) patient-years] than in SCBnever patients [4.2/100 (135/3220) patient-years, adjusted P = 0.015]. Sinus rhythm at 2 years was similar between groups [SCB 537/610 (88); SCBnever 472/579 (82)]. CONCLUSION: Long-term therapy with flecainide or propafenone appeared to be safe in the EAST-AFNET 4 trial to deliver effective ERC therapy, including in selected patients with stable cardiovascular disease such as coronary artery disease and stable HF. Clinical Trial Registration ISRCTN04708680, NCT01288352, EudraCT2010-021258-20, www.easttrial.org.",
+            "similarity": 0.593853848673518,
+            "pubtype": [
+              "Journal Article",
+              "Multicenter Study",
+              "Randomized Controlled Trial"
+            ]
+          },
+          {
+            "pmid": "10796057",
+            "title": "Frequency-independent blockade of cardiac Na+ channels by riluzole: comparison with established anticonvulsants and class I anti-arrhythmics.",
+            "abstract": "The Na+ channel blocking activity and the antiarrhythmic effects of riluzole, and established anticonvulsants (lamotrigine and lifarizine) and class I antiarrhythmics (lidocaine, flecainide and disopyramide) were studied under in vitro and in vivo conditions. Guinea-pig cardiac Purkinje fibres were superfused with Tyrode solution and electrically driven for recording action potentials with intracellular microelectrodes. In these preparations paced at 1 Hz, all compounds tested produced concentration-dependent (0.3-100 microM) reductions in the maximum rate of depolarization of the action potential (Vmax). For riluzole, phenytoin and carbamazepine this effect was frequency-independent (0.5-6 Hz) but for lamotrigine, lifarizine, lidocaine, flecainide and disopyramide it was frequency-dependent. In anaesthetized rats, riluzole, in contrast to flecainide, did not delay the appearance of aconitine-induced arrhythmias. Riluzole (0.3-3.9 mg/kg, i.v.) also lacked notable cardiac electrophysiological effects in anaesthetized dogs. At an i.v. dose of 3.0 mg/kg riluzole failed to restore a normal sinus rhythm in conscious dogs with polymorphic arrhythmias produced by ligation of the left anterior descending coronary artery 24 h earlier. These results indicate that riluzole, phenytoin and carbamazepine, unlike lamotrigine, lifarizine and flecainide, block cardiac Na+ channels in a frequency-independent manner. This property may account for the lack of antiarrhythmic activity of riluzole, phenytoin and carbamazepine in animal models of arrhythmias that respond to class I antiarrhythmic drugs. It may also account for the clinical observation that riluzole does not seem to cause the unfavourable electrocardiographic changes characteristic of drugs that block cardiac Na+ channels in a frequency-dependent manner.",
+            "similarity": 0.7257521141024393,
+            "pubtype": [
+              "Comparative Study",
+              "Journal Article"
+            ]
+          },
+          {
+            "pmid": "21124787",
+            "title": "The persistent sodium current blocker riluzole is antiarrhythmic and anti-ischaemic in a pig model of acute myocardial infarction.",
+            "abstract": "BACKGROUND: The potential of the cardiac persistent sodium current as a target for protection of the myocardium from ischaemia and reperfusion injury is gaining increasing interest. We have investigated the anti-ischaemic and antiarrhythmic effects of riluzole, a selective INaP blocker, in an open chest pig model of infarction. METHODS AND PRINCIPAL FINDINGS: The left anterior descending coronary artery (LAD) was ligated in 27 anesthetised pigs (landrace or large white, either sex, 20-35 kg) which had received riluzole (8 mg/kg IP; n = 6), lidocaine (2.5-12 mg/kg bolus plus 0.05-0.24 mg/kg/min; n = 11) or vehicle (n = 10) 50 min prior. Arrhythmias could be delineated into phase 1a (0 to 20 min), phase 1b (20 to 50 min) and phase 2 (from 50 min to termination at 180 min) and were classified as premature ventricular contractions (PVCs), non-sustained ventricular tachycardia (VT) or ventricular fibrillation (VF) (spontaneously reverting within 15 s) or sustained VT or VF (ie. requiring cardioversion at 15 s). Riluzole reduced the average number of all arrhythmias in Phase 2 (PVCs from 484+/-119 to 32+/-13; non sustained arrhythmias from 8.9+/-4.4 to 0.7+/-0.5; sustained arrhythmias from 3.9+/-2.2 to 0.5+/-0.4); lidocaine reduced the average number of non-sustained and sustained arrhythmias (to 0.4+/-0.3 and 0.4+/-0.3 respectively) but not PVCs (to 390+/-234). Riluzole and lidocaine reduced the average number of sustained arrhythmias in phase 1b (from 1.8+/-0.4 to 0.17+/-0.13 (p<0.02) and to 0.55+/-0.26 (p = ns) respectively). Neither lidocaine or riluzole changed the ECG intervals: there was no statistical significance between groups at time zero (just before ligation) for any ECG measure. During the course of the 3 hour period of the ischaemia R-R, and P-R intervals shortened slightly in control and riluzole groups (not significantly different from each other) but not in the lidocaine group (significantly different from control). QRS and QTc did not change appreciably in any group Riluzole reduced the degree of histopathological tissue damage across the infarct zone considerably more than did lidocaine. CONCLUSIONS: At the doses used, riluzole was at least as effective as lidocaine at reducing the number of episodes of ischaemic VT or VF in pigs, and much more effective at reducing the number of PVCs. We propose that this is related to the ability of riluzole to block cardiac persistent sodium current.",
+            "similarity": 0.6600693113612046,
+            "pubtype": [
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "Two of the three abstracts provide relevant evidence on riluzole and cardiac arrhythmia. In a pig model of acute myocardial infarction, riluzole reduced premature ventricular contractions, non-sustained and sustained ventricular tachycardia/fibrillation compared to vehicle controls (PMID: 21124787). However, in vitro and in vivo studies in guinea pigs, rats, and dogs showed that riluzole blocks cardiac Na+ channels in a frequency-independent manner and failed to demonstrate antiarrhythmic activity in animal models of arrhythmias that respond to class I antiarrhythmic drugs, including failing to delay aconitine-induced arrhythmias or restore sinus rhythm in dogs with coronary artery ligation-induced polymorphic arrhythmias (PMID: 10796057). The third abstract (PMID: 38702961) concerns flecainide and propafenone and does not mention riluzole, making it irrelevant to this assessment.",
+          "study_count": 2,
+          "strength": "weak",
+          "key_findings": [
+            "Riluzole (8 mg/kg IP) reduced average PVCs in Phase 2 from 484±119 to 32±13 in a pig model of acute myocardial infarction (PMID: 21124787)",
+            "Riluzole reduced non-sustained arrhythmias in Phase 2 from 8.9±4.4 to 0.7±0.5 and sustained arrhythmias from 3.9±2.2 to 0.5±0.4 in the pig infarction model (PMID: 21124787)",
+            "Riluzole reduced the average number of sustained arrhythmias in phase 1b from 1.8±0.4 to 0.17±0.13 (p<0.02) in the pig infarction model (PMID: 21124787)",
+            "Riluzole reduced histopathological tissue damage across the infarct zone considerably more than lidocaine in the pig model (PMID: 21124787)",
+            "Riluzole blocks cardiac Na+ channels in a frequency-independent manner (0.5–6 Hz) in guinea-pig cardiac Purkinje fibres, unlike lamotrigine, lifarizine, lidocaine, flecainide, and disopyramide which show frequency-dependent blockade (PMID: 10796057)",
+            "In anaesthetized rats, riluzole did not delay the appearance of aconitine-induced arrhythmias, in contrast to flecainide (PMID: 10796057)",
+            "Riluzole (3.0 mg/kg IV) failed to restore normal sinus rhythm in conscious dogs with polymorphic arrhythmias produced by ligation of the left anterior descending coronary artery 24 hours earlier (PMID: 10796057)",
+            "Riluzole lacked notable cardiac electrophysiological effects in anaesthetized dogs at doses of 0.3–3.9 mg/kg IV (PMID: 10796057)",
+            "The frequency-independent Na+ channel blocking property of riluzole may account for its lack of antiarrhythmic activity in animal models that respond to class I antiarrhythmic drugs (PMID: 10796057)"
+          ],
+          "supporting_pmids": [
+            "21124787"
+          ]
+        },
+        "summary": "Evidence strength: weak"
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 0,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 0
+          },
+          "trials": []
+        },
+        "completed": {
+          "total_count": 0,
+          "trials": []
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 1032,
+          "competitors": [
+            {
+              "sponsor": "Wroclaw Medical University",
+              "drug_name": "Influenza vaccination",
+              "drug_type": "Biological",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 400,
+              "most_recent_start": "2025-11-12"
+            },
+            {
+              "sponsor": "University of Rochester",
+              "drug_name": "Metoprolol Succinate",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 2000,
+              "most_recent_start": "2025-08-17"
+            },
+            {
+              "sponsor": "Indiana University",
+              "drug_name": "Ondansetron 8mg",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 80,
+              "most_recent_start": "2025-04-22"
+            },
+            {
+              "sponsor": "Pontificia Universidad Catolica de Chile",
+              "drug_name": "Norepinephrine",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "COMPLETED"
+              ],
+              "total_enrollment": 60,
+              "most_recent_start": "2025-04-01"
+            },
+            {
+              "sponsor": "Cardurion Pharmaceuticals, Inc.",
+              "drug_name": "CRD-4730",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 12,
+              "most_recent_start": "2025-12-01"
+            },
+            {
+              "sponsor": "Novartis Pharmaceuticals",
+              "drug_name": "PKN605",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 165,
+              "most_recent_start": "2025-10-28"
+            },
+            {
+              "sponsor": "Inova Health Care Services",
+              "drug_name": "Deferoxamine",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 100,
+              "most_recent_start": "2025-10-07"
+            },
+            {
+              "sponsor": "Centro Cardiologico Monzino",
+              "drug_name": "Atorvastatin 80 mg/day",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 102,
+              "most_recent_start": "2025-03-31"
+            },
+            {
+              "sponsor": "Hamilton Health Sciences Corporation",
+              "drug_name": "Tideglusib",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 120,
+              "most_recent_start": "2025-03-21"
+            },
+            {
+              "sponsor": "Deeptankar DeMazumder",
+              "drug_name": "Relaxin",
+              "drug_type": "Drug",
+              "max_phase": "Phase 1/Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 208,
+              "most_recent_start": "2027-01-01"
+            }
+          ],
+          "phase_distribution": {
+            "Phase 1/Phase 2": 1,
+            "Phase 2": 5,
+            "Phase 4": 4
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT07359872",
+              "sponsor": "Deeptankar DeMazumder",
+              "drug": "Relaxin",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT06658899",
+              "sponsor": "Cardurion Pharmaceuticals, Inc.",
+              "drug": "CRD-4730",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07617376",
+              "sponsor": "Wroclaw Medical University",
+              "drug": "Influenza vaccination",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07217067",
+              "sponsor": "Novartis Pharmaceuticals",
+              "drug": "PKN605",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07023666",
+              "sponsor": "Inova Health Care Services",
+              "drug": "Deferoxamine",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06964464",
+              "sponsor": "University of Rochester",
+              "drug": "Metoprolol Succinate",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT05844501",
+              "sponsor": "Indiana University",
+              "drug": "Ondansetron 8mg",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT06574555",
+              "sponsor": "Pontificia Universidad Catolica de Chile",
+              "drug": "Norepinephrine",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT06922994",
+              "sponsor": "Centro Cardiologico Monzino",
+              "drug": "Atorvastatin 80 mg/day",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06174220",
+              "sponsor": "Hamilton Health Sciences Corporation",
+              "drug": "Tideglusib",
+              "phase": "Phase 2"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "riluzole",
+            "bhv-0223",
+            "exservan",
+            "nsc-753433",
+            "nsc-759823",
+            "rilutek",
+            "riluzol",
+            "riluzole zentiva",
+            "rp 54274",
+            "rp-54274",
+            "teglutik",
+            "tiglutik",
+            "tiglutik kit"
+          ]
+        },
+        "summary": "There is no clinical trial evidence for riluzole in cardiac arrhythmia: the registry returned zero trials across all statuses — no recruiting, completed, or terminated studies. This exact indication also does not appear on riluzole's FDA labels in this run (checked across 13 drug name variants), consistent with its established use in ALS/amyotrophic lateral sclerosis. The cardiac arrhythmia space is active with 10 competitor programs on record, meaning any entry would face an established competitive landscape. In sum, there is no registered clinical development history for this pair, and the repurposing hypothesis is entirely untested at the interventional trial level."
+      },
+      "blurb": {
+        "stage": "Rationale-only, no trials",
+        "literature": "Weak, observational and preclinical reports",
+        "blocker": "No clinical trial program on record",
+        "active_programs": "None active",
+        "key_risk": "No clinical validation; hypothesis untested in controlled trials",
+        "verdict": "Untested",
+        "watch": "",
+        "prose": "The literature signal for riluzole in cardiac arrhythmia is weak, with no clinical trials on record and evidence limited to preclinical and observational reports. No dedicated clinical development program for this indication has been identified in this run."
+      }
+    }
+  ],
+  "top_diseases": [
+    "seizure",
+    "epilepsy",
+    "cardiac arrhythmia"
+  ],
+  "summary": "Ranked repurposing signals for riluzole:\n\n1. seizure — weak literature signal; no trials on record\n2. epilepsy — weak literature signal; no trials on record\n3. cardiac arrhythmia — weak literature signal; no trials on record\n\nEvidence gate exclusions: none (all three candidates have ≥5 PMIDs despite zero trials)\n\nNot ranked (insufficient investigation — FAN-OUT MODE returned only 3 of 5 candidates; neuropathic pain and migraine disorder lacked both sub-agent calls and are excluded per hard rules)."
+}
