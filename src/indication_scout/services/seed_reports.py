@@ -12,6 +12,7 @@ import logging
 import time
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+from indication_scout.config import get_settings
 from indication_scout.constants import EXAMPLE_SEED_DIR, SEED_REPORT_TTL_SECONDS
 from indication_scout.helpers.drug_helpers import normalize_drug_name
 
@@ -21,10 +22,14 @@ logger = logging.getLogger(__name__)
 def load_fresh_seed_report(drug_name: str) -> SupervisorOutput | None:
     """Return a fresh seed report for the drug, or None on any miss.
 
-    Miss cases (all return None, logged): no captured_at.json, no entry for the
-    drug, report file absent, report older than SEED_REPORT_TTL_SECONDS, or a
-    report file that fails to validate.
+    Miss cases (all return None, logged): seed reports disabled via
+    SEED_REPORTS_ENABLED, no captured_at.json, no entry for the drug, report file
+    absent, report older than SEED_REPORT_TTL_SECONDS, or a report file that fails
+    to validate.
     """
+    if not get_settings().seed_reports_enabled:
+        return None
+
     drug = normalize_drug_name(drug_name)
 
     manifest_path = EXAMPLE_SEED_DIR / "captured_at.json"

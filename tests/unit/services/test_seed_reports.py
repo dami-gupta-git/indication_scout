@@ -1,11 +1,20 @@
 """Unit tests for services/seed_reports — no network/LLM/DB; seed dir is patched."""
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
 from indication_scout.services import seed_reports
+
+
+@pytest.fixture(autouse=True)
+def seed_reports_enabled(monkeypatch):
+    """Default the feature flag on; the disabled-path test overrides it."""
+    monkeypatch.setattr(
+        seed_reports, "get_settings", lambda: SimpleNamespace(seed_reports_enabled=True)
+    )
 
 
 def _write_seed(seed_dir, drug, captured_epoch, *, write_report=True):
@@ -31,6 +40,16 @@ def test_returns_report_when_fresh(seed_dir, monkeypatch):
     assert result is not None
     assert result.drug_name == "metformin"
     assert result.summary == "seeded summary"
+
+
+def test_returns_none_when_disabled(seed_dir, monkeypatch):
+    monkeypatch.setattr(seed_reports.time, "time", lambda: 1000.0)
+    _write_seed(seed_dir, "metformin", 1000.0 - 5 * 86400)  # fresh, but flag off
+    monkeypatch.setattr(
+        seed_reports, "get_settings", lambda: SimpleNamespace(seed_reports_enabled=False)
+    )
+
+    assert seed_reports.load_fresh_seed_report("metformin") is None
 
 
 def test_returns_none_when_stale(seed_dir, monkeypatch):

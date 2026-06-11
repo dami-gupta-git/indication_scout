@@ -52,6 +52,11 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
 
+    # When true, an analyse request serves a fresh committed seed report (see
+    # services/seed_reports.py) instead of running the agents. Set
+    # SEED_REPORTS_ENABLED=false to force every request through the live pipeline.
+    seed_reports_enabled: bool = True
+
     # Tracing (OpenTelemetry -> Langfuse). Opt-in; all optional so absence never
     # breaks startup. tracing_enabled is the master switch; the langfuse_* values
     # come from .env. See tracing.py.
