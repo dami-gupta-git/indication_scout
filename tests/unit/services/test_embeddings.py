@@ -1,4 +1,4 @@
-"""Unit tests for services/embeddings — no model loading."""
+"""Unit tests for services/embeddings — does not do model loading."""
 
 import numpy as np
 import pytest
