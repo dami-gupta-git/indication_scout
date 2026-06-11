@@ -50,7 +50,7 @@ EXAMPLE_SEED_DIR: Path = _PROJECT_ROOT / "seed_examples"
 # of running the agents. SEED_REPORT_SPINNER_SECONDS is a purely cosmetic delay so
 # the load still shows the progress spinner.
 SEED_REPORT_TTL_SECONDS: int = 30 * 86400  # 30 days
-SEED_REPORT_SPINNER_SECONDS: int = 30
+SEED_REPORT_SPINNER_SECONDS: int = 10
 
 # -- Hardcoded FDA approvals (used during temporal holdouts) ----------------
 # When the pipeline is run with --date-before, the live FDA-label lookup is
