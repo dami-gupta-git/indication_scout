@@ -11,16 +11,8 @@ Active tasks organized by component. Items here are actionable and derived from 
 - [x] Write `prompts/synthesize.txt` prompt template
 - [x] Implement `run_rag()` in `runners/rag_runner.py`
 - [x] Unit tests for `run_rag` in `tests/unit/runners/test_rag_runner.py`
-- [ ] Integration tests for `synthesize` in `tests/integration/services/test_retrieval.py`
+- [x] Integration tests for `synthesize` in `tests/integration/services/test_retrieval.py`
 - [ ] Integration test for `run_rag` in `tests/integration/services/test_retrieval.py`
-
-## Agents
-
-- [ ] Implement `Orchestrator.run()` in `agents/orchestrator.py`
-- [ ] Implement `LiteratureAgent.run()` in `agents/literature.py`
-- [ ] Implement `ClinicalTrialsAgent.run()` in `agents/clinical_trials.py`
-- [ ] Implement `MechanismAgent.run()` in `agents/mechanism.py`
-- [ ] Implement `SafetyAgent.run()` in `agents/safety.py`
 
 ## Data Sources
 
@@ -28,12 +20,15 @@ Active tasks organized by component. Items here are actionable and derived from 
 
 ## API
 
-- [ ] Define API routes in `api/routes/`
-- [ ] Define request/response schemas in `api/schemas/`
+- [x] Define API routes in `api/routes/`
+- [x] Define request/response schemas in `api/schemas/`
+- [ ] Show "Fetching from cache" (not "pulling live evidence") in the loading UI on a seed-report
+      hit. Needs a `source: "seed" | "live"` field on `AnalysisStatusResponse`, set early in
+      `_execute` (before the spinner sleep), and a frontend copy swap in `LoadingState`.
 
 ## CLI
 
-- [ ] Implement CLI module (`indication_scout.cli.cli`) referenced in `pyproject.toml`
+- [x] Implement CLI module (`indication_scout.cli.cli`) referenced in `pyproject.toml`
 
 ## Infrastructure
 
