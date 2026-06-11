@@ -12,12 +12,10 @@ rather than just keyword matches.
 The model is lazy-loaded on first call to embed() and reused for the lifetime
 of the process — loading takes ~10s and uses ~500MB RAM, so we only do it once.
 
-On first deployment the model is not yet present in the persistent volume
-(HF_HOME=/data/hf). _get_model() detects this by checking whether the
-huggingface_hub snapshot directory for the model exists. If it does not, the
-model is downloaded (local_files_only=False); on every subsequent start the
-cached copy is used with local_files_only=True so no outbound traffic is
-required.
+The model must be prefetched into the persistent HF cache (HF_HOME) before
+serving — see scripts/prefetch_embedding_model.py. _get_model() always loads
+with local_files_only=True and raises if the snapshot is absent, so analysis
+never downloads at request time.
 """
 
 import asyncio
@@ -72,10 +70,10 @@ def _is_model_cached(model_name: str) -> bool:
 def _get_model() -> SentenceTransformer:
     """Return the singleton model, instantiating it on first call.
 
-    On first deployment the model files are absent from the persistent volume,
-    so we download them (local_files_only=False). On subsequent starts the
-    cached snapshot is used with local_files_only=True, keeping the service
-    fully air-gapped after the initial download.
+    The model must be prefetched into the HF cache ahead of time (see
+    scripts/prefetch_embedding_model.py). We always load with
+    local_files_only=True so analysis never downloads at request time — if the
+    cache is missing we fail loudly rather than silently pulling ~500MB.
 
     Not safe to call concurrently — use embed_async() which holds _model_lock
     across both model initialisation and encode().
@@ -83,17 +81,14 @@ def _get_model() -> SentenceTransformer:
     global _model
     if _model is None:
         model_name = get_settings().embedding_model
-        if _is_model_cached(model_name):
-            logger.info(
-                "Loading embedding model %s from local cache", model_name
+        if not _is_model_cached(model_name):
+            hf_home = os.environ.get("HF_HOME", str(Path.home() / ".cache" / "huggingface"))
+            raise RuntimeError(
+                f"Embedding model {model_name} not found in HF cache (HF_HOME={hf_home}). "
+                "Run scripts/prefetch_embedding_model.py to populate the cache before serving."
             )
-            _model = SentenceTransformer(model_name, local_files_only=True)
-        else:
-            logger.info(
-                "Embedding model %s not found in cache — downloading", model_name
-            )
-            _model = SentenceTransformer(model_name, local_files_only=False)
-            logger.info("Embedding model %s downloaded and cached", model_name)
+        logger.info("Loading embedding model %s from local cache", model_name)
+        _model = SentenceTransformer(model_name, local_files_only=True)
     return _model
 
 
