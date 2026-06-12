@@ -9,6 +9,7 @@ import { CompletedTrialsTable } from "../tables/CompletedTrialsTable";
 import { CompetitorsTable } from "../tables/CompetitorsTable";
 import { StatusDonut } from "../charts/StatusDonut";
 import { PhaseFunnel } from "../charts/PhaseFunnel";
+import { Markdown } from "../components/Markdown";
 import { phaseSlices, statusSlices } from "../charts/chartData";
 
 const TERMINATED_LIMIT = 15;
@@ -50,7 +51,7 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
         <p className="muted">No clinical trials data available.</p>
       ) : (
         <>
-          {ct.summary && <p>{ct.summary}</p>}
+          {ct.summary && <Markdown>{ct.summary}</Markdown>}
 
           <div className="metrics">
             <Kpi label="Total trials" value={ct.search?.total_count ?? 0} />

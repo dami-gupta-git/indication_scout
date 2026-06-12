@@ -3,6 +3,7 @@
 
 import type { SupervisorOutput } from "../types";
 import { PmidLink } from "../components/links";
+import { Markdown } from "../components/Markdown";
 
 export function LiteratureTab({
   result,
@@ -49,7 +50,7 @@ export function LiteratureTab({
           {lit.summary && (
             <>
               <h4>Summary</h4>
-              <p>{lit.summary}</p>
+              <Markdown>{lit.summary}</Markdown>
             </>
           )}
 

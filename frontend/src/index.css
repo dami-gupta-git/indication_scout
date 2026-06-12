@@ -475,6 +475,35 @@ body {
   line-height: 1.6;
 }
 
+/* Rendered agent/supervisor summaries: markdown already emits block elements,
+   so reset the pre-wrap inherited from .summary and tighten block spacing. */
+.markdown {
+  white-space: normal;
+  line-height: 1.6;
+}
+
+.markdown > :first-child {
+  margin-top: 0;
+}
+
+.markdown > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown p {
+  margin: 0 0 0.7em;
+}
+
+.markdown ul,
+.markdown ol {
+  margin: 0.4em 0 0.7em;
+  padding-left: 1.4em;
+}
+
+.markdown li {
+  margin: 0.15em 0;
+}
+
 .marker.investigated {
   color: #1d6b35;
 }

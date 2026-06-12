@@ -3,6 +3,7 @@
 
 import type { SupervisorOutput } from "../types";
 import { MechanismGraph } from "../graph/MechanismGraph";
+import { Markdown } from "../components/Markdown";
 
 export function MechanismTab({
   result,
@@ -23,7 +24,7 @@ export function MechanismTab({
   return (
     <div className="mechanism">
       <h3>Mechanistic analysis</h3>
-      {mech.summary && <p>{mech.summary}</p>}
+      {mech.summary && <Markdown>{mech.summary}</Markdown>}
 
       <h4>Drug → target → disease network</h4>
       <p className="caption">Click a disease node to focus it in the other tabs.</p>

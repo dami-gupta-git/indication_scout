@@ -6,6 +6,7 @@ import { ComparisonGrid } from "../grid/ComparisonGrid";
 import { SummaryBlurbCard } from "../overview/SummaryBlurbCard";
 import { hasStructuredBlurb } from "../overview/blurb";
 import { extractSummaryFooter } from "../overview/summaryFooter";
+import { Markdown } from "../components/Markdown";
 
 export function OverviewTab({
   result,
@@ -60,7 +61,9 @@ export function OverviewTab({
           {footer && <p className="summary-footer">{footer}</p>}
         </>
       ) : result.summary ? (
-        <p className="summary">{result.summary}</p>
+        <div className="summary">
+          <Markdown>{result.summary}</Markdown>
+        </div>
       ) : (
         <p className="muted">No summary produced.</p>
       )}
