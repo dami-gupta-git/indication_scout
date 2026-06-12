@@ -111,8 +111,10 @@ def test_get_model_uses_local_files_only_when_cached():
     assert kwargs.get("local_files_only") is True
 
 
-def test_get_model_raises_when_not_cached():
-    """When the model is absent from cache, _get_model() raises and never instantiates the model."""
+def test_get_model_downloads_when_not_cached():
+    """When the model is absent from cache, SentenceTransformer is called with
+    local_files_only=False so the snapshot downloads on the first call."""
+    mock_model = _make_mock_model()
     with (
         patch(
             "indication_scout.services.embeddings._is_model_cached",
@@ -120,12 +122,13 @@ def test_get_model_raises_when_not_cached():
         ),
         patch(
             "indication_scout.services.embeddings.SentenceTransformer",
+            return_value=mock_model,
         ) as mock_cls,
     ):
-        with pytest.raises(RuntimeError, match="not found in HF cache"):
-            embed(["text"])
+        embed(["text"])
 
-    mock_cls.assert_not_called()
+    _, kwargs = mock_cls.call_args
+    assert kwargs.get("local_files_only") is False
 
 
 # ---------------------------------------------------------------------------
