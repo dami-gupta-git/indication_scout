@@ -16,7 +16,10 @@ from indication_scout.models.model_open_targets import (
 
 def test_default_config():
     """Test that client uses default settings."""
-    client = OpenTargetsClient()
+    # Patch mkdir so constructing with the default cache dir doesn't touch the
+    # real (possibly read-only) DEFAULT_CACHE_DIR — we only assert the path here.
+    with patch("pathlib.Path.mkdir"):
+        client = OpenTargetsClient()
 
     assert client.timeout == 30.0
     assert client.max_retries == 3

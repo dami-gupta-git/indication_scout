@@ -8,9 +8,9 @@ from indication_scout.data_sources.pubmed import PubMedClient
 # --- _parse_pubmed_xml ---
 
 
-def test_invalid_xml_raises_error():
+def test_invalid_xml_raises_error(tmp_path):
     """Test that invalid XML raises DataSourceError."""
-    client = PubMedClient()
+    client = PubMedClient(tmp_path)
     invalid_xml = "not valid xml <unclosed"
 
     with pytest.raises(DataSourceError) as exc_info:
@@ -20,9 +20,9 @@ def test_invalid_xml_raises_error():
     assert "Failed to parse XML" in str(exc_info.value)
 
 
-def test_empty_xml_raises_error():
+def test_empty_xml_raises_error(tmp_path):
     """Test that empty string raises DataSourceError."""
-    client = PubMedClient()
+    client = PubMedClient(tmp_path)
 
     with pytest.raises(DataSourceError) as exc_info:
         client._parse_pubmed_xml("")
@@ -31,9 +31,9 @@ def test_empty_xml_raises_error():
     assert "Failed to parse XML" in str(exc_info.value)
 
 
-def test_valid_xml_no_articles_returns_empty_list():
+def test_valid_xml_no_articles_returns_empty_list(tmp_path):
     """Test that valid XML with no PubmedArticle elements returns empty list."""
-    client = PubMedClient()
+    client = PubMedClient(tmp_path)
     xml = "<PubmedArticleSet></PubmedArticleSet>"
 
     result = client._parse_pubmed_xml(xml)
@@ -41,9 +41,9 @@ def test_valid_xml_no_articles_returns_empty_list():
     assert result == []
 
 
-def test_valid_xml_parses_article():
+def test_valid_xml_parses_article(tmp_path):
     """Test that valid XML with article is parsed correctly."""
-    client = PubMedClient()
+    client = PubMedClient(tmp_path)
     xml = """<?xml version="1.0"?>
     <PubmedArticleSet>
         <PubmedArticle>
@@ -89,9 +89,9 @@ def test_valid_xml_parses_article():
     assert article.journal == "Test Journal"
 
 
-def test_article_without_pmid_is_skipped():
+def test_article_without_pmid_is_skipped(tmp_path):
     """Test that articles without PMID are skipped."""
-    client = PubMedClient()
+    client = PubMedClient(tmp_path)
     xml = """<?xml version="1.0"?>
     <PubmedArticleSet>
         <PubmedArticle>
@@ -109,14 +109,14 @@ def test_article_without_pmid_is_skipped():
     assert result == []
 
 
-def test_valid_xml_parses_book_article():
+def test_valid_xml_parses_book_article(tmp_path):
     """PubmedBookArticle elements are parsed into PubmedAbstract objects.
 
     Book chapters have a different XML structure: BookDocument instead of
     MedlineCitation, BookTitle instead of Journal/Title, and separate
     AuthorList elements for authors vs editors.
     """
-    client = PubMedClient()
+    client = PubMedClient(tmp_path)
     xml = """<?xml version="1.0"?>
     <PubmedArticleSet>
         <PubmedBookArticle>
@@ -168,9 +168,9 @@ def test_valid_xml_parses_book_article():
     assert article.keywords == ["ALS2", "Alsin"]
 
 
-def test_book_article_excludes_editors_from_authors():
+def test_book_article_excludes_editors_from_authors(tmp_path):
     """AuthorList Type='editors' must not appear in the authors field."""
-    client = PubMedClient()
+    client = PubMedClient(tmp_path)
     xml = """<?xml version="1.0"?>
     <PubmedArticleSet>
         <PubmedBookArticle>

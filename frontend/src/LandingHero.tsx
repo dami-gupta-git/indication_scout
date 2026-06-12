@@ -1,5 +1,5 @@
 // Landing / empty-state hero shown before any analysis has run. Explains what
-// the tool does and offers example drugs that kick off a run on click.
+// the tool does. Example drugs are offered in the sidebar.
 
 export const EXAMPLES = ["metformin", "semaglutide", "bupropion", "sildenafil"];
 
@@ -18,7 +18,7 @@ const STEPS = [
   },
 ];
 
-export function LandingHero({ onPickExample }: { onPickExample: (drug: string) => void }) {
+export function LandingHero() {
   return (
     <div className="hero">
       <div className="hero-mark" aria-hidden="true">
@@ -37,20 +37,6 @@ export function LandingHero({ onPickExample }: { onPickExample: (drug: string) =
             <h3>{s.title}</h3>
             <p>{s.body}</p>
           </div>
-        ))}
-      </div>
-
-      <div className="hero-examples">
-        <span className="hero-examples-label">Try an example:</span>
-        {EXAMPLES.map((drug) => (
-          <button
-            key={drug}
-            type="button"
-            className="hero-example"
-            onClick={() => onPickExample(drug)}
-          >
-            {drug}
-          </button>
         ))}
       </div>
     </div>

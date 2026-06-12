@@ -387,3 +387,34 @@ MECHANISM_ASSOCIATION_MIN_SCORE: float = 0.3
 CORS_ALLOW_ORIGINS: list[str] = ["http://localhost:5173", "http://127.0.0.1:5173"]
 # Built React bundle served by FastAPI in prod (Vite `npm run build` output).
 FRONTEND_DIST_DIR: Path = _PROJECT_ROOT / "frontend" / "dist"
+
+# -- API: visitor-location logging -------------------------------------------
+# Substrings (matched case-insensitively) that mark a User-Agent as a known
+# crawler / link-preview fetcher rather than a human browser.
+BOT_USER_AGENT_MARKERS: list[str] = [
+    "bot",
+    "crawler",
+    "spider",
+    "slurp",
+    "facebookexternalhit",
+    "twitterbot",
+    "slackbot",
+    "discordbot",
+    "telegrambot",
+    "whatsapp",
+    "linkedinbot",
+    "embedly",
+    "pinterest",
+    "redditbot",
+    "applebot",
+    "headlesschrome",
+    "python-requests",
+    "httpx",
+    "curl",
+    "wget",
+    "go-http-client",
+    "axios",
+]
+# ip-api.com response fields requested for visitor geolocation. `hosting` and `proxy`
+# flag data-center / VPN IPs, which mark automated (non-human) traffic.
+GEO_API_FIELDS: str = "status,city,regionName,country,proxy,hosting"

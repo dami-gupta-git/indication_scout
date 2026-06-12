@@ -12,7 +12,12 @@ from indication_scout.api.routes.analyses import router as analyses_router
 from indication_scout.api.routes.drilldown import router as drilldown_router
 from indication_scout.api.routes.examples import router as examples_router
 from indication_scout.api.routes.examples import seed_example_cache
-from indication_scout.constants import CORS_ALLOW_ORIGINS, FRONTEND_DIST_DIR
+from indication_scout.constants import (
+    BOT_USER_AGENT_MARKERS,
+    CORS_ALLOW_ORIGINS,
+    FRONTEND_DIST_DIR,
+    GEO_API_FIELDS,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -39,32 +44,43 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-_geo_cache: dict[str, str] = {}
+# Per-IP geolocation cache: maps IP -> (location string, is_datacenter flag).
+_geo_cache: dict[str, tuple[str, bool]] = {}
 
 
-async def _geolocate(ip: str) -> str:
-    """Return "City, Region, Country" for an IP via ip-api.com, cached per IP.
+async def _geolocate(ip: str) -> tuple[str, bool]:
+    """Return ("City, Region, Country", is_datacenter) for an IP via ip-api.com.
 
-    Returns "" on private/local IPs or any lookup failure — geolocation is best-effort
-    and must never break a request.
+    `is_datacenter` is True when the IP belongs to a hosting provider or proxy/VPN —
+    a strong signal the request is automated rather than a human browser. Cached per IP.
+    Returns ("", False) on private/local IPs or any lookup failure — geolocation is
+    best-effort and must never break a request.
     """
     if ip in _geo_cache:
         return _geo_cache[ip]
     location = ""
+    is_datacenter = False
     try:
         async with httpx.AsyncClient(timeout=2.0) as client:
             resp = await client.get(
                 f"http://ip-api.com/json/{ip}",
-                params={"fields": "status,city,regionName,country"},
+                params={"fields": GEO_API_FIELDS},
             )
         data = resp.json()
         if data.get("status") == "success":
             parts = [data.get("city"), data.get("regionName"), data.get("country")]
             location = ", ".join(p for p in parts if p)
+            is_datacenter = bool(data.get("hosting")) or bool(data.get("proxy"))
     except Exception as e:
         logger.debug("geolocation failed for %s: %s", ip, e)
-    _geo_cache[ip] = location
-    return location
+    _geo_cache[ip] = (location, is_datacenter)
+    return location, is_datacenter
+
+
+def _is_bot_user_agent(user_agent: str) -> bool:
+    """True when the User-Agent self-identifies as a known crawler / preview fetcher."""
+    ua = user_agent.lower()
+    return any(marker in ua for marker in BOT_USER_AGENT_MARKERS)
 
 
 @app.middleware("http")
@@ -79,13 +95,19 @@ async def _log_client_ip(request: Request, call_next):
             if forwarded
             else (request.client.host if request.client else "unknown")
         )
-        location = await _geolocate(client_ip)
+        location, is_datacenter = await _geolocate(client_ip)
+        user_agent = request.headers.get("user-agent", "")
+        # A request is automated if its UA self-identifies as a crawler OR it originates
+        # from a hosting/proxy IP (data-center traffic is never a human browser).
+        is_bot = _is_bot_user_agent(user_agent) or is_datacenter
         logger.warning(
-            "[VISITOR-LOCATION] request from %s (%s): %s %s",
+            "[%s] request from %s (%s): %s %s — UA: %s",
+            "BOT" if is_bot else "VISITOR-LOCATION",
             client_ip,
             location or "unknown location",
             request.method,
             request.url.path,
+            user_agent or "none",
         )
     return await call_next(request)
 

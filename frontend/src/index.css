@@ -845,36 +845,6 @@ body {
   color: #6b7280;
 }
 
-.hero-examples {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.hero-examples-label {
-  color: #6b7280;
-  font-size: 0.9rem;
-  /* Own line above the chips, so the chips sit together on one row below. */
-  flex-basis: 100%;
-}
-
-.hero-example {
-  padding: 0.35rem 0.9rem;
-  border: 1px solid #cfd2d8;
-  border-radius: 999px;
-  background: #fff;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-
-.hero-example:hover {
-  border-color: #2d6cdf;
-  color: #2d6cdf;
-}
-
 @media (max-width: 768px) {
   .hero-steps {
     grid-template-columns: 1fr;
@@ -1132,18 +1102,6 @@ body {
 
   .scorecard-cards + .table-scroll {
     display: none;
-  }
-
-  /* On mobile, surface the example chips at the top of the hero — they're the
-     primary call to action and read better above the intro text. */
-  .hero {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .hero-examples {
-    order: -1;
-    margin-bottom: 1.5rem;
   }
 
   /* KPI band wraps instead of forcing a wide row. */

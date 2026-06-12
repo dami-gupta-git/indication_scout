@@ -190,6 +190,10 @@ async def test_expand_search_terms_returns_list(tmp_path, metformin_profile):
             new=AsyncMock(return_value="colon"),
         ),
         patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=None),
+        ),
+        patch(
             "indication_scout.services.retrieval.query_small_llm",
             new=AsyncMock(return_value=llm_response),
         ),
@@ -254,6 +258,10 @@ async def test_expand_search_terms_prompt_sources_names_from_chembl(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
+        patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=None),
+        ),
         patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
     ):
         await RetrievalService(tmp_path).expand_search_terms(
@@ -280,6 +288,10 @@ async def test_expand_search_terms_prompt_contains_targets(tmp_path, metformin_p
         patch(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
+        ),
+        patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=None),
         ),
         patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
     ):
@@ -310,6 +322,10 @@ async def test_expand_search_terms_prompt_contains_atc_descriptions(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
+        patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=None),
+        ),
         patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
     ):
         await RetrievalService(tmp_path).expand_search_terms(
@@ -338,6 +354,10 @@ async def test_expand_search_terms_prompt_contains_organ_term(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
         ),
+        patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=None),
+        ),
         patch("indication_scout.services.retrieval.query_small_llm", new=capture_llm),
     ):
         await RetrievalService(tmp_path).expand_search_terms(
@@ -358,6 +378,10 @@ async def test_expand_search_terms_deduplicates_output(tmp_path, metformin_profi
         patch(
             "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
             new=AsyncMock(return_value="colon"),
+        ),
+        patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=None),
         ),
         patch(
             "indication_scout.services.retrieval.query_small_llm",

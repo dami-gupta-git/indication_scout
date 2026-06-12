@@ -186,9 +186,12 @@ async def test_fallback_accepted_when_not_blocklisted():
     ],
 )
 async def test_llm_normalize_disease_returns_cleaned_llm_output(
-    raw_term, llm_response, expected
+    raw_term, llm_response, expected, tmp_path, monkeypatch
 ):
     """llm_normalize_disease strips quotes/whitespace and returns the LLM output."""
+    monkeypatch.setattr(
+        "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
+    )
     with patch(
         "indication_scout.services.disease_helper.query_small_llm",
         new=AsyncMock(return_value=llm_response),
@@ -205,9 +208,12 @@ async def test_llm_normalize_disease_returns_cleaned_llm_output(
     ],
 )
 async def test_llm_normalize_disease_strips_llm_response(
-    raw_term, llm_response, expected
+    raw_term, llm_response, expected, tmp_path, monkeypatch
 ):
     """Leading/trailing quotes and whitespace in the LLM response are stripped."""
+    monkeypatch.setattr(
+        "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
+    )
     with patch(
         "indication_scout.services.disease_helper.query_small_llm",
         new=AsyncMock(return_value=llm_response),
@@ -227,8 +233,13 @@ async def test_llm_normalize_disease_strips_llm_response(
         '```\n{"merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]}, "remove": []}\n```',
     ],
 )
-async def test_merge_duplicate_diseases_parses_response_formats(llm_response):
+async def test_merge_duplicate_diseases_parses_response_formats(
+    llm_response, tmp_path, monkeypatch
+):
     """merge_duplicate_diseases handles raw JSON and markdown code fences."""
+    monkeypatch.setattr(
+        "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
+    )
     with patch(
         "indication_scout.services.disease_helper.query_small_llm",
         new=AsyncMock(return_value=llm_response),
