@@ -10,6 +10,14 @@ import os
 if os.environ.get("CONSTANTS_FILE") in (None, ".env.constants.test"):
     os.environ["CONSTANTS_FILE"] = ".env.constants.integration"
 
+# Force the cache onto cache_test before constants is imported — DEFAULT_CACHE_DIR
+# reads SCOUT_CACHE_DIR at import time, and .env mirrors prod's /cache (read-only
+# locally). Routes that build clients with no cache_dir would otherwise hit /cache.
+from pathlib import Path
+
+_PROJECT_ROOT = Path(__file__).resolve().parents[2]
+os.environ["SCOUT_CACHE_DIR"] = str(_PROJECT_ROOT / "cache_test")
+
 import pytest
 from dotenv import load_dotenv
 from sqlalchemy import create_engine, text
