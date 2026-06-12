@@ -152,7 +152,9 @@ async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
 
 
 async def merge_duplicate_diseases(
-    diseases: list[str], drug_indications: list[str]
+    diseases: list[str],
+    drug_indications: list[str],
+    max_tokens: int | None = None,
 ) -> MergeResult:
     cache_params = {
         "diseases": sorted(diseases),
@@ -168,7 +170,7 @@ async def merge_duplicate_diseases(
         .read_text()
         .format(disease_names=diseases, drug_indications=drug_indications)
     )
-    response = await query_small_llm(prompt)
+    response = await query_small_llm(prompt, max_tokens=max_tokens)
     cleaned = strip_markdown_fences(response)
     try:
         result = json.loads(cleaned)

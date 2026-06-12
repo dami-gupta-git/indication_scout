@@ -2,7 +2,7 @@
 
 **API:** Open Targets Platform GraphQL API (`https://api.platform.opentargets.org/api/v4/graphql`)
 **Auth:** None required
-**Cache TTL:** 5 days
+**Cache TTL:** config-driven (`CACHE_TTL`, currently 60 days)
 
 The client provides three primary entry points that fetch complete data in a single call, plus convenience accessors for specific data types.
 
@@ -432,7 +432,7 @@ get_drug("semaglutide")
 
 ## Caching
 
-All public methods use a **disk-based file cache** in the `_cache/` directory with a 5-day TTL (configurable via `CACHE_TTL` in `constants.py`). Cache entries are JSON files keyed by a SHA-256 hash of the namespace and parameters. Expired entries are evicted on read.
+All public methods use a **disk-based file cache** in the `cache/` directory with a config-driven TTL (`CACHE_TTL` in `constants.py`, currently 60 days). Cache entries are JSON files keyed by a SHA-256 hash of the namespace and parameters. Expired entries are evicted on read.
 
 Cached namespaces: `drug` (keyed by `chembl_id`), `target` (keyed by `target_id`), `disease_drugs` (keyed by `disease_id`), `disease_synonyms` (keyed by `disease_id`).
 

@@ -78,7 +78,7 @@ Fetch the full ATC classification hierarchy for a single ATC code.
 - `level5` -- Chemical substance code (e.g. `"A10BA02"`)
 - `who_name` -- WHO International Nonproprietary Name (e.g. `"metformin"`)
 
-**Caching:** Results are cached under namespace `"atc_description"` with 5-day TTL.
+**Caching:** Results are cached under namespace `"atc_description"` with config-driven TTL (currently 60 days).
 
 **Error behavior:**
 - **ATC code not found:** Raises `DataSourceError`

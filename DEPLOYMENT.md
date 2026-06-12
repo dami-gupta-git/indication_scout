@@ -18,7 +18,7 @@ This document covers the architecture, the files added, and the reasoning.
                  └───────┬───────────────┬────────┘
                          │               │
               DATABASE_URL          /data volume
-                         │          ├ /data/_cache  (API/LLM file cache)
+                         │          ├ /data/cache  (API/LLM file cache)
                  ┌───────▼──────┐   └ /data/hf      (model weights)
                  │  Postgres    │
                  │  + pgvector  │
@@ -99,7 +99,7 @@ Secrets/credentials are passed at runtime (never baked into the image):
 |---|---|---|
 | `DATABASE_URL` | from `.env`, points at `db:5432` | `${{Postgres.DATABASE_URL}}` |
 | `DB_PASSWORD` | from `.env` | any non-empty string (required by config) |
-| `SCOUT_CACHE_DIR` | unset → `<root>/_cache` | `/data/_cache` |
+| `SCOUT_CACHE_DIR` | unset → `<root>/cache` | `/data/cache` |
 | `HF_HOME` | volume `hf_cache` | `/data/hf` |
 | `HF_TOKEN` | optional (model usually already cached) | recommended — avoids the anonymous HF rate limit on first download |
 | `ANTHROPIC_API_KEY`, `PUBMED_API_KEY`, `NCBI_API_KEY`, `OPENFDA_API_KEY` | from `.env` | set as service variables |
@@ -109,7 +109,7 @@ Secrets/credentials are passed at runtime (never baked into the image):
 image** — `config.py` requires those fields with no defaults.
 
 `SCOUT_CACHE_DIR` is an env override added to `constants.py` so the file cache can
-live on the mounted volume; unset, it falls back to the original `<root>/_cache`
+live on the mounted volume; unset, it falls back to the original `<root>/cache`
 path, so local/test behaviour is unchanged.
 
 ## Problems hit and fixed (so they don't recur)

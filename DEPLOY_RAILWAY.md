@@ -24,14 +24,14 @@ also `CREATE EXTENSION vector`), then starts uvicorn on `$PORT`.
 
 ### 3. Persistent volume
 1. App service → **Volumes → New Volume**.
-2. Mount path: **`/data`**  (holds the BioLORD model cache + the scout `_cache`).
+2. Mount path: **`/data`**  (holds the BioLORD model cache + the scout `cache`).
 
 ### 4. Environment variables (app service → Variables)
 | Variable | Value |
 |---|---|
 | `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (reference the Postgres service) |
 | `DB_PASSWORD` | any non-empty string (config requires it; the DB itself ignores it) |
-| `SCOUT_CACHE_DIR` | `/data/_cache` |
+| `SCOUT_CACHE_DIR` | `/data/cache` |
 | `HF_HOME` | `/data/hf` (model cache dir — not HuggingFace hosting) |
 | `HF_TOKEN` | a HuggingFace read token — avoids the anonymous rate limit on the first model download (see note below) |
 | `ANTHROPIC_API_KEY` | your key |

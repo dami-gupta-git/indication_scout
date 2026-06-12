@@ -88,7 +88,7 @@ removes). Net: worth it for BOTH cost (−15 Anthropic calls/run) AND latency on
 drugs. (Currently stashed at `stash@{0}` on main, awaiting review.)
 
 ### F4. Caching is correct but was silently broken on Railway
-The file cache logic is sound and persists within a deploy. It was writing to `/data/_cache` on
+The file cache logic is sound and persists within a deploy. It was writing to `/data/cache` on
 ephemeral image disk because no volume was mounted there (two-volume conflict + 24h soft-delete
 made this hard to fix). Fixed by mounting the volume at `/cache` and pointing
 `SCOUT_CACHE_DIR`/`HF_HOME` at it. Verified via a temporary `/debug/cache` endpoint

@@ -89,39 +89,86 @@ async def test_multiple_drug_disease_normalizer(disease, drug, required_keyword)
         required_keyword in t for t in result_terms
     ), f"Expected '{required_keyword}' in result terms {result_terms} for {drug} + {disease}"
 
-
-async def test_merge_duplicate_diseases():
+@pytest.mark.parametrize(
+    "d1, d2, d3, d4",
+    [
+        (
+            {
+                "narcolepsy",
+                "narcolepsy-cataplexy syndrome",
+                "obesity",
+                "overweight body mass index status",
+            },
+            {"type 2 diabetes mellitus"},
+            {
+                frozenset({"narcolepsy", "narcolepsy-cataplexy syndrome"}),
+                frozenset({"obesity", "overweight body mass index status"}),
+            },
+            set(),
+        ),
+        (
+            {"obesity", "overweight body mass index status"},
+            set(),
+            {frozenset({"obesity", "overweight body mass index status"})},
+            set(),
+        ),
+        # Distinct substance-dependence disorders must NOT be collapsed into each
+        # other or the "drug dependence" / "substance abuse" umbrella. Only the two
+        # umbrella synonyms may merge together.
+        (
+            {
+                "cocaine dependence",
+                "methamphetamine dependence",
+                "nicotine dependence",
+                "alcohol dependence",
+                "cannabis dependence",
+                "substance abuse",
+            },
+            set(),
+            set(),
+            {
+                "cocaine dependence",
+                "methamphetamine dependence",
+                "nicotine dependence",
+                "alcohol dependence",
+                "cannabis dependence",
+            },
+        ),
+    ],
+)
+async def test_merge_duplicate_diseases(d1, d2, d3, d4):
+    # d1: input diseases, d2: drug indications, d3: expected merge groups (each a
+    # frozenset, so canonical-name choice and alias ordering don't matter),
+    # d4: diseases that must each stay in their own group (never merged together).
     result = await merge_duplicate_diseases(
-        [
-            "narcolepsy",
-            "narcolepsy-cataplexy syndrome",
-            "obesity",
-            "overweight body mass index status",
-        ],
-        ["type 2 diabetes mellitus"],
+        list(d1),
+        list(d2),
     )
 
     assert "merge" in result
     assert "remove" in result
 
-    all_merged = []
-    for canonical, aliases in result["merge"].items():
-        all_merged.append({canonical} | set(aliases))
+    actual_groups = {
+        frozenset({canonical} | set(aliases))
+        for canonical, aliases in result["merge"].items()
+    }
 
-    assert any(
-        {"narcolepsy", "narcolepsy-cataplexy syndrome"}.issubset(group)
-        for group in all_merged
-    ), f"Expected narcolepsy variants to be merged, got: {result['merge']}"
+    for group in d3:
+        assert any(
+            group <= merged for merged in actual_groups
+        ), f"Expected {set(group)} to be merged, got: {result['merge']}"
 
-    assert any(
-        {"obesity", "overweight body mass index status"}.issubset(group)
-        for group in all_merged
-    ), f"Expected obesity variants to be merged, got: {result['merge']}"
+    # No two diseases in d4 may share a merge group (they are clinically distinct).
+    for merged in actual_groups:
+        shared = d4 & merged
+        assert len(shared) <= 1, (
+            f"Expected {sorted(d4)} to stay separate, but {sorted(shared)} were "
+            f"merged together, got: {result['merge']}"
+        )
 
     # `remove` is for diseases equivalent to the drug's EXISTING indications
-    # (here ["type 2 diabetes mellitus"]) — not for merge aliases. None of the
-    # input diseases matches that indication, so nothing should be removed.
-    # (Merge dedup is expressed entirely via the `merge` map above.)
+    # (here type 2 diabetes mellitus) — not for merge aliases. None of the input
+    # diseases matches that indication, so nothing should be removed.
     assert result["remove"] == [], (
         f"Expected no removals (no input matches an existing indication), "
         f"got: {result['remove']}"

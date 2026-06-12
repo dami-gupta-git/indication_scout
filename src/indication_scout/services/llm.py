@@ -125,10 +125,12 @@ async def query_llm(prompt: str, system: str = "") -> str:
     return response.content[0].text
 
 
-async def query_small_llm(prompt: str, system: str = "") -> str:
+async def query_small_llm(
+    prompt: str, system: str = "", max_tokens: int | None = None
+) -> str:
     response = await client.messages.create(
         model=_small_model,
-        max_tokens=_settings.small_llm_max_tokens,
+        max_tokens=max_tokens or _settings.small_llm_max_tokens,
         temperature=0,
         system=system or NOT_GIVEN,
         messages=[{"role": "user", "content": prompt}],

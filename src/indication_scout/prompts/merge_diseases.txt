@@ -22,6 +22,7 @@ Pairs you must NEVER merge (non-exhaustive — apply the principle broadly):
 | "depression"                               | "major depressive disorder" / "bipolar depression" / "postpartum depression"                     |
 | "cancer"                                   | any specific tumor type                                                                          |
 | "heart failure"                            | HFrEF / HFpEF                                                                                    |
+| "drug dependence" / "substance abuse" / "substance use disorder" | "nicotine dependence" / "cocaine dependence" / "alcohol dependence" / "cannabis dependence" / "opioid dependence" / "methamphetamine dependence" |
 
 The fatty liver case is the one that gets misread most often. Read this carefully:
 
@@ -29,6 +30,15 @@ The fatty liver case is the one that gets misread most often. Read this carefull
   - "steatohepatitis" / NASH / MASH is a specific inflammatory subtype WITH hepatocyte injury. It is a small fraction of fatty liver disease patients.
   - The clinical-trial pipelines, drug approvals, and patient populations differ. They are NOT the same condition.
   - If the input contains BOTH "fatty liver disease" AND "steatohepatitis" (in any spelling, with or without the "non-alcoholic" prefix), they belong in DIFFERENT entries. Do NOT put one in the other's alias list.
+
+The substance-dependence case is also misread often. Each substance defines a distinct
+dependence disorder:
+
+  - "drug dependence" / "substance abuse" / "substance use disorder" is the umbrella.
+  - "nicotine dependence", "cocaine dependence", "alcohol dependence", "cannabis dependence",
+    "opioid dependence", "methamphetamine dependence" are clinically distinct subtypes — different
+    drugs, trials, and approvals (e.g. bupropion treats nicotine dependence, not cocaine dependence).
+  - Do NOT merge any of these into one another or into the umbrella. Keep every substance separate.
 
 When in doubt about parent vs subtype, keep them separate.
 
@@ -49,6 +59,7 @@ Rules for REMOVE:
 - Only remove diseases that are the SAME condition as a current indication, not diseases that merely share a word or occur in the same patient population
 - "diabetic nephropathy" is NOT "type 2 diabetes mellitus" — one is a kidney disease, the other is a metabolic disease
 - "cardiovascular disease" is NOT "obesity" — do not remove it
+- "obesity" is NOT "type 2 diabetes mellitus" — they are distinct diseases that are comorbid and share a patient population, but neither is the same condition as the other. Do not remove "obesity" (or "overweight body mass index status") because the indication is type 2 diabetes, and do not remove diabetes because the indication is obesity.
 
 Drug's current indications: {drug_indications}
 

@@ -58,7 +58,7 @@ indication_scout/
 │   └── conftest.py                # Shared fixtures
 ├── docs/                          # Documentation
 ├── for_me/                        # Personal notes (findings.md is source of truth)
-├── _cache/                        # Disk cache for API/LLM responses (per-namespace JSON, 5-day TTL)
+├── cache/                        # Disk cache for API/LLM responses (per-namespace JSON, config-driven TTL (currently 60 days))
 └── pyproject.toml                 # Project metadata & dependencies
 ```
 
@@ -69,7 +69,7 @@ indication_scout/
 | Data Sources | **Complete** | OpenTargetsClient, ClinicalTrialsClient, PubMedClient, ChEMBLClient, FDAClient; DrugBankClient is a stub |
 | Data Models | **Complete** | Pydantic models for all data contracts (Open Targets, ClinicalTrials, PubMed, ChEMBL, DrugProfile, EvidenceSummary) |
 | BaseClient | **Complete** | Retry with exponential backoff; persistent failure log via `log_data_source_failure` |
-| File Cache | **Complete** | Shared `utils/cache.py` used by all clients and services (`_cache/<namespace>/<sha>.json`, 5-day TTL) |
+| File Cache | **Complete** | Shared `utils/cache.py` used by all clients and services (`cache/<namespace>/<sha>.json`, config-driven TTL (currently 60 days)) |
 | Services | **Complete** | `llm.py`, `embeddings.py`, `disease_helper.py`, `pubmed_query.py`, `approval_check.py`, `retrieval.py` (build_drug_profile, expand_search_terms, extract_organ_term, fetch_new_abstracts, embed_abstracts, fetch_and_cache, semantic_search, synthesize, get_drug_competitors) |
 | Agents | **Complete** | Supervisor + literature, clinical_trials, mechanism sub-agents — all built on LangGraph `create_react_agent`. `BaseAgent` ABC still exists in `agents/base.py` but is unused. |
 | API | Minimal | FastAPI with `/health` endpoint only; `routes/` and `schemas/` are empty packages |
@@ -199,7 +199,7 @@ reliable API communication.
 │                                                                              │
 │  Failure logging                                                             │
 │  └── log_data_source_failure() appends a tab-separated line to             │
-│      _cache/data_source_failures.log on terminal failure.                   │
+│      cache/data_source_failures.log on terminal failure.                   │
 │                                                                              │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -215,10 +215,10 @@ Configuration values come from `Settings` (`default_timeout`, `default_max_retri
 │                         Disk Cache                                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                      │
-│  Layout: _cache/<namespace>/<sha256>.json                           │
+│  Layout: cache/<namespace>/<sha256>.json                           │
 │  Key:    SHA-256 of {"ns": namespace, **params} (JSON, sorted keys)│
 │  Entry:  {"data": ..., "cached_at": <iso>, "ttl": <secs>}           │
-│  TTL:    5 days (CACHE_TTL = 5 * 86400) unless overridden per-call  │
+│  TTL:    CACHE_TTL (currently 60 days) unless overridden per-call   │
 │  Expiry: checked on read; expired/corrupt entries auto-deleted      │
 │                                                                      │
 │  Namespaces in active use:                                           │
@@ -367,7 +367,7 @@ to be cached independently and shared across drugs.
 ### EvidenceRecord
 
 Pulled from Open Targets' `target.evidences(efoIds: [...])` endpoint. Persisted in a
-per-target JSON file (separate from the `_cache/<ns>/<sha>.json` layout) via
+per-target JSON file (separate from the `cache/<ns>/<sha>.json` layout) via
 `_save_target_evidences`.
 
 ```
@@ -658,7 +658,7 @@ semantic search against stored abstracts.
 | `FDAClient` | `get_label_indications(drug_name)`, `get_all_label_indications(drug_names)` |
 
 ChEMBL IDs and drug-name lists are persisted in dedicated per-drug JSON files under
-`_cache/` (separate from the namespace cache).
+`cache/` (separate from the namespace cache).
 
 ---
 
@@ -765,8 +765,8 @@ when `--date-before` is set).
 
 1. **Separation of Concerns** — Data sources (clients) separate from domain logic (agents/services); agents never see raw API responses.
 2. **Async-First** — All I/O is async via aiohttp; clients are async context managers.
-3. **Graceful Degradation** — Retry with exponential backoff on 429/5xx; `DataSourceError` carries source name and context; terminal failures are logged to `_cache/data_source_failures.log`.
-4. **Shared Disk Cache** — JSON files in `_cache/<namespace>/` with 5-day TTL, SHA-256-keyed; used by all data source clients and services via `utils/cache.py`.
+3. **Graceful Degradation** — Retry with exponential backoff on 429/5xx; `DataSourceError` carries source name and context; terminal failures are logged to `cache/data_source_failures.log`.
+4. **Shared Disk Cache** — JSON files in `cache/<namespace>/` with config-driven TTL (currently 60 days), SHA-256-keyed; used by all data source clients and services via `utils/cache.py`.
 5. **Type Safety** — Full Pydantic validation with `coerce_nones` model validator on every external data model; Python 3.10+ type hints throughout.
 6. **Model-Driven** — GraphQL/REST responses parsed into typed Pydantic models; Pydantic `BaseModel` contracts at every module boundary.
 7. **No Fallbacks for Clinical Data** — Missing scientific/clinical values return `None` / empty structures, never defaults; this is a clinical genomics tool.

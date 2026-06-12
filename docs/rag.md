@@ -178,7 +178,7 @@ search terms (e.g. `"narcolepsy"`) before they are passed to `get_pubmed_query`.
    not collapse to an over-generic term in `BROADENING_BLOCKLIST` (defined in `constants.py`; e.g.
    `"cancer"`, `"carcinoma"`, `"disease"`, `"syndrome"`).
 
-**File-based cache (`_cache/`, 5-day TTL):**
+**File-based cache (`cache/`, config-driven TTL (currently 60 days)):**
 
 | Namespace | Cache key | Cached value |
 |-----------|-----------|--------------|
@@ -315,7 +315,7 @@ volumes:
   `sentence-transformers`. 768-dim vectors. Trained on UMLS + SNOMED-CT biomedical ontologies.
 - **Vector store:** PostgreSQL + pgvector. Abstracts and embeddings stored in `pubmed_abstracts`
   table. Cosine similarity for search.
-- **Cache layers:** File-based cache (`_cache/` dir, SHA-256 keys, 5-day TTL) for LLM results,
+- **Cache layers:** File-based cache (`cache/` dir, SHA-256 keys, config-driven TTL (currently 60 days)) for LLM results,
   PubMed searches, and Open Targets data. pgvector itself acts as the abstract/embedding cache.
 - **Service class:** `RetrievalService(cache_dir: Path)` in `services/retrieval.py` is the single
   entry point for all pipeline operations.

@@ -94,7 +94,7 @@ image build, which is stale during dev) — hit **:5173** for the UI.
 
 ## Volumes
 
-- `scout_cache` (`/app/_cache`) is shared with the prod compose — the seeded example
+- `scout_cache` (`/app/cache`) is shared with the prod compose — the seeded example
   cache and all data-source caches persist across runs.
 - `hf_cache` holds the BioLORD-2023 model so it downloads once.
 

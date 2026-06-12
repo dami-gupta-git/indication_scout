@@ -205,7 +205,7 @@ async with PubMedClient() as client:
 
 | Method | Returns | Notes |
 |---|---|---|
-| `search(query, max_results, date_before)` | `list[str]` | PMIDs; results cached to `_cache/` |
+| `search(query, max_results, date_before)` | `list[str]` | PMIDs; results cached to `cache/` |
 | `fetch_abstracts(pmids, batch_size)` | `list[PubmedAbstract]` | Batches requests in groups of 100 |
 | `get_count(query, date_before)` | `int` | Fast count with no content fetch |
 
