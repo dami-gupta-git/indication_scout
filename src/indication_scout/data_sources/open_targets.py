@@ -248,6 +248,7 @@ class OpenTargetsClient(BaseClient):
             "chembl_id": chembl_id,
             "min_stage": min_stage,
             "date_before": date_before.isoformat() if date_before else None,
+            "prefetch_max": _settings.open_targets_competitor_prefetch_max,
         }
         cached = cache_get("competitors_raw", cache_params, self.cache_dir)
         if cached is not None:

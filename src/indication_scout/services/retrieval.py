@@ -132,6 +132,7 @@ class RetrievalService:
         cache_params = {
             "chembl_id": chembl_id,
             "date_before": date_before.isoformat() if date_before else None,
+            "top_k": _settings.literature_top_k,
         }
         cached = cache_get("competitors_merged", cache_params, self.cache_dir)
         if cached is not None and len(cached) > 0:
@@ -715,6 +716,7 @@ class RetrievalService:
             "disease": disease,
             "pmids": sorted(r.pmid for r in top_abstracts),
             "holdout_mode": holdout_mode,
+            "llm_model": _settings.llm_model,
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -761,7 +763,11 @@ class RetrievalService:
 
     async def extract_organ_term(self, disease_name: str) -> str:
         """Return the primary organ or tissue for a disease name via a small LLM call."""
-        cached = cache_get("organ_term", {"disease_name": disease_name}, self.cache_dir)
+        cache_params = {
+            "disease_name": disease_name,
+            "small_llm_model": _settings.small_llm_model,
+        }
+        cached = cache_get("organ_term", cache_params, self.cache_dir)
         if cached is not None:
             # logger.debug("Cache hit for organ_term: %s", disease_name)
             return cached
@@ -773,7 +779,7 @@ class RetrievalService:
 
         cache_set(
             "organ_term",
-            {"disease_name": disease_name},
+            cache_params,
             organ_term,
             self.cache_dir,
             ttl=CACHE_TTL,
@@ -820,9 +826,14 @@ class RetrievalService:
             ...     "GLP1R liver inflammation",
             ... ]
         """
+        cache_params = {
+            "chembl_id": chembl_id,
+            "disease_name": disease_name,
+            "small_llm_model": _settings.small_llm_model,
+        }
         cached = cache_get(
             "expand_search_terms",
-            {"chembl_id": chembl_id, "disease_name": disease_name},
+            cache_params,
             self.cache_dir,
         )
         if cached is not None:
@@ -893,7 +904,7 @@ class RetrievalService:
 
         cache_set(
             "expand_search_terms",
-            {"chembl_id": chembl_id, "disease_name": disease_name},
+            cache_params,
             deduped,
             self.cache_dir,
             ttl=CACHE_TTL,

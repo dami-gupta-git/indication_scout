@@ -127,6 +127,7 @@ class ClinicalTrialsClient(BaseClient):
             "drug": drug,
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
+            "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
         }
         cached = cache_get("ct_search", cache_params, self.cache_dir)
         if cached is not None:
@@ -228,6 +229,7 @@ class ClinicalTrialsClient(BaseClient):
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
             "top_n": top_n,
+            "landscape_max": _settings.clinical_trials_landscape_max_trials,
         }
         cached = cache_get("ct_landscape", cache_params, self.cache_dir)
         if cached is not None:
@@ -282,6 +284,7 @@ class ClinicalTrialsClient(BaseClient):
             "drug": drug,
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
+            "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
         }
         cached = cache_get("ct_terminated", cache_params, self.cache_dir)
         if cached is not None:
@@ -385,6 +388,7 @@ class ClinicalTrialsClient(BaseClient):
             "drug": drug,
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
+            "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
         }
         cached = cache_get("ct_completed", cache_params, self.cache_dir)
         if cached is not None:

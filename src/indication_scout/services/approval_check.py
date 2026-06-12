@@ -13,6 +13,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from indication_scout.config import get_settings
 from indication_scout.constants import (
     CACHE_TTL,
     CURATED_FDA_APPROVED_CANDIDATES,
@@ -35,6 +36,7 @@ from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
+_settings = get_settings()
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 _DRUG_APPROVAL_NS = "fda_drug_disease_approval"
@@ -295,7 +297,10 @@ async def list_approved_indications_from_labels(
     if not label_texts:
         return []
 
-    cache_params = {"label_texts": sorted(label_texts)}
+    cache_params = {
+        "label_texts": sorted(label_texts),
+        "llm_model": _settings.llm_model,
+    }
     cached = cache_get("fda_label_indications", cache_params, cache_dir)
     if cached is not None:
         return list(cached)
@@ -358,6 +363,7 @@ async def extract_approved_from_labels(
     cache_params = {
         "label_texts": sorted(label_texts),
         "candidate_diseases": sorted(candidate_diseases),
+        "small_llm_model": _settings.small_llm_model,
     }
     cached = cache_get("fda_approval_check", cache_params, cache_dir)
     if cached is not None:

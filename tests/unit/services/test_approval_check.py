@@ -308,7 +308,7 @@ async def test_list_approved_indications_caches_result(tmp_path):
 
 # --- get_approved_indications (hardcoded table lookup) ---------------------
 #
-# Reads the real data/drug_approvals.json file. The table is loaded via
+# Reads the real drug_approvals.json file. The table is loaded via
 # functools.lru_cache, so each test calls cache_clear() to ensure the file
 # is re-read in the current test's process state.
 

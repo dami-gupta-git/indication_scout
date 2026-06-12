@@ -61,7 +61,8 @@ async def llm_normalize_disease(raw_term: str) -> str:
         "renal tubular dysgenesis"              → "kidney disease"
         "CML"                                   → "chronic myeloid leukemia"
     """
-    cached = cache_get("disease_norm", {"raw_term": raw_term}, DEFAULT_CACHE_DIR)
+    cache_params = {"raw_term": raw_term, "small_llm_model": _settings.small_llm_model}
+    cached = cache_get("disease_norm", cache_params, DEFAULT_CACHE_DIR)
     if cached is not None:
         return cached
 
@@ -71,7 +72,7 @@ async def llm_normalize_disease(raw_term: str) -> str:
     response = await query_small_llm(prompt)
     normalized = response.strip().strip('"').strip("'")
 
-    cache_set("disease_norm", {"raw_term": raw_term}, normalized, DEFAULT_CACHE_DIR)
+    cache_set("disease_norm", cache_params, normalized, DEFAULT_CACHE_DIR)
     return normalized
 
 
@@ -91,7 +92,11 @@ async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
     uncached: list[str] = []
 
     for term in raw_terms:
-        cached = cache_get("disease_norm", {"raw_term": term}, DEFAULT_CACHE_DIR)
+        cached = cache_get(
+            "disease_norm",
+            {"raw_term": term, "small_llm_model": _settings.small_llm_model},
+            DEFAULT_CACHE_DIR,
+        )
         if cached is not None:
             results[term] = cached
         else:
@@ -135,7 +140,12 @@ async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
             normalized = await llm_normalize_disease(term)
         else:
             normalized = normalized.strip().strip('"').strip("'")
-            cache_set("disease_norm", {"raw_term": term}, normalized, DEFAULT_CACHE_DIR)
+            cache_set(
+                "disease_norm",
+                {"raw_term": term, "small_llm_model": _settings.small_llm_model},
+                normalized,
+                DEFAULT_CACHE_DIR,
+            )
         results[term] = normalized
 
     return results
@@ -147,6 +157,7 @@ async def merge_duplicate_diseases(
     cache_params = {
         "diseases": sorted(diseases),
         "drug_indications": sorted(drug_indications),
+        "small_llm_model": _settings.small_llm_model,
     }
     cached = cache_get("disease_merge", cache_params, DEFAULT_CACHE_DIR)
     if cached is not None:

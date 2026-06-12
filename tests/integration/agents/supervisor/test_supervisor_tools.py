@@ -131,6 +131,23 @@ async def test_find_candidates_random(llm, db_session_truncating, test_cache_dir
     )
     diseases: list[str] = msg.artifact
 
+async def my_test(llm, db_session_truncating, test_cache_dir):
+    """find_candidates returns Open Targets candidate diseases, populates the closure-scoped
+    allowlist, and seeds drug aliases + FDA-approved indications into the briefing store.
+    """
+    svc = RetrievalService(test_cache_dir)
+    tools_list, _, _ = build_supervisor_tools(
+        llm=llm, svc=svc, db=db_session_truncating
+    )
+    tools = _tool_map(tools_list)
+    _preset_mechanism_gate(tools)
+
+    msg = await tools["find_candidates"].ainvoke(
+        _tc("find_candidates", drug_name="bupropion")
+    )
+
+    diseases: list[str] = msg.artifact
+    assert isinstance(diseases, list)
 
 async def test_find_candidates_metformin(llm, db_session_truncating, test_cache_dir):
     """find_candidates returns Open Targets candidate diseases, populates the closure-scoped

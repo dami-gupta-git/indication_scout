@@ -51,7 +51,7 @@ class FDAClient(BaseClient):
         Returns:
             List of indications_and_usage text strings, possibly empty.
         """
-        cache_params = {"drug_name": drug_name.lower()}
+        cache_params = {"drug_name": drug_name.lower(), "limit": OPENFDA_LABEL_LIMIT}
         cached = cache_get("fda_label", cache_params, self.cache_dir)
         if cached is not None:
             return cached

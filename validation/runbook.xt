@@ -1,0 +1,64 @@
+drug,indication,date
+bupropion,major depressive disorder,1985-01-01
+imatinib,hypereosinophilic syndrome,2006-05-05
+imatinib,CML,2001-01-01
+bupropion,smoking cessation,1996-08-14
+bupropion,seasonal affective disorder,2006-03-31
+bupropion,obesity,2013-12-10
+bupropion,alzheimer's disease agitation,2025-08-31
+semaglutide,type 2 diabetes mellitus,2017-03-05
+semaglutide,cardiovascular risk reduction,2019-04-16
+semaglutide,obesity,2020-09-04
+semaglutide,chronic kidney disease,2024-04-28
+semaglutide,MASH,2024-11-15
+duloxetine,major depressive disorder,2003-11-03
+duloxetine,diabetic peripheral neuropathic pain,2003-12-03
+duloxetine,generalized anxiety disorder,2006-05-26
+duloxetine,fibromyalgia,2007-09-30
+duloxetine,chronic musculoskeletal pain,2010-02-04
+imatinib,chronic myeloid leukemia,2000-08-10
+imatinib,gastrointestinal stromal tumor,2001-05-01
+imatinib,acute lymphoblastic leukemia,2006-01-19
+imatinib,myelodysplastic syndrome,2006-01-19
+imatinib,myeloproliferative neoplasm,2006-01-19
+imatinib,aggressive systemic mastocytosis,2006-01-19
+imatinib,dermatofibrosarcoma protuberans,2006-01-19
+colchicine,gout,2008-10-29
+colchicine,familial mediterranean fever,2008-10-29
+colchicine,atherosclerotic cardiovascular disease,2022-09-17
+tadalafil,erectile dysfunction,2003-02-21
+tadalafil,pulmonary arterial hypertension,2008-08-22
+tadalafil,benign prostatic hyperplasia,2011-01-06
+sildenafil,erectile dysfunction,1997-06-27
+sildenafil,pulmonary arterial hypertension,2004-09-03
+botox_onabotulinumtoxinA,strabismus and blepharospasm,1989-03-29
+botox_onabotulinumtoxinA,cervical dystonia,1999-04-01
+botox_onabotulinumtoxinA,severe axillary hyperhidrosis,2003-04-01
+botox_onabotulinumtoxinA,glabellar lines,2001-07-12
+botox_onabotulinumtoxinA,chronic migraine,2009-04-01
+botox_onabotulinumtoxinA,upper limb spasticity,2009-04-01
+botox_onabotulinumtoxinA,overactive bladder,2012-04-01
+botox_onabotulinumtoxinA,urinary incontinence due to detrusor overactivity,2010-04-01
+botox_onabotulinumtoxinA,lower limb spasticity,2014-04-01
+botox_onabotulinumtoxinA,pediatric upper/lower limb spasticity,2018-04-01
+botox_onabotulinumtoxinA,pediatric detrusor overactivity,2020-04-01
+botox_onabotulinumtoxinA,forehead lines and crow's feet,2012-04-01
+methotrexate,acute lymphoblastic leukemia,1953-03-31
+methotrexate,psoriasis,1972-03-31
+methotrexate,rheumatoid arthritis,1988-03-31
+baricitinib,alopecia areata,2021-09-01
+propranolol,hypertension,1967-03-31
+propranolol,angina pectoris,1967-03-31
+propranolol,migraine prophylaxis,1979-03-31
+propranolol,essential tremor,1984-03-31
+propranolol,proliferating infantile hemangioma,2014-03-31
+everolimus,advanced renal cell carcinoma,2008-06-30
+everolimus,prevention of organ rejection in kidney transplant,2009-07-22
+everolimus,subependymal giant cell astrocytoma,2010-01-29
+everolimus,progressive pancreatic neuroendocrine tumors,2010-08-06
+everolimus,renal angiomyolipoma associated,2011-07-26
+everolimus,"advanced HR+, HER2- breast cancer",2011-10-20
+everolimus,prevention of organ rejection in liver transplant,2012-05-15
+everolimus,TSC-associated partial-onset seizures,2017-07-10
+methotrexate,benign prostatic hyperplasia,1992-03-31
+methotrexate,male pattern hair loss,1997-03-31

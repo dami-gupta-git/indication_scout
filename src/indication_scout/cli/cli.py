@@ -22,9 +22,11 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DEFAULT_OUT_DIR = PROJECT_ROOT / "snapshots"
 TEST_REPORTS_DIR = PROJECT_ROOT / "test_reports"
 
-# Manually set this to point at a different constants file (e.g. ".env.constants.experiment").
+# Default constants profile for CLI runs. Production values — the CLI writes into the
+# shared production cache, so it must not populate it with test-profile data. Override
+# per-invocation with the CONSTANTS_FILE env var (e.g. ".env.constants.experiment").
 # Path is resolved relative to PROJECT_ROOT.
-CONSTANTS_FILE = ".env.constants.test"
+CONSTANTS_FILE = ".env.constants"
 
 
 def _load_env() -> None:
