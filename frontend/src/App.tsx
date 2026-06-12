@@ -16,6 +16,12 @@ import sampleOutput from "./fixtures/sample-output.json";
 const TABS = ["Overview", "Mechanism", "Clinical Trials", "Literature"] as const;
 type Tab = (typeof TABS)[number];
 
+// Surfacing-scope disclaimer shown under the drug title (desktop + mobile).
+const SCOPE_NOTE =
+  "Candidate diseases are surfaced from OpenTargets target–disease associations only. " +
+  "Indications mediated by the drug but not linked to its targets in OpenTargets " +
+  "(e.g. duloxetine for pain) will not appear.";
+
 export function App() {
   const { state, run, stop, loadSample, reset } = useAnalysis();
   const [drug, setDrug] = useState("metformin");
@@ -135,9 +141,14 @@ export function App() {
         )}
 
         {result && (
-          <h1 className="drug-title drug-title-mobile">
-            {(state.data?.drug_name ?? "").toUpperCase()}
-          </h1>
+          <>
+            <h1 className="drug-title drug-title-mobile">
+              {(state.data?.drug_name ?? "").toUpperCase()}
+            </h1>
+            <p className="caption drug-title-mobile" style={{ fontStyle: "italic" }}>
+              {SCOPE_NOTE}
+            </p>
+          </>
         )}
 
         {result && (
@@ -187,6 +198,9 @@ export function App() {
             <h1 className="drug-title">
               {(state.data?.drug_name ?? "").toUpperCase()}
             </h1>
+            <p className="caption scope-note-main" style={{ fontStyle: "italic" }}>
+              {SCOPE_NOTE}
+            </p>
             <KpiBand result={result} />
             <nav className="tabs" role="tablist" aria-label="Analysis sections">
               {TABS.map((t) => (

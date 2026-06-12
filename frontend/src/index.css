@@ -1100,7 +1100,8 @@ body {
     margin-top: 1.25rem;
   }
 
-  .main .drug-title {
+  .main .drug-title,
+  .scope-note-main {
     display: none;
   }
 
