@@ -18,9 +18,8 @@ type Tab = (typeof TABS)[number];
 
 // Surfacing-scope disclaimer shown under the drug title (desktop + mobile).
 const SCOPE_NOTE =
-  "Candidate diseases are surfaced from OpenTargets target–disease associations only. " +
-  "Indications mediated by the drug but not linked to its targets in OpenTargets " +
-  "(e.g. duloxetine for pain) will not appear.";
+  "Candidates come from OpenTargets target–disease associations only; " +
+  "off-target indications (e.g. duloxetine for pain) won't appear.";
 
 export function App() {
   const { state, run, stop, loadSample, reset } = useAnalysis();

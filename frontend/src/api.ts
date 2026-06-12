@@ -5,8 +5,16 @@ import type { AnalysisCreated, AnalysisStatus } from "./types";
 
 async function asJson<T>(resp: Response): Promise<T> {
   if (!resp.ok) {
-    const detail = await resp.text();
-    throw new Error(`${resp.status}: ${detail}`);
+    const body = await resp.text();
+    // FastAPI error bodies are {"detail": "..."}; surface that plainly when present.
+    let detail = body;
+    try {
+      const parsed = JSON.parse(body);
+      if (parsed && typeof parsed.detail === "string") detail = parsed.detail;
+    } catch {
+      /* non-JSON body: use the raw text */
+    }
+    throw new Error(detail);
   }
   return resp.json() as Promise<T>;
 }

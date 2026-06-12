@@ -58,7 +58,12 @@ async def run_analysis(
         reset_api_timing,
     )
 
+    from indication_scout.data_sources.chembl import resolve_drug_name
+
     drug = normalize_drug_name(drug_name)
+    # Fail fast: one quick Open Targets search confirms the drug exists before any agents run.
+    # Raises DataSourceError if not found; the result is cached for the in-agent resolves.
+    await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
     db = next(get_db())
     _t0 = time.perf_counter()
     reset_api_timing()

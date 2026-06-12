@@ -15,7 +15,10 @@ from indication_scout.api.schemas.analyses import (
     AnalysisRequest,
     AnalysisStatusResponse,
 )
-from indication_scout.constants import SEED_REPORT_SPINNER_SECONDS
+from indication_scout.constants import DEFAULT_CACHE_DIR, SEED_REPORT_SPINNER_SECONDS
+from indication_scout.data_sources.base_client import DataSourceError
+from indication_scout.data_sources.chembl import resolve_drug_name
+from indication_scout.helpers.drug_helpers import normalize_drug_name
 from indication_scout.report.format_report import format_report
 from indication_scout.services.analysis_runner import run_analysis
 from indication_scout.services.job_store import Job, job_store
@@ -54,6 +57,17 @@ async def _execute(job: Job) -> None:
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
 async def create_analysis(req: AnalysisRequest) -> AnalysisCreatedResponse:
     """Launch a background analysis; return its job id immediately."""
+    drug = normalize_drug_name(req.drug_name)
+    # Fail fast: one quick Open Targets search confirms the drug exists before we spin up
+    # a job. Seed-report drugs skip the check (they don't need OT resolution).
+    if load_fresh_seed_report(drug) is None:
+        try:
+            await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
+        except DataSourceError:
+            raise HTTPException(
+                status_code=422,
+                detail=f"No drug found matching '{req.drug_name}'.",
+            )
     job = job_store.create(req.drug_name)
     job.task = asyncio.create_task(_execute(job))
     return AnalysisCreatedResponse(job_id=job.job_id, status=job.status)

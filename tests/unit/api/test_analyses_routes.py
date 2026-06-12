@@ -34,6 +34,19 @@ def no_seed_report():
         yield
 
 
+@pytest.fixture(autouse=True)
+def drug_resolves():
+    """Default the fail-fast existence check to a hit so POST reaches the job path.
+
+    Tests that exercise the not-found path patch this themselves.
+    """
+    with patch(
+        "indication_scout.api.routes.analyses.resolve_drug_name",
+        new=AsyncMock(return_value="CHEMBL1431"),
+    ):
+        yield
+
+
 # --- _execute lifecycle (background runner) ---
 
 
@@ -141,6 +154,22 @@ def test_post_returns_202_with_job_id(client, fresh_store):
     body = resp.json()
     assert body["job_id"] in {j.job_id for j in fresh_store.all()}
     assert body["status"] in {"pending", "running", "done"}
+
+
+def test_post_unknown_drug_returns_422_without_creating_job(client, fresh_store):
+    from indication_scout.data_sources.base_client import DataSourceError
+
+    run = AsyncMock()
+    with patch(
+        "indication_scout.api.routes.analyses.resolve_drug_name",
+        new=AsyncMock(side_effect=DataSourceError("chembl", "No drug found for 'zzzqq'")),
+    ), patch("indication_scout.api.routes.analyses.run_analysis", new=run):
+        resp = client.post("/api/analyses", json={"drug_name": "zzzqq"})
+
+    assert resp.status_code == 422
+    assert resp.json()["detail"] == "No drug found matching 'zzzqq'."
+    assert list(fresh_store.all()) == []
+    run.assert_not_awaited()
 
 
 def test_get_unknown_job_returns_404(client, fresh_store):
