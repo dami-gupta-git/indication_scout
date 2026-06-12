@@ -51,7 +51,10 @@ def _drug_approval_path(drug_name: str, cache_dir: Path) -> Path:
     (e.g. "5-FU" vs "5_FU") and to handle empty slugs.
     """
     slug = _SLUG_RE.sub("_", drug_name.lower()).strip("_")
-    suffix = hashlib.sha256(drug_name.encode()).hexdigest()[:8]
+    # Fold the LLM model into the key: verdicts are LLM-generated, so a model
+    # change must not serve stale verdicts from the prior model.
+    keyed = f"{drug_name}\x00{_settings.llm_model}"
+    suffix = hashlib.sha256(keyed.encode()).hexdigest()[:8]
     stem = f"{slug}_{suffix}" if slug else suffix
     return cache_dir / _DRUG_APPROVAL_NS / f"{stem}.json"
 
