@@ -117,23 +117,6 @@ async def seed_examples() -> None:
     seed_example_cache()
 
 
-@app.on_event("startup")
-async def preload_embedding_model() -> None:
-    """Pre-load the embedding model on startup so it's ready for requests.
-
-    The BioLORD-2023 model is ~500 MB and takes ~10 s to download on first
-    deployment. Loading it here — before the server begins accepting traffic —
-    means the download happens once at startup rather than on the first
-    analysis request, preventing that request from timing out and returning a
-    502 to the client.
-    """
-    from indication_scout.services.embeddings import embed_async
-
-    logger.info("Pre-loading embedding model...")
-    await embed_async(["warmup"])
-    logger.info("Embedding model ready")
-
-
 @app.get("/health")
 async def health_check() -> dict[str, str]:
     """Health check endpoint."""
