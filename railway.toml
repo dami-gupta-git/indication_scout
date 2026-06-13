@@ -1,8 +1,9 @@
-# Railway deploy config. Builds with Railpack (not the Dockerfile): the
-# Dockerfile's startup model preload OOMs on the current instance size, so the
-# service uses Railpack which boots within the healthcheck window.
+# Railway deploy config. Builds the Dockerfile (prod `api` stage = last stage).
+# The Dockerfile uses BuildKit `--mount=type=cache` on the pip/npm steps so deps
+# are not re-downloaded every deploy; cache mounts only apply under the
+# dockerfile builder, hence the explicit setting below.
 #
-# Set the rest in the Railway dashboard (Variables + Volume), see DEPLOY_RAILWAY.md:
+# Set the rest in the Railway dashboard (Variables + Volume):
 #   DATABASE_URL=${{Postgres.DATABASE_URL}}
 #   DB_PASSWORD=<any non-empty>
 #   SCOUT_CACHE_DIR=/cache
@@ -11,7 +12,7 @@
 # Mount a persistent volume at /cache.
 
 [build]
-builder = "railpack"
+builder = "dockerfile"
 
 [deploy]
 # Health check: Railway waits for this to pass before routing traffic.
