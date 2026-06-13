@@ -67,6 +67,25 @@ async def run_analysis(
     db = next(get_db())
     _t0 = time.perf_counter()
     reset_api_timing()
+
+    # Warm the embedding model off the critical path. It lazy-loads (~10s+) on
+    # first embed(), and the literature stage hits it from many parallel callers
+    # that serialize on the model lock — paying the cold load there stalls all of
+    # them. Loading now overlaps the OT/mechanism stages, which don't embed, so
+    # the model is ready by the time literature needs it. Fire-and-forget; errors
+    # are non-fatal (the real embed call will surface any genuine failure).
+    import asyncio
+
+    from indication_scout.services.embeddings import embed_async
+
+    async def _warm_embeddings() -> None:
+        try:
+            await embed_async(["warmup"])
+        except Exception as e:  # noqa: BLE001 — warmup must never break the run
+            logger.warning("Embedding model warmup failed (non-fatal): %s", e)
+
+    _warmup_task = asyncio.create_task(_warm_embeddings())
+
     try:
         agent, get_merged_allowlist, get_auto_findings = build_agent(db, date_before=date_before)
         output = await run_supervisor_agent(
@@ -89,4 +108,8 @@ async def run_analysis(
         )
         return output, format_report(output)
     finally:
+        # Ensure the warmup task is settled so it isn't garbage-collected while
+        # pending (which logs a noisy "Task was destroyed" warning).
+        if not _warmup_task.done():
+            _warmup_task.cancel()
         db.close()

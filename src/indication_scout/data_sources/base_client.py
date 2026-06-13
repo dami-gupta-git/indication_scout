@@ -219,7 +219,10 @@ class BaseClient(ABC):
                         if resp.status == 429:
                             delay = max(delay, 90)
                         ctx_suffix = f" ({context})" if context else ""
-                        logger.debug(
+                        # WARNING, not debug: a 429 forces a 90s sleep that otherwise
+                        # shows up only as an unexplained stall. Surfacing it makes
+                        # rate-limiting visible instead of looking like a hang.
+                        logger.warning(
                             "%s: HTTP %d on %s%s; sleeping %ds and retrying (attempt %d/%d)",
                             self._source_name,
                             resp.status,
@@ -268,7 +271,9 @@ class BaseClient(ABC):
             if attempt < self.max_retries:
                 delay = min(2**attempt, 90)
                 ctx_suffix = f" ({context})" if context else ""
-                logger.debug(
+                # WARNING, not debug — a swallowed timeout/connection error that
+                # silently sleeps and retries otherwise reads as an unexplained stall.
+                logger.warning(
                     "%s: %s on %s%s; sleeping %ds and retrying (attempt %d/%d)",
                     self._source_name,
                     last_error,

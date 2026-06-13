@@ -116,6 +116,19 @@ async def run_mechanism_agent(
         for symbol, target_id in zip(moa.target_symbols, moa.target_ids)
     }
 
+    # Restrict the candidate fan-out to the targets the LLM actually chose
+    # (the symbols it called get_target_associations on). The agent is prompted to
+    # pick the 3 most consequential targets; honoring that here avoids fetching
+    # per-disease evidence for every target — the dominant OT-call cost. Fall back
+    # to all targets if the LLM selected none, so a degenerate run still produces
+    # candidates.
+    chosen_symbols = set(associations.keys())
+    assemble_targets = {
+        symbol: target_id
+        for symbol, target_id in drug_targets.items()
+        if symbol in chosen_symbols
+    } or drug_targets
+
     all_mech_diseases = {
         a.disease_name for assoc_list in associations.values() for a in assoc_list
     }
@@ -127,11 +140,11 @@ async def run_mechanism_agent(
 
     _asm_t0 = time.perf_counter()
     candidates = await _assemble_candidates(
-        drug_name, drug_targets, mechanisms_of_action, date_before=date_before
+        drug_name, assemble_targets, mechanisms_of_action, date_before=date_before
     )
     logger.warning(
-        "[TIMING] mechanism %s: _assemble_candidates (%d targets) took %.1fs",
-        drug_name, len(drug_targets), time.perf_counter() - _asm_t0,
+        "[TIMING] mechanism %s: _assemble_candidates (%d of %d targets) took %.1fs",
+        drug_name, len(assemble_targets), len(drug_targets), time.perf_counter() - _asm_t0,
     )
     logger.warning(f"mechanism_agent SUMMARY: {summary}")
     return MechanismOutput(

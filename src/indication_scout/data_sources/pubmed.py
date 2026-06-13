@@ -25,6 +25,7 @@ from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     PUBMED_FETCH_URL,
     PUBMED_MAX_CONCURRENT_REQUESTS,
+    PUBMED_PUBDATE_TTL,
     PUBMED_SEARCH_SLEEP_SECONDS,
     PUBMED_SEARCH_URL,
     PUBMED_SUMMARY_URL,
@@ -175,9 +176,21 @@ class PubMedClient(BaseClient):
         """
         if batch_size is None:
             batch_size = get_settings().pubmed_esummary_batch_size
-        kept: list[str] = []
-        for i in range(0, len(pmids), batch_size):
-            batch = pmids[i : i + batch_size]
+
+        # Per-PMID sortpubdate cache. A real date is immutable; an empty string
+        # (abstract-less / unindexed PMID) is persisted too so those PMIDs aren't
+        # re-fetched from esummary every run — the residual holdout date cost.
+        dates: dict[str, str] = {}
+        missing: list[str] = []
+        for pmid in pmids:
+            cached = cache_get("pubmed_pubdate", {"pmid": pmid}, self.cache_dir)
+            if cached is not None:
+                dates[pmid] = cached
+            else:
+                missing.append(pmid)
+
+        for i in range(0, len(missing), batch_size):
+            batch = missing[i : i + batch_size]
             params: dict[str, Any] = {
                 "db": "pubmed",
                 "id": ",".join(batch),
@@ -189,18 +202,29 @@ class PubMedClient(BaseClient):
                 )
             result = data.get("result", {})
             for pmid in batch:
-                summary = result.get(pmid, {})
-                sortpubdate: str = summary.get("sortpubdate", "")
-                if not sortpubdate:
-                    kept.append(pmid)
-                    continue
-                try:
-                    pub_date = date.fromisoformat(sortpubdate[:10].replace("/", "-"))
-                except ValueError:
-                    kept.append(pmid)
-                    continue
-                if pub_date < date_before:
-                    kept.append(pmid)
+                sortpubdate: str = result.get(pmid, {}).get("sortpubdate", "")
+                dates[pmid] = sortpubdate
+                cache_set(
+                    "pubmed_pubdate",
+                    {"pmid": pmid},
+                    sortpubdate,
+                    self.cache_dir,
+                    ttl=PUBMED_PUBDATE_TTL,
+                )
+
+        kept: list[str] = []
+        for pmid in pmids:
+            sortpubdate = dates.get(pmid, "")
+            if not sortpubdate:
+                kept.append(pmid)
+                continue
+            try:
+                pub_date = date.fromisoformat(sortpubdate[:10].replace("/", "-"))
+            except ValueError:
+                kept.append(pmid)
+                continue
+            if pub_date < date_before:
+                kept.append(pmid)
         return kept
 
     async def fetch_pubtypes(

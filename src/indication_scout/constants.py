@@ -259,6 +259,13 @@ OPENFDA_LABEL_LIMIT: int = 5
 # case to a week — an acceptable error of omission.
 OPENFDA_EMPTY_LABEL_TTL: int = 7 * 86400  # 7 days
 
+# TTL for per-PMID publication dates from esummary. A real sortpubdate is
+# immutable; an empty result (abstract-less / not-yet-indexed PMID) is the
+# absence-can-flip case, so a 30-day bound caps staleness while killing the
+# per-run esummary re-fetch of those PMIDs (the residual holdout date-filter
+# cost). One TTL for both keeps the cache simple.
+PUBMED_PUBDATE_TTL: int = 30 * 86400  # 30 days
+
 # Curated per-drug list of candidate disease phrasings to short-circuit as
 # FDA-approved (return True without calling the LLM). Acts strictly as an
 # LLM backstop: only add candidate phrasings the LLM-against-label flow
