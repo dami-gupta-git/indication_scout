@@ -11,12 +11,13 @@
     "metabolic syndrome",
     "type 1 diabetes mellitus",
     "insulin resistance",
+    "prediabetes syndrome",
     "prostate cancer",
     "muscular dystrophy",
     "brain neoplasm",
     "bipolar disorder",
-    "migraine disorder",
-    "diabetes mellitus"
+    "diabetes mellitus",
+    "obstructive sleep apnea"
   ],
   "mechanism": {
     "drug_targets": {
@@ -194,22 +195,6 @@
     ],
     "candidates": [
       {
-        "target_symbol": "NDUFS4",
-        "action_type": "INHIBITOR",
-        "disease_name": "diabetes mellitus",
-        "disease_id": "EFO_0000400",
-        "disease_description": "A metabolic disorder characterized by abnormally high blood sugar levels due to diminished production of insulin or insulin resistance/desensitization.",
-        "target_function": "Accessory subunit of the mitochondrial membrane respiratory chain NADH dehydrogenase (Complex I), that is believed not to be involved in catalysis. Complex I functions in the transfer of electrons from NADH to the respiratory chain. The immediate electron acceptor for the enzyme is believed to be ubiquinone.."
-      },
-      {
-        "target_symbol": "NDUFB8",
-        "action_type": "INHIBITOR",
-        "disease_name": "diabetes mellitus",
-        "disease_id": "EFO_0000400",
-        "disease_description": "A metabolic disorder characterized by abnormally high blood sugar levels due to diminished production of insulin or insulin resistance/desensitization.",
-        "target_function": "Accessory subunit of the mitochondrial membrane respiratory chain NADH dehydrogenase (Complex I), that is believed not to be involved in catalysis. Complex I functions in the transfer of electrons from NADH to the respiratory chain. The immediate electron acceptor for the enzyme is believed to be ubiquinone.."
-      },
-      {
         "target_symbol": "GPD2",
         "action_type": "INHIBITOR",
         "disease_name": "diabetes mellitus",
@@ -218,23 +203,39 @@
         "target_function": "Calcium-responsive mitochondrial glycerol-3-phosphate dehydrogenase which seems to be a key component of the pancreatic beta- cell glucose-sensing device.."
       },
       {
-        "target_symbol": "NDUFA5",
+        "target_symbol": "MT-ND1",
         "action_type": "INHIBITOR",
         "disease_name": "diabetes mellitus",
         "disease_id": "EFO_0000400",
         "disease_description": "A metabolic disorder characterized by abnormally high blood sugar levels due to diminished production of insulin or insulin resistance/desensitization.",
-        "target_function": "Accessory subunit of the mitochondrial membrane respiratory chain NADH dehydrogenase (Complex I), that is believed not to be involved in catalysis. Complex I functions in the transfer of electrons from NADH to the respiratory chain. The immediate electron acceptor for the enzyme is believed to be ubiquinone.."
+        "target_function": "Core subunit of the mitochondrial membrane respiratory chain NADH dehydrogenase (Complex I) which catalyzes electron transfer from NADH through the respiratory chain, using ubiquinone as an electron acceptor. Essential for the catalytic activity and assembly of complex I.."
       },
       {
-        "target_symbol": "NDUFAF3",
+        "target_symbol": "GPD2",
         "action_type": "INHIBITOR",
-        "disease_name": "diabetes mellitus",
-        "disease_id": "EFO_0000400",
-        "disease_description": "A metabolic disorder characterized by abnormally high blood sugar levels due to diminished production of insulin or insulin resistance/desensitization.",
-        "target_function": "Essential factor for the assembly of mitochondrial NADH:ubiquinone oxidoreductase complex (complex I).."
+        "disease_name": "obstructive sleep apnea",
+        "disease_id": "EFO_0003918",
+        "disease_description": "Cessation of air flow during sleep due to upper airway obstruction.",
+        "target_function": "Calcium-responsive mitochondrial glycerol-3-phosphate dehydrogenase which seems to be a key component of the pancreatic beta- cell glucose-sensing device.."
+      },
+      {
+        "target_symbol": "GPD2",
+        "action_type": "INHIBITOR",
+        "disease_name": "polycystic ovary syndrome",
+        "disease_id": "EFO_0000660",
+        "disease_description": "A disorder that manifests as multiple cysts on the ovaries. It results in hormonal imbalances and leads to irregular and abnormal menstrual periods, excess growth of hair, acne eruptions and obesity.",
+        "target_function": "Calcium-responsive mitochondrial glycerol-3-phosphate dehydrogenase which seems to be a key component of the pancreatic beta- cell glucose-sensing device.."
+      },
+      {
+        "target_symbol": "GPD2",
+        "action_type": "INHIBITOR",
+        "disease_name": "obesity",
+        "disease_id": "EFO_0001073",
+        "disease_description": "An eating-related disorder in which excess body fat has accumulated to such an extent that health may be negatively affected. It is commonly defined as a body mass index (weight divided by height squared) of 30 kg/m2 or higher.",
+        "target_function": "Calcium-responsive mitochondrial glycerol-3-phosphate dehydrogenase which seems to be a key component of the pancreatic beta- cell glucose-sensing device.."
       }
     ],
-    "summary": "Metformin acts primarily as an inhibitor of Mitochondrial Complex I (represented by MT-ND1) and mitochondrial glycerol-3-phosphate dehydrogenase (GPD2), both of which reduce hepatic energy status and suppress gluconeogenesis. MT-ND1 (Complex I) shows its strongest disease associations with mitochondrial disorders — including Leber hereditary optic neuropathy (score 0.766), MELAS syndrome (0.735), and mitochondrial Complex I deficiency (0.679) — suggesting that metformin's partial Complex I inhibition could be explored cautiously in conditions of mitochondrial dysfunction, though toxicity risks must be weighed. GPD2 (mGPDH) is most strongly associated with type 2 diabetes mellitus (score 0.707, with high clinical evidence), directly validating metformin's approved indication, while secondary GPD2 associations with sleep apnea, COPD, and systemic lupus erythematosus hint at potential repurposing opportunities linked to metabolic and inflammatory dysregulation. Together, these findings reinforce metformin's core anti-diabetic mechanism and open avenues for investigating its utility in mitochondrial diseases, inflammatory conditions, and cancer, consistent with ongoing clinical interest in metformin repurposing."
+    "summary": "Metformin acts primarily as an inhibitor of two mitochondrial enzymes: Mitochondrial Complex I (NADH dehydrogenase), represented by MT-ND1, and mitochondrial glycerol-3-phosphate dehydrogenase (GPD2). MT-ND1 associations are dominated by rare mitochondrial diseases — Leber hereditary optic neuropathy, MELAS syndrome, Leigh syndrome, and mitochondrial Complex I deficiency — driven by strong genetic evidence, suggesting that metformin's Complex I inhibition could be carefully explored in modulating mitochondrial dysfunction, though caution is warranted given its inhibitory mechanism. GPD2 shows its strongest disease association with type 2 diabetes mellitus (overall score 0.707, with near-perfect clinical evidence at 0.999), directly validating metformin's established therapeutic use, while secondary GPD2 associations with sleep apnea, systemic lupus erythematosus, and COPD hint at potential repurposing opportunities in metabolic and inflammatory conditions. Together, these findings reinforce metformin's core anti-diabetic mechanism through GPD2/Complex I-mediated suppression of hepatic gluconeogenesis and suggest exploratory repurposing avenues in mitochondrial disease modulation, autoimmune conditions, and respiratory comorbidities."
   },
   "disease_findings": [
     {
@@ -1321,7 +1322,7 @@
             "24710641"
           ]
         },
-        "summary": "Strong evidence supports metformin's role in cardiovascular disease, based on synthesized PubMed literature across 5 top-ranked abstracts (cosine similarity up to 0.70) drawn from a pool of 983 retrieved records."
+        "summary": "strong"
       },
       "clinical_trials": {
         "search": {
@@ -5388,22 +5389,22 @@
             "walaphage"
           ]
         },
-        "summary": "**Metformin × Cardiovascular Disease — Repurposing Analysis**\n\n**FDA Approval Status**\nThis exact indication (cardiovascular disease) does not appear on metformin's FDA labels in this run. Metformin is, of course, approved for type 2 diabetes, and the supervisor should reconcile whether any cardiovascular risk-reduction language appears on existing labels as a superset or related claim.\n\n**Overall Trial Activity**\nThere are 20 trials on record for this pair, spanning Early Phase 1 through Phase 4, with a notable concentration at Phase 1–2 and a handful of Phase 3/4 studies. The portfolio covers a broad range of cardiovascular sub-contexts: atherosclerosis, coronary artery disease, peripheral artery disease, reperfusion injury, and cardiometabolic risk reduction.\n\n**Completed Trials**\nTen trials are recorded as completed. Two are on record as completed Phase 3:\n\n1. **NCT00000620 — ACCORD (Action to Control Cardiovascular Risk in Diabetes)**: This is the largest trial in the portfolio by enrollment, a landmark Phase 3 study in type 2 diabetes patients with cardiovascular risk. It has an exceptionally rich publication record (dozens of PMIDs linked, including 17599425 and many others), indicating extensive published readouts. The trial's primary focus was cardiovascular risk in the context of diabetes, and the supervisor should note this is a diabetes-primary trial with cardiovascular endpoints rather than a pure cardiovascular disease repurposing study.\n\n2. **NCT02043054 — LYDIA (Effects of Liraglutide in Young Adults With Type 2 Diabetes)**: Recorded as Phase 3, completed, with a published readout (PMID 27440110). This trial compared liraglutide against metformin in young adults with T2D and cardiovascular/obesity endpoints; metformin served as an active comparator rather than the investigational agent.\n\nOther notable completed trials include:\n- **NCT01438723 — MetCAB Trial (Phase 4)**: Metformin in coronary artery bypass graft surgery, with two publications linked (PMIDs 26179504, 24622709), suggesting a published readout in the peri-operative cardiovascular setting.\n- **NCT02252081 — Metformin in Kidney Disease (Phase 2)**: Focused on cardiometabolic outcomes in CKD, with a published readout (PMID 38837240).\n- **NCT00443755 (Phase 2)**: Insulin sensitizer therapy on atherothrombotic/inflammatory profiles, with two publications (PMIDs 22677076, 25733201).\n\n**Terminated Trials**\nTwo trials were terminated, both for operational reasons — recruitment difficulties and loss of funding — with no safety or efficacy stops on record for this pair. This represents no stopping signals related to drug performance.\n\n**Competitive Landscape**\nThe cardiovascular disease space is active with 10 identified competitor programs. Given the breadth of the indication, metformin would face competition from established cardiovascular agents (statins, SGLT2 inhibitors, GLP-1 agonists) many of which already carry explicit cardiovascular outcome approvals.\n\n**Repurposing Assessment**\nThe trial record reflects sustained investigational interest in metformin's cardiovascular effects, primarily in the context of diabetes-associated cardiovascular risk rather than cardiovascular disease as a standalone indication. The two completed Phase 3 trials (ACCORD and LYDIA) did not lead to a standalone cardiovascular disease approval, though ACCORD's cardiovascular endpoints in diabetic patients are extensively published. The two Phase 2 trials with published readouts (MetCAB, Metformin in Kidney Disease, and the atherothrombotic profile study) provide mechanistic and clinical signal in cardiovascular sub-settings. No safety or efficacy termination signals were observed. The repurposing opportunity, if any, likely lies in a specific cardiovascular sub-indication (e.g., peri-operative cardioprotection, CKD-related cardiometabolic risk) rather than broad cardiovascular disease, and the supervisor should weigh the diabetes-cardiovascular overlap carefully when assessing novelty."
+        "summary": "Metformin has 20 trials on record for cardiovascular disease, spanning Early Phase 1 through Phase 4, with 10 completed trials including two Phase 3 entries. The landmark ACCORD trial (NCT00000620, Phase 3) has an extensive published record (100+ linked PMIDs) but addressed cardiovascular risk reduction in the context of type 2 diabetes rather than cardiovascular disease as a standalone indication, and did not lead to a dedicated cardiovascular approval; the supervisor should assess whether the diabetes label subsumes this claim. Both terminated trials were stopped for operational reasons (recruitment/funding), with no safety or efficacy stopping signals on record. The cardiovascular disease space is highly competitive with established drug classes holding dedicated outcome-based approvals, which would pose a significant barrier to metformin's repurposing as a standalone cardiovascular agent."
       },
       "blurb": {
-        "stage": "Phase 2+ completed, multiple completed trials, some active",
-        "literature": "Strong, RCT-level evidence and meta-analyses",
-        "blocker": "No dedicated regulatory program identified; broad indication scope",
-        "active_programs": "Some active trials on record",
-        "key_risk": "Signal may not be separable from T2DM-related cardiovascular benefit in non-diabetic populations",
+        "stage": "Multiple completed trials on record, including Phase 3-scale studies; no dedicated regulatory submission identified",
+        "literature": "Strong, RCTs and meta-analyses",
+        "blocker": "No single pivotal regulatory submission on record for a standalone cardiovascular indication",
+        "active_programs": "Active trials ongoing",
+        "key_risk": "Heterogeneous cardiovascular endpoints across trials may limit regulatory coherence for a dedicated indication",
         "verdict": "Live but bottlenecked",
         "watch": "",
-        "prose": "Metformin has strong literature support for cardiovascular outcomes, with RCT-level evidence and meta-analyses, and a substantial completed trial record. The breadth of the indication and overlap with T2DM-related cardiovascular benefit make it difficult to isolate a pure repurposing signal in non-diabetic populations."
+        "prose": "Metformin has a strong literature base for cardiovascular outcomes, with completed RCTs and meta-analyses supporting a cardioprotective signal across diabetic and non-diabetic populations. Multiple completed trials are on record and active programs continue, but no dedicated regulatory submission for a cardiovascular indication has been identified in this run."
       }
     },
     {
       "disease": "polycystic ovary syndrome",
-      "source": "competitor",
+      "source": "both",
       "literature": {
         "search_results": [
           "metformin AND \"Polycystic Ovary Syndrome\"",
@@ -5916,7 +5917,7 @@
             "29576001"
           ]
         },
-        "summary": "Metformin shows moderate evidence for use in polycystic ovary syndrome (PCOS), supported by 5 semantically relevant abstracts retrieved from a pool of 421 PubMed records. The evidence highlights metformin's role in improving insulin sensitivity, reducing androgen levels, and restoring menstrual regularity in women with PCOS. Key findings include its effects on metabolic parameters, hormonal profiles, and potential benefits in combination with lifestyle interventions or other pharmacological agents. The evidence strength is rated moderate, reflecting a consistent but not overwhelmingly robust body of literature in the retrieved set."
+        "summary": "Metformin shows moderate evidence for use in polycystic ovary syndrome (PCOS), supported by 5 semantically relevant abstracts retrieved from a pool of 421 PubMed records. The evidence highlights metformin's role in improving insulin sensitivity, reducing androgen levels, and restoring menstrual regularity in women with PCOS. Key findings include its effects on metabolic parameters, hormonal profiles, and potential benefits in combination with lifestyle interventions or other agents. Evidence strength is rated moderate, reflecting a consistent but not overwhelmingly robust body of literature in the retrieved set."
       },
       "clinical_trials": {
         "search": {
@@ -18469,17 +18470,17 @@
             "walaphage"
           ]
         },
-        "summary": "Metformin in polycystic ovary syndrome (PCOS) represents one of the most extensively studied off-label drug–indication pairings in women's health. This exact indication does not appear on the drug's FDA labels in this run — metformin is approved for type 2 diabetes, not PCOS — yet the trial record is vast and deeply published.\n\n**Overall trial activity:** 181 trials on record, spanning Early Phase 1 through Phase 4 and a large Not Applicable (pragmatic/interventional) cohort. 109 are recorded as completed, 8 as terminated, and the remainder include recruiting, active, and unknown-status studies.\n\n**Completed pivotal-scale trials:** At least 11 completed Phase 3 trials and 2 completed Phase 2/Phase 3 trials are on record. The most prominent is NCT00068861 (\"Treatment of Infertility in Women With Polycystic Ovary Syndrome\"), a large NICHD-sponsored Phase 3 study with 13 linked PubMed publications (PMIDs including 15911461, 17287476, 21832111, and others), making it one of the most extensively published PCOS trials in the registry. NCT00994812 (Phase 3, \"Effects of Metformin on Pregnancy and Miscarriage Rates in PCOS\") carries 9 linked publications (e.g., PMID 15358717, 31227287). NCT00159536 (Phase 3, \"Metformin in Pregnant PCOS Women\") has 18 linked publications (e.g., PMID 29659896, 22154766), focusing on obstetric outcomes including pre-eclampsia and preterm birth. NCT01999686 (Phase 3, \"PCOS Treatment Using DLBS3233, Metformin, and Combination\") has a linked publication (PMID 37424700). None of these completed Phase 3 trials led to FDA approval for PCOS, but given the breadth of published evidence, the absence of approval reflects a regulatory/commercial decision rather than a lack of clinical investigation. Several completed trials address specific sub-contexts: ovulation induction (often combined with clomiphene citrate or letrozole), insulin resistance, pregnancy outcomes, and metabolic comorbidities.\n\n**Terminated trials:** 8 terminations on record, none classified as safety or efficacy stops. All terminations were operational: COVID-19 pandemic disruptions (NCT02523898 — enrollment shortfall; NCT02521753 — pandemic, with partial results already published), slow or poor recruitment (NCT00159575, NCT01482286, NCT00682890, NCT02500147), or no reason provided. There are no stopping signals related to drug performance on record.\n\n**Unknown-status trials:** 37 trials carry unknown status, including NCT05463627 (a large Chinese PCOS cohort examining metabolic and reproductive outcomes) and NCT06049186 (comparing caloric restriction diet vs. metformin in obese PCOS infertility). These represent pivotal-scale activity whose outcomes are not determinable from the registry.\n\n**Active and recruiting programs:** 14 recruiting trials include NCT06742710 (Phase 4, liraglutide vs. metformin in obese infertile PCOS women) and NCT02647827 (Phase 2, acupuncture vs. metformin for insulin resistance in PCOS), reflecting continued interest in comparative effectiveness and combination strategies. NCT06775093 (not yet recruiting) will examine GLP-1 receptor agonists vs. metformin for reproductive outcomes, signaling a competitive shift toward incretin-based therapies.\n\n**Competitive landscape:** The PCOS space has 10 identified competitors. The emerging presence of GLP-1 receptor agonists (liraglutide, semaglutide) in active PCOS trials represents the most significant competitive dynamic, particularly for the metabolic and weight-related dimensions of PCOS where metformin has historically been used.\n\n**Summary assessment:** Metformin has an exceptionally deep evidence base in PCOS — 109 completed trials, multiple Phase 3 programs with extensive published readouts, and no safety or efficacy stopping signals. The absence of FDA approval for PCOS despite this volume of evidence reflects the off-label use pattern that has become standard clinical practice. Repurposing interest today is most plausible in specific sub-indications (e.g., pregnancy outcomes, adolescent PCOS, combination regimens with newer agents) rather than a broad PCOS label, and any new program would need to differentiate against the growing GLP-1 agonist competitive set."
+        "summary": "Metformin in polycystic ovary syndrome (PCOS) has an exceptionally large and mature trial record — 181 trials on CT.gov spanning Early Phase 1 through Phase 4 and Not Applicable (pragmatic/interventional) designs — making it one of the most extensively studied off-label uses of any drug. This exact indication does not appear on metformin's FDA labels in this run (metformin is approved for type 2 diabetes), so PCOS remains a formal repurposing context despite decades of clinical investigation.\n\nThe completed portfolio is substantial: 109 trials recorded as completed, including at least 11 completed Phase 3 entries and 2 Phase 2/Phase 3 entries among the top 50 shown. Several of these are large, well-referenced pivotal-scale studies. The most prominent is NCT00068861 (\"Treatment of Infertility in Women With Polycystic Ovary Syndrome\"), a Phase 3 trial with 13 linked PubMed publications (PMIDs including 15911461, 17287476, 21832111, and others), representing the landmark NICHD PPCOSII/PPCOS program. NCT00994812 (Phase 3, \"Effects of Metformin on Pregnancy and Miscarriage Rates in PCOS\") has 9 linked publications (PMIDs including 15358717, 31227287). NCT00159536 (Phase 3, \"Metformin in Pregnant PCOS Women\") has 18 linked publications (PMIDs including 29659896, 30704873, 40785326), reflecting the Norwegian PregMet/PregMet2 program examining metformin use during pregnancy in PCOS. NCT01999686 (Phase 3, \"PCOS Treatment Using DLBS3233, Metformin, and Combination\") has a linked publication (PMID 37424700). None of these completed Phase 3 trials appear to have led to FDA approval for PCOS specifically, though the supervisor should note that some trials address narrower subtypes (insulin-resistant PCOS, PCOS-related infertility, PCOS in pregnancy) that may have distinct regulatory or guideline implications. NCT02491333 (Phase 3, acupuncture vs. metformin for insulin resistance in PCOS) is also completed with 39 linked publications.\n\nAmong the 37 trials recorded with UNKNOWN status, NCT05463627 (Not Applicable) and NCT06049186 (Not Applicable) are notable for their enrollment size; NCT00378729 (Phase 4) and NCT05394142 (Phase 2, SPIOMET combination) also carry UNKNOWN status. These represent pivotal-scale or combination-therapy activity whose outcomes are not determinable from the registry alone.\n\nTerminations are limited: 8 total, with no safety or efficacy stops identified in the shown set. All terminations were operational in nature — COVID-19 pandemic preventing target enrollment (NCT02523898, NCT02521753), slow recruitment and expired study medication (NCT00159575), poor enrollment (NCT01482286, NCT00682890, NCT02500147). This constitutes no stopping signals on record related to drug performance.\n\nThe competitive landscape for PCOS includes GLP-1 receptor agonists (liraglutide, NCT06742710 recruiting; NCT05965908 completed Phase 3), combination regimens (SPIOMET: spironolactone + pioglitazone + metformin), inositol, letrozole, clomiphene citrate, acupuncture, and dietary interventions — reflecting a crowded and multi-modal space. Metformin frequently appears as a comparator or combination partner rather than a standalone investigational agent in newer trials.\n\nOverall, metformin in PCOS has an extraordinarily deep evidence base with multiple completed Phase 3 programs and extensive published literature, but has not achieved FDA approval for this indication. The repurposing opportunity is therefore narrow in a regulatory sense — the drug is widely used off-label and guideline-supported in many jurisdictions — but formal approval for PCOS or its subtypes (infertility, pregnancy outcomes, metabolic features) remains an open regulatory question."
       },
       "blurb": {
-        "stage": "Phase 2+ completed, extensive trial record with over 100 completed trials",
-        "literature": "Moderate, multiple RCTs and meta-analyses",
-        "blocker": "",
-        "active_programs": "Multiple active/recruiting trials on record",
-        "key_risk": "Established off-label use may limit formal regulatory development pathway",
+        "stage": "Large completed trial base (Phase 2/3 scale); no dedicated regulatory approval identified for this indication",
+        "literature": "Moderate, RCTs and observational studies",
+        "blocker": "No pivotal Phase 3 submission on record for a standalone PCOS indication",
+        "active_programs": "Active trials ongoing",
+        "key_risk": "Absence of a single pivotal Phase 3 readout may limit a dedicated regulatory pathway",
         "verdict": "Live but bottlenecked",
         "watch": "",
-        "prose": "Metformin has an extensive clinical trial record in PCOS with over 100 completed trials and moderate literature support from RCTs and meta-analyses. The hypothesis is live and well-explored, though the absence of a formal regulatory approval for this indication remains the primary gap."
+        "prose": "Metformin has a substantial clinical trial record in PCOS, with over 100 completed trials and a moderate literature base including RCTs, but no dedicated regulatory approval for PCOS has been identified in this run. The hypothesis remains open with continued trial activity, though no clear pivotal readout has been surfaced."
       }
     },
     {
@@ -19597,7 +19598,7 @@
           ],
           "supporting_pmids": []
         },
-        "summary": "Despite retrieving 1,027 abstracts and achieving a strong semantic similarity score (0.80), the synthesizer returned an evidence strength of \"none\" for metformin in hepatic steatosis. This indicates that while the retrieved abstracts are topically relevant, they do not collectively provide sufficient direct, interpretable evidence to support or refute metformin as a repurposing candidate for hepatic steatosis based on the current retrieval. Further targeted searches or manual curation may be warranted."
+        "summary": "Evidence strength: none. Despite retrieving 1,027 abstracts and achieving a top semantic similarity of 0.80, the synthesizer was unable to identify sufficient structured evidence to support or refute metformin repurposing for hepatic steatosis from the retrieved abstracts in this run."
       },
       "clinical_trials": {
         "search": {
@@ -26369,39 +26370,18 @@
             "walaphage"
           ]
         },
-        "summary": "**FDA Status:** This exact indication (hepatic steatosis) does not appear on metformin's FDA labels in this run. Metformin is approved for type 2 diabetes, and many of the trials in this space enrolled diabetic patients with co-occurring NAFLD/NASH, so a superset/subtype relationship with any approved indication is possible but was not resolved here.\n\n**Overall Trial Activity:** There are 47 trials on record for metformin × hepatic steatosis, spanning Not Applicable through Phase 4. The portfolio is mature, with 24 completed trials and only 4 terminated trials. Phase distribution among completed trials includes 2 Phase 3, 2 Phase 2/Phase 3, 5 Phase 2, 6 Phase 4, and several early-phase and not-applicable studies.\n\n**Key Completed Trials:**\n- **NCT00063635 (TONIC, Phase 3)** — \"Treatment of Nonalcoholic Fatty Liver Disease in Children\" — is the most prominent completed Phase 3 trial and has multiple linked publications (PMIDs: 25714579, 22338037, 21521847, 19761871). This trial did not lead to approval for this exact indication.\n- **NCT05521633 (Phase 3)** — \"Comparison of the Effects of Metformin and Pioglitazone on Liver Enzymes and Ultrasound Changes in Non-Diabetic Non-Alcoholic Fatty Liver\" — completed with no linked publication on CT.gov.\n- **NCT02157974 (Phase 2/Phase 3)** — \"Liver and Fat Regulation in Overweight Adolescent Girls\" (NAFLD + PCOS + Obesity) — completed with publications (PMIDs: 42014131, 31301251, 30888398).\n- **NCT03129113 (Phase 2/Phase 3)** — \"Adding MAraViroc &/or METformin for Hepatic Steatosis in People Living With HIV\" — completed with no linked publication on CT.gov.\n- **NCT00063232 (Phase 2)** — \"Treating Nonalcoholic Steatohepatitis (NASH) With Metformin\" — completed with publications (PMIDs: 10051466, 18945255).\n- **NCT03796975 (Phase 4)** — \"Efficacy of Pioglitazone Hydrochloride and Metformin Hydrochloride Tablets on Newly Diagnosed T2DM With NAFLD\" — completed with a linked publication (PMID: 37305429).\n\n**Terminated Trials:** Four terminations are on record, none classified as safety or efficacy stops. NCT01523639 (Phase 2, chemotherapy-associated steatosis) was stopped due to slow recruitment. NCT02500147 (Phase 4, PCOS + NAFLD) was stopped due to poor enrollment, administrative challenges, and lack of funding. NCT02365233 (Phase 4) was stopped because the IRB withheld data due to inadequate documentation. NCT00736385 (Phase 4) has no recorded stop reason. There are no stopping signals on record attributable to drug safety or efficacy concerns.\n\n**Competitive Landscape:** The hepatic steatosis space has 10 active competitors identified, reflecting a crowded and evolving field with multiple drug classes (SGLT2 inhibitors, GLP-1 RAs, pioglitazone, and others) being studied alongside or compared to metformin.\n\n**Summary Assessment:** Metformin has a broad and mature trial record in hepatic steatosis/NAFLD, including two completed Phase 3 trials and multiple Phase 2/Phase 3 studies, none of which led to approval for this exact indication. The most pivotal completed trial (TONIC, NCT00063635) has a published readout. No safety or efficacy-driven terminations were identified. The competitive landscape is crowded, with newer agents (SGLT2 inhibitors, GLP-1 RAs) now dominating active programs. Repurposing potential for metformin as a standalone agent in hepatic steatosis appears limited given the depth of prior investigation without regulatory progression, though niche subpopulations (e.g., HIV-associated steatosis, PCOS-related NAFLD) remain areas of ongoing interest."
+        "summary": "Metformin in hepatic steatosis has a moderately sized clinical trial portfolio of 47 trials on record, spanning Early Phase 1 through Phase 4, with 24 recorded as completed and 4 terminated. This exact indication does not appear on metformin's FDA labels in this run.\n\nThe most notable completed trial is the pediatric TONIC trial (NCT00063635, Phase 3), which directly compared metformin to vitamin E in children with nonalcoholic fatty liver disease; it has multiple published readouts (PMIDs: 25714579, 22338037, 21521847, 19761871) and did not lead to approval for this exact indication. A second Phase 3 trial (NCT05521633) compared metformin to pioglitazone on liver enzymes and ultrasound changes in non-diabetic NAFLD patients, though no CT.gov-linked publication is listed. Two Phase 2/Phase 3 trials are also on record as completed: one in overweight adolescent girls with fatty liver and polycystic ovary syndrome (NCT02157974, with published refs: 42014131, 31301251, 30888398), and one evaluating metformin for hepatic steatosis in people living with HIV (NCT03129113). An earlier Phase 2 trial specifically treating NASH with metformin (NCT00063232) also has published readouts (PMIDs: 10051466, 18945255). None of these completed trials appear to have led to FDA approval for hepatic steatosis.\n\nOf the 4 terminated trials, none were stopped for safety or efficacy reasons — two were halted due to poor enrollment/funding (NCT01523639, NCT02500147), one was terminated for administrative/IRB documentation issues (NCT02365233), and one has no stop reason recorded (NCT00736385). There are therefore no stopping signals on record related to drug performance. The competitive landscape for hepatic steatosis is active, with 10 identified competitor programs, and the field has shifted heavily toward SGLT2 inhibitors, GLP-1 receptor agonists, and pioglitazone combinations — several of the trials in this portfolio use metformin as a background therapy or comparator rather than as the primary investigational agent. Overall, while metformin has been tested across multiple phases in hepatic steatosis with published evidence available, the completed Phase 3 data did not drive regulatory approval for this exact indication, and the current competitive environment is crowded with newer metabolic agents."
       },
       "blurb": {
-        "stage": "Phase 2+ completed, large trial record with active trials ongoing",
-        "literature": "None (literature strength rated none despite large PMID volume)",
-        "blocker": "Literature strength rated none; evidence quality insufficient to establish viability",
-        "active_programs": "Active trials on record",
-        "key_risk": "Literature strength rated none despite high PMID count; no clear efficacy readout establishing viability",
+        "stage": "Large completed trial base (Phase 2/3 scale); no dedicated regulatory approval identified",
+        "literature": "None (literature strength label: none despite high PMID volume)",
+        "blocker": "Literature strength rated none; no clear efficacy signal identified in this run",
+        "active_programs": "Active trials ongoing",
+        "key_risk": "Absence of a usable literature signal despite large trial base raises efficacy uncertainty for this indication",
         "verdict": "Exploratory only",
         "watch": "",
-        "prose": "Despite a large number of completed trials and a high PMID volume, the literature strength for metformin in hepatic steatosis was rated none in this run, indicating that the available evidence does not meet the threshold for a usable signal. The hypothesis remains exploratory, with active trials ongoing but no established efficacy readout."
+        "prose": "Despite a large number of completed trials and a high PMID count, the literature strength for metformin in hepatic steatosis is rated none in this run, indicating no clear efficacy signal was identified. The hypothesis remains open in terms of trial activity but lacks a supportive literature foundation as assessed in this run."
       }
-    },
-    {
-      "disease": "metabolic disease",
-      "source": "competitor",
-      "literature": null,
-      "clinical_trials": null,
-      "blurb": null
-    },
-    {
-      "disease": "gestational diabetes",
-      "source": "competitor",
-      "literature": null,
-      "clinical_trials": null,
-      "blurb": null
-    },
-    {
-      "disease": "disorder of lipid metabolism",
-      "source": "competitor",
-      "literature": null,
-      "clinical_trials": null,
-      "blurb": null
     }
   ],
   "top_diseases": [
@@ -26409,5 +26389,5 @@
     "polycystic ovary syndrome",
     "hepatic steatosis"
   ],
-  "summary": "Ranked repurposing signals for metformin:\n\n1. cardiovascular disease — strong RCT-level literature; Phase 2+ completed, multiple completed trials, some active\n2. polycystic ovary syndrome — moderate literature (RCTs and meta-analyses); Phase 2+ completed, extensive trial record, multiple active/recruiting trials\n3. hepatic steatosis — no usable literature (strength rated none despite large PMID volume); Phase 2+ completed, large trial record, active trials ongoing\n\nDemoted — approval relationship:\n  - diabetes mellitus (broader term; potentially relevant uncovered population not separable from approved subtype type 2 diabetes mellitus in this run)\n\nEvidence gate exclusions: none applicable to investigated candidates"
+  "summary": "Ranked repurposing signals for metformin:\n\n1. cardiovascular disease — strong RCT-level evidence; multiple completed trials on record, active programs ongoing\n2. polycystic ovary syndrome — moderate exploratory literature; large completed trial base, active programs ongoing\n3. hepatic steatosis — no usable literature; large completed trial base, active programs ongoing"
 }

@@ -29,7 +29,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 VALIDATION_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = VALIDATION_DIR.parent
+PROJECT_ROOT = VALIDATION_DIR.parent.parent
 
 
 def _load_env() -> None:
@@ -52,9 +52,10 @@ from indication_scout.services.llm import query_small_llm, strip_markdown_fences
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("validation")
 RUNBOOK = VALIDATION_DIR / "runbook.xt"
-RESULTS = VALIDATION_DIR / "validation_results.md"
+REPORTS_DIR = PROJECT_ROOT / "reports" / "holdout_validation"
+RESULTS = REPORTS_DIR / "validation_results.md"
 HOLDOUTS_DIR = PROJECT_ROOT / "snapshots" / "holdouts"
-LOGS_DIR = VALIDATION_DIR / "logs"  # per-row scout stdout+stderr (TIMING/429 internals)
+LOGS_DIR = REPORTS_DIR / "logs"  # per-row scout stdout+stderr (TIMING/429 internals)
 
 JUDGE_PROMPT = """You are validating a drug-repurposing pipeline.
 
@@ -284,6 +285,7 @@ def ensure_header() -> None:
     """Write the report title, legend, and table header once, if not already present."""
     if RESULTS.exists() and RESULTS.stat().st_size > 0:
         return
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     with RESULTS.open("a", encoding="utf-8") as f:
         f.write("# Holdout Validation Results\n\n")
         f.write("_Score: 1 = in Summary, 0 = in Diseases Considered only, -1 = not found._\n\n")

@@ -24,7 +24,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 VALIDATION_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = VALIDATION_DIR.parent
+PROJECT_ROOT = VALIDATION_DIR.parent.parent
 
 
 def _load_env() -> None:
