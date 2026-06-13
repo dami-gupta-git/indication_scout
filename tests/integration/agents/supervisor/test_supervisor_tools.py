@@ -127,9 +127,10 @@ async def test_find_candidates_random(llm, db_session_truncating, test_cache_dir
     tools = _tool_map(tools_list)
     _preset_mechanism_gate(tools)
     msg = await tools["find_candidates"].ainvoke(
-        _tc("find_candidates", drug_name="baricitinib")
+        _tc("find_candidates", drug_name="imatinib")
     )
     diseases: list[str] = msg.artifact
+    print(diseases)
 
 async def my_test(llm, db_session_truncating, test_cache_dir):
     """find_candidates returns Open Targets candidate diseases, populates the closure-scoped

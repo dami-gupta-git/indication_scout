@@ -7,6 +7,7 @@ Expected values verified by a live run on 2026-04-08 with drug=metformin.
 """
 
 import logging
+from datetime import date
 
 import pytest
 
@@ -127,3 +128,42 @@ async def test_metformin_supervisor_agent(supervisor_agent):
     assert "ranked repurposing signals for metformin:" in summary_lower
     # Must not look like raw JSON or a tool schema
     assert not output.summary.strip().startswith("{")
+
+
+# ------------------------------------------------------------------
+# Imatinib, holdout cutoff 2006-01-01
+#
+# Holdout run: candidate surfacing must include imatinib's known/emerging
+# 2006-era indications. Exact disease strings (lowercased canonical forms as
+# emitted by the pipeline).
+# ------------------------------------------------------------------
+
+_EXPECTED_IMATINIB_DISEASES = {
+    "chronic myelogenous leukemia",
+    "acute lymphoblastic leukemia",
+    "gastrointestinal stromal tumor",
+    "hypereosinophilic syndrome",
+    "dermatofibrosarcoma protuberans",
+    "systemic mastocytosis",
+}
+
+
+async def test_imatinib_holdout_2006(db_session_truncating, test_cache_dir):
+    """End-to-end holdout: supervisor agent run for imatinib with date_before
+    2006-01-01 must surface imatinib's known/emerging 2006-era indications in
+    candidate_diseases (exact names)."""
+    agent, get_merged_allowlist, get_auto_findings = build_agent(
+        db_session_truncating,
+        date_before=date(2006, 1, 1),
+        cache_dir=test_cache_dir,
+    )
+    output = await run_supervisor_agent(
+        agent,
+        get_merged_allowlist,
+        "imatinib",
+        get_auto_findings=get_auto_findings,
+    )
+
+    assert isinstance(output, SupervisorOutput)
+    assert output.drug_name == "imatinib"
+    assert _EXPECTED_IMATINIB_DISEASES.issubset(set(output.candidate_diseases))

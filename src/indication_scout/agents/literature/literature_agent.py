@@ -10,6 +10,7 @@ from pathlib import Path
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
+from indication_scout.agents._react_loop import cached_system_message
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.literature.literature_tools import build_literature_tools
 
@@ -32,7 +33,9 @@ def build_literature_agent(
         db,
         date_before=date_before,
     )
-    return create_react_agent(model=llm, tools=tools, prompt=SYSTEM_PROMPT)
+    return create_react_agent(
+        model=llm, tools=tools, prompt=cached_system_message(SYSTEM_PROMPT)
+    )
 
 
 async def run_literature_agent(

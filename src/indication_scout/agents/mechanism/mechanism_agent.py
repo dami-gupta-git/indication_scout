@@ -12,6 +12,7 @@ from datetime import date
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
+from indication_scout.agents._react_loop import cached_system_message
 from indication_scout.agents.mechanism.mechanism_candidates import (
     select_top_candidates,
 )
@@ -53,7 +54,9 @@ Do not call get_target_associations on more than 3 targets."""
 def build_mechanism_agent(llm) -> object:
     """Return a compiled ReAct agent."""
     tools = build_mechanism_tools()
-    return create_react_agent(model=llm, tools=tools, prompt=SYSTEM_PROMPT)
+    return create_react_agent(
+        model=llm, tools=tools, prompt=cached_system_message(SYSTEM_PROMPT)
+    )
 
 
 async def run_mechanism_agent(

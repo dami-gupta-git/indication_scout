@@ -54,6 +54,7 @@ logger = logging.getLogger("validation")
 RUNBOOK = VALIDATION_DIR / "runbook.xt"
 RESULTS = VALIDATION_DIR / "validation_results.md"
 HOLDOUTS_DIR = PROJECT_ROOT / "snapshots" / "holdouts"
+LOGS_DIR = VALIDATION_DIR / "logs"  # per-row scout stdout+stderr (TIMING/429 internals)
 
 JUDGE_PROMPT = """You are validating a drug-repurposing pipeline.
 
@@ -70,9 +71,16 @@ match (e.g. "CML" matches "Chronic Myelogenous Leukemia"; "MASH" matches
 or comorbid but distinct diseases.
 
 A match requires the SAME underlying condition. Two distinct diseases that share
-a clinical category are NOT a match. For example, different substance-use
-disorders are distinct: "smoking cessation" / nicotine dependence does NOT match
-"cocaine dependence" or "alcohol use disorder". When in doubt, do NOT match.
+a clinical category are NOT a match, and a specific disease does NOT match a
+generic umbrella term for its category. Examples of NON-matches:
+- Substance-use disorders are distinct: "smoking cessation" / nicotine
+  dependence does NOT match "cocaine dependence" or "alcohol use disorder".
+- Hematologic disorders are distinct: "hypereosinophilic syndrome" does NOT
+  match "leukemia", "acute myeloid leukemia", or "chronic myeloid leukemia" —
+  it is a separate eosinophil disorder, not a leukemia.
+- A specific disease does NOT match a bare umbrella: e.g. do NOT match a specific
+  condition to a generic "leukemia", "cancer", or "neoplasm" entry.
+When in doubt, do NOT match.
 
 Reply with ONLY a JSON object, no prose. For matched_disease give just the
 disease name from the matched item (drop any trailing stats), or empty string:
@@ -119,6 +127,8 @@ def run_scout(drug: str, date: str, force: bool = False) -> Path | None:
 
     cmd = ["scout", "find", "-d", drug, "--date-before", date]
     logger.info("Running: %s", " ".join(cmd))
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    log_path = LOGS_DIR / f"{drug}_{date}.log"
     try:
         result = subprocess.run(
             cmd,
@@ -127,13 +137,22 @@ def run_scout(drug: str, date: str, force: bool = False) -> Path | None:
             text=True,
             timeout=SCOUT_TIMEOUT_SECONDS,
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as e:
+        # Persist whatever the child emitted before the kill so a hang is inspectable.
+        partial = (e.stdout or "") + (e.stderr or "")
+        log_path.write_text(partial, encoding="utf-8")
         logger.error(
-            "scout TIMED OUT after %ds for %s/%s — killed", SCOUT_TIMEOUT_SECONDS, drug, date
+            "scout TIMED OUT after %ds for %s/%s — killed (log: %s)",
+            SCOUT_TIMEOUT_SECONDS, drug, date, log_path,
         )
         return None
+    # Tee the full scout stdout+stderr (TIMING / 429 retries / model load) per row.
+    log_path.write_text((result.stdout or "") + (result.stderr or ""), encoding="utf-8")
     if result.returncode != 0:
-        logger.error("scout failed for %s/%s:\n%s", drug, date, result.stderr[-2000:])
+        logger.error(
+            "scout failed for %s/%s (log: %s):\n%s",
+            drug, date, log_path, result.stderr[-2000:],
+        )
         return None
     return newest_holdout(drug, date)
 

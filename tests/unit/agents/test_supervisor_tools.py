@@ -374,6 +374,10 @@ def _holdout_tools_and_closure(cutoff: date):
     return by_name, findings_local, allowed_diseases
 
 
+async def test_holdout_summary_reconstructed_imatinib():
+    """imatinib"""
+    pass
+
 async def test_holdout_summary_reconstructed_for_sildenafil_2005():
     """Sildenafil holdout at 2005-06-01: deterministic reconstruction must produce
     the structured fact list documented in supervisor_holdout.txt, regardless of

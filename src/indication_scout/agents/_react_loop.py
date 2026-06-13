@@ -20,6 +20,20 @@ from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 
 
+def cached_system_message(prompt: str) -> SystemMessage:
+    """A SystemMessage carrying an Anthropic ephemeral cache_control breakpoint.
+
+    The breakpoint caches the static prefix (tool definitions + system prompt), so turns
+    2+ of an agent loop read it from cache instead of reprocessing it. Output is unchanged.
+    Accepted as the `prompt` arg by both build_gated_react_loop and create_react_agent.
+    """
+    return SystemMessage(
+        content=[
+            {"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}}
+        ]
+    )
+
+
 def build_gated_react_loop(
     llm,
     tools: list,
@@ -38,11 +52,7 @@ def build_gated_react_loop(
     # the (static) system prompt + tool definitions, so turns 2+ of the agent loop read
     # that prefix from cache instead of reprocessing it. Output is unchanged; it cuts
     # per-turn input-processing latency on a multi-turn loop.
-    system_message = SystemMessage(
-        content=[
-            {"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}}
-        ]
-    )
+    system_message = cached_system_message(prompt)
 
     async def call_model(state: MessagesState) -> dict:
         response = await model.ainvoke([system_message] + state["messages"])

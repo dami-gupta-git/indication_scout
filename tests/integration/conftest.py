@@ -7,8 +7,8 @@ import os
 # CONSTANTS_FILE is active. tests/conftest.py runs first and sets this to
 # .env.constants.test for unit tests; we override that here. A genuine shell
 # override (anything other than the unit-test default) is preserved.
-if os.environ.get("CONSTANTS_FILE") in (None, ".env.constants.test"):
-    os.environ["CONSTANTS_FILE"] = ".env.constants.integration"
+#if os.environ.get("CONSTANTS_FILE") in (None, ".env.constants.test"):
+os.environ["CONSTANTS_FILE"] = ".env.constants"
 
 # Force the cache onto cache_test before constants is imported — DEFAULT_CACHE_DIR
 # reads SCOUT_CACHE_DIR at import time, and .env mirrors prod's /cache (read-only
