@@ -58,33 +58,41 @@ LOGS_DIR = VALIDATION_DIR / "logs"  # per-row scout stdout+stderr (TIMING/429 in
 
 JUDGE_PROMPT = """You are validating a drug-repurposing pipeline.
 
-A known approved indication for the drug is:
+A known approved indication for the drug (the TARGET) is:
   "{indication}"
 
-The pipeline considered these diseases:
+The pipeline produced these candidate diseases (the CANDIDATES):
 {candidates}
 
-Does the known indication correspond to ANY disease in the list? Treat synonyms,
-abbreviations, and broader/narrower clinical terms for the SAME condition as a
-match (e.g. "CML" matches "Chronic Myelogenous Leukemia"; "MASH" matches
-"metabolic dysfunction-associated steatohepatitis"). Do NOT match merely related
-or comorbid but distinct diseases.
+Decide whether the pipeline actually found the TARGET. Do this by classifying,
+for the BEST candidate, its clinical relationship to the TARGET — then apply the
+match rule. Do NOT skip to a yes/no; classify first.
 
-A match requires the SAME underlying condition. Two distinct diseases that share
-a clinical category are NOT a match, and a specific disease does NOT match a
-generic umbrella term for its category. Examples of NON-matches:
-- Substance-use disorders are distinct: "smoking cessation" / nicotine
-  dependence does NOT match "cocaine dependence" or "alcohol use disorder".
-- Hematologic disorders are distinct: "hypereosinophilic syndrome" does NOT
-  match "leukemia", "acute myeloid leukemia", or "chronic myeloid leukemia" —
-  it is a separate eosinophil disorder, not a leukemia.
-- A specific disease does NOT match a bare umbrella: e.g. do NOT match a specific
-  condition to a generic "leukemia", "cancer", or "neoplasm" entry.
-When in doubt, do NOT match.
+relationship (pick exactly one for the best candidate):
+- "exact"          — same disease, same name or trivially so.
+- "synonym"        — same disease, different name/abbreviation
+                     (e.g. "CML" ↔ "Chronic Myelogenous Leukemia";
+                      "MASH" ↔ "metabolic dysfunction-associated steatohepatitis";
+                      "smoking cessation" ↔ "nicotine dependence").
+- "candidate_narrower" — the candidate is a MORE SPECIFIC subtype of the TARGET
+                     (the candidate sits UNDER the target in the disease hierarchy).
+- "candidate_broader"  — the candidate is a BROADER umbrella/parent that merely
+                     CONTAINS the target (target sits under the candidate),
+                     e.g. target "seasonal affective disorder" vs candidate
+                     "depressive disorder"; target "nicotine dependence" vs
+                     candidate "substance use disorder".
+- "sibling"        — both sit under a shared parent but are distinct
+                     (e.g. "hypereosinophilic syndrome" vs "leukemia";
+                      "nicotine dependence" vs "cocaine dependence").
+- "unrelated"      — different conditions.
 
-Reply with ONLY a JSON object, no prose. For matched_disease give just the
-disease name from the matched item (drop any trailing stats), or empty string:
-{{"match": true|false, "matched_disease": "<disease name or empty string>"}}"""
+MATCH RULE (strict): match = true ONLY when relationship is "exact", "synonym",
+or "candidate_narrower". A "candidate_broader" relationship is NOT a match — a
+broad umbrella surfacing does not mean the specific TARGET was found. "sibling"
+and "unrelated" are never matches.
+
+Reply with ONLY a JSON object, no prose:
+{{"relationship": "<one of the values above>", "match": true|false, "matched_disease": "<exact candidate name, or empty string>"}}"""
 
 
 def read_runbook(start: int = 0, count: int | None = None) -> list[dict[str, str]]:
@@ -214,7 +222,17 @@ async def judge_match(indication: str, candidates: list[str]) -> tuple[bool, str
     except json.JSONDecodeError:
         logger.error("Judge returned non-JSON for '%s': %s", indication, response)
         return False, ""
-    return bool(parsed.get("match")), str(parsed.get("matched_disease", ""))
+    # Enforce the strict rule in code, not just the prompt: only exact / synonym /
+    # candidate_narrower count, regardless of the LLM's own `match` flag. A broad
+    # umbrella surfacing ("candidate_broader") is never a find.
+    relationship = str(parsed.get("relationship", "")).strip().lower()
+    matched = relationship in {"exact", "synonym", "candidate_narrower"}
+    if matched != bool(parsed.get("match")):
+        logger.warning(
+            "Judge match flag (%s) overridden by relationship=%r for '%s'",
+            parsed.get("match"), relationship, indication,
+        )
+    return matched, str(parsed.get("matched_disease", "")) if matched else ""
 
 
 async def score_report(report_path: Path, indication: str) -> tuple[int, str]:

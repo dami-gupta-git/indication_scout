@@ -10,7 +10,10 @@ from pathlib import Path
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
-from indication_scout.agents._react_loop import cached_system_message
+from indication_scout.agents._react_loop import (
+    cached_system_message,
+    history_cache_pre_model_hook,
+)
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.literature.literature_tools import build_literature_tools
 
@@ -34,7 +37,10 @@ def build_literature_agent(
         date_before=date_before,
     )
     return create_react_agent(
-        model=llm, tools=tools, prompt=cached_system_message(SYSTEM_PROMPT)
+        model=llm,
+        tools=tools,
+        prompt=cached_system_message(SYSTEM_PROMPT),
+        pre_model_hook=history_cache_pre_model_hook,
     )
 
 
@@ -64,11 +70,18 @@ async def run_literature_agent(
         called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
         logger.warning(
             "[LLMTURN] %s turn %d/%d: in=%d out=%d -> %s",
-            disease_name, i + 1, len(ai_turns), in_tok, out_tok, called,
+            disease_name,
+            i + 1,
+            len(ai_turns),
+            in_tok,
+            out_tok,
+            called,
         )
     logger.warning(
         "[LLMTURN] %s: %d turns, %d total output tokens",
-        disease_name, len(ai_turns), total_out,
+        disease_name,
+        len(ai_turns),
+        total_out,
     )
 
     # Pull each tool's typed artifact off msg.artifact

@@ -12,7 +12,10 @@ from datetime import date
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
-from indication_scout.agents._react_loop import cached_system_message
+from indication_scout.agents._react_loop import (
+    cached_system_message,
+    history_cache_pre_model_hook,
+)
 from indication_scout.agents.mechanism.mechanism_candidates import (
     select_top_candidates,
 )
@@ -55,7 +58,10 @@ def build_mechanism_agent(llm) -> object:
     """Return a compiled ReAct agent."""
     tools = build_mechanism_tools()
     return create_react_agent(
-        model=llm, tools=tools, prompt=cached_system_message(SYSTEM_PROMPT)
+        model=llm,
+        tools=tools,
+        prompt=cached_system_message(SYSTEM_PROMPT),
+        pre_model_hook=history_cache_pre_model_hook,
     )
 
 
@@ -88,11 +94,19 @@ async def run_mechanism_agent(
         called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
         logger.warning(
             "[LLMTURN] mechanism %s turn %d/%d: in=%d out=%d -> %s",
-            drug_name, i + 1, len(ai_turns), in_tok, out_tok, called,
+            drug_name,
+            i + 1,
+            len(ai_turns),
+            in_tok,
+            out_tok,
+            called,
         )
     logger.warning(
         "[LLMTURN] mechanism %s: %d turns, %d total output tokens, agent loop %.1fs",
-        drug_name, len(ai_turns), total_out, _agent_elapsed,
+        drug_name,
+        len(ai_turns),
+        total_out,
+        _agent_elapsed,
     )
 
     mechanisms_of_action: list[MechanismOfAction] = []
@@ -147,7 +161,10 @@ async def run_mechanism_agent(
     )
     logger.warning(
         "[TIMING] mechanism %s: _assemble_candidates (%d of %d targets) took %.1fs",
-        drug_name, len(assemble_targets), len(drug_targets), time.perf_counter() - _asm_t0,
+        drug_name,
+        len(assemble_targets),
+        len(drug_targets),
+        time.perf_counter() - _asm_t0,
     )
     logger.warning(f"mechanism_agent SUMMARY: {summary}")
     return MechanismOutput(
