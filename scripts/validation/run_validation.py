@@ -47,7 +47,7 @@ def _load_env() -> None:
 
 _load_env()
 
-from indication_scout.services.llm import query_small_llm, strip_markdown_fences  # noqa: E402
+from indication_scout.services.llm import query_llm, strip_markdown_fences  # noqa: E402
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("validation")
@@ -62,38 +62,31 @@ JUDGE_PROMPT = """You are validating a drug-repurposing pipeline.
 A known approved indication for the drug (the TARGET) is:
   "{indication}"
 
-The pipeline produced these candidate diseases (the CANDIDATES):
+The pipeline surfaced these candidate diseases (the CANDIDATES):
 {candidates}
 
-Decide whether the pipeline actually found the TARGET. Do this by classifying,
-for the BEST candidate, its clinical relationship to the TARGET — then apply the
-match rule. Do NOT skip to a yes/no; classify first.
+Question: did the pipeline find the TARGET? It did if ONE of the candidates is
+the disease/condition that the TARGET indication is FOR — the very disease the
+indication directly acts on or is defined on. This INCLUDES the case where the
+TARGET is a treatment goal, outcome, prophylaxis, prevention, or risk reduction
+stated on that disease (e.g. "cardiovascular risk reduction" is FOR
+"Cardiovascular Disease"; "migraine prophylaxis" is FOR "Migraine").
 
-relationship (pick exactly one for the best candidate):
-- "exact"          — same disease, same name or trivially so.
-- "synonym"        — same disease, different name/abbreviation
-                     (e.g. "CML" ↔ "Chronic Myelogenous Leukemia";
-                      "MASH" ↔ "metabolic dysfunction-associated steatohepatitis";
-                      "smoking cessation" ↔ "nicotine dependence").
-- "candidate_narrower" — the candidate is a MORE SPECIFIC subtype of the TARGET
-                     (the candidate sits UNDER the target in the disease hierarchy).
-- "candidate_broader"  — the candidate is a BROADER umbrella/parent that merely
-                     CONTAINS the target (target sits under the candidate),
-                     e.g. target "seasonal affective disorder" vs candidate
-                     "depressive disorder"; target "nicotine dependence" vs
-                     candidate "substance use disorder".
-- "sibling"        — both sit under a shared parent but are distinct
-                     (e.g. "hypereosinophilic syndrome" vs "leukemia";
-                      "nicotine dependence" vs "cocaine dependence").
-- "unrelated"      — different conditions.
+Do NOT count a candidate that is merely:
+- a BROADER umbrella when a more specific match to the indication's own disease
+  is what's required (e.g. "seasonal affective disorder" vs only "Depressive
+  Disorder"; "diabetic peripheral neuropathic pain" vs only "Diabetes Mellitus"
+  — the pain complication is not diabetes itself);
+- a SIBLING condition under a shared parent (e.g. "hypereosinophilic syndrome"
+  vs "Leukemia");
+- a DIFFERENT disease the drug might also help.
 
-MATCH RULE (strict): match = true ONLY when relationship is "exact", "synonym",
-or "candidate_narrower". A "candidate_broader" relationship is NOT a match — a
-broad umbrella surfacing does not mean the specific TARGET was found. "sibling"
-and "unrelated" are never matches.
+If several candidates qualify, pick the most specific/exact one. When a synonym
+and a broader parent both appear (e.g. "Non-alcoholic Steatohepatitis" [=MASH]
+alongside "Non-alcoholic Fatty Liver Disease"), pick the synonym, not the parent.
 
 Reply with ONLY a JSON object, no prose:
-{{"relationship": "<one of the values above>", "match": true|false, "matched_disease": "<exact candidate name, or empty string>"}}"""
+{{"match": true|false, "matched_disease": "<exact candidate name, or empty string>", "reason": "<short>"}}"""
 
 
 def read_runbook(start: int = 0, count: int | None = None) -> list[dict[str, str]]:
@@ -217,22 +210,13 @@ async def judge_match(indication: str, candidates: list[str]) -> tuple[bool, str
         indication=indication,
         candidates="\n".join(f"- {c}" for c in candidates),
     )
-    response = await query_small_llm(prompt)
+    response = await query_llm(prompt)
     try:
         parsed = json.loads(strip_markdown_fences(response))
     except json.JSONDecodeError:
         logger.error("Judge returned non-JSON for '%s': %s", indication, response)
         return False, ""
-    # Enforce the strict rule in code, not just the prompt: only exact / synonym /
-    # candidate_narrower count, regardless of the LLM's own `match` flag. A broad
-    # umbrella surfacing ("candidate_broader") is never a find.
-    relationship = str(parsed.get("relationship", "")).strip().lower()
-    matched = relationship in {"exact", "synonym", "candidate_narrower"}
-    if matched != bool(parsed.get("match")):
-        logger.warning(
-            "Judge match flag (%s) overridden by relationship=%r for '%s'",
-            parsed.get("match"), relationship, indication,
-        )
+    matched = bool(parsed.get("match"))
     return matched, str(parsed.get("matched_disease", "")) if matched else ""
 
 
