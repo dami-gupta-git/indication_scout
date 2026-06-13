@@ -9,7 +9,13 @@
 #   SCOUT_CACHE_DIR=/cache
 #   HF_HOME=/cache
 #   ANTHROPIC_API_KEY / PUBMED_API_KEY / NCBI_API_KEY / OPENFDA_API_KEY
-# Mount a persistent volume at /cache.
+#
+# A persistent volume MUST be attached at /cache (service volume
+# "indication_scout-volume"). SCOUT_CACHE_DIR and HF_HOME both point there, so it
+# holds the BioLORD model + the Open Targets file cache. If the volume is missing,
+# /cache silently falls back to ephemeral container storage and is WIPED on every
+# restart/redeploy (the model re-downloads, the cache is lost). Volume config is
+# not expressed in this file — verify it with `railway volume list`.
 
 [build]
 builder = "dockerfile"

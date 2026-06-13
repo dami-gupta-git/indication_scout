@@ -20,10 +20,27 @@ the OTLP endpoint does NOT guarantee UI visibility (ingestion is async, view is 
 
 import base64
 import logging
+import subprocess
 
 from indication_scout.config import get_settings
 
 logger = logging.getLogger(__name__)
+
+
+def _git_commit_message() -> str | None:
+    """Subject line of the current HEAD commit, or None if unavailable (not a repo,
+    git missing). Operational metadata only — absence is fine, never fabricated."""
+    try:
+        result = subprocess.run(
+            ["git", "log", "-1", "--pretty=%s"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    message = result.stdout.strip()
+    return message if result.returncode == 0 and message else None
 
 # Module-level handle to the provider so shutdown_tracing() can flush it. None until
 # setup_tracing() successfully initialises (and stays None when tracing is off).
@@ -73,9 +90,13 @@ def setup_tracing() -> None:
             )
         ).decode("ascii")
 
-        provider = TracerProvider(
-            resource=Resource.create({"service.name": _SERVICE_NAME})
-        )
+        # langfuse.release maps to the trace's `release` field; include the HEAD
+        # commit message when available so each run is traceable to a checkout.
+        resource_attrs = {"service.name": _SERVICE_NAME}
+        commit_message = _git_commit_message()
+        if commit_message is not None:
+            resource_attrs["langfuse.release"] = commit_message
+        provider = TracerProvider(resource=Resource.create(resource_attrs))
         provider.add_span_processor(
             BatchSpanProcessor(
                 OTLPSpanExporter(
