@@ -149,11 +149,23 @@ async def run_supervisor_agent(
         _usage = _msg.usage_metadata or {}
         _in_tok = _usage.get("input_tokens", 0)
         _out_tok = _usage.get("output_tokens", 0)
+        # cache_read/cache_write surface whether the prompt-caching breakpoints are
+        # hitting; cache_read==0 across turns 2+ means a silent invalidator (e.g. prefix
+        # below the model's min cacheable size) is at work. langchain-anthropic reports
+        # freshly-written tokens under the TTL-specific ephemeral keys, not cache_creation.
+        _details = _usage.get("input_token_details", {})
+        _cache_read = _details.get("cache_read", 0)
+        _cache_write = (
+            _details.get("ephemeral_5m_input_tokens", 0)
+            + _details.get("ephemeral_1h_input_tokens", 0)
+        ) or _details.get("cache_creation", 0)
         _total_out += _out_tok
         _called = ", ".join(tc["name"] for tc in _msg.tool_calls) or "(final)"
         logger.warning(
-            "[LLMTURN] supervisor turn %d/%d: in=%d out=%d -> %s",
-            _i + 1, len(_ai_turns), _in_tok, _out_tok, _called,
+            "[LLMTURN] supervisor turn %d/%d: in=%d out=%d cache_read=%d "
+            "cache_write=%d -> %s",
+            _i + 1, len(_ai_turns), _in_tok, _out_tok,
+            _cache_read, _cache_write, _called,
         )
     logger.warning(
         "[LLMTURN] supervisor: %d turns, %d total output tokens, agent loop %.1fs",
