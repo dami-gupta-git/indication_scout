@@ -52,7 +52,7 @@ from indication_scout.services.llm import query_small_llm, strip_markdown_fences
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("validation")
 RUNBOOK = VALIDATION_DIR / "runbook.xt"
-REPORTS_DIR = PROJECT_ROOT / "reports" / "holdout_validation"
+REPORTS_DIR = PROJECT_ROOT / "results" / "holdout_validation"
 RESULTS = REPORTS_DIR / "validation_results.md"
 HOLDOUTS_DIR = PROJECT_ROOT / "snapshots" / "holdouts"
 LOGS_DIR = REPORTS_DIR / "logs"  # per-row scout stdout+stderr (TIMING/429 internals)
