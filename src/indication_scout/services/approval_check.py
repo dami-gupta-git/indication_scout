@@ -160,7 +160,7 @@ def _load_drug_approvals_table() -> dict[str, list[dict[str, str]]]:
     return raw
 
 
-def get_approved_indications(
+async def get_approved_indications(
     drug_name: str,
     candidate_diseases: list[str],
     as_of: date | None,
@@ -168,12 +168,14 @@ def get_approved_indications(
     """Return the subset of candidate_diseases that the drug was FDA-approved
     for on or before `as_of`, sourced from the hardcoded approvals table.
 
-    Matching is case-insensitive substring: a candidate is "approved" iff a
-    table-entry disease string is a substring of the candidate (or vice
-    versa) — this lets candidates like "non-alcoholic steatohepatitis (MASH)"
-    match a table entry of "MASH". Strict equality would require a synonym
-    map; substring is the simplest workable rule for the curated drugs we
-    have today.
+    Matching uses the same LLM disease matcher as the competitor merge
+    (`merge_duplicate_diseases` REMOVE): a candidate is dropped only when it is
+    the SAME clinical condition as a pre-cutoff approved indication. This avoids
+    the substring trap where a broader/sibling candidate ("leukemia",
+    "depressive disorder") was wrongly stripped because it shares a substring
+    with a more specific approved indication ("chronic myeloid leukemia",
+    "major depressive disorder"). Subtype/parent and same-category-distinct
+    pairs stay separate per the matcher's prohibition rules.
 
     Returns empty set when:
       - drug is not in the table (logs a warning)
@@ -217,16 +219,14 @@ def get_approved_indications(
     if not pre_cutoff_diseases:
         return set()
 
-    matched: set[str] = set()
-    for candidate in candidate_diseases:
-        cand_lower = candidate.lower().strip()
-        if not cand_lower:
-            continue
-        for approved_disease in pre_cutoff_diseases:
-            if approved_disease in cand_lower or cand_lower in approved_disease:
-                matched.add(candidate)
-                break
-    return matched
+    # LLM equivalence: REMOVE returns the candidate names that are the SAME
+    # condition as a pre-cutoff approved indication (subtype/parent/sibling kept
+    # separate by the prompt's prohibition rules).
+    from indication_scout.services.disease_helper import merge_duplicate_diseases
+
+    merge_result = await merge_duplicate_diseases(candidate_diseases, pre_cutoff_diseases)
+    removed_lower = {r.lower().strip() for r in merge_result.get("remove", [])}
+    return {c for c in candidate_diseases if c.lower().strip() in removed_lower}
 
 
 def list_approved_indications_at(

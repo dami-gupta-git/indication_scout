@@ -335,32 +335,47 @@ def _clear_approvals_cache():
         (date(2025, 8, 16), "MASH", True),
         # 2026-01-01: well after the MASH approval → dropped.
         (date(2026, 1, 1), "MASH", True),
-        # 2026-01-01: substring match — table entry "MASH" should match a
-        # candidate that contains it. Verifies the substring-matching rule.
+        # 2026-01-01: short-form ↔ long-form — table entry "MASH" matches a
+        # candidate that contains it. Verifies the LLM matcher equates them.
         (date(2026, 1, 1), "non-alcoholic steatohepatitis (MASH)", True),
     ],
 )
-def test_get_approved_indications_semaglutide_mash(as_of, candidate, expected_in_set):
+async def test_get_approved_indications_semaglutide_mash(
+    as_of, candidate, expected_in_set
+):
     """Verify the cutoff semantics for semaglutide × MASH against the real table.
 
     MASH was approved 2025-08-15. The lookup uses strict less-than on the
     cutoff, so a holdout dated on or before that day must NOT see MASH as
     approved (and therefore must NOT drop it from the candidate allowlist).
+
+    The LLM matcher is mocked: when MASH is pre-cutoff approved, it returns the
+    candidate as 'removed' (same condition); otherwise nothing reaches it. This
+    keeps the test a deterministic unit test (no network).
     """
-    result = get_approved_indications(
-        drug_name="semaglutide",
-        candidate_diseases=[candidate],
-        as_of=as_of,
-    )
+    expected_remove = [candidate] if expected_in_set else []
+    with patch(
+        "indication_scout.services.disease_helper.merge_duplicate_diseases",
+        new=AsyncMock(return_value={"merge": {}, "remove": expected_remove}),
+    ):
+        result = await get_approved_indications(
+            drug_name="semaglutide",
+            candidate_diseases=[candidate],
+            as_of=as_of,
+        )
     if expected_in_set:
         assert result == {candidate}
     else:
         assert result == set()
 
 
-def test_get_approved_indications_semaglutide_pre_2017_returns_empty():
-    """Cutoff before semaglutide's first approval (2017-12-05) → empty set."""
-    result = get_approved_indications(
+async def test_get_approved_indications_semaglutide_pre_2017_returns_empty():
+    """Cutoff before semaglutide's first approval (2017-12-05) → empty set.
+
+    No pre-cutoff approvals, so the function short-circuits before the LLM
+    matcher — stays a pure unit test (no network).
+    """
+    result = await get_approved_indications(
         drug_name="semaglutide",
         candidate_diseases=[
             "type 2 diabetes mellitus",
@@ -372,9 +387,12 @@ def test_get_approved_indications_semaglutide_pre_2017_returns_empty():
     assert result == set()
 
 
-def test_get_approved_indications_semaglutide_2022_returns_three():
+async def test_get_approved_indications_semaglutide_2022_returns_three():
     """Cutoff 2022-01-01 → T2DM (2017), CV risk (2020), and obesity (2021)
     are all approved; CKD (2025) and MASH (2025) are not.
+
+    LLM matcher mocked to remove exactly the three pre-cutoff-approved
+    candidates (deterministic unit test, no network).
     """
     candidates = [
         "type 2 diabetes mellitus",
@@ -383,11 +401,20 @@ def test_get_approved_indications_semaglutide_2022_returns_three():
         "chronic kidney disease",
         "MASH",
     ]
-    result = get_approved_indications(
-        drug_name="semaglutide",
-        candidate_diseases=candidates,
-        as_of=date(2022, 1, 1),
-    )
+    approved = [
+        "type 2 diabetes mellitus",
+        "cardiovascular risk reduction",
+        "obesity",
+    ]
+    with patch(
+        "indication_scout.services.disease_helper.merge_duplicate_diseases",
+        new=AsyncMock(return_value={"merge": {}, "remove": approved}),
+    ):
+        result = await get_approved_indications(
+            drug_name="semaglutide",
+            candidate_diseases=candidates,
+            as_of=date(2022, 1, 1),
+        )
     assert result == {
         "type 2 diabetes mellitus",
         "cardiovascular risk reduction",
@@ -395,9 +422,9 @@ def test_get_approved_indications_semaglutide_2022_returns_three():
     }
 
 
-def test_get_approved_indications_returns_empty_when_as_of_is_none():
+async def test_get_approved_indications_returns_empty_when_as_of_is_none():
     """as_of=None → callers should use the live FDA path; lookup returns empty."""
-    result = get_approved_indications(
+    result = await get_approved_indications(
         drug_name="semaglutide",
         candidate_diseases=["MASH"],
         as_of=None,
@@ -405,10 +432,10 @@ def test_get_approved_indications_returns_empty_when_as_of_is_none():
     assert result == set()
 
 
-def test_get_approved_indications_uncurated_drug_returns_empty(caplog):
+async def test_get_approved_indications_uncurated_drug_returns_empty(caplog):
     """Drug not in the table → empty set + warning logged."""
     with caplog.at_level("WARNING"):
-        result = get_approved_indications(
+        result = await get_approved_indications(
             drug_name="not-a-real-drug",
             candidate_diseases=["obesity"],
             as_of=date(2025, 1, 1),

@@ -436,7 +436,7 @@ def build_clinical_trials_tools(
         # supervisor knows approval reasoning was disabled, not that the drug
         # is unapproved.
         if date_before is not None:
-            approved_set = get_approved_indications(
+            approved_set = await get_approved_indications(
                 drug_name=drug,
                 candidate_diseases=[indication],
                 as_of=date_before,

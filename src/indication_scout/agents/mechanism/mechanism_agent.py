@@ -215,7 +215,7 @@ async def _assemble_candidates(
     try:
         if candidate_names:
             if date_before is not None:
-                approved = get_approved_indications(
+                approved = await get_approved_indications(
                     drug_name=drug_name,
                     candidate_diseases=candidate_names,
                     as_of=date_before,

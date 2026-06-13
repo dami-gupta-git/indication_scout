@@ -165,7 +165,7 @@ def _patch_assemble_deps():
     select_top_candidates is stubbed to echo the approved set back for assertion.
     """
     live = AsyncMock(return_value={"systemic mastocytosis": True, "glioblastoma": False})
-    table = MagicMock(return_value={"systemic mastocytosis"})
+    table = AsyncMock(return_value={"systemic mastocytosis"})
     captured: dict = {}
 
     def _capture(rows, approved_diseases, limit):

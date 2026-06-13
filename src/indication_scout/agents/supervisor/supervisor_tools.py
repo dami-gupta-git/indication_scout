@@ -319,7 +319,7 @@ def build_supervisor_tools(
         fda_approved_lower: set[str] = set()
         if diseases:
             if date_before is not None:
-                fda_approved = get_approved_indications(
+                fda_approved = await get_approved_indications(
                     drug_name=drug_name,
                     candidate_diseases=diseases,
                     as_of=date_before,
