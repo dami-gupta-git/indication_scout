@@ -12,7 +12,11 @@ WORKDIR /frontend
 # the host platform (macOS), and npm ci strict-checks platform-specific optional
 # deps (esbuild/rollup binaries), which fails when building on a Linux image.
 COPY frontend/package.json frontend/package-lock.json ./
-RUN --mount=type=cache,id=npm,target=/root/.npm \
+# Railway build cache mount. The id MUST be `s/<service id>-<target>` or Railway
+# rejects the Dockerfile; env vars are not allowed in the id, so the service id
+# (indication_scout, project accomplished-harmony) is hardcoded. Without the
+# cache mount, npm re-downloads every package on every deploy.
+RUN --mount=type=cache,id=s/cfc0929f-fbf5-47fb-8ffe-eed4eefb2ebd-/root/.npm,target=/root/.npm \
     npm install
 
 COPY frontend/ ./
@@ -48,7 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # sentence-transformers pulls the default torch, which drags in the multi-GB
 # CUDA/NVIDIA GPU stack (nvidia-*-cu13, triton, ...) — useless on a CPU host and
 # enough to blow the image past several GB / hit build disk limits.
-RUN --mount=type=cache,id=pip,target=/root/.cache/pip \
+RUN --mount=type=cache,id=s/cfc0929f-fbf5-47fb-8ffe-eed4eefb2ebd-/root/.cache/pip,target=/root/.cache/pip \
     pip install --index-url https://download.pytorch.org/whl/cpu torch
 
 # Install Python deps. Copy only the project metadata first so the dependency
@@ -57,7 +61,7 @@ RUN --mount=type=cache,id=pip,target=/root/.cache/pip \
 COPY pyproject.toml ./
 COPY README.md ./
 COPY src/ ./src/
-RUN --mount=type=cache,id=pip,target=/root/.cache/pip \
+RUN --mount=type=cache,id=s/cfc0929f-fbf5-47fb-8ffe-eed4eefb2ebd-/root/.cache/pip,target=/root/.cache/pip \
     pip install -e .
 
 # Tunable numeric limits (not secrets) — config.py loads these from the project
