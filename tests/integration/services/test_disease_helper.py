@@ -18,6 +18,29 @@ from indication_scout.services.disease_helper import (
 logger = logging.getLogger(__name__)
 
 
+async def test_resolve_mesh_id_covid_picks_disease_not_testing():
+    """B1 regression: bare "covid-19" free-text-matched sub-concepts and resolved to
+    "COVID-19 Testing" (D000086742), causing silent false-zero trial counts. The
+    "[MeSH Terms]" qualifier must return the disease descriptor "COVID-19" (D000086382)."""
+    result = await resolve_mesh_id("covid-19")
+    assert result == ("D000086382", "COVID-19")
+
+
+@pytest.mark.parametrize(
+    "disease, expected_id",
+    [
+        ("hypertension", "D006973"),
+        ("raynaud disease", "D011928"),
+        ("obesity", "D009765"),
+    ],
+)
+async def test_resolve_mesh_id_known_diseases_unchanged(disease, expected_id):
+    """The [MeSH Terms] qualifier must not regress diseases that already resolved right."""
+    result = await resolve_mesh_id(disease)
+    assert result is not None
+    assert result[0] == expected_id
+
+
 @no_review
 # Exclude from testing rules, TODO delete
 async def test_single_disease_normalizer():

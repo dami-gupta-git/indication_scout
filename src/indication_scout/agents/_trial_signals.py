@@ -32,10 +32,11 @@ from indication_scout.models.model_clinical_trials import Trial
 # display — "Phase 2/Phase 3" (rank 5) qualifies for describing development maturity.
 _PHASE3_MIN_RANK = _PHASE_RANK["Phase 2/Phase 3"]
 
-# Stop categories that are operational, not a safety/efficacy outcome. A Phase 3
-# terminated for anything else is a cause-termination — a sponsor-stated benefit:risk
-# stop is exactly that even when the phrasing isn't a classifier keyword.
-_OPERATIONAL_STOP_CATEGORIES = {"business", "enrollment"}
+# Stop categories that constitute a genuine cause-termination: an explicit safety or
+# efficacy stop is the ONLY evidence of cause. A blank/unknown/operational/administrative
+# reason is NOT evidence of a safety/efficacy stop and must not set the flag — absence of a
+# stated reason is not a negative signal.
+_CAUSE_STOP_CATEGORIES = {"safety", "efficacy"}
 
 
 def _is_phase3(trial: Trial) -> bool:
@@ -43,13 +44,15 @@ def _is_phase3(trial: Trial) -> bool:
     return _PHASE_RANK.get(trial.phase or "", -1) >= _PHASE3_MIN_RANK
 
 
-def _is_true_phase3(trial: Trial) -> bool:
-    """True only for a literal "Phase 3"+ label — NOT "Phase 2/Phase 3".
+def _is_pivotal_phase3(trial: Trial) -> bool:
+    """True only for the pivotal Phase 3 band: "Phase 2/Phase 3" or "Phase 3".
 
-    Used for the cause-termination signal so a contaminating "Phase 2/Phase 3" trial from
-    another indication doesn't suggest closure.
+    Used for the cause-termination signal. Excludes pure "Phase 4" (post-approval — a
+    Phase 4 event must not render as a "Phase 3 terminated for cause") and "Phase 3/Phase 4"
+    (ambiguous combined designation). A contaminating sub-Phase-2/3 trial is also excluded.
     """
-    return _PHASE_RANK.get(trial.phase or "", -1) >= _PHASE_RANK["Phase 3"]
+    rank = _PHASE_RANK.get(trial.phase or "", -1)
+    return _PHASE_RANK["Phase 2/Phase 3"] <= rank <= _PHASE_RANK["Phase 3"]
 
 
 def _highest_completed_phase(trials: list[Trial]) -> str | None:
@@ -98,8 +101,8 @@ def derive_trial_signals(
     terminated_phase3_for_cause = [
         t
         for t in terminated_trials
-        if _is_true_phase3(t)
-        and _classify_stop_reason(t.why_stopped) not in _OPERATIONAL_STOP_CATEGORIES
+        if _is_pivotal_phase3(t)
+        and _classify_stop_reason(t.why_stopped) in _CAUSE_STOP_CATEGORIES
     ]
     terminated_phase3_nct_ids = [
         t.nct_id for t in terminated_phase3_for_cause if t.nct_id

@@ -537,11 +537,23 @@ def build_clinical_trials_tools(
         if not summary or not summary.strip():
             return "REJECTED: empty summary. Re-call with the full summary.", ""
 
-        # Union the per-pair snapshots: a run analyzes one pair, so this is that
-        # pair's shown trials. Empty when no trials were shown (e.g. MeSH unresolved).
-        shown: set[str] = set()
-        for ncts in shown_by_pair.values():
-            shown |= ncts
+        # The shown set for this run's one pair. The supervisor builds a fresh agent
+        # (fresh, empty shown_by_pair) per analyze_clinical_trials call, so this dict
+        # holds AT MOST one key — the single pair this instance investigated. If it
+        # ever holds more, a tools instance was reused across pairs and the relevance
+        # gate would tag one pair's trials contaminated under another (the cross-pair
+        # leak). That is a wiring error the LLM can't fix by retrying, so fail loudly
+        # rather than silently union an accumulated set into a verdict.
+        if len(shown_by_pair) > 1:
+            raise DataSourceError(
+                "clinical_trials",
+                "finalize_analysis: shown_by_pair holds "
+                f"{len(shown_by_pair)} pairs {sorted(shown_by_pair)} — the tools "
+                "instance was reused across drug × indication pairs. Build a fresh "
+                "clinical-trials agent per analyze_clinical_trials call.",
+            )
+        # Empty when no trials were shown (e.g. MeSH unresolved) → empty verdicts is valid.
+        shown: set[str] = next(iter(shown_by_pair.values()), set())
 
         verdict_ncts = {v.get("nct") for v in verdicts if v.get("nct")}
         missing = shown - verdict_ncts

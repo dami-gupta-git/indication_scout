@@ -26,6 +26,7 @@ Analyze these abstracts and return a JSON object with the following fields:
   - "contradicts": evidence shows the drug fails or harms for this indication (a robustly-evidenced negative)
   - "mixed": both directions present in the relevant abstracts, no clear net
   - "none": insufficient/no relevant evidence (the only genuinely "untested" case; pair with strength "none")
+- "is_observational": Whether the relevant clinical evidence is purely observational. true = the relevant studies are exclusively observational (cohort, case-control, case series/reports) with NO randomized/controlled trial; false = at least one RCT or controlled trial is among the relevant abstracts; null = cannot tell or no relevant clinical evidence (e.g. preclinical-only, or strength "none"). Do NOT guess — use null when undetermined.
 - "key_findings": List of specific findings, each tied to a PMID. Format: ["Finding text (PMID: 12345678)", ...]. Each finding must be a verifiable claim from the abstract text, not a generalization.
 - "supporting_pmids": List of PMIDs from the provided abstracts that SUPPORT the repurposing hypothesis (exclude irrelevant or contradicting papers)
 - "contradicting_pmids": List of PMIDs from the provided abstracts that CONTRADICT the repurposing hypothesis (the drug failed/harmed for this indication; exclude irrelevant papers). Every relevant PMID cited in "summary" or "key_findings" must appear in supporting_pmids OR contradicting_pmids (a mixed paper may appear in both). No relevant cited PMID may be absent from both.

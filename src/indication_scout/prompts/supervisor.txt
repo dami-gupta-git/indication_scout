@@ -341,7 +341,15 @@ Each entry is a dict with these keys:
   label (none / weak / moderate / strong). Examples: "Strong, 5 RCTs and
   meta-analyses"; "Moderate, 3 observational studies"; "Weak, case reports
   only"; "None". Do NOT restate exact PMID counts here — qualitative shape
-  only.
+  only. The analyze_literature header reports an authoritative study_design
+  fact (observational / rct_or_controlled / undetermined) — take the study
+  design FROM THERE, never infer it from the summary prose. This binds EVERY
+  field (literature, constraint, key_risk, verdict, prose, and the disease
+  summary), not just `literature`: if study_design is rct_or_controlled you
+  may NOT write "observational" anywhere; if observational you may NOT call
+  it RCT-backed; if undetermined, describe strength without asserting a
+  design. The prose may describe studies, but the design WORD must match the
+  study_design token.
 - blocker: what is currently holding the program back. One short line.
   Examples: "Regulatory negotiation, not efficacy"; "No completed efficacy readout";
   "Sponsor terminated for benefit:risk". Empty string if nothing is blocking it.

@@ -77,15 +77,15 @@ def test_completed_phase3_no_termination_has_no_cause_signal():
     assert sig.terminated_phase3_nct_ids == []
 
 
-def test_phase2_phase3_terminated_is_not_cause():
-    """A 'Phase 2/Phase 3' terminated trial must NOT trip the cause signal — only a true
-    Phase 3."""
+def test_subphase_terminated_is_not_cause():
+    """A terminated trial BELOW the pivotal band (e.g. Phase 2) must NOT trip the cause
+    signal — only the pivotal 'Phase 2/Phase 3'..'Phase 3' band counts."""
     ct = _ct(
         completed=[Trial(nct_id="NCT11111111", phase="Phase 2")],
         terminated=[
             Trial(
                 nct_id="NCT22222222",
-                phase="Phase 2/Phase 3",
+                phase="Phase 2",
                 why_stopped="Study terminated: lack of efficacy.",
             )
         ],
@@ -108,6 +108,51 @@ def test_phase3_terminated_for_enrollment_is_not_cause():
     )
     sig = derive_trial_signals(ct)
     assert sig.phase3_terminated_for_cause is False
+
+
+def test_phase4_blank_reason_is_not_cause():
+    """Hepatic regression (NCT00736385): a Phase 4 trial with a BLANK stop reason must NOT
+    set phase3_terminated_for_cause. Phase 4 is post-approval (excluded from the pivotal
+    band) and a blank reason is not evidence of a safety/efficacy stop."""
+    ct = _ct(
+        terminated=[Trial(nct_id="NCT00736385", phase="Phase 4", why_stopped=None)],
+    )
+    sig = derive_trial_signals(ct)
+    assert sig.phase3_terminated_for_cause is False
+    assert sig.terminated_phase3_nct_ids == []
+
+
+def test_phase4_safety_stop_is_not_phase3_cause():
+    """A Phase 4 trial stopped for a real safety reason is excluded from this Phase-3 signal —
+    the flag must stay honest about phase (Phase 4 is not a Phase 3 termination)."""
+    ct = _ct(
+        terminated=[
+            Trial(
+                nct_id="NCT99999999",
+                phase="Phase 4",
+                why_stopped="Terminated for safety concerns.",
+            )
+        ],
+    )
+    sig = derive_trial_signals(ct)
+    assert sig.phase3_terminated_for_cause is False
+    assert sig.terminated_phase3_nct_ids == []
+
+
+def test_phase2_phase3_safety_stop_is_cause():
+    """The pivotal band includes 'Phase 2/Phase 3': a safety stop there IS a cause-termination."""
+    ct = _ct(
+        terminated=[
+            Trial(
+                nct_id="NCT12340000",
+                phase="Phase 2/Phase 3",
+                why_stopped="Terminated for safety concerns.",
+            )
+        ],
+    )
+    sig = derive_trial_signals(ct)
+    assert sig.phase3_terminated_for_cause is True
+    assert sig.terminated_phase3_nct_ids == ["NCT12340000"]
 
 
 def test_relevance_filter_excludes_contaminating_phase3():

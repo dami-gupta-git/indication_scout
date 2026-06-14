@@ -163,6 +163,9 @@ STOP_KEYWORDS: dict[str, str] = {
     "not meet its primary endpoint": "efficacy",
     # seen on metformin × diabetes (NCT02111096) and similar benefit/risk phrasing
     "benefit-risk profile did not support": "efficacy",
+    "positive benefit: risk": "efficacy",  # "insufficient evidence to support a positive benefit: risk profile"
+    "positive benefit-risk": "efficacy",
+    "positive benefit/risk": "efficacy",
     "not support continued development": "efficacy",
     "insufficient scientific evidence": "efficacy",
     "meaningful benefit": "efficacy",

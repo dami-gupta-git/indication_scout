@@ -12,6 +12,10 @@ class EvidenceSummary(BaseModel):
     # whether it supports or contradicts. direction = which way it points.
     strength: Literal["strong", "moderate", "weak", "none"] = "none"
     direction: Literal["supports", "contradicts", "mixed", "none"] = "none"
+    # True when the relevant evidence includes at least one RCT/controlled trial, False when
+    # it is purely observational, None when undetermined (no-data). Lets the supervisor avoid
+    # calling RCT-backed evidence "observational". None stays None (no default coercion).
+    is_observational: bool | None = None
     key_findings: list[str] = []
     supporting_pmids: list[str] = []
     contradicting_pmids: list[str] = []

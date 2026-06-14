@@ -7,6 +7,7 @@ import pytest
 
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
+    TrialSignals,
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.mechanism.mechanism_output import (
@@ -323,7 +324,11 @@ async def test_analyze_mechanism_merges_by_efo_id(
 
 
 def _make_lit(
-    strength: str, n_pmids: int, study_count: int, direction: str = "supports"
+    strength: str,
+    n_pmids: int,
+    study_count: int,
+    direction: str = "supports",
+    is_observational: bool | None = None,
 ) -> LiteratureOutput:
     return LiteratureOutput(
         pmids=[str(1000000 + i) for i in range(n_pmids)],
@@ -331,23 +336,31 @@ def _make_lit(
             strength=strength,
             direction=direction,
             study_count=study_count,
+            is_observational=is_observational,
             summary="",
             key_findings=[],
         ),
     )
 
 
-def _make_ct(total: int, completed: int, terminated: int) -> ClinicalTrialsOutput:
+def _make_ct(
+    total: int,
+    completed: int,
+    terminated: int,
+    signals: "TrialSignals | None" = None,
+) -> ClinicalTrialsOutput:
     return ClinicalTrialsOutput(
         search=SearchTrialsResult(total_count=total),
         completed=CompletedTrialsResult(total_count=completed),
         terminated=TerminatedTrialsResult(total_count=terminated),
+        signals=signals,
     )
 
 
-def _holdout_tools_and_closure(cutoff: date):
-    """Build supervisor tools with date_before set, return (tools_by_name,
-    findings_local, allowed_diseases) seeded for direct closure manipulation."""
+def _holdout_tools_and_closure(cutoff: date | None):
+    """Build supervisor tools (date_before=cutoff), return (tools_by_name,
+    findings_local, allowed_diseases) seeded for direct closure manipulation.
+    Pass cutoff=None to exercise the non-holdout path that returns validated blurbs."""
     llm = MagicMock()
     svc = MagicMock()
     db = MagicMock()
@@ -473,6 +486,201 @@ async def test_holdout_summary_reconstructed_for_sildenafil_2005():
     )
     assert msg.artifact["summary"] == expected
     assert msg.artifact["blurbs"] == []
+
+
+async def test_finalize_repairs_false_observational_in_blurb():
+    """A3 deterministic repair: when is_observational is False (RCT-backed), finalize must
+    strip a false 'observational' claim from every blurb free-text field. Non-holdout path
+    so validated blurbs are returned (holdout discards blurbs)."""
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+
+    allowed_diseases["covid-19"] = ("covid-19", "competitor")
+    findings_local["covid-19"] = {
+        "literature": _make_lit(
+            "moderate", 5, 2, direction="supports", is_observational=False
+        ),
+        "clinical_trials": _make_ct(0, 0, 0),
+    }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "test_critique",
+            "type": "tool_call",
+        }
+    )
+    msg = await by_name["finalize_supervisor"].ainvoke(
+        {
+            "name": "finalize_supervisor",
+            "args": {
+                "summary": "Ranked repurposing signals:\n1. covid-19 — x",
+                "blurbs": [
+                    {
+                        "disease": "covid-19",
+                        "key_risk": "Evidence base is off-registry or observational",
+                        "prose": "The Observational studies suggest benefit.",
+                        "literature": "Moderate, supports",
+                    }
+                ],
+            },
+            "id": "test_call",
+            "type": "tool_call",
+        }
+    )
+
+    blurbs = msg.artifact["blurbs"]
+    assert len(blurbs) == 1
+    b = blurbs[0]
+    # Both the standalone and capitalized forms are repaired; nothing else changes.
+    assert b["key_risk"] == "Evidence base is off-registry or RCT-backed"
+    assert b["prose"] == "The RCT-backed studies suggest benefit."
+    assert b["literature"] == "Moderate, supports"
+    assert "observational" not in (b["key_risk"] + b["prose"]).lower()
+
+
+async def test_finalize_keeps_observational_when_fact_is_true():
+    """The repair is one-directional: when is_observational is True, a legitimate
+    'observational' claim must be left untouched (never add/alter design wording)."""
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+
+    allowed_diseases["disease x"] = ("disease x", "competitor")
+    findings_local["disease x"] = {
+        "literature": _make_lit(
+            "moderate", 5, 2, direction="supports", is_observational=True
+        ),
+        "clinical_trials": _make_ct(0, 0, 0),
+    }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "test_critique",
+            "type": "tool_call",
+        }
+    )
+    msg = await by_name["finalize_supervisor"].ainvoke(
+        {
+            "name": "finalize_supervisor",
+            "args": {
+                "summary": "Ranked repurposing signals:\n1. disease x — x",
+                "blurbs": [
+                    {
+                        "disease": "disease x",
+                        "key_risk": "Evidence is observational only",
+                        "prose": "",
+                        "literature": "Moderate, supports",
+                    }
+                ],
+            },
+            "id": "test_call",
+            "type": "tool_call",
+        }
+    )
+
+    blurbs = msg.artifact["blurbs"]
+    assert len(blurbs) == 1
+    assert blurbs[0]["key_risk"] == "Evidence is observational only"
+
+
+async def test_finalize_repairs_false_no_phase3_stage():
+    """A2 deterministic repair: when has_completed_phase3 is True, finalize must rewrite a
+    `stage` that falsely claims 'Phase 4 exploratory only / Phase 3 never initiated'."""
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+
+    allowed_diseases["pcos"] = ("pcos", "competitor")
+    findings_local["pcos"] = {
+        "literature": _make_lit("strong", 10, 5, direction="supports"),
+        "clinical_trials": _make_ct(
+            50,
+            22,
+            0,
+            signals=TrialSignals(
+                highest_completed_phase="Phase 3",
+                has_completed_phase3=True,
+                completed_phase3_nct_ids=["NCT00068861"],
+            ),
+        ),
+    }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "test_critique",
+            "type": "tool_call",
+        }
+    )
+    msg = await by_name["finalize_supervisor"].ainvoke(
+        {
+            "name": "finalize_supervisor",
+            "args": {
+                "summary": "Ranked repurposing signals:\n1. pcos — x",
+                "blurbs": [
+                    {
+                        "disease": "pcos",
+                        "stage": "Phase 4 exploratory only (no dedicated development program)",
+                        "prose": "",
+                    }
+                ],
+            },
+            "id": "test_call",
+            "type": "tool_call",
+        }
+    )
+
+    b = msg.artifact["blurbs"][0]
+    assert "exploratory only" not in b["stage"].lower()
+    assert "Phase 3 completed" in b["stage"]
+
+
+async def test_finalize_keeps_stage_when_no_completed_phase3():
+    """No completed Phase 3 (has_completed_phase3 False): a legitimate 'exploratory only'
+    stage must be left untouched — the repair never invents a phase."""
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+
+    allowed_diseases["disease y"] = ("disease y", "competitor")
+    findings_local["disease y"] = {
+        "literature": _make_lit("moderate", 4, 2, direction="supports"),
+        "clinical_trials": _make_ct(
+            5,
+            2,
+            0,
+            signals=TrialSignals(
+                highest_completed_phase="Phase 4", has_completed_phase3=False
+            ),
+        ),
+    }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "test_critique",
+            "type": "tool_call",
+        }
+    )
+    msg = await by_name["finalize_supervisor"].ainvoke(
+        {
+            "name": "finalize_supervisor",
+            "args": {
+                "summary": "Ranked repurposing signals:\n1. disease y — x",
+                "blurbs": [
+                    {
+                        "disease": "disease y",
+                        "stage": "Phase 4 exploratory only (no dedicated development program)",
+                        "prose": "",
+                    }
+                ],
+            },
+            "id": "test_call",
+            "type": "tool_call",
+        }
+    )
+
+    b = msg.artifact["blurbs"][0]
+    assert b["stage"] == "Phase 4 exploratory only (no dedicated development program)"
 
 
 async def test_holdout_summary_contradicts_ranks_bottom_and_not_excluded():

@@ -400,12 +400,18 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
 
     esearch_params: dict[str, Any] = {
         "db": "mesh",
-        "term": indication,
+        # Qualify to the MeSH-term field. A bare free-text term lets esearch match
+        # every sub-concept that merely CONTAINS the word — e.g. "covid-19" ranks
+        # "COVID-19 Testing"/"Vaccines"/"Serotherapy" above (or instead of) the bare
+        # disease "COVID-19" (D000086382), silently resolving to the wrong descriptor
+        # and returning a false-zero trial count. "[MeSH Terms]" makes esearch return
+        # the disease descriptor first. Verified: fixes covid-19 and leaves the
+        # previously-correct diseases unchanged.
+        "term": f"{indication}[MeSH Terms]",
         "retmode": "json",
-        # Fetch several candidates sorted by relevance: the top idlist entry
-        # without a sort can be a narrower variant (e.g. "hypertension" returns
-        # the pulmonary-hypertension descriptor first), so rank by relevance and
-        # pick the first true descriptor below.
+        # Fetch several candidates sorted by relevance: the top idlist entry can still
+        # be a narrower variant (e.g. "hypertension" can return pulmonary-hypertension
+        # first), so rank by relevance and pick the first true descriptor below.
         "retmax": 5,
         "sort": "relevance",
     }

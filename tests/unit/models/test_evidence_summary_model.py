@@ -1,5 +1,7 @@
 """Unit tests for EvidenceSummary — direction modeled separately from strength."""
 
+import pytest
+
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 
 
@@ -9,9 +11,25 @@ def test_defaults_strength_and_direction_none():
     assert es.study_count == 0
     assert es.strength == "none"
     assert es.direction == "none"
+    assert es.is_observational is None
     assert es.key_findings == []
     assert es.supporting_pmids == []
     assert es.contradicting_pmids == []
+
+
+@pytest.mark.parametrize("value", [True, False, None])
+def test_is_observational_preserves_explicit_value(value):
+    # The design fact must round-trip exactly — None (undetermined) must NOT be coerced
+    # to a guess, since that would let the supervisor mislabel study design.
+    es = EvidenceSummary(is_observational=value)
+    assert es.is_observational is value
+
+
+def test_missing_is_observational_in_old_cache_defaults_none():
+    # Old cached JSON has no `is_observational` key — defaults to None (undetermined),
+    # the safe value (never a fabricated "observational").
+    es = EvidenceSummary(**{"summary": "x", "strength": "strong"})
+    assert es.is_observational is None
 
 
 def test_strong_contradicts_disproven_hypothesis():

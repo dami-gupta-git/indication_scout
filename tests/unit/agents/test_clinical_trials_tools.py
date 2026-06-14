@@ -4,6 +4,7 @@ import logging
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from langchain_core.messages import ToolCall as LCToolCall
 
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
@@ -1189,6 +1190,144 @@ async def test_finalize_analysis_rejects_empty_summary():
 
     assert msg.artifact == ""
     assert "REJECTED" in msg.content
+
+
+# ------------------------------------------------------------------
+# Cross-pair isolation — shown_by_pair must not leak across candidates.
+# Regression for the supervisor's concurrent fan-out: a single shared tools
+# instance accumulates every pair's trials into shown_by_pair and finalize
+# unions across keys, so one disease's trials get tagged contaminated under
+# another. The supervisor fix builds the agent PER analyze_clinical_trials call;
+# this test pins the property that per-call instances stay isolated, and
+# documents that a shared instance does NOT.
+# ------------------------------------------------------------------
+
+
+def _completed_for(drug: str, mesh_term: str, ncts: list[str]):
+    """A mock ClinicalTrialsClient returning the given NCTs as completed trials."""
+
+    def _mk(nct: str) -> Trial:
+        return Trial(
+            nct_id=nct,
+            title=f"trial {nct}",
+            phase="Phase 3",
+            overall_status="COMPLETED",
+            sponsor="S",
+            mesh_conditions=[MeshTerm(id="DXXXXXX", term=mesh_term)],
+            interventions=[
+                Intervention(intervention_type="Drug", intervention_name=drug)
+            ],
+        )
+
+    return _mock_client(
+        get_completed_trials=CompletedTrialsResult(
+            total_count=len(ncts), trials=[_mk(n) for n in ncts]
+        )
+    )
+
+
+async def _run_pair(tools, drug: str, indication: str, mesh_term: str, ncts: list[str]):
+    """get_completed (populates shown_by_pair) then finalize, tagging all RELEVANT."""
+    client = _completed_for(drug, mesh_term, ncts)
+    with (
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+            new=AsyncMock(return_value=("DXXXXXX", mesh_term)),
+        ),
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+            return_value=client,
+        ),
+    ):
+        await _get_tool(tools, "get_completed").ainvoke(
+            LCToolCall(
+                name="get_completed",
+                args={"drug": drug, "indication": indication},
+                id=f"gc_{indication}",
+                type="tool_call",
+            )
+        )
+    return await _finalize(
+        tools,
+        summary=f"{drug} × {indication}: trials on record.",
+        verdicts=[{"nct": n, "verdict": "relevant"} for n in ncts],
+        relevance_reasoning="all relevant to this pair",
+    )
+
+
+async def test_per_call_instances_keep_contaminated_sets_disjoint():
+    """Two pairs on SEPARATE tools instances (the supervisor's per-call build) —
+    each finalize sees only its own pair's trials, so neither rejects and neither
+    contaminated set leaks the other pair's NCTs.
+
+    Runs the pairs sequentially: with state per-instance there is nothing shared
+    to race on, so the isolation is timing-independent (the concurrency hazard
+    exists only for a SHARED instance, pinned by the test below). Sequencing also
+    avoids `unittest.mock.patch`'s module-global monkeypatch, which is not
+    task-local and would otherwise let concurrent coroutines stomp each other's
+    mocked client — a harness artifact, not product behavior."""
+    tools_a = build_clinical_trials_tools(date_before=None)
+    tools_b = build_clinical_trials_tools(date_before=None)
+
+    msg_a = await _run_pair(
+        tools_a, "metformin", "type 1 diabetes", "Diabetes Mellitus, Type 1",
+        ["NCT_A1", "NCT_A2"],
+    )
+    msg_b = await _run_pair(
+        tools_b, "metformin", "nafld", "Non-alcoholic Fatty Liver Disease",
+        ["NCT_B1", "NCT_B2", "NCT_B3"],
+    )
+
+    # Both finalize cleanly (no missing/unknown reject) and stay disjoint.
+    assert msg_a.artifact.relevant_ncts == ["NCT_A1", "NCT_A2"]
+    assert msg_a.artifact.contaminated_ncts == []
+    assert msg_b.artifact.relevant_ncts == ["NCT_B1", "NCT_B2", "NCT_B3"]
+    assert msg_b.artifact.contaminated_ncts == []
+
+
+async def test_shared_instance_across_pairs_raises_not_leaks():
+    """A SHARED tools instance accumulates both pairs into shown_by_pair. finalize
+    detects the >1-key state and RAISES DataSourceError rather than silently
+    unioning the second pair's trials into this pair's verdict scope (the
+    cross-pair leak). Pins the guard so reusing a tools instance across pairs
+    fails loudly instead of corrupting the contaminated set."""
+    shared = build_clinical_trials_tools(date_before=None)
+
+    # Populate pair A then pair B on the SAME instance.
+    client_a = _completed_for("metformin", "Diabetes Mellitus, Type 1", ["NCT_A1"])
+    client_b = _completed_for("metformin", "NAFLD", ["NCT_B1", "NCT_B2"])
+    for client, indication, mesh in (
+        (client_a, "type 1 diabetes", "Diabetes Mellitus, Type 1"),
+        (client_b, "nafld", "NAFLD"),
+    ):
+        with (
+            patch(
+                "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+                new=AsyncMock(return_value=("DXXXXXX", mesh)),
+            ),
+            patch(
+                "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+                return_value=client,
+            ),
+        ):
+            await _get_tool(shared, "get_completed").ainvoke(
+                LCToolCall(
+                    name="get_completed",
+                    args={"drug": "metformin", "indication": indication},
+                    id=f"gc_{indication}",
+                    type="tool_call",
+                )
+            )
+
+    # finalize on the two-pair instance must raise, naming both leaked pairs.
+    with pytest.raises(DataSourceError) as exc:
+        await _finalize(
+            shared,
+            summary="metformin × type 1 diabetes: trials on record.",
+            verdicts=[{"nct": "NCT_A1", "verdict": "relevant"}],
+            relevance_reasoning="relevant to T1D",
+        )
+    assert "reused across drug" in str(exc.value)
 
 
 # ------------------------------------------------------------------
