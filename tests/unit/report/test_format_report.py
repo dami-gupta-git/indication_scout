@@ -211,8 +211,12 @@ def test_fmt_clinical_trials_completed_skips_contaminated_examples():
         contaminated_nct_ids=["NCT00303459", "NCT00644605"],
     )
     rendered = _fmt_clinical_trials(out)
-    # Header count is the verbatim artifact total, not the filtered example count.
-    assert "**Completed trials (64 total):**" in rendered
+    # Header count is the verbatim artifact total; the excluded-count suffix explains the
+    # gap between total and rendered rows.
+    assert (
+        "**Completed trials (64 total, 2 excluded as a different indication):**"
+        in rendered
+    )
     # Contaminated PAH trials are still named in the "excluded" line at the top, but NOT
     # rendered as completed-trial examples. Scope the check to the trial-table region.
     table = rendered.split("**Completed trials")[1]
@@ -243,7 +247,9 @@ def test_fmt_clinical_trials_terminated_skips_contaminated_examples():
         contaminated_nct_ids=["NCT02060487"],
     )
     rendered = _fmt_clinical_trials(out)
-    assert "**Terminated trials (18):**" in rendered
+    assert (
+        "**Terminated trials (18, 1 excluded as a different indication):**" in rendered
+    )
     table = rendered.split("**Terminated trials")[1]
     assert "NCT02060487" not in table
     assert "NCT01392638" in table

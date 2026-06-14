@@ -14,15 +14,14 @@ Oracle: the hand labels in test_relevance_signal_eval.LABELS. Because the live
 CT.gov set drifts, assertions intersect LABELS with what the agent saw rather
 than pinning an exact set.
 
-Hits real CT.gov + real Anthropic. Opt-in via `-m live`.
+Hits real CT.gov + real Anthropic.
 
-Run: pytest -m live tests/integration/agents/clinical_trials/test_sild_htn_relevance_e2e.py
+Run: pytest tests/integration/agents/clinical_trials/test_sild_htn_relevance_e2e.py
 """
 
 import logging
 from datetime import date
 
-import pytest
 from langchain_anthropic import ChatAnthropic
 
 from indication_scout.agents.clinical_trials.clinical_trials_agent import (
@@ -33,8 +32,6 @@ from indication_scout.agents.clinical_trials.clinical_trials_agent import (
 from .test_relevance_signal_eval import LABELS
 
 logger = logging.getLogger(__name__)
-
-pytestmark = pytest.mark.live
 
 # Holdout cutoff that matches the harness snapshot (sild_htn_trials.json was
 # captured with date_before=2025-01-01), so the shown set overlaps the labels.

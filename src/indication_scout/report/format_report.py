@@ -134,7 +134,13 @@ def _fmt_clinical_trials(
 
     if ct.completed:
         c = ct.completed
-        lines.append(f"\n**Completed trials ({c.total_count} total):**")
+        n_excluded = sum(1 for t in c.trials if t.nct_id in contaminated)
+        excl_note = (
+            f", {n_excluded} excluded as a different indication"
+            if n_excluded
+            else ""
+        )
+        lines.append(f"\n**Completed trials ({c.total_count} total{excl_note}):**")
         shown = [t for t in c.trials if t.nct_id not in contaminated]
         for trial in shown[:10]:
             phase = trial.phase or "Unknown phase"
@@ -146,7 +152,15 @@ def _fmt_clinical_trials(
     if ct.terminated:
         term = ct.terminated
         if term.total_count:
-            lines.append(f"\n**Terminated trials ({term.total_count}):**")
+            n_excluded = sum(1 for t in term.trials if t.nct_id in contaminated)
+            excl_note = (
+                f", {n_excluded} excluded as a different indication"
+                if n_excluded
+                else ""
+            )
+            lines.append(
+                f"\n**Terminated trials ({term.total_count}{excl_note}):**"
+            )
             shown = [t for t in term.trials if t.nct_id not in contaminated]
             for t in shown[:10]:
                 reason = f" — *{t.why_stopped}*" if t.why_stopped else ""

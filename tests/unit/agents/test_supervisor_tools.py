@@ -1,5 +1,6 @@
 """Unit tests for supervisor_tools — briefing rendering."""
 
+import json
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -612,27 +613,95 @@ async def test_finalize_repairs_false_no_phase3_stage():
             "type": "tool_call",
         }
     )
-    msg = await by_name["finalize_supervisor"].ainvoke(
+    # critique got [] (didn't cover this blurb) → finalize runs the fact critic. Mock it to
+    # return the blurb UNCHANGED, proving the deterministic `stage` floor corrects stage even
+    # when the critic doesn't touch it. (Hermetic: no live LLM call.)
+    critic_out = json.dumps(
         {
-            "name": "finalize_supervisor",
-            "args": {
-                "summary": "Ranked repurposing signals:\n1. pcos — x",
-                "blurbs": [
-                    {
-                        "disease": "pcos",
-                        "stage": "Phase 4 exploratory only (no dedicated development program)",
-                        "prose": "",
-                    }
-                ],
-            },
-            "id": "test_call",
-            "type": "tool_call",
+            "ordering": "consistent",
+            "blurbs": [
+                {
+                    "disease": "pcos",
+                    "stage": "Phase 4 exploratory only (no dedicated development program)",
+                    "prose": "",
+                }
+            ],
         }
     )
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=AsyncMock(return_value=critic_out),
+    ):
+        msg = await by_name["finalize_supervisor"].ainvoke(
+            {
+                "name": "finalize_supervisor",
+                "args": {
+                    "summary": "Ranked repurposing signals:\n1. pcos — x",
+                    "blurbs": [
+                        {
+                            "disease": "pcos",
+                            "stage": "Phase 4 exploratory only (no dedicated development program)",
+                            "prose": "",
+                        }
+                    ],
+                },
+                "id": "test_call",
+                "type": "tool_call",
+            }
+        )
 
     b = msg.artifact["blurbs"][0]
     assert "exploratory only" not in b["stage"].lower()
     assert "Phase 3 completed" in b["stage"]
+
+
+async def test_finalize_runs_fact_critic_when_critique_uncovered():
+    """The fix: when critique_ranking was called WITHOUT these blurbs (LLM non-compliance,
+    observed live), finalize runs the fact critic itself so the repair reaches ALL fields —
+    not just the stage floor. Mock the critic to rewrite key_risk."""
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+
+    allowed_diseases["pcos"] = ("pcos", "competitor")
+    findings_local["pcos"] = {
+        "literature": _make_lit("strong", 10, 5, direction="supports"),
+        "clinical_trials": _make_ct(
+            50, 22, 0, signals=TrialSignals(
+                highest_completed_phase="Phase 3", has_completed_phase3=True
+            ),
+        ),
+    }
+
+    # Supervisor pre-called critique with [] (the bug path) — finalize must repair anyway.
+    await by_name["critique_ranking"].ainvoke(
+        {"name": "critique_ranking", "args": {"blurbs": []},
+         "id": "c", "type": "tool_call"}
+    )
+    critic_out = json.dumps(
+        {"ordering": "consistent", "blurbs": [
+            {"disease": "pcos",
+             "stage": "Completed Phase 3 on record",
+             "key_risk": "No dedicated regulatory program despite completed Phase 3",
+             "prose": ""}
+        ]}
+    )
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=AsyncMock(return_value=critic_out),
+    ) as mock_llm:
+        msg = await by_name["finalize_supervisor"].ainvoke(
+            {"name": "finalize_supervisor", "args": {
+                "summary": "Ranked repurposing signals:\n1. pcos — x",
+                "blurbs": [{"disease": "pcos",
+                            "stage": "Phase 4 exploratory only",
+                            "key_risk": "No Phase 3 on record; all activity is Phase 4",
+                            "prose": ""}],
+            }, "id": "f", "type": "tool_call"}
+        )
+
+    mock_llm.assert_awaited()  # the finalize-time critic actually ran
+    b = msg.artifact["blurbs"][0]
+    assert "no phase 3 on record" not in b["key_risk"].lower()
+    assert "completed Phase 3" in b["key_risk"]
 
 
 async def test_finalize_keeps_stage_when_no_completed_phase3():

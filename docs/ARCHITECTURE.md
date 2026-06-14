@@ -12,15 +12,15 @@ indication_scout/
 │   ├── __init__.py                # Package initialization
 │   ├── config.py                  # Application settings (pydantic-settings; .env + .env.constants)
 │   ├── constants.py               # URLs, timeouts, lookup maps, vaccine keywords, MeSH constants
-│   ├── markers.py                 # Cross-cutting markers (e.g. holdout flags)
-│   ├── agents/                    # Sub-agents and supervisor (LangGraph create_react_agent)
+│   ├── markers.py                 # `no_review` marker (excludes items from the code-review agent)
+│   ├── agents/                    # Sub-agents and supervisor (custom gated ReAct loop, _react_loop.py)
 │   │   ├── base.py                # BaseAgent ABC (legacy, unused by ReAct agents)
 │   │   ├── _trial_formatting.py   # Shared trial table / phase distribution helpers
 │   │   ├── supervisor/            # Top-level supervisor agent
 │   │   ├── literature/            # PubMed retrieval + synthesis sub-agent
 │   │   ├── clinical_trials/       # ClinicalTrials.gov sub-agent
 │   │   └── mechanism/             # Open Targets mechanism sub-agent
-│   ├── api/                       # FastAPI application (/health only; routes/, schemas/ stubs)
+│   ├── api/                       # FastAPI app (/health + async analyses, drilldown, examples routes; serves built React frontend in prod)
 │   ├── cli/                       # `scout` CLI entry point (cli.py)
 │   ├── data_sources/              # Async API clients
 │   │   ├── base_client.py         # BaseClient: aiohttp + retry/backoff
@@ -71,9 +71,9 @@ indication_scout/
 | BaseClient | **Complete** | Retry with exponential backoff; persistent failure log via `log_data_source_failure` |
 | File Cache | **Complete** | Shared `utils/cache.py` used by all clients and services (`cache/<namespace>/<sha>.json`, config-driven TTL (currently 60 days)) |
 | Services | **Complete** | `llm.py`, `embeddings.py`, `disease_helper.py`, `pubmed_query.py`, `approval_check.py`, `retrieval.py` (build_drug_profile, expand_search_terms, extract_organ_term, fetch_new_abstracts, embed_abstracts, fetch_and_cache, semantic_search, synthesize, get_drug_competitors) |
-| Agents | **Complete** | Supervisor + literature, clinical_trials, mechanism sub-agents — all built on LangGraph `create_react_agent`. `BaseAgent` ABC still exists in `agents/base.py` but is unused. |
-| API | Minimal | FastAPI with `/health` endpoint only; `routes/` and `schemas/` are empty packages |
-| CLI | **Complete** | `scout find -d <drug> [--out-dir DIR] [--no-write] [--date-before YYYY-MM-DD]` (in `cli/cli.py`) |
+| Agents | **Complete** | Supervisor + literature, clinical_trials, mechanism sub-agents — all built on the custom gated ReAct loop (`agents/_react_loop.py`). `BaseAgent` ABC still exists in `agents/base.py` but is unused. |
+| API | **Complete** | FastAPI app: `/health` plus async `analyses` (POST/GET/report.md/DELETE), `drilldown`, and `examples` routers (in `api/routes/`); CORS + visitor/bot logging; serves the built React frontend in prod |
+| CLI | **Complete** | `scout find` (run pipeline), `scout render` (re-render saved JSON), `scout diff-report` (diff two JSON snapshots) — in `cli/cli.py` |
 
 ---
 
@@ -107,28 +107,37 @@ Agents never see raw API responses — all data crosses module boundaries as Pyd
 
 ## Agent Layer
 
-All four agents are built using `langgraph.prebuilt.create_react_agent`. `BaseAgent` (in
-`agents/base.py`) is a legacy ABC and is not used by the active ReAct-style agents.
+All four agents are built using a custom gated ReAct loop (`build_gated_react_loop` in
+`agents/_react_loop.py`) that ends the loop as soon as the agent's `finalize_*` tool
+succeeds. `BaseAgent` (in `agents/base.py`) is a legacy ABC and is not used by the active
+ReAct-style agents.
 
 ### Supervisor (`agents/supervisor/`)
 
 `build_supervisor_agent(llm, svc, db, date_before)` returns
 `(compiled_agent, get_merged_allowlist, get_auto_findings)`. The supervisor wraps each
-sub-agent as a tool and orchestrates the run. After the LangGraph loop finishes,
-`run_supervisor_agent` walks the message history, canonicalises disease names against the
-merged competitor + mechanism allowlist, and assembles a `SupervisorOutput`.
+sub-agent as a tool and orchestrates the run via a gated ReAct loop
+(`build_gated_react_loop`). After the loop finishes, `run_supervisor_agent` walks the
+message history, canonicalises disease names against the merged competitor + mechanism
+allowlist, and assembles a `SupervisorOutput`.
 
 Tools available to the supervisor (all in `supervisor_tools.py`):
 
 | Tool | Purpose |
 |------|---------|
-| `find_candidates` | Surface competitor-derived disease candidates from Open Targets |
-| `analyze_mechanism` | Run the mechanism sub-agent (returns `MechanismOutput`) |
+| `find_candidates` | Surface competitor + mechanism disease candidates (runs the merge/dedup over both seed sources) |
+| `analyze_mechanism` | Run the mechanism sub-agent (returns `MechanismOutput`); buffers raw mechanism candidates |
 | `analyze_literature` | Run the literature sub-agent for one disease |
 | `analyze_clinical_trials` | Run the clinical-trials sub-agent for one disease |
-| `investigate_top_candidates` | Holdout-only: parallel fan-out over top candidates |
+| `investigate_top_candidates` | Holdout/fan-out only: parallel fan-out over top candidates |
 | `get_drug_briefing` | Read-only view of accumulated drug-level facts |
-| `finalize_supervisor` | Last action; returns the supervisor's narrative summary |
+| `critique_ranking` | Audit the draft ranking order; mandatory before `finalize_supervisor` |
+| `finalize_supervisor` | Last action; returns the supervisor's narrative summary + top-5 blurbs |
+
+`investigate_top_candidates` is added to the tool set in holdout mode (`date_before` set) or
+when `supervisor_fanout` is on; in pure fan-out mode the per-candidate `analyze_literature` /
+`analyze_clinical_trials` tools are removed so the LLM must use the parallel path.
+`finalize_supervisor` is rejected until `critique_ranking` has run this turn.
 
 When `date_before` is set, the supervisor loads `prompts/supervisor_holdout.txt` instead of
 `supervisor.txt` and forwards the cutoff to the literature and clinical-trials sub-agents.
@@ -147,7 +156,7 @@ agents/<name>/
 
 | Agent | Tools | Output |
 |-------|-------|--------|
-| **Literature** | `expand_search_terms`, `fetch_and_cache`, `semantic_search`, `synthesize`, `finalize_analysis` | `LiteratureOutput` |
+| **Literature** | `build_drug_profile`, `expand_search_terms`, `fetch_and_cache`, `semantic_search`, `synthesize`, `finalize_analysis` | `LiteratureOutput` |
 | **Clinical Trials** | `check_fda_approval`, `search_trials`, `get_completed`, `get_terminated`, `get_landscape`, `finalize_analysis` | `ClinicalTrialsOutput` |
 | **Mechanism** | `get_drug`, `get_target_associations`, `finalize_analysis` | `MechanismOutput` |
 
@@ -163,13 +172,15 @@ tool's typed artifact off `ToolMessage.artifact`, assembling them into the typed
 ```
 SupervisorOutput
  |-- drug_name: str
- |-- candidates: list[str]                  # Diseases in the merged allowlist
+ |-- candidate_diseases: list[str]          # Diseases in the merged allowlist
  |-- mechanism: MechanismOutput | None
- |-- findings: list[CandidateFindings]
+ |-- disease_findings: list[CandidateFindings]   # top_diseases first (rank order), then the rest
  |        |-- disease: str
  |        |-- source: "competitor" | "mechanism" | "both"
  |        |-- literature: LiteratureOutput | None
- |        +-- clinical_trials: ClinicalTrialsOutput | None
+ |        |-- clinical_trials: ClinicalTrialsOutput | None
+ |        +-- blurb: CandidateBlurb | None        # structured per-candidate synthesis (top 5 only)
+ |-- top_diseases: list[str]                # Ranked top diseases (max 5); subset of disease_findings
  +-- summary: str                           # Supervisor's narrative
 ```
 
@@ -224,7 +235,8 @@ Configuration values come from `Settings` (`default_timeout`, `default_max_retri
 │  Namespaces in active use:                                           │
 │  ├── drug, target, disease_drugs, competitors_raw,                  │
 │  │   disease_id_resolver                       (OpenTargets)        │
-│  ├── ct_terminated, ct_completed                (ClinicalTrials)    │
+│  ├── ct_search, ct_completed, ct_terminated,                        │
+│  │   ct_landscape                                (ClinicalTrials)    │
 │  ├── pubmed_search                              (PubMed)            │
 │  ├── atc_description, resolve_drug_name         (ChEMBL)            │
 │  ├── fda_label, fda_label_indications,          (FDA / approval)    │
@@ -494,20 +506,25 @@ The `ClinicalTrialsClient` exposes five public methods:
 | Method | Purpose | Returns |
 |--------|---------|---------|
 | `get_trial(nct_id)` | Fetch a single trial by NCT ID | `Trial` |
-| `search_trials(drug, indication, target_mesh_id=None)` | All-status pair query: count + top-50 exemplars | `SearchTrialsResult` |
-| `get_completed_trials(drug, indication, target_mesh_id=None)` | COMPLETED pair query | `CompletedTrialsResult` |
-| `get_terminated_trials(drug, indication, target_mesh_id=None)` | TERMINATED pair query | `TerminatedTrialsResult` |
-| `get_landscape(indication, target_mesh_id=None)` | Competitive landscape for an indication | `IndicationLandscape` |
+| `search_trials(drug, mesh_term, date_before=None)` | All-status pair query: count + top-50 exemplars | `SearchTrialsResult` |
+| `get_completed_trials(drug, mesh_term, date_before=None)` | COMPLETED pair query | `CompletedTrialsResult` |
+| `get_terminated_trials(drug, mesh_term, date_before=None)` | TERMINATED pair query | `TerminatedTrialsResult` |
+| `get_landscape(mesh_term, date_before=None, top_n=50)` | Competitive landscape for an indication | `IndicationLandscape` |
 
-### MeSH post-filtering
+### Server-side MeSH filtering
 
-Every indication-filtered method accepts an optional `target_mesh_id` (a MeSH D-number,
-e.g. `D006973` for hypertension). When supplied, results are post-filtered to trials whose
-`mesh_conditions` or `mesh_ancestors` include that ID. This compensates for
-ClinicalTrials.gov's Essie engine being recall-first — `query.cond=hypertension` returns
-trials for glaucoma, portal hypertension, and pulmonary hypertension. The agent tool layer
-(`agents/clinical_trials/clinical_trials_tools.py`) resolves the indication → MeSH ID via
-`services.disease_helper.resolve_mesh_id` and forwards it on every call.
+Each indication-scoped method takes a `mesh_term` (the MeSH preferred heading) rather than a
+raw disease string. The indication is filtered server-side via CT.gov's
+`AREA[ConditionMeshTerm]"<mesh_term>"` syntax — a precise descriptor match with no free-text
+noise; the drug side stays free-text via `query.intr`. The agent tool layer
+(`agents/clinical_trials/clinical_trials_tools.py`) resolves the indication → `(mesh_id,
+mesh_term)` via `services.disease_helper.resolve_mesh_id` (NCBI MeSH ATM lookup) and passes the
+resolved term on every call; when resolution fails it returns an empty result.
+
+> Known bug (flagged in `clinical_trials.py`): `AREA[ConditionMeshTerm]` also matches trials
+> whose MeSH *ancestors* include the term, so e.g. "Hypertension" can still pull in pulmonary
+> hypertension trials. The intended fix (post-filter on direct `mesh_conditions` keyed on MeSH
+> ID) is not yet implemented.
 
 ### Trial
 
@@ -752,12 +769,17 @@ Settings:
 
 ```bash
 scout find -d <drug> [--out-dir DIR] [--no-write] [--date-before YYYY-MM-DD]
+scout render -i <payload.json> [--out-dir DIR] [--no-write]
+scout diff-report <golden.json> <current.json>
 ```
 
-Defined in `cli/cli.py`. Loads `.env` and `.env.constants`, normalizes the drug name,
-constructs a `ChatAnthropic` LLM, builds the supervisor agent, runs it, and writes a
-markdown report and a structured JSON dump under `snapshots/` (or `snapshots/holdouts/`
-when `--date-before` is set).
+Defined in `cli/cli.py`. `find` loads `.env` and `.env.constants`, normalizes the drug name,
+and delegates to `services.analysis_runner.run_analysis` (which builds the `ChatAnthropic`
+LLM and supervisor agent and runs them). It writes the markdown report under `snapshots/`
+(or `snapshots/holdouts/` when `--date-before` is set) and, for non-holdout runs, a
+structured `SupervisorOutput` JSON dump under `test_reports/`. `render` re-renders a saved
+JSON payload to markdown without re-running the pipeline; `diff-report` diffs two JSON
+snapshots (the regression-harness comparison).
 
 ---
 

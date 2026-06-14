@@ -7,24 +7,20 @@ accurate as feeding MeSH conditions, and covers every trial. The 68 trials and
 their hand labels (sildenafil × SYSTEMIC hypertension; the registry over-recalls
 pulmonary hypertension / PAH and other-drug trials) are the oracle.
 
-Hits the real LLM — opt-in via `-m live` (excluded from the default run).
+Hits the real LLM.
 
-Run: pytest -m live tests/integration/agents/clinical_trials/test_relevance_signal_eval.py
+Run: pytest tests/integration/agents/clinical_trials/test_relevance_signal_eval.py
 """
 
 import json
 import logging
 from pathlib import Path
 
-import pytest
-
 from indication_scout.services.llm import parse_last_json_object, query_llm
 
 from ._sild_htn_labels import LABELS
 
 logger = logging.getLogger(__name__)
-
-pytestmark = pytest.mark.live
 
 # Field snapshot the labels were assigned against (mesh/interv/title/summary per nct).
 _DATA_PATH = Path(__file__).parents[4] / "scratch" / "sild_htn_trials.json"

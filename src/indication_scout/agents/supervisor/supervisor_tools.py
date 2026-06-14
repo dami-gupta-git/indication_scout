@@ -1243,6 +1243,76 @@ def build_supervisor_tools(
             lines.append("Evidence gate exclusions: " + ", ".join(excluded) + ".")
         return "\n".join(lines)
 
+    async def _run_fact_critic(items: list[dict]) -> tuple[str, list[dict]]:
+        """Run the ranking/fact critic over `items`; return (ordering_text, repaired_blurbs).
+
+        Feeds each blurb its authoritative per-disease Phase-3 FACT so the critic can repair a
+        false "no Phase 3 trials" claim (A2) while preserving true "no regulatory program"
+        claims. On ANY parse failure or disease-set mismatch, returns the ORIGINAL items
+        (data-loss guard). Used by both critique_ranking and finalize_supervisor so the repair
+        always runs on the finalized blurbs, not only when the LLM pre-called critique_ranking.
+        """
+        lines: list[str] = []
+        for i, item in enumerate(items, start=1):
+            disease = (item.get("disease") or "").strip() or "(unnamed)"
+            verdict = (item.get("verdict") or "").strip()
+            literature = (item.get("literature") or "").strip()
+            blocker = (item.get("blocker") or "").strip()
+            slot = findings_local.get(disease.lower().strip()) or {}
+            ct = slot.get("clinical_trials")
+            sig = ct.signals if ct else None
+            if sig is not None and sig.has_completed_phase3:
+                fact = (
+                    f"relevant COMPLETED Phase 3 IS on record "
+                    f"(highest={sig.highest_completed_phase or 'Phase 3'})"
+                )
+            elif sig is not None:
+                fact = "no relevant completed Phase 3 on record"
+            else:
+                fact = "no trial signal available"
+            lines.append(
+                f"{i}. {disease} | FACT: {fact} | verdict: {verdict or '—'} | "
+                f"literature: {literature or '—'} | blocker: {blocker or '—'}"
+            )
+        prompt = (
+            "Current ranking (top to bottom), each with its authoritative FACT:\n"
+            + "\n".join(lines)
+            + "\n\nFull blurbs to audit and repair (return all of them):\n"
+            + json.dumps(items)
+        )
+        _t0 = time.perf_counter()
+        critique = await query_llm(prompt, system=_RANKING_CRITIC_SYSTEM)
+        logger.warning(
+            "[TIMING] fact_critic LLM call: %.1fs", time.perf_counter() - _t0
+        )
+        logger.info(
+            "[TOOL] fact_critic IN (%d candidates):\n%s", len(items), "\n".join(lines)
+        )
+        ordering = ""
+        repaired = items
+        try:
+            data = json.loads(strip_markdown_fences(critique.strip()))
+            cand = data.get("blurbs")
+            ordering = (data.get("ordering") or "").strip()
+            if (
+                isinstance(cand, list)
+                and len(cand) == len(items)
+                and all(isinstance(b, dict) for b in cand)
+                and {(b.get("disease") or "").strip().lower() for b in cand}
+                == {(b.get("disease") or "").strip().lower() for b in items}
+            ):
+                repaired = cand
+            else:
+                logger.warning(
+                    "[TOOL] fact_critic: blurb set mismatch — keeping originals"
+                )
+        except (json.JSONDecodeError, AttributeError, TypeError) as e:
+            logger.warning(
+                "[TOOL] fact_critic: unparseable critic output (%s) — keeping originals",
+                e,
+            )
+        return ordering, repaired
+
     @tool
     async def critique_ranking(blurbs: list[dict] | None = None) -> str:
         """Audit your candidate ranking ORDER before finalizing.
@@ -1263,79 +1333,7 @@ def build_supervisor_tools(
         items = blurbs or []
         if not items:
             return "No blurbs provided — nothing to critique."
-        # Store the draft so finalize can fall back to it if the critic output is unusable.
-        critique_state["last_blurbs"] = items
-        lines: list[str] = []
-        for i, item in enumerate(items, start=1):
-            disease = (item.get("disease") or "").strip() or "(unnamed)"
-            verdict = (item.get("verdict") or "").strip()
-            literature = (item.get("literature") or "").strip()
-            blocker = (item.get("blocker") or "").strip()
-            # Per-disease FACT block: the trusted relevance-filtered Phase-3 signal. Lets the
-            # critic repair a false "no Phase 3 trials" claim (A2) without re-deriving it. Minimal
-            # by design — the only fact the critic needs to make the trial-vs-program distinction.
-            slot = findings_local.get(disease.lower().strip()) or {}
-            ct = slot.get("clinical_trials")
-            sig = ct.signals if ct else None
-            if sig is not None and sig.has_completed_phase3:
-                fact = (
-                    f"relevant COMPLETED Phase 3 IS on record "
-                    f"(highest={sig.highest_completed_phase or 'Phase 3'})"
-                )
-            elif sig is not None:
-                fact = "no relevant completed Phase 3 on record"
-            else:
-                fact = "no trial signal available"
-            lines.append(
-                f"{i}. {disease} | FACT: {fact} | verdict: {verdict or '—'} | "
-                f"literature: {literature or '—'} | blocker: {blocker or '—'}"
-            )
-        # The critic must see and return the FULL blurbs (it repairs fields), so pass them as JSON.
-        prompt = (
-            "Current ranking (top to bottom), each with its authoritative FACT:\n"
-            + "\n".join(lines)
-            + "\n\nFull blurbs to audit and repair (return all of them):\n"
-            + json.dumps(items)
-        )
-        _t0 = time.perf_counter()
-        critique = await query_llm(prompt, system=_RANKING_CRITIC_SYSTEM)
-        logger.warning(
-            "[TIMING] critique_ranking LLM call: %.1fs", time.perf_counter() - _t0
-        )
-        logger.info(
-            "[TOOL] critique_ranking IN (%d candidates):\n%s",
-            len(items),
-            "\n".join(lines),
-        )
-
-        # Parse the critic's JSON. On ANY failure, fall back to the original blurbs so a
-        # malformed critic response never drops or corrupts candidates (data-loss guard).
-        ordering = ""
-        repaired = items
-        try:
-            data = json.loads(strip_markdown_fences(critique.strip()))
-            cand = data.get("blurbs")
-            ordering = (data.get("ordering") or "").strip()
-            # Only accept a same-length list of dicts whose disease set matches the input —
-            # else the critic dropped/renamed candidates and we keep the originals.
-            if (
-                isinstance(cand, list)
-                and len(cand) == len(items)
-                and all(isinstance(b, dict) for b in cand)
-                and {(b.get("disease") or "").strip().lower() for b in cand}
-                == {(b.get("disease") or "").strip().lower() for b in items}
-            ):
-                repaired = cand
-            else:
-                logger.warning(
-                    "[TOOL] critique_ranking: blurb set mismatch — keeping originals"
-                )
-        except (json.JSONDecodeError, AttributeError, TypeError) as e:
-            logger.warning(
-                "[TOOL] critique_ranking: unparseable critic output (%s) — keeping originals",
-                e,
-            )
-
+        ordering, repaired = await _run_fact_critic(items)
         critique_state["last_blurbs"] = repaired
         result = (
             (ordering or "Ranking is consistent.")
@@ -1398,30 +1396,60 @@ def build_supervisor_tools(
         logger.info(
             "[TOOL] finalize_supervisor called with %d blurbs", len(blurbs or [])
         )
-        # Prefer the critic-repaired blurbs (A2 fact fix) over what the LLM re-passed, so the
-        # repair can't be lost if the LLM didn't copy the critique output back verbatim. Only when
-        # the disease SET matches the critic's input (same candidates, possibly reordered) — else
-        # the supervisor changed the slate after critique and we honor its passed blurbs.
-        critic_blurbs = critique_state.get("last_blurbs")
+        # A2 fact repair — GUARANTEED to run on the finalized blurbs. The supervisor is supposed
+        # to pass its draft to critique_ranking (which repairs + stores last_blurbs), but it does
+        # not always pass the SAME blurbs (or any) — when it doesn't, the repair would be silently
+        # skipped (observed: semaglutide 13:33 leaked, 13:49 worked). So: prefer the critic's
+        # stored repair when its disease set matches; OTHERWISE run the critic HERE on the passed
+        # blurbs. Either way the false "no Phase 3 trials" claim cannot reach the report.
         passed = blurbs or []
+        critic_blurbs = critique_state.get("last_blurbs")
+        passed_set = {(b.get("disease") or "").strip().lower() for b in passed}
         if (
             critic_blurbs
             and passed
-            and {(b.get("disease") or "").strip().lower() for b in passed}
+            and passed_set
             == {(b.get("disease") or "").strip().lower() for b in critic_blurbs}
         ):
-            # Keep the LLM's rank ORDER (it may have reordered per the critique); take repaired
-            # FIELD content from the critic, keyed by disease.
+            repaired_source = critic_blurbs
+            logger.info(
+                "[TOOL] finalize_supervisor using critic-repaired blurbs (%d)", len(passed)
+            )
+        elif passed and any(
+            (
+                (findings_local.get((b.get("disease") or "").strip().lower()) or {})
+                .get("clinical_trials")
+                is not None
+            )
+            and getattr(
+                (findings_local.get((b.get("disease") or "").strip().lower()) or {})
+                .get("clinical_trials")
+                .signals,
+                "has_completed_phase3",
+                False,
+            )
+            for b in passed
+        ):
+            # The pre-call didn't cover these blurbs AND at least one has a completed Phase 3
+            # (the only case where the A2 false "no Phase 3" claim can occur) — run the fact
+            # critic now so the repair is never silently skipped. Gated to avoid an LLM call
+            # when no candidate could carry the false claim.
+            logger.warning(
+                "[TOOL] finalize_supervisor: critique blurbs missing/mismatched — "
+                "running fact critic at finalize (%d blurbs)",
+                len(passed),
+            )
+            _, repaired_source = await _run_fact_critic(passed)
+        else:
+            repaired_source = []
+        if repaired_source:
             by_disease = {
-                (b.get("disease") or "").strip().lower(): b for b in critic_blurbs
+                (b.get("disease") or "").strip().lower(): b for b in repaired_source
             }
             blurbs = [
                 by_disease.get((b.get("disease") or "").strip().lower(), b)
                 for b in passed
             ]
-            logger.info(
-                "[TOOL] finalize_supervisor using critic-repaired blurbs (%d)", len(blurbs)
-            )
         validated: list[dict] = []
         structured_keys = (
             "stage",

@@ -83,6 +83,9 @@ async def test_search_trials_content_string_sildenafil_hfpef():
     expected_content = (
         "Search for sildenafil × diastolic heart failure: 4 trials "
         "(recruiting=0, active=0, withdrawn=0, unknown=0)\n"
+        "Resolved query MeSH: Heart Failure, Diastolic (D054144) — compare each "
+        "trial's mesh column against this descriptor to judge relevance vs "
+        "contamination.\n"
         "Phase distribution (shown): Phase 4=1, Phase 3=2, Phase 2/Phase 3=1\n"
         "Trials shown (top 20 by enrollment):\n"
         "  NCT00763867 | Phase 3          | COMPLETED | "
