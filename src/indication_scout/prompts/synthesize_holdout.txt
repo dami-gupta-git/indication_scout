@@ -16,7 +16,7 @@ Do NOT score "none" purely because the abstracts don't name {drug_name}. Score b
 GROUNDING RULES — these are non-negotiable:
 1. Use ONLY information from the abstracts provided above. Do not introduce facts, trial names, mechanisms, or findings from your training that are not explicitly in these abstracts.
 2. Every factual claim in "summary" and "key_findings" must reference the PMID it came from. If you cannot attribute a claim to a specific PMID in the provided abstracts, do not make the claim.
-3. If the abstracts do not contain enough information to assess the drug-disease pair OR the mechanism class for this disease, set strength to "none" and explain. Do not invent supporting evidence.
+3. If the abstracts do not contain enough information to assess the drug-disease pair OR the mechanism class for this disease, set strength to "none" AND direction to "none", and explain. Do not invent supporting evidence. Note: a body of trials that DISPROVES the hypothesis is NOT "none" — it is strong/moderate evidence (per its trial quantity/quality) with direction "contradicts". "strength none" means genuinely little/no relevant evidence, NOT "no efficacy".
 4. Do not use generic template phrases like "moderate evidence", "needs further validation", "promising candidate", or "early-stage exploration" unless you can immediately cite the specific PMID(s) that justify them.
 5. When citing class-level evidence, name the specific drug studied in the abstract (e.g. "exenatide", "liraglutide") and explicitly note that {drug_name} itself is not directly studied. Do not let class evidence be misread as drug-specific evidence.
 
@@ -24,12 +24,18 @@ Analyze these abstracts and return a JSON object with the following fields:
 
 - "summary": A 2-3 sentence summary of the overall evidence. State clearly whether the evidence supports, contradicts, or is irrelevant to using this drug for this disease. If the evidence is class-level only, lead with that fact. Note if the papers describe a contraindication rather than a therapeutic benefit. Every claim must include a PMID reference, e.g. "Drug X reduced tumor growth in mouse models (PMID: 12345678)."
 - "study_count": Number of abstracts that provide relevant evidence for the drug OR its mechanism class in this disease (exclude irrelevant papers)
-- "strength": One of "strong", "moderate", "weak", or "none"
-  - "strong": Multiple clinical studies (RCTs, large cohorts) showing efficacy of {drug_name} specifically in the provided abstracts. (Class-only evidence does NOT reach "strong" — it caps at "moderate".)
-  - "moderate": Small clinical studies, case series, or strong preclinical data for {drug_name} in the provided abstracts, OR multiple clinical studies of other drugs in the same mechanism class showing efficacy in this disease.
-  - "weak": Case reports / in vitro / animal data for {drug_name}, OR class-level mechanistic evidence (other drugs in the class, preclinical or single small clinical study) supporting the hypothesis in this disease.
-  - "none": No supporting evidence for {drug_name} OR its mechanism class in the provided abstracts; evidence suggests contraindication; or retrieved literature is insufficient to assess.
+- "strength": Grades EVIDENCE QUANTITY/QUALITY ONLY — how much evidence and how good, INDEPENDENT of whether it shows efficacy or failure. One of "strong", "moderate", "weak", or "none"
+  - "strong": Multiple clinical studies (RCTs, large cohorts) of {drug_name} specifically in the provided abstracts — whether they show efficacy OR failure. (Class-only evidence does NOT reach "strong" — it caps at "moderate".)
+  - "moderate": Small clinical studies, case series, or strong preclinical data for {drug_name} in the provided abstracts, OR multiple clinical studies of other drugs in the same mechanism class in this disease.
+  - "weak": Case reports / in vitro / animal data for {drug_name}, OR class-level mechanistic evidence (other drugs in the class, preclinical or single small clinical study) for the hypothesis in this disease.
+  - "none": No/insufficient relevant evidence for {drug_name} OR its mechanism class in the provided abstracts to assess. Do NOT use "none" to mean "the drug failed" — a trial body that disproves the hypothesis is strong/moderate with direction "contradicts".
+- "direction": Which way the relevant evidence points. One of "supports", "contradicts", "mixed", or "none"
+  - "supports": evidence favors repurposing this drug for this disease (class-level supporting evidence counts as supports)
+  - "contradicts": evidence shows the drug fails or harms for this indication (a robustly-evidenced negative)
+  - "mixed": both directions present in the relevant abstracts, no clear net
+  - "none": insufficient/no relevant evidence (the only genuinely "untested" case; pair with strength "none")
 - "key_findings": List of specific findings, each tied to a PMID. Format: ["Finding text (PMID: 12345678)", ...]. Each finding must be a verifiable claim from the abstract text, not a generalization. For class-level findings, name the drug studied (e.g. "Exenatide reduced X in Y model (PMID: 12345678)").
-- "supporting_pmids": List of PMIDs from the provided abstracts that support the repurposing hypothesis (exclude irrelevant or contradicting papers). Class-level supporting papers count.
+- "supporting_pmids": List of PMIDs from the provided abstracts that SUPPORT the repurposing hypothesis (exclude irrelevant or contradicting papers). Class-level supporting papers count.
+- "contradicting_pmids": List of PMIDs from the provided abstracts that CONTRADICT the repurposing hypothesis (the drug failed/harmed for this indication; exclude irrelevant papers). Every relevant PMID cited in "summary" or "key_findings" must appear in supporting_pmids OR contradicting_pmids (a mixed paper may appear in both). No relevant cited PMID may be absent from both.
 
 Return JSON only, no explanation.

@@ -556,7 +556,7 @@ async def test_synthesize_negative_candidate(svc, db_session_truncating):
         "CHEMBL2107830", "severe acute respiratory syndrome", top_5
     )
 
-    assert result.strength == "none"
+    assert result.strength == "strong"
     assert result.supporting_pmids == []
 
 
@@ -570,7 +570,7 @@ async def test_synthesize_contraindication(svc, db_session_truncating):
 
     result = await svc.synthesize("CHEMBL894", "hypertension", top_5)
 
-    assert result.strength == "none"
+    assert result.strength == "strong"
     assert result.supporting_pmids == []
 
 

@@ -623,9 +623,12 @@ def build_supervisor_tools(
         strength = (
             output.evidence_summary.strength if output.evidence_summary else "no data"
         )
+        direction = (
+            output.evidence_summary.direction if output.evidence_summary else "no data"
+        )
         header = (
             f"Literature for {drug_name} × {disease_name}: "
-            f"{len(output.pmids)} PMIDs, strength={strength}."
+            f"{len(output.pmids)} PMIDs, strength={strength}, direction={direction}."
         )
         # Build supervisor-facing summary deterministically from EvidenceSummary so adverse-signal
         # language reaches the supervisor verbatim with no LLM rewrite in between.
@@ -998,6 +1001,11 @@ def build_supervisor_tools(
                 if lit_artifact and lit_artifact.evidence_summary
                 else "no data"
             )
+            direction = (
+                lit_artifact.evidence_summary.direction
+                if lit_artifact and lit_artifact.evidence_summary
+                else "no data"
+            )
             n_pmids = len(lit_artifact.pmids) if lit_artifact else 0
             n_total = (
                 ct_artifact.search.total_count
@@ -1031,6 +1039,7 @@ def build_supervisor_tools(
             return disease, {
                 "disease": disease,
                 "literature_strength": strength,
+                "literature_direction": direction,
                 "literature_pmids": n_pmids,
                 "trials_total": n_total,
                 "trials_completed": n_completed,
@@ -1059,8 +1068,10 @@ def build_supervisor_tools(
                 if a.get("relevant_phase3_terminated_for_cause")
                 else ""
             )
+            direction = a.get("literature_direction") or "none"
+            dir_note = f"/{direction}" if direction not in ("none", "no data") else ""
             lines.append(
-                f"  - {a['disease']}: literature {a['literature_strength']}, "
+                f"  - {a['disease']}: literature {a['literature_strength']}{dir_note}, "
                 f"{a['literature_pmids']} PMIDs; trials {a['trials_total']} total, "
                 f"{a['trials_completed']} completed, {a['trials_terminated']} terminated; "
                 f"relevant highest phase {phase}{term_note}"
@@ -1093,6 +1104,11 @@ def build_supervisor_tools(
                 if lit and lit.evidence_summary
                 else "none"
             )
+            lit_direction = (
+                lit.evidence_summary.direction
+                if lit and lit.evidence_summary
+                else "none"
+            )
             lit_study_count = (
                 lit.evidence_summary.study_count
                 if lit and lit.evidence_summary
@@ -1114,11 +1130,14 @@ def build_supervisor_tools(
                 else 0
             )
 
+            # Zero-evidence gate keys off DIRECTION, not strength: a contradicting (or
+            # supporting/mixed) body is real evidence and must survive — strength "none" now
+            # means only "little/no evidence", which direction "none" captures.
             no_lit_signal = (
-                lit_strength == "none"
+                lit_direction == "none"
                 or lit_study_count == 0
                 or (
-                    lit_strength is None
+                    lit_direction is None
                     and lit_study_count is None
                     and n_pmids < SUPERVISOR_MIN_PMIDS_NO_TRIALS
                 )
@@ -1127,8 +1146,12 @@ def build_supervisor_tools(
                 excluded.append(canonical)
                 continue
 
+            # contradicts → bottom tier regardless of strength (robustly disproven is a
+            # low-priority negative signal, surfaced but ranked last).
+            direction_rank = 0 if lit_direction == "contradicts" else 1
             ranked.append(
                 (
+                    direction_rank,
                     strength_rank.get(lit_strength or "none", 0),
                     total_trials,
                     n_pmids,
@@ -1139,18 +1162,38 @@ def build_supervisor_tools(
                     total_trials,
                     completed_trials,
                     terminated_trials,
+                    lit_direction or "none",
                 )
             )
 
+        # Sort: contradicts last (direction_rank asc), then strength desc, trials desc,
+        # PMIDs desc, name asc.
         ranked.sort(
-            key=lambda r: (-r[0], -r[1], -r[2], r[3]),
+            key=lambda r: (-r[0], -r[1], -r[2], -r[3], r[4]),
         )
 
         lines: list[str] = []
         for i, row in enumerate(ranked, start=1):
-            _, _, _, _, canonical, strength, n_pmids, total, completed, terminated = row
+            (
+                _,
+                _,
+                _,
+                _,
+                _,
+                canonical,
+                strength,
+                n_pmids,
+                total,
+                completed,
+                terminated,
+                direction,
+            ) = row
+            direction_note = (
+                ", contradicts" if direction == "contradicts" else ""
+            )
             lines.append(
-                f"{i}. {canonical} — literature: {strength}, {n_pmids} PMIDs; "
+                f"{i}. {canonical} — literature: {strength}{direction_note}, "
+                f"{n_pmids} PMIDs; "
                 f"trials: {total} total, {completed} completed, "
                 f"{terminated} terminated."
             )
@@ -1302,16 +1345,23 @@ def build_supervisor_tools(
             lit_strength = (
                 lit.evidence_summary.strength if lit and lit.evidence_summary else None
             )
+            lit_direction = (
+                lit.evidence_summary.direction
+                if lit and lit.evidence_summary
+                else None
+            )
             lit_study_count = (
                 lit.evidence_summary.study_count
                 if lit and lit.evidence_summary
                 else None
             )
+            # Zero-evidence gate keys off DIRECTION, not strength (see _reconstruct_holdout_summary):
+            # a contradicting body is real evidence and must survive the gate, ranked as a negative.
             no_lit_signal = (
-                lit_strength == "none"
+                lit_direction == "none"
                 or lit_study_count == 0
                 or (
-                    lit_strength is None
+                    lit_direction is None
                     and lit_study_count is None
                     and n_pmids < SUPERVISOR_MIN_PMIDS_NO_TRIALS
                 )
@@ -1320,11 +1370,12 @@ def build_supervisor_tools(
                 logger.warning(
                     "[TOOL] finalize_supervisor dropping blurb for disease=%r "
                     "(evidence gate: %d trials, %d PMIDs, strength=%s, "
-                    "study_count=%s)",
+                    "direction=%s, study_count=%s)",
                     disease,
                     n_trials,
                     n_pmids,
                     lit_strength,
+                    lit_direction,
                     lit_study_count,
                 )
                 continue

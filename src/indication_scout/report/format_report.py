@@ -29,7 +29,10 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
 
     if lit.evidence_summary:
         es = lit.evidence_summary
-        lines.append(f"**Evidence strength:** {es.strength}")
+        strength_line = f"**Evidence strength:** {es.strength}"
+        if es.direction != "none":
+            strength_line += f", {es.direction}"
+        lines.append(strength_line)
         lines.append(f"**Relevant studies:** {es.study_count}")
         if es.summary:
             lines.append(f"\n{es.summary}")
@@ -43,6 +46,12 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
                 for pmid in es.supporting_pmids
             )
             lines.append(f"\n**Supporting PMIDs:** {pmid_links}")
+        if es.contradicting_pmids:
+            pmid_links = ", ".join(
+                f"[{pmid}](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)"
+                for pmid in es.contradicting_pmids
+            )
+            lines.append(f"\n**Contradicting PMIDs:** {pmid_links}")
     else:
         lines.append("_No evidence summary available._")
 

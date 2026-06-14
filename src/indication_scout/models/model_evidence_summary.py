@@ -8,11 +8,15 @@ from pydantic import BaseModel, field_validator, model_validator
 class EvidenceSummary(BaseModel):
     summary: str = ""
     study_count: int = 0
+    # strength = evidence QUANTITY/QUALITY only (how much, how good), independent of
+    # whether it supports or contradicts. direction = which way it points.
     strength: Literal["strong", "moderate", "weak", "none"] = "none"
+    direction: Literal["supports", "contradicts", "mixed", "none"] = "none"
     key_findings: list[str] = []
     supporting_pmids: list[str] = []
+    contradicting_pmids: list[str] = []
 
-    @field_validator("supporting_pmids", mode="before")
+    @field_validator("supporting_pmids", "contradicting_pmids", mode="before")
     @classmethod
     def coerce_pmids_to_str(cls, v: Any) -> list[str]:
         if isinstance(v, list):

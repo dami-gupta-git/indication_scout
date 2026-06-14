@@ -27,8 +27,45 @@ from indication_scout.models.model_clinical_trials import (
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.report.format_report import (
     _fmt_clinical_trials,
+    _fmt_literature,
     format_report,
 )
+
+
+def test_fmt_literature_renders_direction_and_both_pmid_lists():
+    lit = LiteratureOutput(
+        evidence_summary=EvidenceSummary(
+            summary="Gefitinib showed no benefit (PMID: 16062074).",
+            study_count=4,
+            strength="strong",
+            direction="contradicts",
+            key_findings=["No PFS benefit (PMID: 16062074)"],
+            supporting_pmids=["21220480"],
+            contradicting_pmids=["16062074", "18667394"],
+        )
+    )
+    out = _fmt_literature(lit)
+    assert "**Evidence strength:** strong, contradicts" in out
+    assert "**Relevant studies:** 4" in out
+    assert "**Supporting PMIDs:** [21220480]" in out
+    assert "**Contradicting PMIDs:** [16062074]" in out
+    assert "18667394" in out
+
+
+def test_fmt_literature_omits_direction_none_and_empty_contradicting():
+    lit = LiteratureOutput(
+        evidence_summary=EvidenceSummary(
+            summary="Supports repurposing (PMID: 12345678).",
+            study_count=3,
+            strength="moderate",
+            direction="none",
+            supporting_pmids=["12345678"],
+        )
+    )
+    out = _fmt_literature(lit)
+    assert "**Evidence strength:** moderate" in out
+    assert "contradicts" not in out
+    assert "Contradicting PMIDs" not in out
 
 
 def test_fmt_clinical_trials_empty_returns_placeholder():

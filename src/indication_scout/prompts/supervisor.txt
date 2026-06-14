@@ -128,6 +128,29 @@ These rules apply to ALL text you write — summary lines, blurb fields, and pro
   language for trials whose phase IS "Phase 3" AND whose enrollment supports the
   pivotal characterization. Reserve "early-stage" or "Phase 1" verbiage for trials
   whose phase field is literally "Phase 1" or "Early Phase 1."
+- REGISTRY ≠ TRIAL UNIVERSE: CT.gov omits trials published only in journals or foreign
+  registries (EudraCT, jRCT, ChiCTR, ISRCTN), so registry trial count == 0 does NOT mean no
+  trial was ever run. When analyze_clinical_trials shows 0 registry trials but
+  analyze_literature strength is MODERATE or STRONG, the literature found relevant clinical
+  studies (study_count excludes off-topic papers). Do NOT write "no trials on record",
+  "Rationale-only, no trials", "Untested", or "untested at the trial level" for that pair.
+  Reflect the literature evidence instead, citing the supporting PMID(s) from the literature
+  artifact — e.g. stage "No CT.gov registry trials; literature reports clinical studies
+  (PMID...)", verdict "Clinical evidence in literature only". Cite only PMIDs the literature
+  summary actually named — do not assert trials it did not. This rule does NOT apply to WEAK
+  strength: weak can be case-reports-only or in-vitro/animal-only, which does not establish a
+  human trial — a weak pair with 0 registry trials stays "Untested / no trials on record".
+  Only strength "none"/"weak" with 0 registry trials is genuinely untested.
+- EVIDENCE DIRECTION: analyze_literature reports a `direction` (supports / contradicts /
+  mixed / none) SEPARATELY from strength. strength now grades only how much/how good the
+  evidence is — NOT whether it works. A moderate/strong body with direction "contradicts" is a
+  robustly DISPROVEN hypothesis (the drug was tested and failed/harmed), NOT "no evidence" and
+  NOT "untested". For a contradicts pair: do NOT write "Untested" and do NOT drop it via the
+  evidence gate — surface it as a NEGATIVE finding (verdict like "Disproven — literature shows
+  no benefit (PMID...)") and rank it at the BOTTOM (it composes with the CLOSED concept). If 0
+  registry trials but direction is "contradicts", surface as "No CT.gov registry trials;
+  literature reports clinical studies that show the drug failed (PMID...)", NOT "untested".
+  Only direction "none" (with strength "none") is genuinely untested.
 
 # APPROVAL RELATIONSHIPS
 Before finalizing, classify each candidate against the briefing's approved indications and set
@@ -236,6 +259,10 @@ Where:
   If an adverse signal is present in the literature, append it explicitly:
     "weak literature, adverse signal present"
     "weak mixed literature, adverse signal present"
+  If the literature direction is "contradicts", say so explicitly — the strength describes
+  how much evidence, the direction that it DISPROVES the hypothesis:
+    "strong RCT-level evidence, contradicts (drug failed)"
+    "moderate literature, contradicts"
   Do NOT restate PMID counts — these are pipeline statistics, not evidence quality signals.
 
 - development status phrase: plain English summary of where the drug×indication pair sits
@@ -249,7 +276,9 @@ Where:
       "exploratory study only"
     Tier 4 (Phase 1 only or no completed phase): "Phase 1 only" or
       "early-stage, no readout"
-    Tier 5 (no trials): "no trials on record"
+    Tier 5 (no trials): "no trials on record" — ONLY when 0 registry trials AND literature
+      strength is "none"/"weak". If 0 registry trials but literature strength is moderate or
+      strong, do NOT write "no trials on record"; see REGISTRY ≠ TRIAL UNIVERSE below.
   If active or recruiting trials exist, note them: "Phase 2 active" or
     "Phase 3 recruiting".
   Do NOT restate raw trial counts — use qualitative status only.
@@ -261,10 +290,14 @@ strength (strong > moderate > weak > none), then by trial count.
   Tier 1: Phase 3 or higher completed for this indication, with efficacy readout
   Tier 2: Phase 2 completed for this indication
   Tier 3: Phase 4 only for this indication (no Phase 2 or Phase 3 on record)
-  Tier 4: Phase 1 only, or trials present but no completed phase
-  Tier 5: No trials on record
+  Tier 4: Phase 1 only, or trials present but no completed phase; OR 0 registry trials but
+    literature strength is moderate or strong (clinical evidence exists off-registry — see
+    REGISTRY ≠ TRIAL UNIVERSE; rank within the tier by literature strength)
+  Tier 5: No trials on record AND literature strength "none"/"weak"
 
-  Demoted to bottom regardless of tier: CLOSED signals, APPROVAL RELATIONSHIP demotions.
+  Demoted to bottom regardless of tier: CLOSED signals, APPROVAL RELATIONSHIP demotions,
+  and DIRECTION="contradicts" pairs (robustly disproven — a negative signal, ranked last
+  regardless of strength or trial phase).
 
   This tier ordering is ABSOLUTE. A Tier 3 candidate with moderate literature never
   outranks a Tier 2 candidate with weak literature. Literature strength only breaks
@@ -281,7 +314,8 @@ After the ranked list, add these optional footer lines in order:
   (a relevant safety/efficacy termination, or negative literature). No explanation — just names.
 
   Evidence gate exclusions: <name(s)> — candidates excluded for zero trials AND
-  literature strength=none, or zero trials AND fewer than 5 PMIDs.
+  literature direction=none (no relevant evidence), or zero trials AND fewer than 5 PMIDs.
+  A direction=contradicts pair is NOT excluded here — it ranks at the bottom as a negative.
 
 A candidate appears in EXACTLY ONE footer block. Precedence when multiple apply:
 approval-relationship demotions > closed signals > evidence gate exclusions.
@@ -351,9 +385,14 @@ Field-level rules:
 - Do NOT restate PMID counts, trial counts, phase distributions, or termination counts in
   any field — those numbers are in the structured summary line above. Reference phases
   qualitatively where helpful ("Post-Phase 3", "Phase 2 readout") but never as raw counts.
-- For zero-evidence candidates (0 PMIDs, 0 trials), set stage="Rationale-only, no trials",
-  literature="None", active_programs="None active", verdict="Untested", and write the prose
-  accordingly.
+- For zero-evidence candidates, set stage="Rationale-only, no trials", literature="None",
+  active_programs="None active", verdict="Untested", and write the prose accordingly. This
+  applies ONLY when there are 0 registry trials AND the analyze_literature direction is "none"
+  (strength "none"). If registry trials == 0 but literature strength is moderate or strong, the
+  pair is NOT untested — see REGISTRY ≠ TRIAL UNIVERSE above; reflect the literature evidence.
+  If direction is "contradicts", the pair is NOT untested either — it is a disproven negative;
+  set verdict like "Disproven — literature shows no benefit (PMID...)" and rank it at the bottom
+  (see EVIDENCE DIRECTION above).
 - Empty string is acceptable for any field where you have no grounded answer this run
   (especially `blocker` and `watch`). Empty fields are omitted from the rendered report.
 - Follow the GROUNDING rules above for ALL fields — `blocker`, `key_risk`, `verdict`,
@@ -380,7 +419,10 @@ HARD RULES — these override every other instruction in this prompt:
 - If a candidate's only tool call was REJECTED, exclude it from the summary entirely.
 - EVIDENCE GATE: do NOT include a candidate in the ranked summary OR in the blurbs list when
   it has BOTH zero trials AND fewer than 5 PMIDs, OR when it has zero trials AND literature
-  strength=none. Such candidates have effectively no evidence to rank against. They remain
+  direction=none (genuinely no relevant evidence). A pair with zero trials but direction
+  supports/contradicts/mixed has real evidence and is NOT gate-excluded — a contradicts pair is
+  surfaced as a bottom-ranked negative, not dropped. Gate-excluded candidates have effectively
+  no evidence to rank against. They remain
   investigated and will still be rendered in the per-disease findings section of the report
   — but they must not appear in the top-N ranking. The pipeline enforces this filter on
   blurbs after you return; matching the rule in the summary string keeps the two halves

@@ -73,13 +73,15 @@ async def _process_disease(
     async with sem_llm:
         evidence = await svc.synthesize(drug_name, disease, top_abstracts)
     logger.info(
-        "run_rag: synthesize took %.2fs, strength=%s for '%s'",
+        "run_rag: synthesize took %.2fs, strength=%s, direction=%s for '%s'",
         time.perf_counter() - t0,
         evidence.strength,
+        evidence.direction,
         disease,
     )
 
     logger.info("  Strength: %s", evidence.strength)
+    logger.info("  Direction: %s", evidence.direction)
     logger.info("  Summary: %s...", evidence.summary[:100])
 
     return disease, evidence
@@ -148,13 +150,19 @@ async def run_rag(
     #     wandb.log({"searches": searches_table})
 
     ranking = {"strong": 3, "moderate": 2, "weak": 1, "none": 0}
+    # contradicts ranks below all non-contradicts regardless of strength (negative signal).
     sorted_results = sorted(
-        results.items(), key=lambda x: ranking[x[1].strength], reverse=True
+        results.items(),
+        key=lambda x: (
+            0 if x[1].direction == "contradicts" else 1,
+            ranking[x[1].strength],
+        ),
+        reverse=True,
     )
 
     logger.info("=== Final Ranking for %s ===", drug_name)
     for disease, summary in sorted_results:
-        logger.info("  %s: %s", disease, summary.strength)
+        logger.info("  %s: %s (%s)", disease, summary.strength, summary.direction)
 
     return results
 

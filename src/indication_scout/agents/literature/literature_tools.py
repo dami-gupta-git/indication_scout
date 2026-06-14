@@ -130,7 +130,10 @@ def build_literature_tools(
         )
         # logger.warning(
         #     f"literature agent evidence: {evidence}")
-        return f"Evidence strength: {evidence.strength}", evidence
+        return (
+            f"Evidence strength: {evidence.strength}, direction: {evidence.direction}",
+            evidence,
+        )
 
     @tool(response_format="content_and_artifact", return_direct=True)
     async def finalize_analysis(summary: str) -> tuple[str, str]:

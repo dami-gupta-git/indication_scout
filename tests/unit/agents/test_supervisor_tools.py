@@ -322,11 +322,14 @@ async def test_analyze_mechanism_merges_by_efo_id(
 # --- replaces whatever string the LLM returns when date_before is set. ---------
 
 
-def _make_lit(strength: str, n_pmids: int, study_count: int) -> LiteratureOutput:
+def _make_lit(
+    strength: str, n_pmids: int, study_count: int, direction: str = "supports"
+) -> LiteratureOutput:
     return LiteratureOutput(
         pmids=[str(1000000 + i) for i in range(n_pmids)],
         evidence_summary=EvidenceSummary(
             strength=strength,
+            direction=direction,
             study_count=study_count,
             summary="",
             key_findings=[],
@@ -388,22 +391,24 @@ async def test_holdout_summary_reconstructed_for_sildenafil_2005():
         date(2005, 6, 1)
     )
 
-    # Disease → (strength, n_pmids, study_count, total, completed, terminated).
+    # Disease → (strength, direction, n_pmids, study_count, total, completed, terminated).
     # Values pulled from the per-disease sections of the May-11 broken snapshot.
     # PMID counts taken from the bulleted exclusions block (Coronary Artery
     # Disease=72, Covid-19=32) and from a synthetic spread for the ranked
     # candidates; PMID ranking only matters for tiebreaks and doesn't affect
     # this case because primary keys (strength, total trials) already separate
-    # every candidate.
+    # every candidate. direction is the gate key: "supports"/"contradicts"/"mixed"
+    # is real evidence (kept); "none" with 0 trials is excluded. The two
+    # zero-study_count pairs (coronary, covid) are excluded via study_count==0.
     cases = {
-        "pulmonary hypertension": ("moderate", 300, 3, 9, 5, 0),
-        "pulmonary arterial hypertension": ("moderate", 381, 3, 4, 0, 0),
-        "benign prostatic hyperplasia": ("moderate", 101, 3, 1, 1, 0),
-        "raynaud disease": ("weak", 552, 2, 0, 0, 0),
-        "cardiovascular disease": ("weak", 200, 3, 0, 0, 0),
-        "hypertension": ("none", 518, 1, 15, 7, 0),
-        "coronary artery disease": ("none", 72, 0, 0, 0, 0),
-        "covid-19": ("none", 32, 0, 0, 0, 0),
+        "pulmonary hypertension": ("moderate", "supports", 300, 3, 9, 5, 0),
+        "pulmonary arterial hypertension": ("moderate", "supports", 381, 3, 4, 0, 0),
+        "benign prostatic hyperplasia": ("moderate", "supports", 101, 3, 1, 1, 0),
+        "raynaud disease": ("weak", "supports", 552, 2, 0, 0, 0),
+        "cardiovascular disease": ("weak", "supports", 200, 3, 0, 0, 0),
+        "hypertension": ("none", "supports", 518, 1, 15, 7, 0),
+        "coronary artery disease": ("none", "none", 72, 0, 0, 0, 0),
+        "covid-19": ("none", "none", 32, 0, 0, 0, 0),
     }
     canonical_case = {
         "pulmonary hypertension": "pulmonary hypertension",
@@ -415,10 +420,18 @@ async def test_holdout_summary_reconstructed_for_sildenafil_2005():
         "coronary artery disease": "coronary artery disease",
         "covid-19": "covid-19",
     }
-    for lower, (strength, n_pmids, study_count, total, comp, term) in cases.items():
+    for lower, (
+        strength,
+        direction,
+        n_pmids,
+        study_count,
+        total,
+        comp,
+        term,
+    ) in cases.items():
         allowed_diseases[lower] = (canonical_case[lower], "competitor")
         findings_local[lower] = {
-            "literature": _make_lit(strength, n_pmids, study_count),
+            "literature": _make_lit(strength, n_pmids, study_count, direction),
             "clinical_trials": _make_ct(total, comp, term),
         }
 
@@ -460,3 +473,60 @@ async def test_holdout_summary_reconstructed_for_sildenafil_2005():
     )
     assert msg.artifact["summary"] == expected
     assert msg.artifact["blurbs"] == []
+
+
+async def test_holdout_summary_contradicts_ranks_bottom_and_not_excluded():
+    """A robustly-disproven pair (strong evidence, direction=contradicts, 0 trials) must
+    survive the evidence gate AND rank below every supporting pair, with a "contradicts"
+    note. This locks in the direction/strength split: strong contradiction is not erased."""
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(
+        date(2005, 6, 1)
+    )
+
+    # (strength, direction, n_pmids, study_count, total, completed, terminated).
+    cases = {
+        "disease a": ("weak", "supports", 50, 2, 0, 0, 0),
+        "disease b": ("strong", "contradicts", 80, 5, 0, 0, 0),
+    }
+    for lower, (
+        strength,
+        direction,
+        n_pmids,
+        study_count,
+        total,
+        comp,
+        term,
+    ) in cases.items():
+        allowed_diseases[lower] = (lower, "competitor")
+        findings_local[lower] = {
+            "literature": _make_lit(strength, n_pmids, study_count, direction),
+            "clinical_trials": _make_ct(total, comp, term),
+        }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "test_critique",
+            "type": "tool_call",
+        }
+    )
+    msg = await by_name["finalize_supervisor"].ainvoke(
+        {
+            "name": "finalize_supervisor",
+            "args": {"summary": "DISCARDED", "blurbs": []},
+            "id": "test_call",
+            "type": "tool_call",
+        }
+    )
+
+    expected = (
+        "1. disease a — literature: weak, 50 PMIDs; "
+        "trials: 0 total, 0 completed, 0 terminated.\n"
+        "2. disease b — literature: strong, contradicts, 80 PMIDs; "
+        "trials: 0 total, 0 completed, 0 terminated."
+    )
+    # disease b has stronger evidence but ranks LAST (contradicts), and is NOT in
+    # any "Evidence gate exclusions" footer — it is surfaced as a negative.
+    assert msg.artifact["summary"] == expected
+    assert "Evidence gate exclusions" not in msg.artifact["summary"]
