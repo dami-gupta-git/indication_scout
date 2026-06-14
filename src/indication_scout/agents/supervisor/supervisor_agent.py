@@ -164,12 +164,19 @@ async def run_supervisor_agent(
         logger.warning(
             "[LLMTURN] supervisor turn %d/%d: in=%d out=%d cache_read=%d "
             "cache_write=%d -> %s",
-            _i + 1, len(_ai_turns), _in_tok, _out_tok,
-            _cache_read, _cache_write, _called,
+            _i + 1,
+            len(_ai_turns),
+            _in_tok,
+            _out_tok,
+            _cache_read,
+            _cache_write,
+            _called,
         )
     logger.warning(
         "[LLMTURN] supervisor: %d turns, %d total output tokens, agent loop %.1fs",
-        len(_ai_turns), _total_out, _agent_elapsed,
+        len(_ai_turns),
+        _total_out,
+        _agent_elapsed,
     )
 
     mechanism: MechanismOutput | None = None

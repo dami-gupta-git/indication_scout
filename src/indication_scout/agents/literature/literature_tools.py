@@ -19,7 +19,9 @@ from indication_scout.models.model_drug_profile import DrugProfile
 _settings = get_settings()
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.retrieval import AbstractResult, RetrievalService
+
 logger = logging.getLogger(__name__)
+
 
 def build_literature_tools(
     svc: RetrievalService,
@@ -50,7 +52,9 @@ def build_literature_tools(
         profile = await svc.build_drug_profile(chembl_id)
         store["drug_profile"] = profile
         logger.warning(
-            "[TIMING] build_drug_profile %s: %.1fs", drug_name, time.perf_counter() - _t0
+            "[TIMING] build_drug_profile %s: %.1fs",
+            drug_name,
+            time.perf_counter() - _t0,
         )
         return (
             f"Profile for {drug_name} ({chembl_id}): "
@@ -71,11 +75,11 @@ def build_literature_tools(
         queries = await svc.expand_search_terms(chembl_id, disease_name, profile)
         store["queries"] = queries
         logger.warning(
-            "[TIMING] expand_search_terms %s: %.1fs", disease_name,
+            "[TIMING] expand_search_terms %s: %.1fs",
+            disease_name,
             time.perf_counter() - _t0,
         )
         return f"Generated {len(queries)} queries", queries
-
 
     @tool(response_format="content_and_artifact")
     async def fetch_and_cache(drug_name: str) -> tuple[str, list[str]]:
@@ -106,7 +110,8 @@ def build_literature_tools(
         )
         store["abstracts"] = results
         logger.warning(
-            "[TIMING] semantic_search %s: %.1fs", disease_name,
+            "[TIMING] semantic_search %s: %.1fs",
+            disease_name,
             time.perf_counter() - _t0,
         )
         top = results[0].similarity if results else 0.0

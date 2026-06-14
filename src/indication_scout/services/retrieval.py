@@ -591,9 +591,7 @@ class RetrievalService:
         # filter as fetch_and_cache so the date policy stays in one place.
         if date_before is not None:
             async with PubMedClient(cache_dir=self.cache_dir) as client:
-                pmids = await self._filter_pmids_by_date(
-                    pmids, date_before, db, client
-                )
+                pmids = await self._filter_pmids_by_date(pmids, date_before, db, client)
             if not pmids:
                 return []
 
@@ -642,7 +640,9 @@ class RetrievalService:
             logger.warning(
                 "semantic_search: fetch_pubtypes returned empty for all %d "
                 "candidates (%s / %s); pubtype boost is a no-op for this call",
-                len(candidate_pmids), chembl_id, disease,
+                len(candidate_pmids),
+                chembl_id,
+                disease,
             )
 
         scored: list[tuple[AbstractResult, float, float]] = []
@@ -667,7 +667,10 @@ class RetrievalService:
 
         logger.info(
             "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
-            chembl_id, disease, len(scored), rerank_cap,
+            chembl_id,
+            disease,
+            len(scored),
+            rerank_cap,
         )
         # for result, boost, final_score in scored[:20]:
         #     logger.info(
@@ -854,6 +857,7 @@ class RetrievalService:
         # the disease term in double quotes for reliable parsing. If the
         # MeSH lookup misses, fall back to the raw disease name.
         from indication_scout.services.disease_helper import resolve_mesh_id
+
         mesh_result = await resolve_mesh_id(disease_name)
         disease_term = mesh_result[1] if mesh_result else disease_name
         if mesh_result is None:

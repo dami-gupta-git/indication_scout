@@ -86,7 +86,9 @@ def _get_model() -> SentenceTransformer:
         if cached:
             logger.info("Loading embedding model %s from local cache", model_name)
         else:
-            logger.info("Embedding model %s not cached; downloading into HF cache", model_name)
+            logger.info(
+                "Embedding model %s not cached; downloading into HF cache", model_name
+            )
         _model = SentenceTransformer(model_name, local_files_only=cached)
     return _model
 

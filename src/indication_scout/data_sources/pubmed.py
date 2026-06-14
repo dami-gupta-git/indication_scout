@@ -117,7 +117,7 @@ class PubMedClient(BaseClient):
             "term": query,
             "retmax": max_results,
             "retmode": "json",
-            'sort': 'relevance',
+            "sort": "relevance",
         }
         if effective_maxdate:
             params["datetype"] = "pdat"
@@ -276,9 +276,7 @@ class PubMedClient(BaseClient):
                 pubtypes = summary.get("pubtype", []) or []
                 # Persist even empty lists so we don't refetch records
                 # that genuinely have no pubtype field.
-                cache_set(
-                    "pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir
-                )
+                cache_set("pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir)
                 if pubtypes:
                     result[pmid] = pubtypes
 

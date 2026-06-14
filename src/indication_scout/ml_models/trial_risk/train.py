@@ -32,7 +32,11 @@ from sklearn.preprocessing import StandardScaler
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.db.session import get_db
 from indication_scout.ml_models.trial_risk.data import LabeledTrial, load_labeled_trials
-from indication_scout.ml_models.trial_risk.features import FeatureRow, build_features, vectorize
+from indication_scout.ml_models.trial_risk.features import (
+    FeatureRow,
+    build_features,
+    vectorize,
+)
 from indication_scout.ml_models.trial_risk.literature import (
     DEFAULT_LOOKBACK_MONTHS,
     LiteratureSignals,

@@ -47,7 +47,9 @@ def load_fresh_seed_report(drug_name: str) -> SupervisorOutput | None:
 
     age = time.time() - captured
     if age > SEED_REPORT_TTL_SECONDS:
-        logger.info("Seed report for %s is stale (%.0f days); running live", drug, age / 86400)
+        logger.info(
+            "Seed report for %s is stale (%.0f days); running live", drug, age / 86400
+        )
         return None
 
     report_path = EXAMPLE_SEED_DIR / f"{drug}.json"

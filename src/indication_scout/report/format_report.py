@@ -136,9 +136,7 @@ def _fmt_clinical_trials(
         c = ct.completed
         n_excluded = sum(1 for t in c.trials if t.nct_id in contaminated)
         excl_note = (
-            f", {n_excluded} excluded as a different indication"
-            if n_excluded
-            else ""
+            f", {n_excluded} excluded as a different indication" if n_excluded else ""
         )
         lines.append(f"\n**Completed trials ({c.total_count} total{excl_note}):**")
         shown = [t for t in c.trials if t.nct_id not in contaminated]
@@ -158,9 +156,7 @@ def _fmt_clinical_trials(
                 if n_excluded
                 else ""
             )
-            lines.append(
-                f"\n**Terminated trials ({term.total_count}{excl_note}):**"
-            )
+            lines.append(f"\n**Terminated trials ({term.total_count}{excl_note}):**")
             shown = [t for t in term.trials if t.nct_id not in contaminated]
             for t in shown[:10]:
                 reason = f" — *{t.why_stopped}*" if t.why_stopped else ""
@@ -421,9 +417,7 @@ def format_report(output: SupervisorOutput) -> str:
                 lines += [
                     "### Clinical Trials",
                     "",
-                    _fmt_clinical_trials(
-                        finding.clinical_trials, finding.disease, rel
-                    ),
+                    _fmt_clinical_trials(finding.clinical_trials, finding.disease, rel),
                     "",
                 ]
 

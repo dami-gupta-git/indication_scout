@@ -42,6 +42,7 @@ def _git_commit_message() -> str | None:
     message = result.stdout.strip()
     return message if result.returncode == 0 and message else None
 
+
 # Module-level handle to the provider so shutdown_tracing() can flush it. None until
 # setup_tracing() successfully initialises (and stays None when tracing is off).
 _provider = None

@@ -75,7 +75,9 @@ CLINICAL_TRIALS_FETCH_MAX: int = 50
 # Per-source cache TTL for ClinicalTrials.gov pair-scoped queries
 # (get_completed_trials / get_terminated_trials). Longer than the global
 # CACHE_TTL because trial status transitions are slow.
-CLINICAL_TRIALS_CACHE_TTL: int = 60 * 86400  # 60 days (relaxed: portfolio project, save time/tokens)
+CLINICAL_TRIALS_CACHE_TTL: int = (
+    60 * 86400
+)  # 60 days (relaxed: portfolio project, save time/tokens)
 
 # -- PubMed / NCBI ----------------------------------------------------------
 NCBI_BASE_URL: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
@@ -94,7 +96,9 @@ PUBMED_SEARCH_SLEEP_SECONDS: float = 1.0
 # -- MeSH resolver ----------------------------------------------------------
 NCBI_ESEARCH_URL: str = f"{NCBI_BASE_URL}/esearch.fcgi"
 NCBI_ESUMMARY_URL: str = f"{NCBI_BASE_URL}/esummary.fcgi"
-MESH_RESOLVER_TTL_SECONDS: int = 60 * 60 * 24 * 60  # 60 days (relaxed: portfolio project, save time/tokens)
+MESH_RESOLVER_TTL_SECONDS: int = (
+    60 * 60 * 24 * 60
+)  # 60 days (relaxed: portfolio project, save time/tokens)
 MESH_RESOLVER_MAX_CONCURRENT: int = 5
 
 # -- Clinical stage ranking (Open Targets) ----------------------------------

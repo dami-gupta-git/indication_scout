@@ -345,7 +345,9 @@ class ClinicalTrialsClient(BaseClient):
             return
         async with PubMedClient(cache_dir=self.cache_dir) as pm:
             tasks = [
-                pm.search(query=f"{t.nct_id}[si]", max_results=10, date_before=date_before)
+                pm.search(
+                    query=f"{t.nct_id}[si]", max_results=10, date_before=date_before
+                )
                 for t in targets
             ]
             try:

@@ -36,7 +36,9 @@ async def _execute(job: Job) -> None:
         seed = load_fresh_seed_report(job.drug_name)
         if seed is not None:
             # Fresh seed report: skip the agents, hold the spinner briefly, then serve it.
-            logger.info("Job %s served from seed report for %s", job.job_id, job.drug_name)
+            logger.info(
+                "Job %s served from seed report for %s", job.job_id, job.drug_name
+            )
             await asyncio.sleep(SEED_REPORT_SPINNER_SECONDS)
             job.result = seed
             job.status = "done"
@@ -95,7 +97,9 @@ async def get_analysis_report(job_id: str) -> str:
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")
     if job.status != "done" or job.result is None:
-        raise HTTPException(status_code=409, detail=f"Job not done (status={job.status})")
+        raise HTTPException(
+            status_code=409, detail=f"Job not done (status={job.status})"
+        )
     return format_report(job.result)
 
 

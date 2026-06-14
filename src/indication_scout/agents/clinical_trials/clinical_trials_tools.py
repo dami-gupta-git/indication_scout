@@ -573,7 +573,9 @@ def build_clinical_trials_tools(
             )
 
         relevant_ncts = [
-            v["nct"] for v in verdicts if v.get("verdict") == "relevant" and v.get("nct")
+            v["nct"]
+            for v in verdicts
+            if v.get("verdict") == "relevant" and v.get("nct")
         ]
         contaminated_ncts = [
             v["nct"]

@@ -87,7 +87,9 @@ async def run_analysis(
     _warmup_task = asyncio.create_task(_warm_embeddings())
 
     try:
-        agent, get_merged_allowlist, get_auto_findings = build_agent(db, date_before=date_before)
+        agent, get_merged_allowlist, get_auto_findings = build_agent(
+            db, date_before=date_before
+        )
         output = await run_supervisor_agent(
             agent, get_merged_allowlist, drug, get_auto_findings=get_auto_findings
         )

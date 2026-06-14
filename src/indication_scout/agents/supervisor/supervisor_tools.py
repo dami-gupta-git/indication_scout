@@ -657,9 +657,7 @@ def build_supervisor_tools(
         design = (
             "observational"
             if is_observational is True
-            else "rct_or_controlled"
-            if is_observational is False
-            else "undetermined"
+            else "rct_or_controlled" if is_observational is False else "undetermined"
         )
         header = (
             f"Literature for {drug_name} × {disease_name}: "
@@ -1228,9 +1226,7 @@ def build_supervisor_tools(
                 terminated,
                 direction,
             ) = row
-            direction_note = (
-                ", contradicts" if direction == "contradicts" else ""
-            )
+            direction_note = ", contradicts" if direction == "contradicts" else ""
             lines.append(
                 f"{i}. {canonical} — literature: {strength}{direction_note}, "
                 f"{n_pmids} PMIDs; "
@@ -1413,12 +1409,14 @@ def build_supervisor_tools(
         ):
             repaired_source = critic_blurbs
             logger.info(
-                "[TOOL] finalize_supervisor using critic-repaired blurbs (%d)", len(passed)
+                "[TOOL] finalize_supervisor using critic-repaired blurbs (%d)",
+                len(passed),
             )
         elif passed and any(
             (
-                (findings_local.get((b.get("disease") or "").strip().lower()) or {})
-                .get("clinical_trials")
+                (
+                    findings_local.get((b.get("disease") or "").strip().lower()) or {}
+                ).get("clinical_trials")
                 is not None
             )
             and getattr(
@@ -1495,9 +1493,7 @@ def build_supervisor_tools(
                 lit.evidence_summary.strength if lit and lit.evidence_summary else None
             )
             lit_direction = (
-                lit.evidence_summary.direction
-                if lit and lit.evidence_summary
-                else None
+                lit.evidence_summary.direction if lit and lit.evidence_summary else None
             )
             lit_study_count = (
                 lit.evidence_summary.study_count

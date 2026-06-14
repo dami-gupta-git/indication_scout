@@ -171,7 +171,9 @@ def render(input_path: Path, out_dir: Path, no_write: bool) -> None:
     from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
     from indication_scout.report.format_report import format_report
 
-    output = SupervisorOutput.model_validate_json(input_path.read_text(encoding="utf-8"))
+    output = SupervisorOutput.model_validate_json(
+        input_path.read_text(encoding="utf-8")
+    )
     report_md = format_report(output)
 
     if no_write:

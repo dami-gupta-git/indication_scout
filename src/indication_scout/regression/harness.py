@@ -39,7 +39,9 @@ def compare_reports(golden: SupervisorOutput, current: SupervisorOutput) -> list
     return diffs
 
 
-def _compare_top_level(golden: SupervisorOutput, current: SupervisorOutput) -> list[Diff]:
+def _compare_top_level(
+    golden: SupervisorOutput, current: SupervisorOutput
+) -> list[Diff]:
     diffs: list[Diff] = []
     if golden.drug_name != current.drug_name:
         diffs.append(
@@ -126,7 +128,9 @@ def _compare_candidate_sets(
     return diffs
 
 
-def _compare_mechanism(golden: SupervisorOutput, current: SupervisorOutput) -> list[Diff]:
+def _compare_mechanism(
+    golden: SupervisorOutput, current: SupervisorOutput
+) -> list[Diff]:
     diffs: list[Diff] = []
     if golden.mechanism is None and current.mechanism is None:
         return diffs
@@ -249,7 +253,9 @@ def _compare_one_finding(
         )
     elif golden.clinical_trials is not None and current.clinical_trials is not None:
         diffs.extend(
-            _compare_trial_counts(golden.clinical_trials, current.clinical_trials, path_prefix)
+            _compare_trial_counts(
+                golden.clinical_trials, current.clinical_trials, path_prefix
+            )
         )
 
     if golden.blurb is not None and current.blurb is not None:

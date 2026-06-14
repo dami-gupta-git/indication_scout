@@ -34,7 +34,10 @@ load_dotenv(_root / ".env.constants", override=False)
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
-from indication_scout.services.disease_helper import normalize_for_pubmed, resolve_mesh_id
+from indication_scout.services.disease_helper import (
+    normalize_for_pubmed,
+    resolve_mesh_id,
+)
 from indication_scout.services.llm import query_llm
 
 logging.basicConfig(level=logging.WARNING, format="%(message)s", stream=sys.stderr)
@@ -42,9 +45,7 @@ logger = logging.getLogger(__name__)
 
 _ESEARCH_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 
-_SYSTEM = (
-    "You are a pharmacovigilance scientist. Be concise. Do not speculate beyond what the abstracts say."
-)
+_SYSTEM = "You are a pharmacovigilance scientist. Be concise. Do not speculate beyond what the abstracts say."
 
 _PROMPT_TEMPLATE = """\
 Drug: {drug} | Disease: {disease}
@@ -153,15 +154,23 @@ async def run(drug: str, disease: str | None, n: int, date_before: date | None) 
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="LLM safety signal probe from PubMed abstracts")
+    parser = argparse.ArgumentParser(
+        description="LLM safety signal probe from PubMed abstracts"
+    )
     parser.add_argument("--drug", required=True, help="Drug name (e.g. metformin)")
-    parser.add_argument("--disease", default=None, help="Disease name (optional — omit to search full drug literature)")
+    parser.add_argument(
+        "--disease",
+        default=None,
+        help="Disease name (optional — omit to search full drug literature)",
+    )
     parser.add_argument(
         "--n", type=int, default=10, help="Abstracts to fetch (default 10)"
     )
     parser.add_argument(
-        "--date-before", default=None, metavar="YYYY-MM-DD",
-        help="Only include papers published before this date (e.g. 2020-01-01)"
+        "--date-before",
+        default=None,
+        metavar="YYYY-MM-DD",
+        help="Only include papers published before this date (e.g. 2020-01-01)",
     )
     args = parser.parse_args()
 

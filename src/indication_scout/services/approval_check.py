@@ -224,7 +224,9 @@ async def get_approved_indications(
     # separate by the prompt's prohibition rules).
     from indication_scout.services.disease_helper import merge_duplicate_diseases
 
-    merge_result = await merge_duplicate_diseases(candidate_diseases, pre_cutoff_diseases)
+    merge_result = await merge_duplicate_diseases(
+        candidate_diseases, pre_cutoff_diseases
+    )
     removed_lower = {r.lower().strip() for r in merge_result.get("remove", [])}
     return {c for c in candidate_diseases if c.lower().strip() in removed_lower}
 
