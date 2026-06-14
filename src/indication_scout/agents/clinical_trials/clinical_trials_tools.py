@@ -4,17 +4,17 @@ from datetime import date
 from langchain_core.tools import tool
 
 from indication_scout.agents._trial_formatting import (
+    _classify_stop_reason,
     _format_trial_table,
     _phase_distribution,
 )
 from indication_scout.config import get_settings
-from indication_scout.constants import (
-    DEFAULT_CACHE_DIR,
-    NEGATION_PREFIXES,
-    STOP_KEYWORDS,
-)
+from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
+from indication_scout.agents.clinical_trials.clinical_trials_output import (
+    FinalizeClinicalTrialsArtifact,
+)
 from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
 from indication_scout.data_sources.fda import FDAClient
 from indication_scout.models.model_clinical_trials import (
@@ -34,34 +34,6 @@ from indication_scout.services.disease_helper import resolve_mesh_id
 _settings = get_settings()
 
 logger = logging.getLogger(__name__)
-
-
-def _classify_stop_reason(why_stopped: str | None) -> str:
-    """Keyword-based stop classification of a CT.gov why_stopped string.
-
-    Returns one of: safety, efficacy, business, enrollment, unknown — or, when
-    no keyword matches, the original why_stopped text verbatim.
-    Has a 20-char negation lookback so phrasings like "no safety concerns"
-    don't classify as safety.
-    """
-    if not why_stopped:
-        return "unknown"
-    lower = why_stopped.lower()
-    for keyword, category in STOP_KEYWORDS.items():
-        if keyword in lower:
-            idx = lower.index(keyword)
-            prefix = lower[max(0, idx - 20) : idx]
-            if any(neg in prefix for neg in NEGATION_PREFIXES):
-                neg_end = max(
-                    prefix.rfind(neg) + len(neg)
-                    for neg in NEGATION_PREFIXES
-                    if neg in prefix
-                )
-                between = prefix[neg_end:]
-                if not any(sep in between for sep in (",", "-", ".", ";")):
-                    continue
-            return category
-    return why_stopped
 
 
 def _scrub_post_cutoff_outcome(trial: Trial, cutoff: date) -> tuple[Trial, bool]:
@@ -191,7 +163,9 @@ def build_clinical_trials_tools(
         )
         header = (
             f"Search for {drug} × {indication}: {result.total_count} trials"
-            f"{status_breakdown}{cap_note}{scrub_note}"
+            f"{status_breakdown}{cap_note}{scrub_note}\n"
+            f"Resolved query MeSH: {mesh_term} ({mesh_id}) — compare each trial's mesh "
+            f"column against this descriptor to judge relevance vs contamination."
         )
         phase_dist = _phase_distribution(result.trials)
         table = _format_trial_table(
@@ -263,7 +237,9 @@ def build_clinical_trials_tools(
         )
         header = (
             f"Completed for {drug} × {indication}: {result.total_count} total"
-            f"{cap_note}{scrub_note}"
+            f"{cap_note}{scrub_note}\n"
+            f"Resolved query MeSH: {mesh_term} ({mesh_id}) — compare each trial's mesh "
+            f"column against this descriptor to judge relevance vs contamination."
         )
         phase_dist = _phase_distribution(result.trials)
         table = _format_trial_table(
@@ -349,7 +325,9 @@ def build_clinical_trials_tools(
         )
         header = (
             f"Terminated for {drug} × {indication}: {result.total_count} total "
-            f"({safety_efficacy} safety/efficacy in shown set){cap_note}{scrub_note}"
+            f"({safety_efficacy} safety/efficacy in shown set){cap_note}{scrub_note}\n"
+            f"Resolved query MeSH: {mesh_term} ({mesh_id}) — compare each trial's mesh "
+            f"column against this descriptor to judge relevance vs contamination."
         )
         phase_dist = _phase_distribution(result.trials)
         table = _format_trial_table(
@@ -514,17 +492,36 @@ def build_clinical_trials_tools(
         return content, result
 
     @tool(response_format="content_and_artifact")
-    async def finalize_analysis(summary: str) -> tuple[str, str]:
+    async def finalize_analysis(
+        summary: str,
+        relevant_ncts: list[str],
+        contaminated_ncts: list[str],
+        relevance_reasoning: str,
+    ) -> tuple[str, FinalizeClinicalTrialsArtifact | str]:
         """Signal that the analysis is complete.
 
-        Call this as the very last step, passing your 2-3 sentence plain-text summary of the
-        findings. This terminates the agent loop.
+        Call this as the very last step. Pass:
+        - summary: your 2-3 sentence plain-text summary of the findings (human report).
+        - relevant_ncts: NCT ids of completed/terminated trials RELEVANT to this exact
+          pair (MeSH conditions cover this indication or a clinically overlapping form).
+        - contaminated_ncts: NCT ids of completed/terminated trials that are a DISTINCT
+          disease pulled in by the recall-first search, or a different drug's trial.
+        - relevance_reasoning: 1-2 sentences justifying the split.
+
+        Do NOT enumerate the contaminated list in the prose summary — the structured
+        contaminated_ncts list is the record. This terminates the agent loop.
 
         Empty or whitespace-only summaries are rejected — re-call with a real summary.
         """
         if not summary or not summary.strip():
             return "REJECTED: empty summary. Re-call with the full summary.", ""
-        return "Analysis complete.", summary
+        artifact = FinalizeClinicalTrialsArtifact(
+            summary=summary,
+            relevant_ncts=relevant_ncts or [],
+            contaminated_ncts=contaminated_ncts or [],
+            relevance_reasoning=relevance_reasoning or "",
+        )
+        return "Analysis complete.", artifact
 
     return [
         search_trials,

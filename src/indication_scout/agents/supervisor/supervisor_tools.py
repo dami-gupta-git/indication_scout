@@ -20,7 +20,11 @@ from indication_scout.agents.supervisor.candidate_dedup import (
 )
 from indication_scout.config import get_settings
 from indication_scout.constants import SUPERVISOR_MIN_PMIDS_NO_TRIALS
-from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
+from indication_scout.data_sources.chembl import (
+    ChEMBLClient,
+    get_all_drug_names,
+    resolve_drug_name,
+)
 from indication_scout.data_sources.fda import FDAClient
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.helpers.drug_helpers import normalize_drug_name
@@ -44,13 +48,14 @@ You audit the ORDER of a ranked list of drug-repurposing candidates. You are giv
 the candidates in their current rank order, each with a verdict tag and a few \
 one-line fields. Apply these rules:
 
-CLOSED candidates MUST appear AFTER every non-closed candidate. A candidate is \
-CLOSED when ANY of these hold:
+CLOSED candidates MUST appear AFTER every non-closed candidate. The clinical_trials \
+sub-agent judges closure per pair and states it in its verdict — trust that verdict, \
+do not re-derive closure. A candidate is CLOSED when ANY of these hold:
 - its verdict or literature indicates multiple negative randomized trials, or \
 authors recommend against further development;
-- a safety/efficacy termination of this drug x indication;
-- completed Phase 3 of this exact pair with no subsequent regulatory progression \
-(unless approved for a related narrower indication).
+- a safety/efficacy termination of this drug x indication.
+A completed Phase 3 with no approval is NOT closure on its own (a generic/off-patent \
+drug files no new NDA regardless of efficacy).
 
 ADVERSE-SIGNAL candidates (verdict names an adverse/safety signal, or harm reports \
 outnumber benefit) rank below clean live candidates but above fully CLOSED ones.
@@ -91,6 +96,10 @@ from indication_scout.agents._trial_formatting import (
     _borda_rank_by_enrollment_and_recency,
     _format_trial_table,
     _phase_distribution,
+)
+from indication_scout.agents._trial_signals import (
+    derive_trial_signals,
+    format_derived_signals,
 )
 from indication_scout.agents.clinical_trials.clinical_trials_agent import (
     build_clinical_trials_agent,
@@ -199,6 +208,7 @@ def build_supervisor_tools(
                 "approved_indications": [],  # list of indication strings
                 "mechanism_targets": [],  # list of (gene, action_type)
                 "mechanism_disease_associations": [],  # list of (gene, disease, score)
+                "first_approval": None,  # year first approved anywhere (ChEMBL), or None
             }
         return drug_facts[key]
 
@@ -271,6 +281,20 @@ def build_supervisor_tools(
         except Exception as e:
             logger.warning(
                 "find_candidates: get_all_drug_names failed for %s: %s", chembl_id, e
+            )
+
+        # Fetch first_approval (year first approved anywhere) so the clinical_trials sub-agent's
+        # closure judgment can tell an old/generic drug (no new NDA expected) from a genuine
+        # negative. Stays None on failure — never defaulted to a year (CLAUDE.md no-fallback).
+        try:
+            async with ChEMBLClient(cache_dir=svc.cache_dir) as chembl_client:
+                molecule = await chembl_client.get_molecule(chembl_id)
+            entry["first_approval"] = molecule.first_approval
+        except Exception as e:
+            logger.warning(
+                "find_candidates: get_molecule(first_approval) failed for %s: %s",
+                chembl_id,
+                e,
             )
 
         # Seed approved_indications from the drug's own FDA label, independent of any candidate
@@ -587,7 +611,9 @@ def build_supervisor_tools(
         lit_agent = build_literature_agent(
             llm=llm, svc=svc, db=db, date_before=date_before
         )
-        logger.warning("[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name)
+        logger.warning(
+            "[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name
+        )
 
         _t0 = time.perf_counter()
         output = await run_literature_agent(lit_agent, drug_name, disease_name)
@@ -613,9 +639,7 @@ def build_supervisor_tools(
         if synth_summary:
             parts.append(synth_summary)
         if key_findings:
-            parts.append(
-                "Key findings:\n" + "\n".join(f"- {f}" for f in key_findings)
-            )
+            parts.append("Key findings:\n" + "\n".join(f"- {f}" for f in key_findings))
         summary = "\n\n".join(parts)
         # Write-through for the top-N evidence gate in finalize_supervisor.
         slot = findings_local.setdefault(
@@ -645,9 +669,17 @@ def build_supervisor_tools(
 
         # logger.warning("[TOOL] analyze_clinical_trials(drug=%r, disease=%r)", drug_name, disease_name)
         _t0 = time.perf_counter()
-        output = await run_clinical_trials_agent(ct_agent, drug_name, disease_name)
+        # first_approval (seeded in find_candidates) lets the sub-agent's closure judgment tell an
+        # old/generic drug from a genuine negative. None when not resolved — passed through as-is.
+        seed_entry = drug_facts.get(_drug_key(drug_name))
+        first_approval = seed_entry.get("first_approval") if seed_entry else None
+        output = await run_clinical_trials_agent(
+            ct_agent, drug_name, disease_name, first_approval=first_approval
+        )
         logger.warning(
-            "[TIMING] clinical_trials %s: %.1fs", disease_name, time.perf_counter() - _t0
+            "[TIMING] clinical_trials %s: %.1fs",
+            disease_name,
+            time.perf_counter() - _t0,
         )
 
         # Drug-level write-through: when the FDA check matches the candidate
@@ -745,10 +777,25 @@ def build_supervisor_tools(
             f"{terminated_table}"
         )
 
+        # Authoritative reasoning basis: the sub-agent's relevance-filtered signals + its
+        # closure verdict (carried in the prose). The supervisor reasons over THESE, not the
+        # raw counts above and not by re-deriving phase/closure from prose. When the sub-agent
+        # didn't classify relevance (signals None), fall back to all-trial facts so the phase
+        # is still surfaced rather than silently dropped.
+        signals = output.signals or derive_trial_signals(output)
+        signals_block = format_derived_signals(signals)
+        if output.contaminated_nct_ids:
+            signals_block += (
+                f"\n  contaminated_excluded: {len(output.contaminated_nct_ids)} trial(s) "
+                f"({', '.join(output.contaminated_nct_ids)})"
+            )
+
+        # Prose summary is HUMAN-REPORT context only — carries the sub-agent's closure verdict
+        # in words. The supervisor TRUSTS that verdict; it must not re-judge closure from prose.
         sub_agent_summary = output.summary or ""
-        summary = f"{header}{structured}"
+        summary = f"{header}{structured}\n\n{signals_block}"
         if sub_agent_summary:
-            summary = f"{summary}\n\n{sub_agent_summary}"
+            summary = f"{summary}\n\nSub-agent verdict (trust, do not re-judge closure):\n{sub_agent_summary}"
         # Write-through for the top-N evidence gate in finalize_supervisor.
         slot = findings_local.setdefault(
             disease_name.lower().strip(), {"literature": None, "clinical_trials": None}
@@ -893,7 +940,11 @@ def build_supervisor_tools(
         # path's per-run investigation ceiling (the prompt's "up to 6") so output parity holds.
         # supervisor_candidate_cap is NOT used here — it only trims the final ranked list, not how
         # many diseases get investigated.
-        cap = HOLDOUT_INVESTIGATION_CAP if date_before is not None else FANOUT_INVESTIGATION_CAP
+        cap = (
+            HOLDOUT_INVESTIGATION_CAP
+            if date_before is not None
+            else FANOUT_INVESTIGATION_CAP
+        )
         top_n = list(allowed_diseases.items())[:cap]
         if not top_n:
             return "No candidates in allowlist; nothing to investigate.", []
@@ -963,6 +1014,20 @@ def build_supervisor_tools(
                 if ct_artifact and ct_artifact.terminated
                 else 0
             )
+            # Relevance-filtered signals (sub-agent judgment) — the phase facts the supervisor
+            # ranks on, not the raw counts. None when the sub-agent didn't classify; fall back to
+            # all-trial facts so the phase is still surfaced.
+            ct_signals = (
+                (ct_artifact.signals or derive_trial_signals(ct_artifact))
+                if ct_artifact
+                else None
+            )
+            relevant_highest_phase = (
+                ct_signals.highest_completed_phase if ct_signals else None
+            )
+            relevant_phase3_terminated = (
+                ct_signals.phase3_terminated_for_cause if ct_signals else False
+            )
             return disease, {
                 "disease": disease,
                 "literature_strength": strength,
@@ -970,6 +1035,8 @@ def build_supervisor_tools(
                 "trials_total": n_total,
                 "trials_completed": n_completed,
                 "trials_terminated": n_terminated,
+                "relevant_highest_phase": relevant_highest_phase,
+                "relevant_phase3_terminated_for_cause": relevant_phase3_terminated,
             }
 
         _fan_t0 = time.perf_counter()
@@ -986,10 +1053,17 @@ def build_supervisor_tools(
             f"Auto-investigated {len(artifacts)} top candidates " f"for {drug_name}:"
         ]
         for a in artifacts:
+            phase = a.get("relevant_highest_phase") or "none"
+            term_note = (
+                "; relevant Phase 3 terminated for cause"
+                if a.get("relevant_phase3_terminated_for_cause")
+                else ""
+            )
             lines.append(
                 f"  - {a['disease']}: literature {a['literature_strength']}, "
                 f"{a['literature_pmids']} PMIDs; trials {a['trials_total']} total, "
-                f"{a['trials_completed']} completed, {a['trials_terminated']} terminated"
+                f"{a['trials_completed']} completed, {a['trials_terminated']} terminated; "
+                f"relevant highest phase {phase}{term_note}"
             )
         return "\n".join(lines), artifacts
 
@@ -1119,10 +1193,14 @@ def build_supervisor_tools(
         prompt = "Current ranking (top to bottom):\n" + "\n".join(lines)
         _t0 = time.perf_counter()
         critique = await query_llm(prompt, system=_RANKING_CRITIC_SYSTEM)
-        logger.warning("[TIMING] critique_ranking LLM call: %.1fs", time.perf_counter() - _t0)
+        logger.warning(
+            "[TIMING] critique_ranking LLM call: %.1fs", time.perf_counter() - _t0
+        )
         result = critique.strip()
         logger.info(
-            "[TOOL] critique_ranking IN (%d candidates):\n%s", len(items), "\n".join(lines)
+            "[TOOL] critique_ranking IN (%d candidates):\n%s",
+            len(items),
+            "\n".join(lines),
         )
         logger.info("[TOOL] critique_ranking OUT:\n%s", result)
         return result
@@ -1177,7 +1255,9 @@ def build_supervisor_tools(
                 "call finalize_supervisor again.",
                 {},
             )
-        logger.info("[TOOL] finalize_supervisor called with %d blurbs", len(blurbs or []))
+        logger.info(
+            "[TOOL] finalize_supervisor called with %d blurbs", len(blurbs or [])
+        )
         validated: list[dict] = []
         structured_keys = (
             "stage",
@@ -1215,13 +1295,12 @@ def build_supervisor_tools(
             ct = slot.get("clinical_trials")
             n_pmids = len(lit.pmids) if lit else 0
             n_trials = (
-                ct.search.total_count if (ct is not None and ct.search is not None)
+                ct.search.total_count
+                if (ct is not None and ct.search is not None)
                 else 0
             )
             lit_strength = (
-                lit.evidence_summary.strength
-                if lit and lit.evidence_summary
-                else None
+                lit.evidence_summary.strength if lit and lit.evidence_summary else None
             )
             lit_study_count = (
                 lit.evidence_summary.study_count
@@ -1267,7 +1346,9 @@ def build_supervisor_tools(
         # regex and longest-substring match strategy as the report formatter's
         # _splice_blurbs_into_summary so disease matching is consistent.
         validated_diseases = {e["disease"].lower().strip() for e in validated}
-        rank_line = re.compile(r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)\s+—\s+(?P<tail>.+)$")
+        rank_line = re.compile(
+            r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)\s+—\s+(?P<tail>.+)$"
+        )
         # Normalize the heading line so the report uses "signals" instead of
         # "candidates" / "opportunities" / "indications" regardless of what the LLM wrote.
         heading_line = re.compile(
@@ -1302,9 +1383,7 @@ def build_supervisor_tools(
                     m.group("head"),
                 )
                 continue
-            filtered_lines.append(
-                f"{next_rank}. {m.group('head')} — {m.group('tail')}"
-            )
+            filtered_lines.append(f"{next_rank}. {m.group('head')} — {m.group('tail')}")
             next_rank += 1
         filtered_summary = "\n".join(filtered_lines)
 
@@ -1351,5 +1430,7 @@ def build_supervisor_tools(
         # investigate serially (it ignores the prompt-level fan-out directive on its own),
         # so it must call investigate_top_candidates once. Holdout keeps the per-candidate
         # tools because its flow calls them directly.
-        tools = [t for t in tools if t not in (analyze_literature, analyze_clinical_trials)]
+        tools = [
+            t for t in tools if t not in (analyze_literature, analyze_clinical_trials)
+        ]
     return tools, get_merged_allowlist, get_auto_findings

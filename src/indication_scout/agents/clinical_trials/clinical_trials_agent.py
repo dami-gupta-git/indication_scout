@@ -15,8 +15,10 @@ from indication_scout.agents._react_loop import (
     _trailing_tool_messages,
     build_gated_react_loop,
 )
+from indication_scout.agents._trial_signals import derive_trial_signals
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
+    FinalizeClinicalTrialsArtifact,
 )
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     build_clinical_trials_tools,
@@ -50,16 +52,26 @@ def build_clinical_trials_agent(llm, date_before=None):
 
 
 async def run_clinical_trials_agent(
-    agent, drug_name: str, disease_name: str
+    agent,
+    drug_name: str,
+    disease_name: str,
+    first_approval: int | None = None,
 ) -> ClinicalTrialsOutput:
-    """Invoke the agent and assemble a ClinicalTrialsOutput from the run."""
-    # logger.warning(
-    #     "clinical_trials_agent: starting run for %s × %s", drug_name, disease_name
-    # )
-    _agent_t0 = time.perf_counter()
-    result = await agent.ainvoke(
-        {"messages": [HumanMessage(content=f"Analyze {drug_name} in {disease_name}")]}
+    """Invoke the agent and assemble a ClinicalTrialsOutput from the run.
+
+    `first_approval` is the year the drug was first approved anywhere (ChEMBL). It is fed
+    to the agent so its closure judgment can tell "old/generic drug, no new NDA expected"
+    (no-approval is not failure) from a genuine negative. When None, the literal "unknown"
+    is passed — never a default year (CLAUDE.md no-fallback).
+    """
+    approval_line = (
+        f"first_approval (year first approved anywhere): {first_approval}"
+        if first_approval is not None
+        else "first_approval (year first approved anywhere): unknown"
     )
+    task = f"Analyze {drug_name} in {disease_name}\n" f"DRUG FACT — {approval_line}"
+    _agent_t0 = time.perf_counter()
+    result = await agent.ainvoke({"messages": [HumanMessage(content=task)]})
     _agent_elapsed = time.perf_counter() - _agent_t0
 
     # Per-turn LLM accounting (same as literature/mechanism agents). Each AIMessage
@@ -87,13 +99,22 @@ async def run_clinical_trials_agent(
         logger.warning(
             "[LLMTURN] clinical_trials %s turn %d/%d: in=%d out=%d cache_read=%d "
             "cache_write=%d -> %s",
-            disease_name, i + 1, len(ai_turns), in_tok, out_tok,
-            cache_read, cache_write, called,
+            disease_name,
+            i + 1,
+            len(ai_turns),
+            in_tok,
+            out_tok,
+            cache_read,
+            cache_write,
+            called,
         )
     logger.warning(
         "[LLMTURN] clinical_trials %s: %d turns, %d total output tokens, "
         "agent loop %.1fs",
-        disease_name, len(ai_turns), total_out, _agent_elapsed,
+        disease_name,
+        len(ai_turns),
+        total_out,
+        _agent_elapsed,
     )
 
     artifacts: dict = {
@@ -102,7 +123,7 @@ async def run_clinical_trials_agent(
         "terminated": None,
         "landscape": None,
         "approval": None,
-        "summary": None,
+        "finalize": None,
     }
 
     field_map = {
@@ -111,7 +132,7 @@ async def run_clinical_trials_agent(
         "get_terminated": "terminated",
         "get_landscape": "landscape",
         "check_fda_approval": "approval",
-        "finalize_analysis": "summary",
+        "finalize_analysis": "finalize",
     }
 
     for msg in result["messages"]:
@@ -134,23 +155,37 @@ async def run_clinical_trials_agent(
             disease_name,
         )
 
-    if artifacts["summary"] is None:
+    # finalize artifact is a FinalizeClinicalTrialsArtifact on a normal end, or "" / None if
+    # finalize was never reached (or only rejected). Unpack defensively.
+    finalize = artifacts.get("finalize")
+    finalized = isinstance(finalize, FinalizeClinicalTrialsArtifact)
+    if not finalized:
         logger.warning(
-            "clinical_trials_agent: %s × %s — finalize_analysis was not called; "
-            "summary will be empty",
+            "clinical_trials_agent: %s × %s — finalize_analysis produced no artifact; "
+            "summary, relevance, and signals will be empty",
             drug_name,
             disease_name,
         )
+        finalize = FinalizeClinicalTrialsArtifact()
 
-    summary = artifacts.get("summary") or ""
-    # logger.warning(
-    #     f"clinical_trials_agent SUMMARY: {summary}")
-
-    return ClinicalTrialsOutput(
+    output = ClinicalTrialsOutput(
         search=artifacts["search"],
         completed=artifacts["completed"],
         terminated=artifacts["terminated"],
         landscape=artifacts["landscape"],
         approval=artifacts["approval"],
-        summary=summary,
+        summary=finalize.summary,
+        relevant_nct_ids=finalize.relevant_ncts,
+        contaminated_nct_ids=finalize.contaminated_ncts,
+        relevance_reasoning=finalize.relevance_reasoning,
     )
+
+    # Signals are computed from RELEVANT trials only, so supervisor and human report read
+    # identical numbers. Only when the agent actually classified relevance (finalize ran) —
+    # otherwise leave signals None so the supervisor knows no relevance judgment was made,
+    # rather than silently filtering every trial out with an empty relevant set.
+    if finalized:
+        output.signals = derive_trial_signals(
+            output, relevant_nct_ids=set(output.relevant_nct_ids)
+        )
+    return output

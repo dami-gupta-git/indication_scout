@@ -1003,22 +1003,57 @@ async def test_tool_list_contains_expected_tools():
 # ------------------------------------------------------------------
 
 
-async def test_finalize_analysis_returns_summary_as_artifact():
-    """finalize_analysis returns the summary string as artifact and confirms completion in content."""
+async def test_finalize_analysis_returns_relevance_artifact():
+    """finalize_analysis returns a FinalizeClinicalTrialsArtifact carrying the summary
+    and the structured relevance split, and confirms completion in content."""
     tools = build_clinical_trials_tools(date_before=None)
 
-    text = "No trials found for tirzepatide in Huntington disease. The landscape shows 5 competitors."
+    text = "Completed Phase 3 on record for this pair; PAH trials excluded as a different disease."
     msg = await _get_tool(tools, "finalize_analysis").ainvoke(
         LCToolCall(
             name="finalize_analysis",
-            args={"summary": text},
+            args={
+                "summary": text,
+                "relevant_ncts": ["NCT00000001", "NCT00000002"],
+                "contaminated_ncts": ["NCT00000099"],
+                "relevance_reasoning": "NCT99 is a PAH trial; the query is systemic hypertension.",
+            },
             id="tc_fin",
             type="tool_call",
         )
     )
 
-    assert msg.artifact == text
+    art = msg.artifact
+    assert art.summary == text
+    assert art.relevant_ncts == ["NCT00000001", "NCT00000002"]
+    assert art.contaminated_ncts == ["NCT00000099"]
+    assert (
+        art.relevance_reasoning
+        == "NCT99 is a PAH trial; the query is systemic hypertension."
+    )
     assert "Analysis complete" in msg.content
+
+
+async def test_finalize_analysis_rejects_empty_summary():
+    """An empty/whitespace summary is rejected with an empty-string artifact so the loop retries."""
+    tools = build_clinical_trials_tools(date_before=None)
+
+    msg = await _get_tool(tools, "finalize_analysis").ainvoke(
+        LCToolCall(
+            name="finalize_analysis",
+            args={
+                "summary": "   ",
+                "relevant_ncts": [],
+                "contaminated_ncts": [],
+                "relevance_reasoning": "",
+            },
+            id="tc_fin_empty",
+            type="tool_call",
+        )
+    )
+
+    assert msg.artifact == ""
+    assert "REJECTED" in msg.content
 
 
 # ------------------------------------------------------------------
@@ -1069,9 +1104,7 @@ def test_scrub_no_completion_date_terminal_status_scrubbed():
     """A terminal trial (COMPLETED/TERMINATED) with no completion_date
     can't be proven pre-cutoff — scrub it conservatively.
     """
-    t = _trial(
-        nct_id="NCT001", overall_status="TERMINATED", completion_date=None
-    )
+    t = _trial(nct_id="NCT001", overall_status="TERMINATED", completion_date=None)
     out, was_scrubbed = _scrub_post_cutoff_outcome(t, date(2020, 1, 1))
     assert was_scrubbed is True
     assert out.overall_status == "UNKNOWN"

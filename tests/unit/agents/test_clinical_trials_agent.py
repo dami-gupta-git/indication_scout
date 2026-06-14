@@ -16,6 +16,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_agent import (
 )
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
+    FinalizeClinicalTrialsArtifact,
 )
 from indication_scout.models.model_clinical_trials import (
     ApprovalCheck,
@@ -147,6 +148,10 @@ def _make_agent(messages: list) -> MagicMock:
 
 
 def _tool_msg(name: str, artifact) -> ToolMessage:
+    # finalize_analysis now returns a FinalizeClinicalTrialsArtifact, not a bare string.
+    # Accept a plain summary string for brevity and wrap it so existing call sites still work.
+    if name == "finalize_analysis" and isinstance(artifact, str):
+        artifact = FinalizeClinicalTrialsArtifact(summary=artifact)
     return ToolMessage(
         content=f"result of {name}",
         artifact=artifact,
@@ -400,3 +405,82 @@ async def test_run_clinical_trials_agent_missing_tool_leaves_default(
     output = await run_clinical_trials_agent(agent, "somedrug", "huntingtons")
 
     assert getattr(output, missing_field) is None
+
+
+# ------------------------------------------------------------------
+# Relevance assembly: finalize artifact populates relevance fields + filtered signals
+# ------------------------------------------------------------------
+
+
+async def test_relevance_fields_and_filtered_signals_assembled():
+    """The finalize artifact's relevance split flows onto the output, and signals are computed
+    from RELEVANT trials only — a contaminating completed Phase 3 is excluded."""
+    completed = CompletedTrialsResult(
+        total_count=2,
+        trials=[
+            Trial(nct_id="NCT_REL", phase="Phase 2", overall_status="COMPLETED"),
+            Trial(nct_id="NCT_CONTAM", phase="Phase 3", overall_status="COMPLETED"),
+        ],
+    )
+    finalize = FinalizeClinicalTrialsArtifact(
+        summary="Phase 2 on record; the Phase 3 is a different disease.",
+        relevant_ncts=["NCT_REL"],
+        contaminated_ncts=["NCT_CONTAM"],
+        relevance_reasoning="NCT_CONTAM is a distinct disease sharing a parent term.",
+    )
+    messages = [
+        HumanMessage(content="Analyze somedrug in somedisease"),
+        _tool_msg("search_trials", SEARCH),
+        _tool_msg("get_completed", completed),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("finalize_analysis", finalize),
+    ]
+    agent = _make_agent(messages)
+
+    output = await run_clinical_trials_agent(agent, "somedrug", "somedisease")
+
+    assert output.relevant_nct_ids == ["NCT_REL"]
+    assert output.contaminated_nct_ids == ["NCT_CONTAM"]
+    assert (
+        output.relevance_reasoning
+        == "NCT_CONTAM is a distinct disease sharing a parent term."
+    )
+    # Signals computed from the RELEVANT set only: the contaminating Phase 3 is dropped.
+    assert output.signals is not None
+    assert output.signals.highest_completed_phase == "Phase 2"
+    assert output.signals.has_completed_phase3 is False
+    assert output.signals.completed_phase3_nct_ids == []
+
+
+async def test_first_approval_reaches_agent_task_message():
+    """first_approval is surfaced in the agent's task message so the closure judge can read it."""
+    messages = [
+        HumanMessage(content="Analyze bupropion in adhd"),
+        _tool_msg("search_trials", SEARCH),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("finalize_analysis", NARRATIVE),
+    ]
+    agent = _make_agent(messages)
+
+    await run_clinical_trials_agent(agent, "bupropion", "adhd", first_approval=1985)
+
+    sent = agent.ainvoke.call_args.args[0]["messages"][0].content
+    assert "first_approval" in sent
+    assert "1985" in sent
+
+
+async def test_unknown_first_approval_passed_as_literal():
+    """When first_approval is None, the literal 'unknown' is passed — never a default year."""
+    messages = [
+        HumanMessage(content="Analyze somedrug in somedisease"),
+        _tool_msg("search_trials", SEARCH),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("finalize_analysis", NARRATIVE),
+    ]
+    agent = _make_agent(messages)
+
+    await run_clinical_trials_agent(agent, "somedrug", "somedisease")
+
+    sent = agent.ainvoke.call_args.args[0]["messages"][0].content
+    assert "first_approval" in sent
+    assert "unknown" in sent

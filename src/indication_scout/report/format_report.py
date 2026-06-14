@@ -55,6 +55,13 @@ def _fmt_clinical_trials(ct: ClinicalTrialsOutput, indication: str = "") -> str:
     if ct.summary:
         lines.append(ct.summary)
 
+    if ct.contaminated_nct_ids:
+        n = len(ct.contaminated_nct_ids)
+        lines.append(
+            f"\n_{n} trial(s) excluded as a different indication: "
+            f"{', '.join(ct.contaminated_nct_ids)}._"
+        )
+
     if ct.approval:
         a = ct.approval
         if a.label_found:
@@ -100,11 +107,7 @@ def _fmt_clinical_trials(ct: ClinicalTrialsOutput, indication: str = "") -> str:
                 title = f" {t.title}" if t.title else ""
                 phase = t.phase or "Unknown phase"
                 classified = _classify_stop_reason(t.why_stopped)
-                category = (
-                    f" [{classified}]"
-                    if classified != t.why_stopped
-                    else ""
-                )
+                category = f" [{classified}]" if classified != t.why_stopped else ""
                 lines.append(
                     f"- [{t.nct_id}](https://clinicaltrials.gov/study/{t.nct_id}){title} ({phase}){category}{reason}"
                 )

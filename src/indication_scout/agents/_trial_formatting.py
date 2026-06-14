@@ -12,7 +12,37 @@ Python-side and is invisible to the model. So whatever the LLM is going to
 reason over has to be in the content string. These helpers build that string.
 """
 
+from indication_scout.constants import NEGATION_PREFIXES, STOP_KEYWORDS
 from indication_scout.models.model_clinical_trials import MeshTerm, Trial
+
+
+def _classify_stop_reason(why_stopped: str | None) -> str:
+    """Keyword-based stop classification of a CT.gov why_stopped string.
+
+    Returns one of: safety, efficacy, business, enrollment, unknown — or, when
+    no keyword matches, the original why_stopped text verbatim.
+    Has a 20-char negation lookback so phrasings like "no safety concerns"
+    don't classify as safety.
+    """
+    if not why_stopped:
+        return "unknown"
+    lower = why_stopped.lower()
+    for keyword, category in STOP_KEYWORDS.items():
+        if keyword in lower:
+            idx = lower.index(keyword)
+            prefix = lower[max(0, idx - 20) : idx]
+            if any(neg in prefix for neg in NEGATION_PREFIXES):
+                neg_end = max(
+                    prefix.rfind(neg) + len(neg)
+                    for neg in NEGATION_PREFIXES
+                    if neg in prefix
+                )
+                between = prefix[neg_end:]
+                if not any(sep in between for sep in (",", "-", ".", ";")):
+                    continue
+            return category
+    return why_stopped
+
 
 # Width of the phase column in rendered rows. Phase strings range from
 # "Not Applicable" (14 chars) to "Phase 1/Phase 2" (15 chars). Pad to 16 so

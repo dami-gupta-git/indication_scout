@@ -68,12 +68,15 @@ ADVERSE SIGNAL (downgrades verdict, does not close):
   literature". Do not let any other verdict label suppress this signal.
 
 CLOSED (drops a candidate to the bottom):
-- Safety or efficacy termination of this drug × this indication.
-- Completed Phase 3 of this exact drug × this exact indication with no subsequent regulatory
-  progression — UNLESS the briefing shows the drug is approved for a related narrower indication,
-  in which case the trial likely succeeded for that narrower form (see APPROVAL RELATIONSHIPS).
+The clinical_trials sub-agent judges live-vs-closed in its focused per-pair context (fed the
+drug's first_approval year and its relevance-filtered trials) and states the verdict in its
+summary. TRUST that verdict — do not re-judge closure from the prose, and never close a pair on
+"completed Phase 3 with no approval" alone (for a generic/off-patent drug that reflects no NDA
+filing, not failure). Your only closure job is RANKING: a candidate the sub-agent judged closed
+ranks below every live one.
+- Safety or efficacy termination of this drug × this indication (the sub-agent surfaces this).
 - Literature reports multiple negative randomized trials, or authors recommend against further
-  development. This wins over the clinical_trials sub-agent's "active trials may clarify."
+  development.
 
 NEUTRAL:
 - Business or enrollment terminations.
@@ -274,8 +277,8 @@ After the ranked list, add these optional footer lines in order:
   approval_relationship in {"same", "narrower", "broader_overlapping", "broader_distinct",
   "combination"}.
 
-  Closed signals: <name(s)> — only candidates with a safety or efficacy termination,
-  or completed Phase 3 without approval. No explanation — just names.
+  Closed signals: <name(s)> — only candidates the clinical_trials sub-agent judged closed
+  (a relevant safety/efficacy termination, or negative literature). No explanation — just names.
 
   Evidence gate exclusions: <name(s)> — candidates excluded for zero trials AND
   literature strength=none, or zero trials AND fewer than 5 PMIDs.

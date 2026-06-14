@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 # directory scan of all per-drug files (cheap at the tens-to-hundreds
 # scale this cache reaches in practice).
 _CHEMBL_NAMES_NS = "chembl_id_to_names"
+_CHEMBL_MOLECULE_NS = "chembl_molecule"
 
 
 def _chembl_names_path(chembl_id: str, cache_dir: Path) -> Path:
@@ -170,14 +171,23 @@ class ChEMBLClient(BaseClient):
 
         Hits GET /molecule/{chembl_id}.json and returns a MoleculeData instance.
         Raises DataSourceError if the molecule is not found or the response is malformed.
+
+        The raw response is file-cached under `chembl_molecule` (molecule facts like
+        first_approval are immutable), so repeat runs skip the network — and the EBI
+        timeout — entirely.
         """
-        url = f"{CHEMBL_BASE_URL}/molecule/{chembl_id}.json"
-        try:
-            raw = await self._rest_get(url, params={})
-        except Exception as e:
-            raise DataSourceError(
-                self._source_name, f"Unexpected error fetching {chembl_id}: {e}"
-            )
+        cache_params = {"chembl_id": chembl_id}
+        raw = cache_get(_CHEMBL_MOLECULE_NS, cache_params, self.cache_dir)
+        if raw is None:
+            url = f"{CHEMBL_BASE_URL}/molecule/{chembl_id}.json"
+            try:
+                raw = await self._rest_get(url, params={})
+            except Exception as e:
+                raise DataSourceError(
+                    self._source_name, f"Unexpected error fetching {chembl_id}: {e}"
+                )
+            if isinstance(raw, dict):
+                cache_set(_CHEMBL_MOLECULE_NS, cache_params, raw, self.cache_dir)
 
         if not isinstance(raw, dict):
             raise DataSourceError(
