@@ -11,6 +11,7 @@ import { StatusDonut } from "../charts/StatusDonut";
 import { PhaseFunnel } from "../charts/PhaseFunnel";
 import { Markdown } from "../components/Markdown";
 import { phaseSlices, statusSlices } from "../charts/chartData";
+import { partitionTrials } from "./trialFilter";
 
 const TERMINATED_LIMIT = 15;
 
@@ -42,6 +43,13 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
 
   const ct = finding.clinical_trials;
 
+  // Hide trials the agent judged a different disease/drug from the tables, while
+  // keeping the verbatim total_count headers. Mirrors the markdown report.
+  const contaminated = ct?.contaminated_nct_ids ?? [];
+  const completedSplit = partitionTrials(ct?.completed?.trials ?? [], contaminated);
+  const terminatedSplit = partitionTrials(ct?.terminated?.trials ?? [], contaminated);
+  const excludedCount = completedSplit.excluded.length + terminatedSplit.excluded.length;
+
   return (
     <div className="trials">
       <h3>Clinical trials — {finding.disease}</h3>
@@ -72,27 +80,27 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
             </>
           )}
 
-          {ct.completed && ct.completed.trials.length > 0 && (
+          {ct.completed && completedSplit.shown.length > 0 && (
             <>
               <h4>Completed trials ({ct.completed.total_count} total)</h4>
               <PhaseFunnel
-                slices={phaseSlices(ct.completed.trials)}
+                slices={phaseSlices(completedSplit.shown)}
                 active={phaseFilter}
                 onSelect={setPhaseFilter}
               />
               <CompletedTrialsTable
-                trials={ct.completed.trials}
+                trials={completedSplit.shown}
                 phase={phaseFilter}
                 onPhaseChange={setPhaseFilter}
               />
             </>
           )}
 
-          {ct.terminated && ct.terminated.trials.length > 0 && (
+          {ct.terminated && terminatedSplit.shown.length > 0 && (
             <>
               <h4>Terminated trials ({ct.terminated.total_count})</h4>
               <div className="terminated-list">
-                {ct.terminated.trials.slice(0, TERMINATED_LIMIT).map((t) => (
+                {terminatedSplit.shown.slice(0, TERMINATED_LIMIT).map((t) => (
                   <div className="card" key={t.nct_id}>
                     <div>
                       <NctLink nctId={t.nct_id} /> — {t.title || "no title"}
@@ -112,6 +120,21 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
               <h4>Competitive landscape ({ct.landscape.competitors.length})</h4>
               <CompetitorsTable competitors={ct.landscape.competitors} />
             </>
+          )}
+
+          {excludedCount > 0 && (
+            <details className="excluded-trials">
+              <summary>
+                {excludedCount} trial(s) excluded as a different indication
+              </summary>
+              <ul>
+                {[...completedSplit.excluded, ...terminatedSplit.excluded].map((t) => (
+                  <li key={t.nct_id}>
+                    <NctLink nctId={t.nct_id} /> — {t.title || "no title"}
+                  </li>
+                ))}
+              </ul>
+            </details>
           )}
         </>
       )}

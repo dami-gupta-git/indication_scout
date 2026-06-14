@@ -269,6 +269,7 @@ async def run_supervisor_agent(
         "key_risk",
         "verdict",
         "watch",
+        "approval_relationship",
     )
     for entry in blurbs:
         disease_raw = entry.get("disease", "")

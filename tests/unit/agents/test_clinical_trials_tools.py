@@ -296,8 +296,13 @@ async def test_get_completed_returns_completed_trials_result_artifact():
     assert len(msg.artifact.trials) == 1
     assert msg.artifact.trials[0].nct_id == "NCT04111111"
     assert "12 total" in msg.content
-    # only 1 shown of 12 → cap note present
-    assert "top 50 shown" in msg.content
+    # Classification view is un-capped — no "top 50" note; all shown trials listed.
+    assert "top 50 shown" not in msg.content
+    assert "classify EVERY one" in msg.content
+    # New rich columns the agent classifies from (drugs + summary), MeSH dropped.
+    assert "drugs: Semaglutide" in msg.content
+    assert "summary:" in msg.content
+    assert "mesh:" not in msg.content
 
 
 async def test_get_completed_passes_date_before():
@@ -437,14 +442,17 @@ async def test_get_terminated_returns_terminated_trials_result_artifact():
     assert "1 safety/efficacy" in msg.content
 
 
-async def test_get_terminated_content_notes_cap_when_total_exceeds_shown():
-    """When total_count exceeds shown trials, the content string flags the 50-cap."""
+async def test_get_terminated_classification_view_uncapped_with_rich_columns():
+    """The terminated classification view is un-capped and renders drugs +
+    stop_reason + summary (MeSH dropped) so the agent classifies from the
+    relevance-bearing fields."""
     trial = Trial(
         nct_id="NCT04012255",
         title="Trial",
         phase="Phase 2",
         overall_status="TERMINATED",
         why_stopped="Lack of efficacy",
+        brief_summary="A study of drug_x for the indication.",
         sponsor="S",
         mesh_conditions=[MeshTerm(id="D050177", term="Overweight")],
         interventions=[
@@ -475,8 +483,13 @@ async def test_get_terminated_content_notes_cap_when_total_exceeds_shown():
         )
 
     assert "80 total" in msg.content
-    assert "top 50 shown" in msg.content
-    assert "stop-category counts cover the 1 shown only" in msg.content
+    # Un-capped classification view — no "top 50" note.
+    assert "top 50 shown" not in msg.content
+    assert "classify EVERY one" in msg.content
+    assert "drugs: Drug_x" in msg.content
+    assert "stop: efficacy" in msg.content
+    assert "summary: A study of drug_x for the indication." in msg.content
+    assert "mesh:" not in msg.content
 
 
 async def test_get_terminated_passes_date_before():
@@ -1003,24 +1016,101 @@ async def test_tool_list_contains_expected_tools():
 # ------------------------------------------------------------------
 
 
-async def test_finalize_analysis_returns_relevance_artifact():
-    """finalize_analysis returns a FinalizeClinicalTrialsArtifact carrying the summary
-    and the structured relevance split, and confirms completion in content."""
-    tools = build_clinical_trials_tools(date_before=None)
+async def _populate_shown(tools: list, *, completed=(), terminated=()) -> None:
+    """Drive get_completed/get_terminated so finalize_analysis's closure-scoped
+    shown_by_pair is filled — the same path production takes. Returns nothing;
+    the shown NCTs live in the tools' shared closure.
+    """
 
-    text = "Completed Phase 3 on record for this pair; PAH trials excluded as a different disease."
-    msg = await _get_tool(tools, "finalize_analysis").ainvoke(
-        LCToolCall(
-            name="finalize_analysis",
-            args={
-                "summary": text,
-                "relevant_ncts": ["NCT00000001", "NCT00000002"],
-                "contaminated_ncts": ["NCT00000099"],
-                "relevance_reasoning": "NCT99 is a PAH trial; the query is systemic hypertension.",
-            },
-            id="tc_fin",
-            type="tool_call",
+    def _mk(nct: str) -> Trial:
+        return Trial(
+            nct_id=nct,
+            title=f"trial {nct}",
+            phase="Phase 3",
+            overall_status="COMPLETED",
+            sponsor="S",
+            mesh_conditions=[MeshTerm(id="D006973", term="Hypertension")],
+            interventions=[
+                Intervention(intervention_type="Drug", intervention_name="Sildenafil")
+            ],
         )
+
+    if completed:
+        client = _mock_client(
+            get_completed_trials=CompletedTrialsResult(
+                total_count=len(completed), trials=[_mk(n) for n in completed]
+            )
+        )
+        with (
+            patch(
+                "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+                new=AsyncMock(return_value=("D006973", "Hypertension")),
+            ),
+            patch(
+                "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+                return_value=client,
+            ),
+        ):
+            await _get_tool(tools, "get_completed").ainvoke(
+                LCToolCall(
+                    name="get_completed",
+                    args={"drug": "sildenafil", "indication": "hypertension"},
+                    id="pc",
+                    type="tool_call",
+                )
+            )
+    if terminated:
+        client = _mock_client(
+            get_terminated_trials=TerminatedTrialsResult(
+                total_count=len(terminated), trials=[_mk(n) for n in terminated]
+            )
+        )
+        with (
+            patch(
+                "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+                new=AsyncMock(return_value=("D006973", "Hypertension")),
+            ),
+            patch(
+                "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+                return_value=client,
+            ),
+        ):
+            await _get_tool(tools, "get_terminated").ainvoke(
+                LCToolCall(
+                    name="get_terminated",
+                    args={"drug": "sildenafil", "indication": "hypertension"},
+                    id="pt",
+                    type="tool_call",
+                )
+            )
+
+
+async def _finalize(tools: list, **args):
+    return await _get_tool(tools, "finalize_analysis").ainvoke(
+        LCToolCall(
+            name="finalize_analysis", args=args, id="tc_fin", type="tool_call"
+        )
+    )
+
+
+async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():
+    """A verdict for every shown trial → FinalizeClinicalTrialsArtifact with
+    relevant/contaminated derived from the verdicts."""
+    tools = build_clinical_trials_tools(date_before=None)
+    await _populate_shown(
+        tools, completed=["NCT00000001", "NCT00000002"], terminated=["NCT00000099"]
+    )
+
+    text = "Completed Phase 3 on record; PAH trial excluded as a different disease."
+    msg = await _finalize(
+        tools,
+        summary=text,
+        verdicts=[
+            {"nct": "NCT00000001", "verdict": "relevant"},
+            {"nct": "NCT00000002", "verdict": "relevant"},
+            {"nct": "NCT00000099", "verdict": "contaminated"},
+        ],
+        relevance_reasoning="NCT99 is a PAH trial; the query is systemic hypertension.",
     )
 
     art = msg.artifact
@@ -1034,22 +1124,67 @@ async def test_finalize_analysis_returns_relevance_artifact():
     assert "Analysis complete" in msg.content
 
 
+async def test_finalize_analysis_rejects_missing_verdict():
+    """A shown trial with no verdict is rejected so the loop retries; the
+    missing NCT is named in the rejection."""
+    tools = build_clinical_trials_tools(date_before=None)
+    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
+
+    msg = await _finalize(
+        tools,
+        summary="real summary",
+        verdicts=[{"nct": "NCT00000001", "verdict": "relevant"}],
+        relevance_reasoning="r",
+    )
+
+    assert msg.artifact == ""
+    assert "REJECTED" in msg.content
+    assert "NCT00000002" in msg.content
+
+
+async def test_finalize_analysis_rejects_unknown_nct():
+    """A verdict naming a trial that was never shown is rejected."""
+    tools = build_clinical_trials_tools(date_before=None)
+    await _populate_shown(tools, completed=["NCT00000001"])
+
+    msg = await _finalize(
+        tools,
+        summary="real summary",
+        verdicts=[
+            {"nct": "NCT00000001", "verdict": "relevant"},
+            {"nct": "NCT09999999", "verdict": "contaminated"},
+        ],
+        relevance_reasoning="r",
+    )
+
+    assert msg.artifact == ""
+    assert "REJECTED" in msg.content
+    assert "NCT09999999" in msg.content
+
+
+async def test_finalize_analysis_empty_shown_accepts_empty_verdicts():
+    """No trials shown (e.g. MeSH unresolved) → empty verdicts is valid, not rejected."""
+    tools = build_clinical_trials_tools(date_before=None)
+
+    msg = await _finalize(
+        tools,
+        summary="No trial evidence on record for this pair.",
+        verdicts=[],
+        relevance_reasoning="No completed or terminated trials shown.",
+    )
+
+    art = msg.artifact
+    assert art.relevant_ncts == []
+    assert art.contaminated_ncts == []
+    assert "Analysis complete" in msg.content
+
+
 async def test_finalize_analysis_rejects_empty_summary():
     """An empty/whitespace summary is rejected with an empty-string artifact so the loop retries."""
     tools = build_clinical_trials_tools(date_before=None)
 
-    msg = await _get_tool(tools, "finalize_analysis").ainvoke(
-        LCToolCall(
-            name="finalize_analysis",
-            args={
-                "summary": "   ",
-                "relevant_ncts": [],
-                "contaminated_ncts": [],
-                "relevance_reasoning": "",
-            },
-            id="tc_fin_empty",
-            type="tool_call",
-        )
+    msg = await _finalize(
+        tools, summary="   ", verdicts=[], relevance_reasoning=""
     )
 
     assert msg.artifact == ""

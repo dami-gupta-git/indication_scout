@@ -94,6 +94,13 @@ def build_clinical_trials_tools(
     date_before: date | None = None,
 ) -> list:
 
+    # Closure-scoped snapshot of the NCTs rendered to the agent for the relevance
+    # classification, keyed by (drug, indication). get_completed/get_terminated
+    # populate it; finalize_analysis reads it to enforce that every shown trial got
+    # a verdict. Keyed (not flat) so a re-call of the same pair rewrites the same
+    # deterministic set and a different indication can't contaminate the check.
+    shown_by_pair: dict[tuple[str, str], set[str]] = {}
+
     @tool(response_format="content_and_artifact")
     async def search_trials(
         drug: str, indication: str
@@ -203,7 +210,7 @@ def build_clinical_trials_tools(
                 f"Completed for {drug} × {indication}: MeSH unresolved, skipped.",
                 CompletedTrialsResult(),
             )
-        mesh_id, mesh_term = resolved
+        _mesh_id, mesh_term = resolved
 
         async with ClinicalTrialsClient() as client:
             result = await client.get_completed_trials(
@@ -227,8 +234,12 @@ def build_clinical_trials_tools(
             result.trials = kept
             result.total_count = max(0, result.total_count - scrub_dropped)
 
-        shown = len(result.trials)
-        cap_note = "; top 50 shown" if shown < result.total_count else ""
+        # Record the classification set for this pair (un-capped — every shown
+        # trial must get a verdict at finalize). Re-call rewrites the same set.
+        shown_by_pair.setdefault((drug, indication), set()).update(
+            t.nct_id for t in result.trials if t.nct_id
+        )
+
         scrub_note = (
             f"; dropped {scrub_dropped} post-cutoff completion(s) "
             f"(not yet completed at cutoff)"
@@ -237,20 +248,20 @@ def build_clinical_trials_tools(
         )
         header = (
             f"Completed for {drug} × {indication}: {result.total_count} total"
-            f"{cap_note}{scrub_note}\n"
-            f"Resolved query MeSH: {mesh_term} ({mesh_id}) — compare each trial's mesh "
-            f"column against this descriptor to judge relevance vs contamination."
+            f"{scrub_note}\n"
+            f"Judge relevance from the drugs (is {drug} the studied drug?), title, and "
+            f"summary — is the disease THIS indication, not a distinct subtype?"
         )
         phase_dist = _phase_distribution(result.trials)
         table = _format_trial_table(
             result.trials,
-            columns=("nct_id", "phase", "refs", "mesh", "title"),
-            cap=_settings.clinical_trials_cap,
+            columns=("nct_id", "phase", "interventions", "title", "brief_summary"),
+            cap=len(result.trials),
         )
         content = (
             f"{header}\n"
             f"Phase distribution (shown): {phase_dist}\n"
-            f"Trials shown (top {_settings.clinical_trials_cap} by enrollment):\n"
+            f"Trials shown (all {len(result.trials)} — classify EVERY one):\n"
             f"{table}"
         )
         return content, result
@@ -282,7 +293,7 @@ def build_clinical_trials_tools(
                 f"Terminated for {drug} × {indication}: MeSH unresolved, skipped.",
                 TerminatedTrialsResult(),
             )
-        mesh_id, mesh_term = resolved
+        _mesh_id, mesh_term = resolved
 
         async with ClinicalTrialsClient() as client:
             result = await client.get_terminated_trials(
@@ -312,35 +323,44 @@ def build_clinical_trials_tools(
             for t in result.trials
             if _classify_stop_reason(t.why_stopped) in {"safety", "efficacy"}
         )
-        cap_note = (
-            f"; top 50 shown (stop-category counts cover the {shown} shown only)"
-            if shown < result.total_count
-            else ""
-        )
         scrub_note = (
             f"; dropped {scrub_dropped} post-cutoff termination(s) "
             f"(not yet terminated at cutoff)"
             if scrub_dropped
             else ""
         )
+
+        # Record the classification set for this pair (un-capped — every shown
+        # trial must get a verdict at finalize). Re-call rewrites the same set.
+        shown_by_pair.setdefault((drug, indication), set()).update(
+            t.nct_id for t in result.trials if t.nct_id
+        )
+
         header = (
             f"Terminated for {drug} × {indication}: {result.total_count} total "
-            f"({safety_efficacy} safety/efficacy in shown set){cap_note}{scrub_note}\n"
-            f"Resolved query MeSH: {mesh_term} ({mesh_id}) — compare each trial's mesh "
-            f"column against this descriptor to judge relevance vs contamination."
+            f"({safety_efficacy} safety/efficacy in shown set){scrub_note}\n"
+            f"Judge relevance from the drugs (is {drug} the studied drug?), title, and "
+            f"summary — is the disease THIS indication, not a distinct subtype?"
         )
         phase_dist = _phase_distribution(result.trials)
         table = _format_trial_table(
             result.trials,
-            columns=("nct_id", "phase", "stop_reason", "refs", "mesh", "title"),
-            cap=_settings.clinical_trials_cap,
+            columns=(
+                "nct_id",
+                "phase",
+                "interventions",
+                "stop_reason",
+                "title",
+                "brief_summary",
+            ),
+            cap=len(result.trials),
             include_why_stopped=True,
             stop_classifier=_classify_stop_reason,
         )
         content = (
             f"{header}\n"
             f"Phase distribution (shown): {phase_dist}\n"
-            f"Trials shown (top {_settings.clinical_trials_cap} by enrollment):\n"
+            f"Trials shown (all {shown} — classify EVERY one):\n"
             f"{table}"
         )
         return content, result
@@ -494,31 +514,64 @@ def build_clinical_trials_tools(
     @tool(response_format="content_and_artifact")
     async def finalize_analysis(
         summary: str,
-        relevant_ncts: list[str],
-        contaminated_ncts: list[str],
+        verdicts: list[dict],
         relevance_reasoning: str,
     ) -> tuple[str, FinalizeClinicalTrialsArtifact | str]:
         """Signal that the analysis is complete.
 
         Call this as the very last step. Pass:
         - summary: your 2-3 sentence plain-text summary of the findings (human report).
-        - relevant_ncts: NCT ids of completed/terminated trials RELEVANT to this exact
-          pair (MeSH conditions cover this indication or a clinically overlapping form).
-        - contaminated_ncts: NCT ids of completed/terminated trials that are a DISTINCT
-          disease pulled in by the recall-first search, or a different drug's trial.
+        - verdicts: one entry PER completed/terminated trial shown to you, each a dict
+          {"nct": "<NCT id>", "verdict": "relevant" | "contaminated"}. You MUST classify
+          EVERY shown trial — omit none. "relevant" = studies this drug for THIS exact
+          indication (a narrower subtype rolls up). "contaminated" = a DISTINCT disease
+          (e.g. pulmonary vs systemic hypertension) or a different drug's trial.
         - relevance_reasoning: 1-2 sentences justifying the split.
 
-        Do NOT enumerate the contaminated list in the prose summary — the structured
-        contaminated_ncts list is the record. This terminates the agent loop.
+        Do NOT enumerate the contaminated trials in the prose summary — the structured
+        verdicts list is the record. This terminates the agent loop.
 
-        Empty or whitespace-only summaries are rejected — re-call with a real summary.
+        Rejected (re-call to fix) when: summary is empty; any shown trial is missing a
+        verdict; or a verdict names an NCT that was not shown.
         """
         if not summary or not summary.strip():
             return "REJECTED: empty summary. Re-call with the full summary.", ""
+
+        # Union the per-pair snapshots: a run analyzes one pair, so this is that
+        # pair's shown trials. Empty when no trials were shown (e.g. MeSH unresolved).
+        shown: set[str] = set()
+        for ncts in shown_by_pair.values():
+            shown |= ncts
+
+        verdict_ncts = {v.get("nct") for v in verdicts if v.get("nct")}
+        missing = shown - verdict_ncts
+        unknown = verdict_ncts - shown
+        if missing:
+            return (
+                f"REJECTED: missing verdicts for {len(missing)} shown trial(s): "
+                f"{', '.join(sorted(missing))}. Classify EVERY shown trial "
+                f"(relevant or contaminated) and re-call.",
+                "",
+            )
+        if unknown:
+            return (
+                f"REJECTED: verdicts name {len(unknown)} trial(s) that were not shown: "
+                f"{', '.join(sorted(unknown))}. Only classify shown trials and re-call.",
+                "",
+            )
+
+        relevant_ncts = [
+            v["nct"] for v in verdicts if v.get("verdict") == "relevant" and v.get("nct")
+        ]
+        contaminated_ncts = [
+            v["nct"]
+            for v in verdicts
+            if v.get("verdict") == "contaminated" and v.get("nct")
+        ]
         artifact = FinalizeClinicalTrialsArtifact(
             summary=summary,
-            relevant_ncts=relevant_ncts or [],
-            contaminated_ncts=contaminated_ncts or [],
+            relevant_ncts=relevant_ncts,
+            contaminated_ncts=contaminated_ncts,
             relevance_reasoning=relevance_reasoning or "",
         )
         return "Analysis complete.", artifact

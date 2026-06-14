@@ -88,6 +88,9 @@ export interface ClinicalTrialsOutput {
   terminated: TerminatedTrialsResult | null;
   landscape: IndicationLandscape | null;
   summary: string;
+  // NCTs the agent judged a different disease/drug — filtered from the trial
+  // tables (mirrors the markdown report). The total_count headers stay verbatim.
+  contaminated_nct_ids: string[];
 }
 
 // ----- Literature -----

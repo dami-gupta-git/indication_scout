@@ -65,6 +65,33 @@ _PHASE_RANK = {
 
 _MESH_CAP = 10
 _WHY_STOPPED_CAP = 500
+_INTERVENTIONS_CAP = 5
+_BRIEF_SUMMARY_CAP = 160
+
+
+def _format_interventions(interventions: list, cap: int = _INTERVENTIONS_CAP) -> str:
+    """Render intervention names as "drug1; drug2", capped at `cap`.
+
+    Empty list renders as "(none)" so the LLM sees the absence explicitly.
+    """
+    if not interventions:
+        return "(none)"
+    names = [i.intervention_name for i in interventions[:cap] if i.intervention_name]
+    if not names:
+        return "(none)"
+    return "; ".join(names)
+
+
+def _truncate_brief_summary(summary: str | None, cap: int = _BRIEF_SUMMARY_CAP) -> str:
+    """Trim brief_summary to `cap`, preserving the original text."""
+    if not summary:
+        return "(none)"
+    text = summary.strip()
+    if not text:
+        return "(none)"
+    if len(text) <= cap:
+        return text
+    return text[:cap].rstrip() + "…"
 
 
 def _phase_distribution(trials: list[Trial]) -> str:
@@ -123,8 +150,9 @@ def _format_trial_row(
     """Render one trial as a pipe-separated row.
 
     Columns supported: nct_id, phase, status, start_date, completion_date,
-    stop_reason, mesh, title. The phase column is padded for visual
-    alignment; other columns render their value verbatim.
+    stop_reason, mesh, interventions, brief_summary, refs, title. The phase
+    column is padded for visual alignment; other columns render their value
+    verbatim.
 
     `classified_stop_reason` is passed in (rather than computed here) so this
     module stays free of the keyword-classification logic — the caller owns
@@ -162,6 +190,10 @@ def _format_trial_row(
                     parts.append("stop (raw): (none)")
         elif col == "mesh":
             parts.append(f"mesh: {_format_mesh_list(trial.mesh_conditions)}")
+        elif col == "interventions":
+            parts.append(f"drugs: {_format_interventions(trial.interventions)}")
+        elif col == "brief_summary":
+            parts.append(f"summary: {_truncate_brief_summary(trial.brief_summary)}")
         elif col == "refs":
             # PMIDs from CT.gov's referencesModule — papers the registry
             # links to this trial. Used by the supervisor as a signal that a

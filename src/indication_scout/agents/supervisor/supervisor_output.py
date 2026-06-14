@@ -78,6 +78,23 @@ class CandidateBlurb(BaseModel):
             "clinical-trials sub-agent summaries for this disease."
         ),
     )
+    approval_relationship: Literal[
+        "same",
+        "narrower",
+        "broader_overlapping",
+        "broader_distinct",
+        "related_family",
+        "combination",
+        "",
+    ] = Field(
+        default="",
+        description=(
+            "Relationship to an approved indication, set by the supervisor per the "
+            "APPROVAL RELATIONSHIPS rules. Empty when no related approval. For "
+            "broader_distinct / broader_overlapping the trial and literature artifacts "
+            "are contaminated by the approved subtype and cannot be cleanly separated."
+        ),
+    )
 
     @model_validator(mode="before")
     @classmethod

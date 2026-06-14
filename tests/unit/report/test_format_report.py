@@ -182,6 +182,119 @@ def test_fmt_clinical_trials_completed_caps_at_ten():
     assert "NCT00000010" not in rendered
 
 
+def test_fmt_clinical_trials_completed_skips_contaminated_examples():
+    # The CT agent flagged the two PAH trials as contamination (different indication).
+    # The rendered examples must skip them, but the total_count header stays verbatim.
+    pah_a = Trial(
+        nct_id="NCT00303459",
+        title="Bosentan + Sildenafil in PAH",
+        phase="Phase 4",
+        overall_status="Completed",
+    )
+    pah_b = Trial(
+        nct_id="NCT00644605",
+        title="Sildenafil in PAH",
+        phase="Phase 3",
+        overall_status="Completed",
+    )
+    systemic = Trial(
+        nct_id="NCT00150358",
+        title="Sildenafil in Hypertensive Men",
+        phase="Phase 4",
+        overall_status="Completed",
+    )
+    out = ClinicalTrialsOutput(
+        completed=CompletedTrialsResult(
+            total_count=64,
+            trials=[pah_a, pah_b, systemic],
+        ),
+        contaminated_nct_ids=["NCT00303459", "NCT00644605"],
+    )
+    rendered = _fmt_clinical_trials(out)
+    # Header count is the verbatim artifact total, not the filtered example count.
+    assert "**Completed trials (64 total):**" in rendered
+    # Contaminated PAH trials are still named in the "excluded" line at the top, but NOT
+    # rendered as completed-trial examples. Scope the check to the trial-table region.
+    table = rendered.split("**Completed trials")[1]
+    assert "NCT00303459" not in table
+    assert "NCT00644605" not in table
+    # The genuinely relevant systemic-hypertension trial surfaces.
+    assert (
+        "[NCT00150358](https://clinicaltrials.gov/study/NCT00150358) — "
+        "Sildenafil in Hypertensive Men (Phase 4, Completed)" in table
+    )
+
+
+def test_fmt_clinical_trials_terminated_skips_contaminated_examples():
+    pah = Trial(
+        nct_id="NCT02060487",
+        title="Oral Sildenafil on Mortality in PAH",
+        phase="Phase 4",
+        why_stopped="Primary objective met at interim analysis",
+    )
+    systemic = Trial(
+        nct_id="NCT01392638",
+        title="Sildenafil in Resistant Hypertension",
+        phase="Phase 2",
+        why_stopped="Slow enrollment",
+    )
+    out = ClinicalTrialsOutput(
+        terminated=TerminatedTrialsResult(total_count=18, trials=[pah, systemic]),
+        contaminated_nct_ids=["NCT02060487"],
+    )
+    rendered = _fmt_clinical_trials(out)
+    assert "**Terminated trials (18):**" in rendered
+    table = rendered.split("**Terminated trials")[1]
+    assert "NCT02060487" not in table
+    assert "NCT01392638" in table
+
+
+def test_fmt_clinical_trials_broader_distinct_suppresses_trial_tables():
+    # Hypertension demoted broader_distinct (PAH is the approved subtype). The artifact is
+    # dominated by PAH trials that can't be cleanly filtered, so example tables are suppressed
+    # while the verbatim total_count is still reported.
+    pah = Trial(
+        nct_id="NCT00323297",
+        title="Sildenafil + Bosentan in PAH",
+        phase="Phase 4",
+        overall_status="Completed",
+    )
+    out = ClinicalTrialsOutput(
+        completed=CompletedTrialsResult(total_count=64, trials=[pah]),
+        terminated=TerminatedTrialsResult(
+            total_count=18,
+            trials=[Trial(nct_id="NCT00586794", title="PAH in Eisenmenger", phase="Phase 3")],
+        ),
+    )
+    rendered = _fmt_clinical_trials(
+        out, "hypertension", approval_relationship="broader_distinct"
+    )
+    # Verbatim totals are reported.
+    assert "**Completed trials (64 total):**" in rendered
+    assert "**Terminated trials (18):**" in rendered
+    # But no example trials are listed.
+    assert "NCT00323297" not in rendered
+    assert "NCT00586794" not in rendered
+    assert "contaminated by approved subtype" in rendered
+
+
+def test_fmt_clinical_trials_related_family_still_lists_trials():
+    # A non-contaminated relationship renders the example tables normally.
+    trial = Trial(
+        nct_id="NCT04567890",
+        title="Drug in Crohn's",
+        phase="Phase 3",
+        overall_status="Completed",
+    )
+    out = ClinicalTrialsOutput(
+        completed=CompletedTrialsResult(total_count=3, trials=[trial])
+    )
+    rendered = _fmt_clinical_trials(
+        out, "crohn's disease", approval_relationship="related_family"
+    )
+    assert "NCT04567890" in rendered
+
+
 def test_fmt_clinical_trials_terminated_with_why_stopped():
     trial = Trial(
         nct_id="NCT01112233",

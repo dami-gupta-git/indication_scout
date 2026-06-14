@@ -4,8 +4,10 @@ Background: tools use `@tool(response_format="content_and_artifact")`. The LLM
 sees only the `content` string — the artifact stays Python-side. These tests
 guard the prompt-side contract (see `agent_data_contracts.md` at the project
 root): they assert the LLM-visible content string carries per-trial NCT ids,
-phase, mesh_conditions, and (for terminated) classified stop reasons. The
-supervisor-view test additionally asserts ISO dates and Borda-ranked output.
+phase, and title. search_trials still renders a mesh column; the completed and
+terminated relevance-classification views render interventions (drugs) and a
+truncated brief_summary instead (and, for terminated, classified stop reasons),
+with MeSH dropped from those views.
 
 Bug being guarded against: with content-only-aggregates strings, the
 sub-agent's prose claimed "no Phase 3" while Phase 3 trials existed in the
@@ -108,12 +110,14 @@ async def test_search_trials_content_string_sildenafil_hfpef():
 
 
 async def test_get_completed_content_string_sildenafil_hfpef():
-    """get_completed renders phase distribution + per-row table with NCT id,
-    phase, mesh, title — no status column (all COMPLETED), no dates
-    (delegated to supervisor view).
+    """get_completed renders the un-capped relevance-classification view: per-row
+    NCT id, phase, interventions (drugs), title, and truncated brief_summary.
+    MeSH is dropped from this view (it over-recalls subtypes); the agent judges
+    relevance from the drugs/title/summary instead. No status column (all
+    COMPLETED), no dates (delegated to the supervisor view).
 
     Trials are ordered by enrollment desc in the artifact (216, 70, 52, 44),
-    and the cap is 20, so all 4 are rendered in that order.
+    and the view is un-capped, so all 4 are rendered in that order.
     """
     tools = build_clinical_trials_tools(date_before=_CUTOFF)
     get_completed = next(t for t in tools if t.name == "get_completed")
@@ -144,25 +148,33 @@ async def test_get_completed_content_string_sildenafil_hfpef():
 
     expected_content = (
         "Completed for sildenafil × diastolic heart failure: 4 total\n"
+        "Judge relevance from the drugs (is sildenafil the studied drug?), title, and "
+        "summary — is the disease THIS indication, not a distinct subtype?\n"
         "Phase distribution (shown): Phase 4=1, Phase 3=2, Phase 2/Phase 3=1\n"
-        "Trials shown (top 20 by enrollment):\n"
-        "  NCT00763867 | Phase 3          | "
-        "refs: 23478662, 38533961, 35358904, 32150314, 31805424, 31272568, "
-        "28214792, 28194841, 27072860, 25104521, 24833648, 24162898, 22991405 | "
-        "mesh: Heart Failure; Heart Failure, Diastolic | "
+        "Trials shown (all 4 — classify EVERY one):\n"
+        "  NCT00763867 | Phase 3          | drugs: Placebo; Sildenafil | "
         "Evaluating the Effectiveness of Sildenafil at Improving Health Outcomes "
-        "and Exercise Ability in People With Diastolic Heart Failure (The RELAX Study)\n"
-        "  NCT01046838 | Phase 4          | refs: 36356959, 23406672 | "
-        "mesh: Heart Failure, Diastolic | "
+        "and Exercise Ability in People With Diastolic Heart Failure (The RELAX Study) | "
+        "summary: Diastolic heart failure (DHF), which affects older individuals and "
+        "women at a disproportionate rate, is a condition that can lead to shortness "
+        "of breath and flu…\n"
+        "  NCT01046838 | Phase 4          | drugs: Sildenafil; Placebo | "
         "SIDAMI - Sildenafil and Diastolic Dysfunction After Acute Myocardial "
-        "Infarction (AMI)\n"
-        "  NCT01726049 | Phase 3          | refs: 27873388, 26188003 | "
-        "mesh: Heart Failure, Diastolic; Hypertension, Pulmonary | "
-        "Sildenafil in HFpEF (Heart Failure With Preserved Ejection Fraction) and PH\n"
-        "  NCT01156636 | Phase 2/Phase 3  | refs: 21709061 | "
-        "mesh: Hypertension, Pulmonary; Heart Failure, Diastolic | "
+        "Infarction (AMI) | "
+        "summary: In patients with Doppler echocardiographic signs of elevated LV "
+        "filling pressures despite preserved LV systolic function after AMI treatment "
+        "with the phosphodie…\n"
+        "  NCT01726049 | Phase 3          | drugs: Sildenafil; Placebo | "
+        "Sildenafil in HFpEF (Heart Failure With Preserved Ejection Fraction) and PH | "
+        "summary: Aim of the study is to investigate whether Sildenafil treatment "
+        "results in a reduction of pulmonary artery pressure without decrease of "
+        "cardiac output (CO) and…\n"
+        "  NCT01156636 | Phase 2/Phase 3  | drugs: Sildenafil; Placebo | "
         "Phosphodiesterase-5 (PDE5) Inhibition and Pulmonary Hypertension in "
-        "Diastolic Heart Failure"
+        "Diastolic Heart Failure | "
+        "summary: Prevalence of heart failure (HF) with left ventricular (LV) "
+        "diastolic dysfunction and preserved ejection fraction (EF) (HFpEF) is "
+        "increasing. Prognosis worsens…"
     )
     assert msg.content == expected_content
 
@@ -173,8 +185,10 @@ async def test_get_completed_content_string_sildenafil_hfpef():
 
 
 async def test_get_terminated_content_string_sildenafil_stroke():
-    """get_terminated renders classified stop reason + indented why_stopped
-    excerpt under each row. Sildenafil × stroke has 2 terminated trials
+    """get_terminated renders the un-capped relevance-classification view:
+    interventions (drugs), classified stop reason, title, and truncated
+    brief_summary, with an indented why_stopped excerpt under each row (MeSH
+    dropped from this view). Sildenafil × stroke has 2 terminated trials
     (NCT00452582 'Failure to recruit...' → other; NCT02628847
     'Recruitment was problematic' → enrollment).
 
@@ -210,13 +224,16 @@ async def test_get_terminated_content_string_sildenafil_stroke():
         "Terminated for sildenafil × stroke: 1 total "
         "(0 safety/efficacy in shown set); dropped 1 post-cutoff "
         "termination(s) (not yet terminated at cutoff)\n"
+        "Judge relevance from the drugs (is sildenafil the studied drug?), title, and "
+        "summary — is the disease THIS indication, not a distinct subtype?\n"
         "Phase distribution (shown): Phase 1=1\n"
-        "Trials shown (top 20 by enrollment):\n"
-        "  NCT02628847 | Phase 1          | stop: enrollment | "
-        "refs: 23118941, 15746452, 12411660, 17188664, 18356548, 18418368, "
-        "21903952, 19717023 | "
-        "mesh: Stroke | "
-        "Sildenafil and Stroke Recovery\n"
+        "Trials shown (all 1 — classify EVERY one):\n"
+        "  NCT02628847 | Phase 1          | drugs: sildenafil citrate; Placebo | "
+        "stop: enrollment | "
+        "Sildenafil and Stroke Recovery | "
+        "summary: This is a small, pilot randomized clinical trial of administering "
+        "sildenafil citrate to individuals within 10 days of ischemic stroke who have "
+        "motor impairment…\n"
         "    why_stopped: Recruitment was problematic"
     )
     assert msg.content == expected_content

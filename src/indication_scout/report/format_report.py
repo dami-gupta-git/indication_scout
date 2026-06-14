@@ -58,8 +58,20 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
     return "\n".join(lines)
 
 
-def _fmt_clinical_trials(ct: ClinicalTrialsOutput, indication: str = "") -> str:
+# Relationships where the trial/literature artifacts are contaminated by an approved subtype
+# the registry pulls in (e.g. PAH under a "Hypertension" search) and the subtype cannot be
+# cleanly separated. The example trial tables are suppressed for these — a curated-looking list
+# is misleading when most of it is the approved subtype's trials.
+_CONTAMINATED_RELATIONSHIPS = frozenset({"broader_distinct", "broader_overlapping"})
+
+
+def _fmt_clinical_trials(
+    ct: ClinicalTrialsOutput,
+    indication: str = "",
+    approval_relationship: str = "",
+) -> str:
     lines: list[str] = []
+    suppress_trial_tables = approval_relationship in _CONTAMINATED_RELATIONSHIPS
 
     if ct.summary:
         lines.append(ct.summary)
@@ -97,10 +109,34 @@ def _fmt_clinical_trials(ct: ClinicalTrialsOutput, indication: str = "") -> str:
                 "- _Whitespace: no trials found for this drug × indication pair._"
             )
 
+    # Rendered example trials skip contamination (trials the CT agent judged a different
+    # indication pulled in by the recall-first search). The total_count headers stay verbatim
+    # per the broader_distinct rule — only the listed examples are filtered.
+    contaminated = set(ct.contaminated_nct_ids)
+
+    if suppress_trial_tables:
+        # Show the verbatim total but no example list — the artifact is dominated by the
+        # approved subtype's trials and cannot be cleanly filtered to this indication.
+        if ct.completed:
+            lines.append(
+                f"\n**Completed trials ({ct.completed.total_count} total):** "
+                "not listed — trial record contaminated by approved subtype; "
+                "see the demotion note in the summary."
+            )
+        if ct.terminated and ct.terminated.total_count:
+            lines.append(
+                f"\n**Terminated trials ({ct.terminated.total_count}):** "
+                "not listed — trial record contaminated by approved subtype."
+            )
+        if not lines:
+            lines.append("_No clinical trials data available._")
+        return "\n".join(lines)
+
     if ct.completed:
         c = ct.completed
         lines.append(f"\n**Completed trials ({c.total_count} total):**")
-        for trial in c.trials[:10]:
+        shown = [t for t in c.trials if t.nct_id not in contaminated]
+        for trial in shown[:10]:
             phase = trial.phase or "Unknown phase"
             status = trial.overall_status or ""
             lines.append(
@@ -111,7 +147,8 @@ def _fmt_clinical_trials(ct: ClinicalTrialsOutput, indication: str = "") -> str:
         term = ct.terminated
         if term.total_count:
             lines.append(f"\n**Terminated trials ({term.total_count}):**")
-            for t in term.trials[:10]:
+            shown = [t for t in term.trials if t.nct_id not in contaminated]
+            for t in shown[:10]:
                 reason = f" — *{t.why_stopped}*" if t.why_stopped else ""
                 title = f" {t.title}" if t.title else ""
                 phase = t.phase or "Unknown phase"
@@ -366,10 +403,13 @@ def format_report(output: SupervisorOutput) -> str:
                 ]
 
             if finding.clinical_trials:
+                rel = finding.blurb.approval_relationship if finding.blurb else ""
                 lines += [
                     "### Clinical Trials",
                     "",
-                    _fmt_clinical_trials(finding.clinical_trials, finding.disease),
+                    _fmt_clinical_trials(
+                        finding.clinical_trials, finding.disease, rel
+                    ),
                     "",
                 ]
 

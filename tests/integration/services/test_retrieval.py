@@ -574,6 +574,35 @@ async def test_synthesize_contraindication(svc, db_session_truncating):
     assert result.supporting_pmids == []
 
 
+async def test_synthesize_contradicts_direction(svc, db_session_truncating):
+    """Gefitinib + colorectal cancer is a robustly DISPROVEN hypothesis: multiple Phase II
+    trials show no efficacy. synthesize must capture this as strong evidence with
+    direction="contradicts" (NOT strength="none"), routing every cited PMID into
+    contradicting_pmids and leaving supporting_pmids empty. This is the case the
+    direction/strength split exists to represent."""
+    queries = ["gefitinib AND colorectal cancer"]
+    pmids = await svc.fetch_and_cache(queries, db_session_truncating)
+    top_5 = await svc.semantic_search(
+        "colorectal cancer", "CHEMBL939", pmids, db_session_truncating
+    )
+
+    result = await svc.synthesize("CHEMBL939", "colorectal cancer", top_5)
+
+    assert result.strength == "strong"
+    assert result.direction == "contradicts"
+    assert result.study_count == 5
+    # The whole point: disproven ≠ no evidence. Support list empty, every cited
+    # PMID lands in contradicting_pmids.
+    assert result.supporting_pmids == []
+    assert set(result.contradicting_pmids) == {
+        "16062074",
+        "18667394",
+        "16361624",
+        "20204674",
+        "17237473",
+    }
+
+
 async def test_synthesize_caches_result(tmp_path, db_session_truncating):
     """Second synthesize call with the same inputs returns the cached EvidenceSummary
     without invoking the LLM.

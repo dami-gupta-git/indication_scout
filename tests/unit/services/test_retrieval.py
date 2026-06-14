@@ -159,9 +159,18 @@ async def test_extract_organ_term_returns_stripped_string(svc):
 
 
 async def test_extract_organ_term_returns_cached_result(tmp_path):
+    from indication_scout.config import get_settings
     from indication_scout.utils.cache import cache_set
 
-    cache_set("organ_term", {"disease_name": "colorectal cancer"}, "colon", tmp_path)
+    cache_set(
+        "organ_term",
+        {
+            "disease_name": "colorectal cancer",
+            "small_llm_model": get_settings().small_llm_model,
+        },
+        "colon",
+        tmp_path,
+    )
 
     with patch(
         "indication_scout.services.retrieval.query_small_llm",
@@ -396,12 +405,17 @@ async def test_expand_search_terms_deduplicates_output(tmp_path, metformin_profi
 
 
 async def test_expand_search_terms_returns_cached_result(tmp_path, metformin_profile):
+    from indication_scout.config import get_settings
     from indication_scout.utils.cache import cache_set
 
     cached_queries = ["metformin AND colorectal cancer", "biguanides AND colon"]
     cache_set(
         "expand_search_terms",
-        {"chembl_id": "CHEMBL1431", "disease_name": "colorectal cancer"},
+        {
+            "chembl_id": "CHEMBL1431",
+            "disease_name": "colorectal cancer",
+            "small_llm_model": get_settings().small_llm_model,
+        },
         cached_queries,
         tmp_path,
     )
@@ -1330,12 +1344,17 @@ async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
 
 async def test_get_drug_competitors_returns_cached(tmp_path):
     """When a cache entry exists, the client and LLM are not called."""
+    from indication_scout.config import get_settings
     from indication_scout.utils.cache import cache_set
 
     cached = {"depression": ["competitor_a"]}
     cache_set(
         "competitors_merged",
-        {"chembl_id": "CHEMBL1", "date_before": None},
+        {
+            "chembl_id": "CHEMBL1",
+            "date_before": None,
+            "top_k": get_settings().literature_top_k,
+        },
         cached,
         tmp_path,
     )
