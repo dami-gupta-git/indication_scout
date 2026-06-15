@@ -24,6 +24,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.supervisor.supervisor_tools import build_supervisor_tools
 from indication_scout.services.retrieval import RetrievalService
+from indication_scout.config import get_settings
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
 )
@@ -96,6 +97,25 @@ def _preset_both_gates(tools: dict) -> None:
 @pytest.fixture
 def llm():
     return ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
+
+
+@pytest.fixture
+def no_fanout(monkeypatch):
+    """Disable supervisor_fanout for the duration of a test.
+
+    In normal mode (fanout=true, non-holdout) build_supervisor_tools strips
+    analyze_literature / analyze_clinical_trials from the toolset to force the
+    parallel investigate_top_candidates path. Tests that invoke those per-candidate
+    tools directly must build with fanout off so the tools are present.
+
+    Settings is frozen, so patch the get_settings reference inside supervisor_tools
+    to return a copy with only supervisor_fanout flipped (other fields unchanged).
+    """
+    patched = get_settings().model_copy(update={"supervisor_fanout": False})
+    monkeypatch.setattr(
+        "indication_scout.agents.supervisor.supervisor_tools.get_settings",
+        lambda: patched,
+    )
 
 
 # ------------------------------------------------------------------
@@ -211,7 +231,7 @@ async def test_find_candidates_metformin(llm, db_session_truncating, test_cache_
     ],
 )
 async def test_analyze_rejects_unlisted_disease(
-    llm, db_session_truncating, test_cache_dir, tool_name, empty_artifact_type
+    llm, db_session_truncating, test_cache_dir, no_fanout, tool_name, empty_artifact_type
 ):
     """analyze_literature / analyze_clinical_trials must reject any disease that wasn't
     surfaced by find_candidates or promoted by analyze_mechanism. Returns an empty artifact
@@ -396,7 +416,7 @@ async def test_analyze_mechanism_promotes_mechanism_only_candidates(
 
 
 async def test_mechanism_promoted_disease_is_investigatable_downstream(
-    llm, db_session_truncating, test_cache_dir
+    llm, db_session_truncating, test_cache_dir, no_fanout
 ):
     """A disease promoted by analyze_mechanism (source='mechanism') must be accepted
     by analyze_literature and analyze_clinical_trials — i.e. no REJECTED message and

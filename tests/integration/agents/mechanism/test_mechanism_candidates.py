@@ -14,6 +14,10 @@ from indication_scout.agents.mechanism.mechanism_candidates import (
     select_top_candidates,
 )
 
+# OT's GraphQL endpoint intermittently returns "Internal server error" 500s.
+# Rerun only on that transient transport failure, not on real assertion failures.
+pytestmark = pytest.mark.flaky(reruns=2, reruns_delay=1, only_rerun=["DataSourceError"])
+
 
 async def _build_rows(
     ot_client,

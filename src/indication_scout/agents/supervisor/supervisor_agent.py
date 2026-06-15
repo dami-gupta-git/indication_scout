@@ -234,6 +234,17 @@ async def run_supervisor_agent(
             continue
 
         canonical, source = match
+        # A None artifact means the sub-agent call errored before producing output (LangGraph
+        # returns an error ToolMessage with artifact=None). Don't create a finding for it — an
+        # uninvestigated disease must not reach disease_findings with empty results.
+        if msg.artifact is None:
+            logger.warning(
+                "Skipping %s for disease=%r (None artifact — sub-agent errored)",
+                msg.name,
+                disease_raw,
+            )
+            continue
+
         findings = findings_by_disease.setdefault(
             canonical, CandidateFindings(disease=canonical, source=source)
         )
