@@ -209,6 +209,14 @@ def _fmt_clinical_trials(
                 f"{len(shown)})._"
             )
 
+    # NOTE: a separate "Active / ongoing trials" registry list was removed. It rendered active
+    # trials from a status-only filter (_is_active over the search slice), which diverged from
+    # the card's authoritative `active_programs` (the LLM judgment, which includes unknown-status
+    # pivotal trials and is relevance/pivotal-curated) — e.g. a card could cite an unknown-status
+    # Phase 3 the status-filtered list dropped. Two independent definitions of "active" produced
+    # card-vs-section mismatches. Active trials are already surfaced authoritatively via the
+    # card's active_programs and the CT prose; the redundant second list is gone.
+
     if ct.terminated:
         term = ct.terminated
         if term.total_count:
@@ -464,14 +472,17 @@ def format_report(output: SupervisorOutput) -> str:
     lines += ["## Findings by Disease", ""]
     if output.disease_findings:
         for finding in output.disease_findings:
+            # Each disease nests UNDER "## Findings by Disease", so it is an H3 and its
+            # Literature/Clinical Trials subsections are H4 — keeps the heading hierarchy
+            # nested for document navigation/TOC rather than flat at H2/H3.
             lines += [
-                f"## {_title_case_disease(finding.disease)} _(source: {finding.source})_",
+                f"### {_title_case_disease(finding.disease)} _(source: {finding.source})_",
                 "",
             ]
 
             if finding.literature:
                 lines += [
-                    f"### Literature — {_title_case_disease(finding.disease)}",
+                    f"#### Literature — {_title_case_disease(finding.disease)}",
                     "",
                     _fmt_literature(finding.literature),
                     "",
@@ -480,7 +491,7 @@ def format_report(output: SupervisorOutput) -> str:
             if finding.clinical_trials:
                 rel = finding.blurb.approval_relationship if finding.blurb else ""
                 lines += [
-                    "### Clinical Trials",
+                    "#### Clinical Trials",
                     "",
                     _fmt_clinical_trials(finding.clinical_trials, finding.disease, rel),
                     "",

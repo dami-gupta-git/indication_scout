@@ -92,10 +92,19 @@ completed phase.
 8. untested — no trials.
 
 Also summarize ACTIVE PROGRAMS — what clinical activity is still MOVING (recruiting, active,
-not-yet-recruiting, enrolling, suspended). One short line naming the active pivotal programs
-(prefer Phase 2/3 and Phase 3) with their NCT ids, e.g. "2 Phase 3 recruiting (NCT…, NCT…)".
-A COMPLETED or TERMINATED trial is NOT an active program — never list one here. If nothing is
-recruiting/active, return exactly "None active".
+not-yet-recruiting, enrolling, suspended). A COMPLETED or TERMINATED trial is NOT an active
+program — never list one here. One short line, following these rules EXACTLY:
+- If an active PIVOTAL trial exists (Phase 2/3 or Phase 3), name those with their NCT ids, e.g.
+  "2 Phase 3 recruiting (NCT…, NCT…)". Prefer pivotal; you may append a brief note of any
+  non-pivotal activity.
+- If NO pivotal trial is active but EARLIER-phase or POST-APPROVAL trials ARE moving (Phase 1,
+  Phase 1/2, Phase 2, Phase 4, Early Phase 1), do NOT write "None active" — that would be false.
+  Write exactly: "No pivotal program active; <phase>-only activity (NCT…)", e.g. "No pivotal
+  program active; Phase 1/Phase 4-only activity (NCT06959784)". Phase 4 is POST-APPROVAL
+  off-label activity, NOT pivotal development — so it is correctly "no pivotal program active",
+  but it IS still activity and must be disclosed, never hidden behind "None active".
+- ONLY when NOTHING is recruiting/active at any phase, return exactly "None active".
+Never write "None active" in the same line as a list of active trials — that is self-contradictory.
 
 Trials:
 {trials}
