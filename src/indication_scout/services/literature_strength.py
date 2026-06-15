@@ -42,12 +42,19 @@ CRITICAL — strength and direction grade evidence for THIS EXACT DRUG only:
 - An abstract about a DIFFERENT drug — even one in the same mechanistic class (e.g. another GLP-1
   receptor agonist) — is NOT direct evidence for this drug. It is class-level context.
 - An abstract about this drug but a DIFFERENT disease is NOT relevant evidence for this pair.
+- THERAPEUTIC INTENT: evidence that the drug was studied IN patients who HAVE this disease but
+  FOR a different condition (a comorbidity, smoking cessation, weight loss, etc.) is NOT evidence
+  that the drug TREATS this disease. It does not support the repurposing hypothesis. Set
+  evidence_basis="none" in that case (there is no relevant evidence for treating this disease),
+  even though the abstracts are about this drug and mention this disease.
 - evidence_basis:
-  - "drug_specific": at least one abstract reports clinical/preclinical evidence for THIS drug in
-    THIS disease.
+  - "drug_specific": at least one abstract reports clinical/preclinical evidence for THIS drug
+    used to TREAT THIS disease.
   - "class_level": the disease-relevant evidence is for OTHER drugs in the class; there is no
     direct evidence for this drug in this disease.
-  - "none": no relevant evidence at all (neither drug-specific nor class-level for this disease).
+  - "none": no relevant evidence for treating this disease with this drug — neither drug-specific
+    nor class-level, OR the only this-drug evidence is for a different condition in this
+    population (the therapeutic-intent case above).
 - strength grades DRUG-SPECIFIC evidence quantity/quality only:
   - "strong": multiple drug-specific clinical studies (RCTs, large cohorts) for THIS drug in THIS
     disease. NEVER "strong" when evidence_basis is "class_level" or "none".

@@ -38,7 +38,7 @@ DEV_STAGE_PHRASE = {
         "development program for this indication)"
     ),
     "early_phase": "Early-phase only, no completed pivotal readout",
-    "untested": "No trials on record for this indication",
+    "untested": "No registry (ClinicalTrials.gov) trials on record for this indication",
 }
 
 DEV_STAGE_TIERS = tuple(DEV_STAGE_PHRASE)

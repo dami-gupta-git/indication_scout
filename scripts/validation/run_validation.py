@@ -1,6 +1,6 @@
 """Holdout validation harness.
 
-Reads drug,indication,date rows from runbook.xt, runs `scout find -d <drug>
+Reads drug,indication,date rows from runbook.txt, runs `scout find -d <drug>
 --date-before <date>` for each, then scores whether the known runbook indication
 shows up in the holdout report:
 

@@ -1033,25 +1033,25 @@ def build_supervisor_tools(
     # (scripts/probe_supervisor_t2dm.py) showed the supervisor LLM systematically skips "obvious"
     # candidates like T2DM for semaglutide regardless of prompt instructions — exactly the
     # candidate the holdout is testing, so we remove the LLM's ability to skip by auto-investigating
-    # the top-10.
-    HOLDOUT_INVESTIGATION_CAP = 10
-    # Non-holdout fan-out cap. Mirrors the prompt's "investigate up to a maximum of 6" so the
-    # parallel path investigates the same candidate set the serial path would.
-    FANOUT_INVESTIGATION_CAP = 3
+    # the top-N (see INVESTIGATION_CAP).
+    # Single cap shared by holdout and non-holdout runs: holdout must mirror production exactly,
+    # so it investigates the same number of candidates the live application would. A separate,
+    # wider holdout cap would make the holdout comparison invalid.
+    INVESTIGATION_CAP = 3
 
     @tool(response_format="content_and_artifact")
     async def investigate_top_candidates(
         drug_name: str,
     ) -> tuple[str, list[dict]]:
-        """[HOLDOUT MODE ONLY] Auto-investigate the top-10 candidates from the merged allowlist.
+        """Auto-investigate the top-N candidates from the merged allowlist.
 
-        Runs analyze_literature AND analyze_clinical_trials in parallel for the top 10
-        candidates by mechanism+competitor strength. Removes the LLM's ability to skip
-        "obvious" candidates that holdout-mode evaluations specifically need to recover.
+        Runs analyze_literature AND analyze_clinical_trials in parallel for the top
+        INVESTIGATION_CAP candidates by mechanism+competitor strength. Removes the LLM's
+        ability to skip "obvious" candidates that evaluations specifically need to recover.
 
         Call this ONCE, after find_candidates and analyze_mechanism complete. After this
         returns, you may still call analyze_literature / analyze_clinical_trials for
-        candidates beyond the top 10 if you want.
+        candidates beyond the top N if you want.
         """
         # Wait for both seed tools to finish populating the allowlist.
         await find_candidates_done.wait()
@@ -1061,16 +1061,10 @@ def build_supervisor_tools(
 
         # Top-N from the merged allowlist. Insertion order preserves find_candidates's competitor
         # ranking, with mechanism-promoted entries appended in analyze_mechanism's order. Holdout
-        # uses a wider cap (recover obvious candidates); non-holdout fan-out matches the serial
-        # path's per-run investigation ceiling (the prompt's "up to 6") so output parity holds.
-        # supervisor_candidate_cap is NOT used here — it only trims the final ranked list, not how
-        # many diseases get investigated.
-        cap = (
-            HOLDOUT_INVESTIGATION_CAP
-            if date_before is not None
-            else FANOUT_INVESTIGATION_CAP
-        )
-        top_n = list(allowed_diseases.items())[:cap]
+        # and non-holdout use the same cap so the holdout mirrors what the live application would
+        # investigate. supervisor_candidate_cap is NOT used here — it only trims the final ranked
+        # list, not how many diseases get investigated.
+        top_n = list(allowed_diseases.items())[:INVESTIGATION_CAP]
         if not top_n:
             return "No candidates in allowlist; nothing to investigate.", []
 
