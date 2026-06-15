@@ -94,6 +94,10 @@ class Settings(BaseSettings):
 
     # Supervisor
     supervisor_candidate_cap: int
+    # How many top candidates investigate_top_candidates pulls literature + clinical-trial
+    # evidence for (the deep-dive fan-out). Independent of supervisor_candidate_cap, which only
+    # trims the final ranked list. Raise to investigate more diseases per run (more cost/time).
+    supervisor_investigation_cap: int
     # When true, the supervisor exposes investigate_top_candidates in non-holdout
     # runs and the prompt directs the LLM to call it once instead of investigating
     # each candidate serially. Trades the per-candidate ReAct loop for a single
@@ -103,6 +107,10 @@ class Settings(BaseSettings):
     # Mechanism
     mechanism_signal_threshold: float
     mechanism_associations_cap: int
+    # Top-scored OT associations pulled per target before filtering.
+    mechanism_associations_per_target: int
+    # Final count of POSITIVE repurposing candidates the mechanism agent surfaces.
+    mechanism_top_candidates: int
 
     # Disease helper
     disease_pubmed_min_results: int

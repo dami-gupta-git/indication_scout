@@ -9,7 +9,6 @@ Hits real ClinicalTrials.gov, openFDA, ChEMBL, NCBI, and Anthropic APIs.
 """
 
 import logging
-import re
 from datetime import date
 
 import pytest
@@ -83,8 +82,12 @@ async def test_approved_pair_semaglutide_t2dm(clinical_trials_agent):
     assert set(output.approval.drug_names_checked) == {"semaglutide"}
 
     # --- Summary (LLM-generated; assertions reflect prompt rules) ---
+    # The CT prompt now forbids the summary from drawing any approval conclusion —
+    # "the supervisor owns all approval framing" (prompts/clinical_trials.txt). So we no
+    # longer assert "fda approved" appears here; the approval contract is the deterministic
+    # ApprovalCheck artifact above. The summary is a trial-program description and must name
+    # the indication.
     summary_lower = output.summary.lower()
-    assert "fda-approved" in summary_lower or "fda approved" in summary_lower
     assert "diabetes" in summary_lower
 
     # Banned hedge phrasings — prompt rule: "Do not hedge."
@@ -129,10 +132,12 @@ async def test_no_label_atabecestat_alzheimer(clinical_trials_agent_live):
     }
 
     # --- Summary (LLM-generated; assertions reflect prompt rules) ---
+    # No label-absence assertion: the CT prompt now forbids the summary from drawing any
+    # approval/label conclusion ("the supervisor owns all approval framing",
+    # prompts/clinical_trials.txt). The label_found=False contract is the deterministic
+    # ApprovalCheck artifact above. Assert only that the summary describes the trial program.
     summary_lower = output.summary.lower()
-
-    # The summary should reference the FDA label (its absence for this drug).
-    assert "label" in summary_lower
+    assert "atabecestat" in summary_lower or "jnj-54861911" in summary_lower
 
 
 async def test_confirmed_failure_count_scaled_atorvastatin_alzheimer(
@@ -180,24 +185,14 @@ async def test_confirmed_failure_count_scaled_atorvastatin_alzheimer(
     )
 
     # --- Summary (LLM-generated) ---
+    # No "did not lead to approval" assertion: the CT prompt now forbids the summary from
+    # drawing approval conclusions ("the supervisor owns all approval framing",
+    # prompts/clinical_trials.txt). The is_approved=False / label_found=True contract is the
+    # deterministic ApprovalCheck artifact above. Assert only that the summary describes the
+    # trial program for this pair.
     summary_lower = output.summary.lower()
     assert "atorvastatin" in summary_lower
     assert "alzheimer" in summary_lower
-
-    # Prompt rule: "State explicitly: the pivotal trials did not lead to
-    # approval." Accept close paraphrases, including an intervening qualifier
-    # ("regulatory"/"FDA") and verbs like advance ("did not advance to
-    # approval", "did not lead to regulatory approval").
-    did_not_lead_pattern = re.compile(
-        r"(did not|have not|has not|no[t]?)\s+"
-        r"(lead|led|result(ed)?|advance(d)?|progress(ed)?)\s+"
-        r"(to|in)\s+(\w+\s+){0,2}approval",
-        re.IGNORECASE,
-    )
-    assert did_not_lead_pattern.search(output.summary), (
-        f"Expected 'did not lead to approval' phrasing per INFERENCE rule; "
-        f"summary: {output.summary!r}"
-    )
 
     # Banned hedge phrasings — prompt rule: "Do not hedge."
     for phrase in _BANNED_HEDGE_PHRASES:

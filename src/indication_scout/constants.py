@@ -252,9 +252,6 @@ GOF_ACTION_TYPES: frozenset[str] = frozenset(
     }
 )
 
-# Number of top POSITIVE repurposing candidates the mechanism agent surfaces.
-MECHANISM_TOP_CANDIDATES: int = 5
-
 # -- Supervisor top-N evidence gate -----------------------------------------
 # A candidate is excluded from the supervisor's top-N ranking (summary +
 # blurbs) when it has both zero clinical trials AND fewer than this many

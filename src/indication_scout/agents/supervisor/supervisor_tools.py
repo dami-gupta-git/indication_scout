@@ -473,7 +473,7 @@ def build_supervisor_tools(
 
         # Cap applies to competitor entries only. Mechanism-promoted entries are appended on top
         # after the merge below — they're already small (capped upstream by
-        # MECHANISM_TOP_CANDIDATES) and dropping them here would defeat the purpose of the merge.
+        # settings.mechanism_top_candidates) and dropping them here would defeat the purpose of the merge.
         candidate_cap = get_settings().supervisor_candidate_cap
         if len(diseases) > candidate_cap:
             logger.warning(
@@ -1033,11 +1033,12 @@ def build_supervisor_tools(
     # (scripts/probe_supervisor_t2dm.py) showed the supervisor LLM systematically skips "obvious"
     # candidates like T2DM for semaglutide regardless of prompt instructions — exactly the
     # candidate the holdout is testing, so we remove the LLM's ability to skip by auto-investigating
-    # the top-N (see INVESTIGATION_CAP).
+    # the top-N (settings.supervisor_investigation_cap).
     # Single cap shared by holdout and non-holdout runs: holdout must mirror production exactly,
     # so it investigates the same number of candidates the live application would. A separate,
-    # wider holdout cap would make the holdout comparison invalid.
-    INVESTIGATION_CAP = 3
+    # wider holdout cap would make the holdout comparison invalid. Env-tunable via
+    # .env.constants (SUPERVISOR_INVESTIGATION_CAP) so a validation run can widen coverage.
+    investigation_cap = get_settings().supervisor_investigation_cap
 
     @tool(response_format="content_and_artifact")
     async def investigate_top_candidates(
@@ -1046,7 +1047,7 @@ def build_supervisor_tools(
         """Auto-investigate the top-N candidates from the merged allowlist.
 
         Runs analyze_literature AND analyze_clinical_trials in parallel for the top
-        INVESTIGATION_CAP candidates by mechanism+competitor strength. Removes the LLM's
+        supervisor_investigation_cap candidates by mechanism+competitor strength. Removes the LLM's
         ability to skip "obvious" candidates that evaluations specifically need to recover.
 
         Call this ONCE, after find_candidates and analyze_mechanism complete. After this
@@ -1064,7 +1065,7 @@ def build_supervisor_tools(
         # and non-holdout use the same cap so the holdout mirrors what the live application would
         # investigate. supervisor_candidate_cap is NOT used here — it only trims the final ranked
         # list, not how many diseases get investigated.
-        top_n = list(allowed_diseases.items())[:INVESTIGATION_CAP]
+        top_n = list(allowed_diseases.items())[:investigation_cap]
         if not top_n:
             return "No candidates in allowlist; nothing to investigate.", []
 

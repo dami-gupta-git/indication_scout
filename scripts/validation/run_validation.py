@@ -141,7 +141,14 @@ def run_scout(drug: str, date: str, force: bool = False) -> Path | None:
         )
     except subprocess.TimeoutExpired as e:
         # Persist whatever the child emitted before the kill so a hang is inspectable.
-        partial = (e.stdout or "") + (e.stderr or "")
+        # Despite text=True, TimeoutExpired.stdout/stderr can come back as bytes (CPython
+        # does not always decode on the timeout path), so decode defensively before joining.
+        def _as_text(x: str | bytes | None) -> str:
+            if x is None:
+                return ""
+            return x.decode("utf-8", "replace") if isinstance(x, bytes) else x
+
+        partial = _as_text(e.stdout) + _as_text(e.stderr)
         log_path.write_text(partial, encoding="utf-8")
         logger.error(
             "scout TIMED OUT after %ds for %s/%s — killed (log: %s)",

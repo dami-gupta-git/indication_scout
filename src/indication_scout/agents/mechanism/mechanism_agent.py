@@ -24,7 +24,7 @@ from indication_scout.agents.mechanism.mechanism_row_builder import (
     build_candidate_rows,
 )
 from indication_scout.agents.mechanism.mechanism_tools import build_mechanism_tools
-from indication_scout.constants import MECHANISM_TOP_CANDIDATES
+from indication_scout.config import get_settings
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.models.model_open_targets import MechanismOfAction
 from indication_scout.services.approval_check import (
@@ -34,9 +34,7 @@ from indication_scout.services.approval_check import (
 
 logger = logging.getLogger(__name__)
 
-# Number of top-scored associations per target we pull evidence for. Not the final candidate count —
-# select_top_candidates trims to MECHANISM_TOP_CANDIDATES after filtering.
-_ASSOCIATIONS_PER_TARGET = 15
+_settings = get_settings()
 
 SYSTEM_PROMPT = """\
 You analyze a drug's molecular targets to surface disease associations for repurposing.
@@ -217,7 +215,7 @@ async def _assemble_candidates(
                     ot_client,
                     target_id,
                     symbol_to_actions.get(symbol, set()),
-                    _ASSOCIATIONS_PER_TARGET,
+                    _settings.mechanism_associations_per_target,
                 )
                 for symbol, target_id in drug_targets.items()
             ],
@@ -269,5 +267,5 @@ async def _assemble_candidates(
         )
 
     return select_top_candidates(
-        rows, approved_diseases=approved, limit=MECHANISM_TOP_CANDIDATES
+        rows, approved_diseases=approved, limit=_settings.mechanism_top_candidates
     )
