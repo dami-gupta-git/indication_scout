@@ -68,6 +68,29 @@ def test_fmt_literature_omits_direction_none_and_empty_contradicting():
     assert "Contradicting PMIDs" not in out
 
 
+def test_fmt_literature_class_level_basis_renders_honest_strength_line():
+    """class_level evidence_basis must NOT render a bare strength/direction (the Parkinson bug);
+    the line says 'class-level signal (no direct evidence for this drug)' instead."""
+    lit = LiteratureOutput(
+        evidence_summary=EvidenceSummary(
+            summary="GLP-1 class RCTs in Parkinson's; no direct semaglutide evidence.",
+            study_count=4,
+            strength="none",
+            direction="none",
+            evidence_basis="class_level",
+            supporting_pmids=["38598572"],
+        )
+    )
+    out = _fmt_literature(lit)
+    assert (
+        "**Evidence strength:** class-level signal (no direct evidence for this drug)"
+        in out
+    )
+    # the prose still renders, but the line must not read as direct drug strength
+    assert "**Evidence strength:** strong" not in out
+    assert "**Evidence strength:** none" not in out
+
+
 def test_fmt_clinical_trials_empty_returns_placeholder():
     out = ClinicalTrialsOutput()
     rendered = _fmt_clinical_trials(out)
@@ -157,7 +180,9 @@ def test_fmt_clinical_trials_completed_renders_count_and_top_trials():
         )
     )
     rendered = _fmt_clinical_trials(out)
-    assert "**Completed trials (7 total):**" in rendered
+    # 7 on record but only 1 fetched, none hidden → reconciling slice clause, no false subtract.
+    assert "**Completed trials (7 total on record):**" in rendered
+    assert "showing 1 of the first 1 fetched" in rendered
     assert (
         "[NCT04567890](https://clinicaltrials.gov/study/NCT04567890) — Semaglutide in NASH (Phase 3, Completed)"
         in rendered
@@ -211,11 +236,12 @@ def test_fmt_clinical_trials_completed_skips_contaminated_examples():
         contaminated_nct_ids=["NCT00303459", "NCT00644605"],
     )
     rendered = _fmt_clinical_trials(out)
-    # Header count is the verbatim artifact total; the excluded-count suffix explains the
-    # gap between total and rendered rows.
+    # Header states the authoritative total on record; the clause reconciles the FETCHED slice
+    # (3 fetched, 2 hidden → 1 shown) WITHOUT implying 64 - 2 = 62 visible.
+    assert "**Completed trials (64 total on record):**" in rendered
     assert (
-        "**Completed trials (64 total, 2 excluded as a different indication):**"
-        in rendered
+        "showing 1 relevant of the first 3 fetched "
+        "(2 of those fetched hidden as a different indication)." in rendered
     )
     # Contaminated PAH trials are still named in the "excluded" line at the top, but NOT
     # rendered as completed-trial examples. Scope the check to the trial-table region.
@@ -247,8 +273,11 @@ def test_fmt_clinical_trials_terminated_skips_contaminated_examples():
         contaminated_nct_ids=["NCT02060487"],
     )
     rendered = _fmt_clinical_trials(out)
+    # 18 on record; 2 fetched, 1 hidden → 1 shown, reconciled against the fetched slice.
+    assert "**Terminated trials (18 total on record):**" in rendered
     assert (
-        "**Terminated trials (18, 1 excluded as a different indication):**" in rendered
+        "showing 1 relevant of the first 2 fetched "
+        "(1 of those fetched hidden as a different indication)." in rendered
     )
     table = rendered.split("**Terminated trials")[1]
     assert "NCT02060487" not in table
@@ -269,7 +298,9 @@ def test_fmt_clinical_trials_broader_distinct_suppresses_trial_tables():
         completed=CompletedTrialsResult(total_count=64, trials=[pah]),
         terminated=TerminatedTrialsResult(
             total_count=18,
-            trials=[Trial(nct_id="NCT00586794", title="PAH in Eisenmenger", phase="Phase 3")],
+            trials=[
+                Trial(nct_id="NCT00586794", title="PAH in Eisenmenger", phase="Phase 3")
+            ],
         ),
     )
     rendered = _fmt_clinical_trials(
@@ -312,7 +343,8 @@ def test_fmt_clinical_trials_terminated_with_why_stopped():
         terminated=TerminatedTrialsResult(total_count=1, trials=[trial])
     )
     rendered = _fmt_clinical_trials(out)
-    assert "**Terminated trials (1):**" in rendered
+    # 1 on record, 1 fetched, none hidden → all fetched, no reconciling clause needed.
+    assert "**Terminated trials (1 total on record):**" in rendered
     assert (
         "[NCT01112233](https://clinicaltrials.gov/study/NCT01112233) Cardio Trial (Phase 2)"
         " [enrollment] — *Sponsor decision due to slow enrollment*" in rendered
@@ -500,3 +532,71 @@ def test_format_report_unknown_drug_name_default():
     output = SupervisorOutput()
     rendered = format_report(output)
     assert "# IndicationScout Report: Unknown Drug" in rendered
+
+
+def test_fmt_clinical_trials_truncates_with_disclosure():
+    """When the relevant completed list exceeds the render cap (10), the body lists the first
+    10 and discloses the remainder so the count can't read as the full list (gefitinib ×
+    breast cancer shape: 18 relevant completed, only 10 shown)."""
+    trials = [
+        Trial(
+            nct_id=f"NCT{i:08d}",
+            title=f"Study {i}",
+            phase="Phase 2",
+            overall_status="COMPLETED",
+        )
+        for i in range(18)
+    ]
+    out = ClinicalTrialsOutput(
+        completed=CompletedTrialsResult(total_count=18, trials=trials),
+    )
+    rendered = _fmt_clinical_trials(out)
+    # First 10 listed, 11th not.
+    assert "NCT00000009" in rendered
+    assert "NCT00000010" not in rendered
+    # Disclosure line present with correct remainder and totals.
+    assert "and 8 more relevant completed trial(s) not listed" in rendered
+    assert "showing first 10 of 18" in rendered
+
+
+def test_fmt_clinical_trials_no_truncation_note_at_or_below_cap():
+    """Exactly 10 relevant trials → all shown, no truncation disclosure."""
+    trials = [
+        Trial(
+            nct_id=f"NCT{i:08d}",
+            title=f"Study {i}",
+            phase="Phase 2",
+            overall_status="COMPLETED",
+        )
+        for i in range(10)
+    ]
+    out = ClinicalTrialsOutput(
+        completed=CompletedTrialsResult(total_count=10, trials=trials),
+    )
+    rendered = _fmt_clinical_trials(out)
+    assert "more relevant completed trial(s) not listed" not in rendered
+
+
+def test_fmt_clinical_trials_renders_authoritative_dev_stage_line():
+    """The per-disease CT section renders the authoritative development-stage phrase from
+    ct.signals.dev_stage — the single source of the phase-tier judgment (the CT prose must not
+    judge the tier, so this is the only place it is stated)."""
+    from indication_scout.agents.clinical_trials.clinical_trials_output import (
+        TrialSignals,
+    )
+
+    out = ClinicalTrialsOutput(
+        summary="NCT05205928 (Phase 2/Phase 3, COMPLETED) studied semaglutide in T1DM.",
+        signals=TrialSignals(dev_stage="completed_phase3"),
+    )
+    rendered = _fmt_clinical_trials(out)
+    assert "**Development stage:** Phase 3 completed for this indication" in rendered
+    # the prose still renders below it
+    assert "NCT05205928" in rendered
+
+
+def test_fmt_clinical_trials_no_dev_stage_line_when_no_signals():
+    """No signals → no development-stage line (e.g. sub-agent didn't classify relevance)."""
+    out = ClinicalTrialsOutput(summary="some prose")
+    rendered = _fmt_clinical_trials(out)
+    assert "**Development stage:**" not in rendered

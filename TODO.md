@@ -13,6 +13,14 @@ Active tasks organized by component. Items here are actionable and derived from 
 - [x] Unit tests for `run_rag` in `tests/unit/runners/test_rag_runner.py`
 - [x] Integration tests for `synthesize` in `tests/integration/services/test_retrieval.py`
 - [ ] Integration test for `run_rag` in `tests/integration/services/test_retrieval.py`
+- [ ] Preserve class-level evidence DIRECTION. `judge_literature_strength` flattens
+      direction to "none" whenever `evidence_basis != "drug_specific"` (enforced in
+      `_parse_strength`), so a meaningful class-level negative — e.g. the whole GLP-1 class
+      failed in Parkinson's (NLY01 negative) — is discarded. Safe (omission over inaccuracy)
+      but informative for a repurposing tool. Fix additively: a SEPARATE `class_direction`
+      field on `LiteratureStrength` / `EvidenceSummary`, populated only for `class_level`,
+      rendered as distinct prose ("class-level signal: GLP-1 class failed in PD") and kept OUT
+      of `es.strength` / `es.direction` so the supervisor ranking path stays clean.
 
 ## Data Sources
 

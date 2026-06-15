@@ -32,6 +32,7 @@ from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
 from indication_scout.services.embeddings import embed_async
 from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.services.literature_strength import judge_literature_strength
 from indication_scout.services.llm import (
     parse_llm_response,
     query_llm,
@@ -754,6 +755,31 @@ class RetrievalService:
             )
             raise
         summary = EvidenceSummary(**data)
+
+        # Authoritative drug-specific strength: an isolated call grades the SAME abstracts for
+        # THIS drug only, so a class-level (other-drug) RCT body cannot inflate strength to
+        # "strong" while the prose says "no direct evidence for <drug>" (the Parkinson bug).
+        # One source of truth — its verdict OVERWRITES synthesize's strength/direction/
+        # is_observational and sets evidence_basis. The summary/key_findings/pmids prose stays
+        # (it already wrote the honest disclaimer). Skipped in holdout_mode, whose relaxed
+        # rubric intentionally scores class-level evidence. On None (parse failure / no
+        # abstracts) the synthesize values are kept — never fabricated.
+        if not holdout_mode:
+            ls = await judge_literature_strength(
+                [
+                    {"pmid": r.pmid, "title": r.title, "abstract": r.abstract}
+                    for r in top_abstracts
+                ],
+                drug=pref_name,
+                indication=disease,
+                cache_dir=self.cache_dir,
+            )
+            if ls is not None:
+                summary.strength = ls.strength
+                summary.direction = ls.direction
+                summary.is_observational = ls.is_observational
+                summary.evidence_basis = ls.evidence_basis
+
         cache_set(
             "synthesize",
             cache_params,

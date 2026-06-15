@@ -12,6 +12,12 @@ class EvidenceSummary(BaseModel):
     # whether it supports or contradicts. direction = which way it points.
     strength: Literal["strong", "moderate", "weak", "none"] = "none"
     direction: Literal["supports", "contradicts", "mixed", "none"] = "none"
+    # Whether the strength/direction above grade evidence FOR THIS DRUG or only for other drugs
+    # in the same class. Set by the isolated judge_literature_strength call (authoritative).
+    # "class_level" means the disease-relevant RCTs are for sibling drugs, not this one — the
+    # strength is then NOT "strong" (services/literature_strength.py). Renderers surface the
+    # basis so a card never claims "strong, RCT-backed" for class-level-only evidence.
+    evidence_basis: Literal["drug_specific", "class_level", "none"] = "none"
     # True when the relevant evidence includes at least one RCT/controlled trial, False when
     # it is purely observational, None when undetermined (no-data). Lets the supervisor avoid
     # calling RCT-backed evidence "observational". None stays None (no default coercion).

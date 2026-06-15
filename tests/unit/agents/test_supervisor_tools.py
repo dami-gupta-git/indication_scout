@@ -22,6 +22,20 @@ from indication_scout.models.model_clinical_trials import (
 )
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 
+
+@pytest.fixture(autouse=True)
+def _mock_judge_interpretive():
+    """Stub the isolated interpretive call to a no-op (returns None) so finalize_supervisor
+    tests stay hermetic and exercise only the deterministic override/assembly logic. When the
+    call returns None the enrich pass leaves the LLM-written interpretive fields untouched.
+    Tests that assert interpretive output patch it themselves."""
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.judge_interpretive",
+        new=AsyncMock(return_value=None),
+    ):
+        yield
+
+
 # --- semaglutide × NAFLD regression: briefing surfaces MASH so the prompt's ---
 # --- APPROVED-CANDIDATE SHORT-CIRCUIT case C can fire on NAFLD. -----------------
 
@@ -395,6 +409,7 @@ async def test_holdout_summary_reconstructed_imatinib():
     """imatinib"""
     pass
 
+
 async def test_holdout_summary_reconstructed_for_sildenafil_2005():
     """Sildenafil holdout at 2005-06-01: deterministic reconstruction must produce
     the structured fact list documented in supervisor_holdout.txt, regardless of
@@ -489,57 +504,6 @@ async def test_holdout_summary_reconstructed_for_sildenafil_2005():
     assert msg.artifact["blurbs"] == []
 
 
-async def test_finalize_repairs_false_observational_in_blurb():
-    """A3 deterministic repair: when is_observational is False (RCT-backed), finalize must
-    strip a false 'observational' claim from every blurb free-text field. Non-holdout path
-    so validated blurbs are returned (holdout discards blurbs)."""
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
-
-    allowed_diseases["covid-19"] = ("covid-19", "competitor")
-    findings_local["covid-19"] = {
-        "literature": _make_lit(
-            "moderate", 5, 2, direction="supports", is_observational=False
-        ),
-        "clinical_trials": _make_ct(0, 0, 0),
-    }
-
-    await by_name["critique_ranking"].ainvoke(
-        {
-            "name": "critique_ranking",
-            "args": {"blurbs": []},
-            "id": "test_critique",
-            "type": "tool_call",
-        }
-    )
-    msg = await by_name["finalize_supervisor"].ainvoke(
-        {
-            "name": "finalize_supervisor",
-            "args": {
-                "summary": "Ranked repurposing signals:\n1. covid-19 — x",
-                "blurbs": [
-                    {
-                        "disease": "covid-19",
-                        "key_risk": "Evidence base is off-registry or observational",
-                        "prose": "The Observational studies suggest benefit.",
-                        "literature": "Moderate, supports",
-                    }
-                ],
-            },
-            "id": "test_call",
-            "type": "tool_call",
-        }
-    )
-
-    blurbs = msg.artifact["blurbs"]
-    assert len(blurbs) == 1
-    b = blurbs[0]
-    # Both the standalone and capitalized forms are repaired; nothing else changes.
-    assert b["key_risk"] == "Evidence base is off-registry or RCT-backed"
-    assert b["prose"] == "The RCT-backed studies suggest benefit."
-    assert b["literature"] == "Moderate, supports"
-    assert "observational" not in (b["key_risk"] + b["prose"]).lower()
-
-
 async def test_finalize_keeps_observational_when_fact_is_true():
     """The repair is one-directional: when is_observational is True, a legitimate
     'observational' claim must be left untouched (never add/alter design wording)."""
@@ -586,7 +550,7 @@ async def test_finalize_keeps_observational_when_fact_is_true():
 
 
 async def test_finalize_repairs_false_no_phase3_stage():
-    """A2 deterministic repair: when has_completed_phase3 is True, finalize must rewrite a
+    """Deterministic dev_stage override: when dev_stage=completed_phase3, finalize must rewrite a
     `stage` that falsely claims 'Phase 4 exploratory only / Phase 3 never initiated'."""
     by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
 
@@ -601,6 +565,7 @@ async def test_finalize_repairs_false_no_phase3_stage():
                 highest_completed_phase="Phase 3",
                 has_completed_phase3=True,
                 completed_phase3_nct_ids=["NCT00068861"],
+                dev_stage="completed_phase3",
             ),
         ),
     }
@@ -652,61 +617,13 @@ async def test_finalize_repairs_false_no_phase3_stage():
 
     b = msg.artifact["blurbs"][0]
     assert "exploratory only" not in b["stage"].lower()
-    assert "Phase 3 completed" in b["stage"]
-
-
-async def test_finalize_runs_fact_critic_when_critique_uncovered():
-    """The fix: when critique_ranking was called WITHOUT these blurbs (LLM non-compliance,
-    observed live), finalize runs the fact critic itself so the repair reaches ALL fields —
-    not just the stage floor. Mock the critic to rewrite key_risk."""
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
-
-    allowed_diseases["pcos"] = ("pcos", "competitor")
-    findings_local["pcos"] = {
-        "literature": _make_lit("strong", 10, 5, direction="supports"),
-        "clinical_trials": _make_ct(
-            50, 22, 0, signals=TrialSignals(
-                highest_completed_phase="Phase 3", has_completed_phase3=True
-            ),
-        ),
-    }
-
-    # Supervisor pre-called critique with [] (the bug path) — finalize must repair anyway.
-    await by_name["critique_ranking"].ainvoke(
-        {"name": "critique_ranking", "args": {"blurbs": []},
-         "id": "c", "type": "tool_call"}
-    )
-    critic_out = json.dumps(
-        {"ordering": "consistent", "blurbs": [
-            {"disease": "pcos",
-             "stage": "Completed Phase 3 on record",
-             "key_risk": "No dedicated regulatory program despite completed Phase 3",
-             "prose": ""}
-        ]}
-    )
-    with patch(
-        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
-        new=AsyncMock(return_value=critic_out),
-    ) as mock_llm:
-        msg = await by_name["finalize_supervisor"].ainvoke(
-            {"name": "finalize_supervisor", "args": {
-                "summary": "Ranked repurposing signals:\n1. pcos — x",
-                "blurbs": [{"disease": "pcos",
-                            "stage": "Phase 4 exploratory only",
-                            "key_risk": "No Phase 3 on record; all activity is Phase 4",
-                            "prose": ""}],
-            }, "id": "f", "type": "tool_call"}
-        )
-
-    mock_llm.assert_awaited()  # the finalize-time critic actually ran
-    b = msg.artifact["blurbs"][0]
-    assert "no phase 3 on record" not in b["key_risk"].lower()
-    assert "completed Phase 3" in b["key_risk"]
+    assert b["stage"] == "Phase 3 completed for this indication"
 
 
 async def test_finalize_keeps_stage_when_no_completed_phase3():
-    """No completed Phase 3 (has_completed_phase3 False): a legitimate 'exploratory only'
-    stage must be left untouched — the repair never invents a phase."""
+    """dev_stage=exploratory_phase4_only renders the authoritative Phase 4 phrase — a
+    legitimate 'exploratory only' stage is preserved (the override never invents a phase).
+    """
     by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
 
     allowed_diseases["disease y"] = ("disease y", "competitor")
@@ -717,7 +634,9 @@ async def test_finalize_keeps_stage_when_no_completed_phase3():
             2,
             0,
             signals=TrialSignals(
-                highest_completed_phase="Phase 4", has_completed_phase3=False
+                highest_completed_phase="Phase 4",
+                has_completed_phase3=False,
+                dev_stage="exploratory_phase4_only",
             ),
         ),
     }
@@ -749,13 +668,17 @@ async def test_finalize_keeps_stage_when_no_completed_phase3():
     )
 
     b = msg.artifact["blurbs"][0]
-    assert b["stage"] == "Phase 4 exploratory only (no dedicated development program)"
+    assert b["stage"] == (
+        "Phase 4 exploratory only (post-approval off-label study; no dedicated "
+        "development program for this indication)"
+    )
 
 
 async def test_holdout_summary_contradicts_ranks_bottom_and_not_excluded():
     """A robustly-disproven pair (strong evidence, direction=contradicts, 0 trials) must
     survive the evidence gate AND rank below every supporting pair, with a "contradicts"
-    note. This locks in the direction/strength split: strong contradiction is not erased."""
+    note. This locks in the direction/strength split: strong contradiction is not erased.
+    """
     by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(
         date(2005, 6, 1)
     )
@@ -807,3 +730,278 @@ async def test_holdout_summary_contradicts_ranks_bottom_and_not_excluded():
     # any "Evidence gate exclusions" footer — it is surfaced as a negative.
     assert msg.artifact["summary"] == expected
     assert "Evidence gate exclusions" not in msg.artifact["summary"]
+
+
+async def test_finalize_repairs_false_stage_in_demotion_footer():
+    """The T1DM bug: a demoted candidate's footer line falsely says 'Phase 4 exploratory only,
+    no dedicated development program' while dev_stage=active_phase3. finalize must overwrite the
+    false stage clause with the authoritative dev_stage phrase (incl. the active NCTs).
+    """
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+
+    allowed_diseases["type 1 diabetes mellitus"] = (
+        "type 1 diabetes mellitus",
+        "competitor",
+    )
+    findings_local["type 1 diabetes mellitus"] = {
+        "literature": _make_lit("moderate", 6, 3, direction="supports"),
+        "clinical_trials": _make_ct(
+            16,
+            4,
+            0,
+            signals=TrialSignals(
+                has_active_phase3=True,
+                active_phase3_nct_ids=["NCT06909006", "NCT06894784"],
+                dev_stage="active_phase3",
+            ),
+        ),
+    }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "c",
+            "type": "tool_call",
+        }
+    )
+    summary = (
+        "Ranked repurposing signals:\n"
+        "Demoted — approval relationship:\n"
+        "- Type 1 Diabetes Mellitus — related_family (T2DM approved; T1DM is a distinct "
+        "disease; Phase 4 exploratory only, no dedicated development program; "
+        "moderate literature)"
+    )
+    msg = await by_name["finalize_supervisor"].ainvoke(
+        {
+            "name": "finalize_supervisor",
+            "args": {"summary": summary, "blurbs": []},
+            "id": "test_footer",
+            "type": "tool_call",
+        }
+    )
+
+    out = msg.artifact["summary"]
+    assert "Phase 4 exploratory only" not in out
+    assert "no dedicated development program" not in out
+    assert "Active Phase 3 development on record" in out
+    assert "NCT06909006" in out
+    # The rest of the footer line (relationship, literature) is preserved.
+    assert "related_family" in out
+    assert "moderate literature" in out
+
+
+async def test_finalize_leaves_footer_when_dev_stage_agrees():
+    """A demoted candidate whose dev_stage is genuinely exploratory_phase4_only keeps its
+    'Phase 4 exploratory only' footer text — the repair only fires on a program-stage.
+    """
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+
+    allowed_diseases["disease z"] = ("disease z", "competitor")
+    findings_local["disease z"] = {
+        "literature": _make_lit("weak", 2, 1, direction="supports"),
+        "clinical_trials": _make_ct(
+            3, 0, 0, signals=TrialSignals(dev_stage="exploratory_phase4_only")
+        ),
+    }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "c",
+            "type": "tool_call",
+        }
+    )
+    summary = (
+        "Ranked repurposing signals:\n"
+        "Demoted — approval relationship:\n"
+        "- Disease Z — related_family (Phase 4 exploratory only, no dedicated development "
+        "program; weak literature)"
+    )
+    msg = await by_name["finalize_supervisor"].ainvoke(
+        {
+            "name": "finalize_supervisor",
+            "args": {"summary": summary, "blurbs": []},
+            "id": "test_footer_agree",
+            "type": "tool_call",
+        }
+    )
+
+    assert "Phase 4 exploratory only" in msg.artifact["summary"]
+
+
+async def test_finalize_repairs_false_stage_in_ranked_summary_line():
+    """The ranked-line analog of the footer leak: a ranked summary line falsely says 'no formal
+    development program' while dev_stage=active_phase3. finalize must overwrite the false clause
+    with the authoritative dev_stage phrase, keeping the rest of the line intact."""
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+
+    allowed_diseases["type 1 diabetes mellitus"] = (
+        "type 1 diabetes mellitus",
+        "competitor",
+    )
+    findings_local["type 1 diabetes mellitus"] = {
+        "literature": _make_lit("moderate", 6, 3, direction="supports"),
+        "clinical_trials": _make_ct(
+            16,
+            4,
+            0,
+            signals=TrialSignals(
+                has_active_phase3=True,
+                active_phase3_nct_ids=["NCT06909006"],
+                dev_stage="active_phase3",
+            ),
+        ),
+    }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "c",
+            "type": "tool_call",
+        }
+    )
+    summary = (
+        "Ranked repurposing signals:\n"
+        "1. Type 1 Diabetes Mellitus — moderate literature; no formal development program; "
+        "watch nothing"
+    )
+    msg = await by_name["finalize_supervisor"].ainvoke(
+        {
+            "name": "finalize_supervisor",
+            "args": {
+                "summary": summary,
+                "blurbs": [
+                    {"disease": "type 1 diabetes mellitus", "stage": "x", "prose": "p"}
+                ],
+            },
+            "id": "test_ranked",
+            "type": "tool_call",
+        }
+    )
+
+    out = msg.artifact["summary"]
+    assert "no formal development program" not in out
+    assert "Active Phase 3 development on record" in out
+    assert "NCT06909006" in out
+    assert "moderate literature" in out
+
+
+async def test_finalize_enrich_overwrites_interpretive_fields():
+    """The enrich pass: when judge_interpretive returns a judgment, finalize overwrites the
+    blurb's blocker/key_risk/verdict/prose from it (one source of truth — the LLM no longer
+    authors them). Patches judge_interpretive to a known value (the autouse fixture is
+    overridden here)."""
+    from indication_scout.services.judge_interpretive import InterpretiveJudgment
+
+    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+    allowed_diseases["pcos"] = ("pcos", "competitor")
+    findings_local["pcos"] = {
+        "literature": _make_lit("strong", 10, 5, direction="supports"),
+        "clinical_trials": _make_ct(
+            50,
+            22,
+            0,
+            signals=TrialSignals(
+                highest_completed_phase="Phase 3",
+                has_completed_phase3=True,
+                completed_phase3_nct_ids=["NCT1"],
+                dev_stage="completed_phase3",
+                active_programs="Phase 3 recruiting (NCT1)",
+            ),
+        ),
+    }
+
+    await by_name["critique_ranking"].ainvoke(
+        {
+            "name": "critique_ranking",
+            "args": {"blurbs": []},
+            "id": "c",
+            "type": "tool_call",
+        }
+    )
+
+    interp = InterpretiveJudgment(
+        blocker="Regulatory differentiation burden",
+        key_risk="May not beat approved family member",
+        verdict="Live but bottlenecked",
+        prose="A completed pivotal program exists with active follow-on trials. The "
+        "remaining question is commercial differentiation.",
+    )
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+            new=AsyncMock(return_value=json.dumps({"ordering": "ok", "blurbs": []})),
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.judge_interpretive",
+            new=AsyncMock(return_value=interp),
+        ),
+    ):
+        msg = await by_name["finalize_supervisor"].ainvoke(
+            {
+                "name": "finalize_supervisor",
+                "args": {
+                    "summary": "Ranked repurposing signals:\n1. pcos — x",
+                    "blurbs": [
+                        {
+                            "disease": "pcos",
+                            "stage": "draft",
+                            "verdict": "LLM-WROTE-THIS-SHOULD-BE-REPLACED",
+                            "blocker": "LLM-WROTE-THIS",
+                            "key_risk": "LLM-WROTE-THIS",
+                            "prose": "LLM wrote this and it should be replaced.",
+                        }
+                    ],
+                },
+                "id": "f",
+                "type": "tool_call",
+            }
+        )
+
+    b = msg.artifact["blurbs"][0]
+    assert b["verdict"] == "Live but bottlenecked"
+    assert b["blocker"] == "Regulatory differentiation burden"
+    assert b["key_risk"] == "May not beat approved family member"
+    assert b["prose"].startswith("A completed pivotal program")
+    # stage still came from the dev_stage override (not the LLM draft).
+    assert "Phase 3 completed" in b["stage"]
+
+
+# ------------------------------------------------------------------
+# _literature_oneliner — class_level basis must not read as direct drug strength
+# ------------------------------------------------------------------
+
+from indication_scout.agents.supervisor.supervisor_tools import (  # noqa: E402
+    _literature_oneliner,
+)
+
+
+def test_literature_oneliner_drug_specific_renders_strength_direction_design():
+    es = EvidenceSummary(
+        strength="strong",
+        direction="supports",
+        is_observational=False,
+        evidence_basis="drug_specific",
+    )
+    assert _literature_oneliner(es) == "strong, supports, RCT-backed / controlled"
+
+
+def test_literature_oneliner_class_level_states_basis_not_strength():
+    """The Parkinson bug: class-level evidence must NOT render 'strong, ..., RCT-backed'."""
+    es = EvidenceSummary(
+        strength="none",
+        direction="none",
+        is_observational=None,
+        evidence_basis="class_level",
+    )
+    assert (
+        _literature_oneliner(es)
+        == "class-level signal (no direct evidence for this drug)"
+    )
+
+
+def test_literature_oneliner_none_summary_returns_none():
+    assert _literature_oneliner(None) == "None"

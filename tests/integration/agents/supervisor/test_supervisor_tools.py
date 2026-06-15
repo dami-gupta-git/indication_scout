@@ -132,6 +132,7 @@ async def test_find_candidates_random(llm, db_session_truncating, test_cache_dir
     diseases: list[str] = msg.artifact
     print(diseases)
 
+
 async def my_test(llm, db_session_truncating, test_cache_dir):
     """find_candidates returns Open Targets candidate diseases, populates the closure-scoped
     allowlist, and seeds drug aliases + FDA-approved indications into the briefing store.
@@ -149,6 +150,7 @@ async def my_test(llm, db_session_truncating, test_cache_dir):
 
     diseases: list[str] = msg.artifact
     assert isinstance(diseases, list)
+
 
 async def test_find_candidates_metformin(llm, db_session_truncating, test_cache_dir):
     """find_candidates returns Open Targets candidate diseases, populates the closure-scoped
@@ -652,3 +654,149 @@ async def test_analyze_literature_respects_cutoff(
         f"is on or after the cutoff {_CUTOFF.isoformat()} — cutoff was not applied "
         f"at the PubMed search layer. Leaked PMIDs: {leaked[:10]}"
     )
+
+
+# ------------------------------------------------------------------
+# Phase-tier consistency: a REAL LLM, given a completed-Phase-3 pair, must not
+# leave a sub-Phase-3 understatement ("exploratory only", "post-Phase 2", "no
+# development program") in a blurb's free-text fields, where it would contradict
+# the authoritative `stage`. Proves the supervisor prompt's phase-tier rule under
+# a live model — the deterministic `stage` override fixes `stage` itself; this
+# guards the sibling fields the override does NOT touch. (See the bupropion ×
+# cocaine and semaglutide × T1DM report regressions.)
+# ------------------------------------------------------------------
+
+from indication_scout.agents.clinical_trials.clinical_trials_output import (  # noqa: E402
+    TrialSignals,
+)
+from indication_scout.models.model_clinical_trials import (  # noqa: E402
+    CompletedTrialsResult,
+    SearchTrialsResult,
+    TerminatedTrialsResult,
+    Trial,
+)
+from indication_scout.models.model_evidence_summary import EvidenceSummary  # noqa: E402
+
+# Lowercased phrases that name a phase tier BELOW the authoritative completed Phase 3.
+# Any of these in a sibling field contradicts stage="Phase 3 completed".
+_UNDERSTATEMENT_PHRASES = (
+    "exploratory only",
+    "phase 4 only",
+    "phase 4 exploratory",
+    "post-phase 2",
+    "post-phase 1",
+    "stalled post-phase",
+    "no dedicated development program",
+    "no formal development program",
+    "no phase 2 or phase 3",
+    "early-phase only",
+    "no development program",
+)
+
+
+def _finalize_closure(tools: dict) -> tuple[dict, dict]:
+    """Reach finalize_supervisor's closure-scoped findings_local + allowed_diseases."""
+    fin = tools["finalize_supervisor"]
+    closure = dict(zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__))
+    return (
+        closure["findings_local"].cell_contents,
+        closure["allowed_diseases"].cell_contents,
+    )
+
+
+async def test_finalize_blurb_fields_have_no_subphase3_understatement_live(
+    llm, db_session_truncating, test_cache_dir
+):
+    """A REAL LLM run: dev_stage=completed_phase3 (a completed Phase 2/Phase 3 trial), and the
+    incoming blurb deliberately seeds 'exploratory only' / 'no dedicated development program'
+    understatements in verdict, key_risk, and prose. After the live finalize (which runs the
+    real fact critic), the authoritative `stage` must say Phase 3 completed AND no sibling
+    field may carry a sub-Phase-3 understatement that contradicts it."""
+    svc = RetrievalService(test_cache_dir)
+    tools_list, _, _ = build_supervisor_tools(
+        llm=llm, svc=svc, db=db_session_truncating
+    )
+    tools = _tool_map(tools_list)
+    findings_local, allowed_diseases = _finalize_closure(tools)
+
+    disease = "cocaine dependence"
+    allowed_diseases[disease] = (disease, "competitor")
+    # Real-shaped trial data: a completed Phase 2/Phase 3 → dev_stage completed_phase3.
+    completed = [
+        Trial(
+            nct_id="NCT02111798",
+            title="Bupropion-Enhanced Contingency Management for Cocaine Dependence",
+            phase="Phase 2/Phase 3",
+            overall_status="COMPLETED",
+        ),
+        Trial(
+            nct_id="NCT00227812",
+            title="Bupropion in cocaine users",
+            phase="Phase 2",
+            overall_status="COMPLETED",
+        ),
+    ]
+    findings_local[disease] = {
+        "literature": LiteratureOutput(
+            pmids=["1", "2", "3", "4"],
+            evidence_summary=EvidenceSummary(
+                summary="RCTs of bupropion for cocaine dependence, mixed efficacy.",
+                strength="strong",
+                direction="mixed",
+                study_count=4,
+                is_observational=False,
+            ),
+        ),
+        "clinical_trials": ClinicalTrialsOutput(
+            search=SearchTrialsResult(total_count=10, trials=completed),
+            completed=CompletedTrialsResult(total_count=2, trials=completed),
+            terminated=TerminatedTrialsResult(total_count=0, trials=[]),
+            relevant_nct_ids=["NCT02111798", "NCT00227812"],
+            signals=TrialSignals(
+                highest_completed_phase="Phase 2/Phase 3",
+                has_completed_phase3=True,
+                completed_phase3_nct_ids=["NCT02111798"],
+                dev_stage="completed_phase3",
+            ),
+        ),
+    }
+
+    # critique_ranking must precede finalize (finalize rejects otherwise).
+    await tools["critique_ranking"].ainvoke(_tc("critique_ranking", blurbs=[]))
+
+    seeded_blurb = {
+        "disease": disease,
+        "stage": "Phase 4 exploratory only; no dedicated development program",
+        "literature": "Strong, mixed RCTs",
+        "blocker": "Stalled post-Phase 2",
+        "active_programs": "None active",
+        "key_risk": "No dedicated development program; exploratory only",
+        "verdict": "Exploratory only, no formal development program",
+        "prose": (
+            "Bupropion has been studied primarily through early exploratory work with no "
+            "dedicated Phase 2 or Phase 3 program. The hypothesis remains unproven."
+        ),
+    }
+    msg = await tools["finalize_supervisor"].ainvoke(
+        _tc(
+            "finalize_supervisor",
+            summary=f"Ranked repurposing signals:\n1. {disease} — strong but mixed",
+            blurbs=[seeded_blurb],
+        )
+    )
+
+    blurbs = msg.artifact["blurbs"]
+    assert len(blurbs) == 1, f"expected 1 blurb, got {blurbs}"
+    b = blurbs[0]
+
+    # stage is the authoritative override — it MUST state the completed Phase 3.
+    assert "Phase 3 completed for this indication" in b["stage"], b["stage"]
+
+    # No sibling free-text field may carry a sub-Phase-3 understatement contradicting stage.
+    for field in ("verdict", "blocker", "active_programs", "key_risk", "prose"):
+        val = (b.get(field) or "").lower()
+        leaked = [p for p in _UNDERSTATEMENT_PHRASES if p in val]
+        assert not leaked, (
+            f"blurb field {field!r} contradicts stage=Phase 3 completed with "
+            f"understatement(s) {leaked}: {b.get(field)!r}"
+        )

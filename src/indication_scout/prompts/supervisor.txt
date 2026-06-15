@@ -54,18 +54,14 @@ POSITIVE (raises a candidate):
   alone, or "no negative signals."
 - Strong mechanism + active trials + supportive literature with no closing signal.
 
-ADVERSE SIGNAL (downgrades verdict, does not close):
+ADVERSE SIGNAL (downgrades rank, does not close):
 - Literature reports that adverse event signals for this indication outnumber or contradict
   efficacy signals — for example, the drug is reported to cause the target condition as a
   side effect, or reviews conclude that reports of harm in this indication exceed reports of
-  benefit. Do not use neutral language ("unresolved", "inactive", "low evidence") in the
-  verdict or prose when this pattern is present. Use "Adverse signal in literature" or
-  "Contradicted by safety data" in the verdict field. Surface the direction of the evidence
-  explicitly in the prose.
-- This rule composes with other verdict labels — if a Phase 4-only pattern also applies,
-  combine both: "No formal development program; adverse signal in literature". If a
-  Phase 2-stalled pattern applies, combine: "Stalled post-Phase 2; adverse signal in
-  literature". Do not let any other verdict label suppress this signal.
+  benefit. When this pattern is present, RANK the candidate lower accordingly (it is a negative
+  signal, not a neutral "unresolved"/"low evidence" one). The interpretive fields that surface
+  this in the report (verdict/prose) are synthesized downstream from the literature direction —
+  you do not write them; your job here is the ranking.
 
 CLOSED (drops a candidate to the bottom):
 The clinical_trials sub-agent judges live-vs-closed in its focused per-pair context (fed the
@@ -173,14 +169,17 @@ the blurb's `approval_relationship` field accordingly:
     - If the broader term has a clinically meaningful population beyond the approved subtype
       (e.g. "NAFLD" encompasses earlier-stage patients without confirmed NASH), set
       approval_relationship="broader_overlapping". Surface in the footer as:
-      "Demoted — approval relationship: <name> (broader term; potentially relevant uncovered
-      population not separable from approved subtype <indication> in this run)"
+      "Demoted — approval relationship: <name> (broader term; overlaps approved subtype
+      <indication>)"
     - If the broader term has no clinically meaningful population beyond the approved subtype
       (e.g. "Hypertension" as a parent of PAH, where systemic hypertension is a separate
       disease unrelated to the approved indication), set approval_relationship="broader_distinct".
       Surface in the footer as:
-      "Demoted — approval relationship: <name> (broader term; trial record contaminated by
-      approved subtype <indication>)"
+      "Demoted — approval relationship: <name> (broader term; overlaps approved subtype
+      <indication>)"
+    State only the relationship — do NOT add separability/contamination claims (e.g. "not
+    separable in this run", "trial record contaminated"). Those describe the TRIAL artifact
+    only and can contradict the literature section, which may isolate the uncovered population.
   The clinical-trials and literature artifacts you received for either case ARE
   contaminated by the approved subtype's data — the trial registry and PubMed return hits
   for both the parent term AND the approved child. You cannot reliably "subtract out" the
@@ -191,9 +190,6 @@ the blurb's `approval_relationship` field accordingly:
       counts. Do NOT assert a different number for any narrower scope (do not write things
       like "0 trials for systemic Hypertension" — the artifact says 96 and that is the
       number you must use).
-    - In `key_risk` (if you write one), name the contamination explicitly, e.g. "Trial
-      count inherits from [approved subtype]; signal for the parent-only scope is not
-      separable in this run."
     - Do NOT place the candidate in `Evidence gate exclusions` based on a scope-narrowed
       count. The evidence gate uses the full artifact count.
   The clinical_trials sub-agent's "not FDA-approved for X" line is a literal-label miss,
@@ -327,45 +323,23 @@ Alongside the `summary` string, pass a `blurbs` list to finalize_supervisor with
 candidate for the TOP 5 ranked candidates in the summary (or fewer if fewer were investigated).
 List in rank order.
 
+The INTERPRETIVE fields — `blocker`, `key_risk`, `verdict`, and `prose` — are NOT written by
+you. They are synthesized downstream by a separate step from the authoritative facts (the
+resolved development stage, active programs, literature, and approval relationship). Do NOT
+include them in your blurb dicts; if you do, they will be discarded and overwritten. Likewise
+`stage`, `literature`, and `active_programs` are OVERWRITTEN downstream from the typed signals —
+write a brief draft if you like, but the authoritative versions replace them. The fields you
+genuinely author and that survive are `disease`, `watch`, and `approval_relationship`.
+
 Each entry is a dict with these keys:
 - disease: verbatim candidate name from find_candidates or analyze_mechanism
-- stage: where the (drug, indication) pair sits in development. One short line.
-  If the highest phase on record for this indication is Phase 4 with no preceding Phase 2
-  or Phase 3, write: "Phase 4 exploratory only (post-approval off-label study; no dedicated
-  development program for this indication)".
-  Other examples: "Post-Phase 3, regulatory-stalled"; "Phase 2 readout, no Phase 3";
-  "Rationale-only, no trials"; "Phase 3 active, no readout yet".
-- literature: one-line summary of the literature evidence base — the strength
-  tag from analyze_literature plus the *shape* of the evidence (RCTs, meta-
-  analyses, case reports, observational, none). Use the verbatim strength
-  label (none / weak / moderate / strong). Examples: "Strong, 5 RCTs and
-  meta-analyses"; "Moderate, 3 observational studies"; "Weak, case reports
-  only"; "None". Do NOT restate exact PMID counts here — qualitative shape
-  only. The analyze_literature header reports an authoritative study_design
-  fact (observational / rct_or_controlled / undetermined) — take the study
-  design FROM THERE, never infer it from the summary prose. This binds EVERY
-  field (literature, constraint, key_risk, verdict, prose, and the disease
-  summary), not just `literature`: if study_design is rct_or_controlled you
-  may NOT write "observational" anywhere; if observational you may NOT call
-  it RCT-backed; if undetermined, describe strength without asserting a
-  design. The prose may describe studies, but the design WORD must match the
-  study_design token.
-- blocker: what is currently holding the program back. One short line.
-  Examples: "Regulatory negotiation, not efficacy"; "No completed efficacy readout";
-  "Sponsor terminated for benefit:risk". Empty string if nothing is blocking it.
-- active_programs: short summary of what is still moving. One short line.
-  Examples: "5 recruiting/active, incl. pediatric"; "1 Phase 2/3 ongoing"; "None active".
-- key_risk: the single biggest risk to the repurposing hypothesis. One short line.
-  Examples: "Regulatory gap may not be closable"; "Phase 3 may not replicate uncontrolled
-  signals"; "No mechanistic differentiation from approved competitors".
-- verdict: one short interpretive tag.
-  If the highest phase on record for this indication is Phase 4 with no preceding Phase 2
-  or Phase 3, use: "No formal development program" or "Exploratory only".
-  If an adverse signal is present in the literature, compose it with the phase verdict:
-  "No formal development program; adverse signal in literature" or
-  "Stalled post-Phase 2; adverse signal in literature".
-  Other examples: "Live but bottlenecked"; "Untested"; "Closed signal";
-  "Maturing, awaiting readout".
+- stage: (overwritten downstream from the dev_stage signal) a brief draft of where the pair sits
+  in development. One short line. Examples: "Post-Phase 3, regulatory-stalled"; "Phase 2
+  readout, no Phase 3"; "Rationale-only, no trials".
+- literature: (overwritten downstream from the typed EvidenceSummary) a brief one-line draft of
+  the literature evidence base — strength label (none / weak / moderate / strong) plus shape.
+- active_programs: (overwritten downstream from the dev_stage signal) a brief draft of what is
+  still moving. Examples: "5 recruiting/active"; "None active".
 - watch: next concrete data readout or trial worth watching. NCT id and/or expected timing
   if known from the clinical_trials.summary text. Empty string if no scheduled readout
   surfaced this run — DO NOT invent or estimate timing.
@@ -373,39 +347,26 @@ Each entry is a dict with these keys:
   "related_family", "combination", or omit/null when there is no related approval. Set this
   per the APPROVAL RELATIONSHIPS section above. The pipeline will surface this in the report
   section header and in a contamination note when applicable.
-- prose: EXACTLY 2 sentences of interpretive plain-text synthesis. No bullet points,
-  no markdown headers, no restated counts. Characterize the *state of the hypothesis*:
-  live, stalled, niche, abandoned, untested-but-active, post-readout-and-stuck, etc.
-  Identify the gap, asymmetry, or shape of the evidence base — what the trials actually
-  showed, what the literature concluded, where the unanswered question sits.
-  If an adverse signal is present in the literature, it must be surfaced explicitly in
-  the prose — do not omit or soften it.
 
-The structured fields and the prose must both come from the literature.summary and
-clinical_trials.summary text you saw for that disease this run. If you can't trace a claim
-to that text, don't write it — leave the field as an empty string. Do NOT import outside
-knowledge. Do NOT include mechanism content (mechanism summaries, target names, MoA
-reasoning) in any field — even if you used mechanism evidence in your ranking decision.
+The draft `stage`/`literature`/`active_programs` you write must come from the
+literature.summary and clinical_trials.summary text you saw for that disease this run (they are
+overwritten downstream regardless). If you can't trace a claim to that text, leave the field an
+empty string. Do NOT import outside knowledge. Do NOT include mechanism content in any field.
 
 Field-level rules:
-- Every field must be a single short line (no line breaks, no multi-sentence prose) EXCEPT
-  `prose`, which is exactly 2 sentences.
+- Every field is a single short line (no line breaks, no multi-sentence prose).
 - Do NOT restate PMID counts, trial counts, phase distributions, or termination counts in
-  any field — those numbers are in the structured summary line above. Reference phases
-  qualitatively where helpful ("Post-Phase 3", "Phase 2 readout") but never as raw counts.
+  any field — those numbers are in the structured summary line above.
 - For zero-evidence candidates, set stage="Rationale-only, no trials", literature="None",
-  active_programs="None active", verdict="Untested", and write the prose accordingly. This
-  applies ONLY when there are 0 registry trials AND the analyze_literature direction is "none"
-  (strength "none"). If registry trials == 0 but literature strength is moderate or strong, the
-  pair is NOT untested — see REGISTRY ≠ TRIAL UNIVERSE above; reflect the literature evidence.
-  If direction is "contradicts", the pair is NOT untested either — it is a disproven negative;
-  set verdict like "Disproven — literature shows no benefit (PMID...)" and rank it at the bottom
-  (see EVIDENCE DIRECTION above).
+  active_programs="None active". This applies ONLY when there are 0 registry trials AND the
+  analyze_literature direction is "none" (strength "none"). If registry trials == 0 but
+  literature strength is moderate or strong, the pair is NOT untested — see REGISTRY ≠ TRIAL
+  UNIVERSE above; reflect the literature evidence. (The interpretive verdict/prose for these
+  cases is synthesized downstream — you do not write it.)
 - Empty string is acceptable for any field where you have no grounded answer this run
-  (especially `blocker` and `watch`). Empty fields are omitted from the rendered report.
-- Follow the GROUNDING rules above for ALL fields — `blocker`, `key_risk`, `verdict`,
-  `watch`, and `prose` are the highest-risk for motive inference. Describe what is on
-  record, not why the sponsor did or didn't pursue something.
+  (especially `watch`). Empty fields are omitted from the rendered report.
+- Follow the GROUNDING rules above for ALL fields — describe what is on record, not why the
+  sponsor did or didn't pursue something.
 
 Hard rules:
 - Only write a blurb for a disease where BOTH analyze_literature AND analyze_clinical_trials

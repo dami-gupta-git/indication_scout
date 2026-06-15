@@ -1,3 +1,5 @@
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 from indication_scout.models.model_clinical_trials import (
@@ -16,13 +18,30 @@ class TrialSignals(BaseModel):
     Lives here so ClinicalTrialsOutput can store it without an import cycle.
     """
 
+    # Highest phase label among ANY completed (or P3-terminated-for-cause) trial — including
+    # pure Phase 4, which ranks above Phase 3. This is a DISPLAY fact ("highest completed, any
+    # kind"), NOT a pivotal-evidence signal: it can read "Phase 4" while has_completed_phase3 is
+    # False. Do NOT make tier/closure decisions on it — use has_completed_phase3 / dev_stage.
     highest_completed_phase: str | None = None
     has_completed_phase3: bool = False
     completed_phase3_nct_ids: list[str] = []
+    # An active/recruiting Phase 3 (>= Phase 2/Phase 3 floor) on the all-status search set.
+    # The recruiting-pipeline analog of has_completed_phase3 — blocks a false "no
+    # development program / Phase 4 only" claim. Best-effort contamination drop only.
+    has_active_phase3: bool = False
+    active_phase3_nct_ids: list[str] = []
     # A true Phase 3 terminated for a non-operational reason — the positive closure
     # signal. The sub-agent decides whether this actually closes the candidate.
     phase3_terminated_for_cause: bool = False
     terminated_phase3_nct_ids: list[str] = []
+    # Single authoritative development-stage tier + the "what is still moving" line, both from
+    # the isolated LLM judgment (services/dev_stage.judge_dev_stage) over the relevant trials.
+    # The supervisor renders these verbatim in the blurb stage / active_programs — it does NOT
+    # re-author them. dev_stage is one of: phase3_terminated_for_cause, completed_phase3,
+    # active_phase3, phase3_unknown_status, completed_phase2, exploratory_phase4_only,
+    # early_phase, untested. active_programs is a free-text line or "None active".
+    dev_stage: str = "untested"
+    active_programs: str = "None active"
 
 
 class ClinicalTrialsOutput(BaseModel):
@@ -67,7 +86,24 @@ class ClinicalTrialsOutput(BaseModel):
 
     summary: str = Field(
         default="",
-        description="LLM narrative summary from the final agent message.",
+        description=(
+            "Trial-section prose, authored post-loop by services.clinical_trials_summary fed "
+            "the resolved dev_stage (so it cannot contradict the tier). Empty when the "
+            "synthesis call returned None."
+        ),
+    )
+
+    closure: Literal["live", "closed", "unknown"] = Field(
+        default="unknown",
+        description=(
+            "Typed live-vs-closed verdict from the same synthesis call. The supervisor "
+            "consumes this directly and does NOT re-judge closure."
+        ),
+    )
+
+    closure_reason: str = Field(
+        default="",
+        description="One-sentence justification for the closure verdict.",
     )
 
     relevant_nct_ids: list[str] = Field(
@@ -103,11 +139,11 @@ class ClinicalTrialsOutput(BaseModel):
 class FinalizeClinicalTrialsArtifact(BaseModel):
     """Artifact returned by the finalize_analysis tool.
 
-    Carries the human-report prose summary plus the agent's structured relevance split,
-    harvested into ClinicalTrialsOutput by run_clinical_trials_agent.
+    Carries the agent's structured relevance split, harvested into ClinicalTrialsOutput by
+    run_clinical_trials_agent. The trial-section prose is NO LONGER authored here — it is
+    written post-loop by services.clinical_trials_summary fed the resolved dev_stage.
     """
 
-    summary: str = ""
     relevant_ncts: list[str] = []
     contaminated_ncts: list[str] = []
     relevance_reasoning: str = ""

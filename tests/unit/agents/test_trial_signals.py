@@ -16,6 +16,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 )
 from indication_scout.models.model_clinical_trials import (
     CompletedTrialsResult,
+    SearchTrialsResult,
     TerminatedTrialsResult,
     Trial,
 )
@@ -28,7 +29,7 @@ _BENEFIT_RISK_STOP = (
 )
 
 
-def _ct(completed=None, terminated=None) -> ClinicalTrialsOutput:
+def _ct(completed=None, terminated=None, search=None) -> ClinicalTrialsOutput:
     return ClinicalTrialsOutput(
         completed=CompletedTrialsResult(
             total_count=len(completed or []), trials=completed or []
@@ -36,6 +37,7 @@ def _ct(completed=None, terminated=None) -> ClinicalTrialsOutput:
         terminated=TerminatedTrialsResult(
             total_count=len(terminated or []), trials=terminated or []
         ),
+        search=SearchTrialsResult(total_count=len(search or []), trials=search or []),
     )
 
 
@@ -237,5 +239,139 @@ def test_format_block_facts_only_no_closure_hint():
     block = format_derived_signals(sig)
     assert block.startswith("DERIVED SIGNALS (authoritative facts")
     assert "completed_phase_3: no" in block
+    assert "active_phase_3: no" in block
     assert "relevant_phase3_terminated_for_cause: no" in block
     assert "closed_candidate" not in block
+
+
+def test_active_phase3_from_recruiting_search_trial():
+    """semaglutide × T1D shape: a recruiting Phase 3 in the all-status search set sets
+    has_active_phase3, even with no completed Phase 3 on record."""
+    ct = _ct(
+        completed=[Trial(nct_id="NCT05537233", phase="Phase 2")],
+        search=[
+            Trial(nct_id="NCT06909006", phase="Phase 3", overall_status="Recruiting"),
+            Trial(
+                nct_id="NCT06082063",
+                phase="Phase 3",
+                overall_status="Active, not recruiting",
+            ),
+        ],
+    )
+    sig = derive_trial_signals(ct, relevant_nct_ids={"NCT05537233"})
+    assert sig.has_completed_phase3 is False
+    assert sig.has_active_phase3 is True
+    assert sig.active_phase3_nct_ids == ["NCT06909006", "NCT06082063"]
+
+
+def test_active_phase3_excludes_contaminated():
+    """A recruiting Phase 3 flagged as contamination is dropped from the active signal."""
+    ct = _ct(
+        search=[
+            Trial(nct_id="NCT_REL", phase="Phase 3", overall_status="Recruiting"),
+            Trial(nct_id="NCT_CONTAM", phase="Phase 3", overall_status="Recruiting"),
+        ],
+    )
+    sig = derive_trial_signals(ct, contaminated_nct_ids={"NCT_CONTAM"})
+    assert sig.has_active_phase3 is True
+    assert sig.active_phase3_nct_ids == ["NCT_REL"]
+
+
+def test_active_phase23_counts_but_phase4_and_inactive_do_not():
+    """Floor is >= Phase 2/Phase 3: a recruiting Phase 2/3 counts; a recruiting Phase 4,
+    a recruiting Phase 1, and a completed Phase 3 (not active) do not."""
+    ct = _ct(
+        search=[
+            Trial(
+                nct_id="NCT_P23", phase="Phase 2/Phase 3", overall_status="Recruiting"
+            ),
+            Trial(
+                nct_id="NCT_P34", phase="Phase 3/Phase 4", overall_status="Recruiting"
+            ),
+            Trial(nct_id="NCT_P4", phase="Phase 4", overall_status="Recruiting"),
+            Trial(nct_id="NCT_P1", phase="Phase 1", overall_status="Recruiting"),
+            Trial(nct_id="NCT_DONE", phase="Phase 3", overall_status="Completed"),
+        ],
+    )
+    sig = derive_trial_signals(ct)
+    assert sig.has_active_phase3 is True
+    assert sig.active_phase3_nct_ids == ["NCT_P23", "NCT_P34"]
+
+
+def test_no_active_phase3_when_search_empty():
+    """No search trials -> has_active_phase3 stays False."""
+    ct = _ct(completed=[Trial(nct_id="NCT1", phase="Phase 3")])
+    sig = derive_trial_signals(ct)
+    assert sig.has_active_phase3 is False
+    assert sig.active_phase3_nct_ids == []
+
+
+def test_format_block_renders_active_phase3_yes():
+    ct = _ct(
+        search=[Trial(nct_id="NCT_A", phase="Phase 3", overall_status="Recruiting")]
+    )
+    block = format_derived_signals(derive_trial_signals(ct))
+    assert "active_phase_3: yes (NCT_A)" in block
+
+
+
+# ------------------------------------------------------------------
+# status-classification edge cases (E1-E4)
+# ------------------------------------------------------------------
+
+
+def test_not_yet_recruiting_phase3_is_active_via_exact_match():
+    """'Not yet recruiting' is a planned program and counts as active — matched by exact set
+    membership, not the old substring accident (RECRUITING in NOT_YET_RECRUITING)."""
+    ct = _ct(
+        search=[
+            Trial(
+                nct_id="NCT_NYR", phase="Phase 3", overall_status="Not yet recruiting"
+            )
+        ]
+    )
+    sig = derive_trial_signals(ct)
+    assert sig.has_active_phase3 is True
+
+
+def test_withdrawn_phase3_is_not_active():
+    """A withdrawn Phase 3 never enrolled — it must NOT count as an active program."""
+    ct = _ct(
+        search=[Trial(nct_id="NCT_W", phase="Phase 3", overall_status="Withdrawn")]
+    )
+    sig = derive_trial_signals(ct)
+    assert sig.has_active_phase3 is False
+
+
+def test_suspended_phase3_counts_as_active():
+    """A suspended trial is a pause (often resumes), so it counts as an ongoing program."""
+    ct = _ct(
+        search=[Trial(nct_id="NCT_S", phase="Phase 3", overall_status="Suspended")]
+    )
+    assert derive_trial_signals(ct).has_active_phase3 is True
+
+
+def test_active_phase3_drops_classified_nonrelevant_trial():
+    """E4: a Phase 3 the agent classified (it appears in completed/terminated) but judged NOT
+    relevant must not be re-admitted via the unfiltered search read."""
+    ct = _ct(
+        completed=[
+            Trial(nct_id="REL", phase="Phase 2"),
+            Trial(nct_id="NOTREL", phase="Phase 3", overall_status="Recruiting"),
+        ],
+        search=[Trial(nct_id="NOTREL", phase="Phase 3", overall_status="Recruiting")],
+    )
+    sig = derive_trial_signals(ct, relevant_nct_ids={"REL"})
+    assert sig.has_active_phase3 is False
+
+
+def test_active_phase3_kept_when_relevant():
+    """The E4 guard must not over-drop: a relevant active Phase 3 still counts."""
+    ct = _ct(
+        completed=[Trial(nct_id="REL2", phase="Phase 2")],
+        search=[Trial(nct_id="RELP3", phase="Phase 3", overall_status="Recruiting")],
+    )
+    # RELP3 only in search (never classified into completed/terminated) → not excluded.
+    sig = derive_trial_signals(ct, relevant_nct_ids={"REL2", "RELP3"})
+    assert sig.has_active_phase3 is True
+    assert sig.active_phase3_nct_ids == ["RELP3"]

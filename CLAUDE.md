@@ -42,7 +42,7 @@ uvicorn indication_scout.api.main:app --reload
 scout find -d "metformin"
 ```
 ## Testing
-When writing or modifying any test files, first read skills/testing.md
+When writing or modifying any test files, first read skills/testing.md. Never run the full unit test suite, ask the user to do it. Targeted tests are fine.
 
 ## Architecture
 
@@ -134,6 +134,7 @@ When creating a plan:
 - All data source clients must extend `BaseClient` (async context manager, lazy session via `_get_session()`).
 - Raise `DataSourceError` (not generic exceptions) from data source clients. Include source name and context in the error.
 - When making changes to the cli, flag that corresponding changes need to be made in streamlit UI.
+- The cache is disposable, do not write code to be backward compatible on the cache. Correct cache design is more important.
 
 ## Pydantic Defensive Defaults
 

@@ -92,6 +92,7 @@ def _scrub_post_cutoff_outcome(trial: Trial, cutoff: date) -> tuple[Trial, bool]
 
 def build_clinical_trials_tools(
     date_before: date | None = None,
+    assigned_indication: str | None = None,
 ) -> list:
 
     # Closure-scoped snapshot of the NCTs rendered to the agent for the relevance
@@ -99,7 +100,32 @@ def build_clinical_trials_tools(
     # populate it; finalize_analysis reads it to enforce that every shown trial got
     # a verdict. Keyed (not flat) so a re-call of the same pair rewrites the same
     # deterministic set and a different indication can't contaminate the check.
-    shown_by_pair: dict[tuple[str, str], set[str]] = {}
+    # Keyed on INDICATION only, not (drug, indication): the agent investigates one indication
+    # per instance, but may query the trial tools under several drug-name VARIANTS of that pair
+    # (e.g. "bupropion" and the combo alias "naltrexone bupropion"). Keying on the stable
+    # indication keeps a re-call rewriting the same set, tolerates drug-name variants, and still
+    # separates distinct indications (the cross-pair-reuse guard).
+    shown_by_indication: dict[str, set[str]] = {}
+
+    # The indication this agent instance was launched to investigate. The trial tools
+    # reject a call for any OTHER indication so a drifting LLM (e.g. querying "smoking
+    # cessation" while assigned "nicotine dependence" — a distinct MeSH descriptor) is
+    # nudged back instead of accumulating a second key and crashing at finalize. None
+    # disables the check (callers that don't pin an indication).
+    _assigned = (assigned_indication or "").lower().strip()
+
+    def _indication_mismatch(indication: str) -> str | None:
+        """REJECTED message when `indication` differs from the assigned one, else None."""
+        if not _assigned:
+            return None
+        if (indication or "").lower().strip() == _assigned:
+            return None
+        return (
+            f"REJECTED: this agent investigates only '{assigned_indication}'. "
+            f"You called the tool with '{indication}'. Re-call with "
+            f"'{assigned_indication}' as the indication; do not query other "
+            "indications."
+        )
 
     @tool(response_format="content_and_artifact")
     async def search_trials(
@@ -115,6 +141,9 @@ def build_clinical_trials_tools(
         Whitespace verdict: total_count == 0 means no trials of this drug in
         this indication.
         """
+        mismatch = _indication_mismatch(indication)
+        if mismatch is not None:
+            return mismatch, SearchTrialsResult()
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
             logger.debug(
@@ -199,6 +228,9 @@ def build_clinical_trials_tools(
         to subsequent regulatory progression is a strong signal that the
         primary endpoint was not met.
         """
+        mismatch = _indication_mismatch(indication)
+        if mismatch is not None:
+            return mismatch, CompletedTrialsResult()
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
             logger.debug(
@@ -234,9 +266,10 @@ def build_clinical_trials_tools(
             result.trials = kept
             result.total_count = max(0, result.total_count - scrub_dropped)
 
-        # Record the classification set for this pair (un-capped — every shown
-        # trial must get a verdict at finalize). Re-call rewrites the same set.
-        shown_by_pair.setdefault((drug, indication), set()).update(
+        # Record the classification set for this indication (un-capped — every shown
+        # trial must get a verdict at finalize). Keyed on normalized indication so drug-name
+        # variants AND case/whitespace variants accumulate into one set rather than splitting.
+        shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
 
@@ -282,6 +315,9 @@ def build_clinical_trials_tools(
         the trials shown, not the full population, and may undercount when
         more than 50 terminations exist for the pair.
         """
+        mismatch = _indication_mismatch(indication)
+        if mismatch is not None:
+            return mismatch, TerminatedTrialsResult()
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
             logger.debug(
@@ -330,9 +366,10 @@ def build_clinical_trials_tools(
             else ""
         )
 
-        # Record the classification set for this pair (un-capped — every shown
-        # trial must get a verdict at finalize). Re-call rewrites the same set.
-        shown_by_pair.setdefault((drug, indication), set()).update(
+        # Record the classification set for this indication (un-capped — every shown
+        # trial must get a verdict at finalize). Keyed on normalized indication so drug-name
+        # variants AND case/whitespace variants accumulate into one set rather than splitting.
+        shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
 
@@ -372,6 +409,9 @@ def build_clinical_trials_tools(
         Returns top 10 competitors grouped by sponsor + drug, ranked by phase then enrollment,
         plus phase distribution and recent starts. Use to understand how crowded the space is.
         """
+        mismatch = _indication_mismatch(indication)
+        if mismatch is not None:
+            return mismatch, IndicationLandscape()
         # Holdout skip: the landscape aggregates per-trial overall_status and
         # phase across all competitors for the indication. Those aggregates
         # would leak post-cutoff trial outcomes (e.g. a competitor that
@@ -427,6 +467,9 @@ def build_clinical_trials_tools(
         repurposing opportunity. When False, the indication was not found on FDA labels (which
         does not distinguish trial failure from approval pending from approval outside the US).
         """
+        mismatch = _indication_mismatch(indication)
+        if mismatch is not None:
+            return mismatch, ApprovalCheck()
         # Holdout path: when date_before is set, the live openFDA labels would
         # leak today's approvals (e.g. semaglutide's 2025 MASH approval into a
         # 2020 holdout). Use the hardcoded approvals table instead. Drugs not
@@ -513,14 +556,12 @@ def build_clinical_trials_tools(
 
     @tool(response_format="content_and_artifact")
     async def finalize_analysis(
-        summary: str,
         verdicts: list[dict],
         relevance_reasoning: str,
     ) -> tuple[str, FinalizeClinicalTrialsArtifact | str]:
         """Signal that the analysis is complete.
 
         Call this as the very last step. Pass:
-        - summary: your 2-3 sentence plain-text summary of the findings (human report).
         - verdicts: one entry PER completed/terminated trial shown to you, each a dict
           {"nct": "<NCT id>", "verdict": "relevant" | "contaminated"}. You MUST classify
           EVERY shown trial — omit none. "relevant" = studies this drug for THIS exact
@@ -528,32 +569,29 @@ def build_clinical_trials_tools(
           (e.g. pulmonary vs systemic hypertension) or a different drug's trial.
         - relevance_reasoning: 1-2 sentences justifying the split.
 
-        Do NOT enumerate the contaminated trials in the prose summary — the structured
-        verdicts list is the record. This terminates the agent loop.
+        Do NOT write a prose summary — the trial-section prose is authored separately after
+        the development stage is resolved. This terminates the agent loop.
 
-        Rejected (re-call to fix) when: summary is empty; any shown trial is missing a
-        verdict; or a verdict names an NCT that was not shown.
+        Rejected (re-call to fix) when: any shown trial is missing a verdict; or a verdict
+        names an NCT that was not shown.
         """
-        if not summary or not summary.strip():
-            return "REJECTED: empty summary. Re-call with the full summary.", ""
-
-        # The shown set for this run's one pair. The supervisor builds a fresh agent
-        # (fresh, empty shown_by_pair) per analyze_clinical_trials call, so this dict
-        # holds AT MOST one key — the single pair this instance investigated. If it
-        # ever holds more, a tools instance was reused across pairs and the relevance
-        # gate would tag one pair's trials contaminated under another (the cross-pair
-        # leak). That is a wiring error the LLM can't fix by retrying, so fail loudly
-        # rather than silently union an accumulated set into a verdict.
-        if len(shown_by_pair) > 1:
+        # The supervisor builds a fresh agent (fresh, empty shown_by_indication) per
+        # analyze_clinical_trials call, so this instance investigates ONE indication —
+        # shown_by_indication holds AT MOST one key (drug-name variants of the same pair
+        # accumulate into it). More than one key means a tools instance was reused across
+        # indications: the relevance gate would tag one pair's trials contaminated under
+        # another (the cross-pair leak). That is a wiring error the LLM can't fix by
+        # retrying, so fail loudly rather than silently union an accumulated set into a verdict.
+        if len(shown_by_indication) > 1:
             raise DataSourceError(
                 "clinical_trials",
-                "finalize_analysis: shown_by_pair holds "
-                f"{len(shown_by_pair)} pairs {sorted(shown_by_pair)} — the tools "
-                "instance was reused across drug × indication pairs. Build a fresh "
+                "finalize_analysis: shown_by_indication holds "
+                f"{len(shown_by_indication)} indications {sorted(shown_by_indication)} — "
+                "the tools instance was reused across indications. Build a fresh "
                 "clinical-trials agent per analyze_clinical_trials call.",
             )
         # Empty when no trials were shown (e.g. MeSH unresolved) → empty verdicts is valid.
-        shown: set[str] = next(iter(shown_by_pair.values()), set())
+        shown: set[str] = next(iter(shown_by_indication.values()), set())
 
         verdict_ncts = {v.get("nct") for v in verdicts if v.get("nct")}
         missing = shown - verdict_ncts
@@ -583,7 +621,6 @@ def build_clinical_trials_tools(
             if v.get("verdict") == "contaminated" and v.get("nct")
         ]
         artifact = FinalizeClinicalTrialsArtifact(
-            summary=summary,
             relevant_ncts=relevant_ncts,
             contaminated_ncts=contaminated_ncts,
             relevance_reasoning=relevance_reasoning or "",

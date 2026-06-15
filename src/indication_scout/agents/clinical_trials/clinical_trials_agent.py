@@ -23,6 +23,9 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     build_clinical_trials_tools,
 )
+from indication_scout.constants import DEFAULT_CACHE_DIR
+from indication_scout.services.clinical_trials_summary import judge_ct_summary
+from indication_scout.services.dev_stage import dev_stage_phrase, judge_dev_stage
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +37,7 @@ SYSTEM_PROMPT = (_PROMPTS_DIR / "clinical_trials.txt").read_text()
 def _finalize_done(messages: list) -> bool:
     """End the loop once finalize_analysis has SUCCEEDED this turn.
 
-    A rejected finalize (empty/whitespace summary) returns an empty-string artifact and
+    A rejected finalize (missing/unknown verdicts) returns an empty-string artifact and
     must loop back to the model to retry, so end only on a truthy artifact.
     """
     for m in _trailing_tool_messages(messages):
@@ -43,10 +46,16 @@ def _finalize_done(messages: list) -> bool:
     return False
 
 
-def build_clinical_trials_agent(llm, date_before=None):
-    """Return a compiled ReAct agent. No graph wiring required."""
+def build_clinical_trials_agent(llm, date_before=None, assigned_indication=None):
+    """Return a compiled ReAct agent. No graph wiring required.
+
+    `assigned_indication` pins the tools to one indication: a call for any other
+    indication is soft-rejected so a drifting agent self-corrects instead of crashing
+    at finalize (see build_clinical_trials_tools).
+    """
     tools = build_clinical_trials_tools(
         date_before=date_before,
+        assigned_indication=assigned_indication,
     )
     return build_gated_react_loop(llm, tools, SYSTEM_PROMPT, _finalize_done)
 
@@ -162,7 +171,7 @@ async def run_clinical_trials_agent(
     if not finalized:
         logger.warning(
             "clinical_trials_agent: %s × %s — finalize_analysis produced no artifact; "
-            "summary, relevance, and signals will be empty",
+            "relevance, signals, and summary will be empty",
             drug_name,
             disease_name,
         )
@@ -174,7 +183,6 @@ async def run_clinical_trials_agent(
         terminated=artifacts["terminated"],
         landscape=artifacts["landscape"],
         approval=artifacts["approval"],
-        summary=finalize.summary,
         relevant_nct_ids=finalize.relevant_ncts,
         contaminated_nct_ids=finalize.contaminated_ncts,
         relevance_reasoning=finalize.relevance_reasoning,
@@ -186,6 +194,61 @@ async def run_clinical_trials_agent(
     # rather than silently filtering every trial out with an empty relevant set.
     if finalized:
         output.signals = derive_trial_signals(
-            output, relevant_nct_ids=set(output.relevant_nct_ids)
+            output,
+            relevant_nct_ids=set(output.relevant_nct_ids),
+            contaminated_nct_ids=set(output.contaminated_nct_ids),
         )
+        # dev_stage is an LLM judgment (not the deterministic phase-rank, which mis-encoded
+        # the Phase-4 trap). Only nct/phase/status of the relevant trials is sent. Cached per
+        # trial set. Keeps the deterministic dev_stage already on signals as the fallback when
+        # the relevant set is empty.
+        #
+        # Trial set for the judgment:
+        #   - completed + terminated filtered by relevant_nct_ids (the agent's relevance split)
+        #   - PLUS search-set trials that are NOT contaminated and NOT already in that set —
+        #     active/recruiting Phase 3s live only in the search set and are never classified
+        #     into completed/terminated, so relevance-filtering alone would drop them (the E4
+        #     gap). Contamination exclusion is best-effort, matching derive_trial_signals.
+        relevant_set = set(output.relevant_nct_ids)
+        contaminated_set = set(output.contaminated_nct_ids)
+        seen: set[str] = set()
+        relevant_trials = []
+        for t in (output.completed.trials if output.completed else []) + (
+            output.terminated.trials if output.terminated else []
+        ):
+            if t.nct_id and t.nct_id in relevant_set and t.nct_id not in seen:
+                seen.add(t.nct_id)
+                relevant_trials.append(t)
+        for t in output.search.trials if output.search else []:
+            if t.nct_id and t.nct_id not in contaminated_set and t.nct_id not in seen:
+                seen.add(t.nct_id)
+                relevant_trials.append(t)
+        if relevant_trials:
+            judgment = await judge_dev_stage(
+                relevant_trials,
+                DEFAULT_CACHE_DIR,
+                drug=drug_name,
+                indication=disease_name,
+            )
+            output.signals.dev_stage = judgment.tier
+            output.signals.active_programs = judgment.active_programs
+
+            # LOAD-BEARING ORDER: judge_dev_stage MUST run before judge_ct_summary. The whole
+            # fix is that the trial-section prose is FED the resolved stage so it cannot
+            # contradict it (the T1DM "no completed Phase 3" bug). Do NOT reorder these.
+            stage_phrase = dev_stage_phrase(output.signals)
+            if stage_phrase:
+                ct_summary = await judge_ct_summary(
+                    relevant_trials,
+                    stage=stage_phrase,
+                    active_programs=judgment.active_programs,
+                    first_approval=first_approval,
+                    cache_dir=DEFAULT_CACHE_DIR,
+                    drug=drug_name,
+                    indication=disease_name,
+                )
+                if ct_summary is not None:
+                    output.summary = ct_summary.prose
+                    output.closure = ct_summary.closure
+                    output.closure_reason = ct_summary.closure_reason
     return output

@@ -141,6 +141,25 @@ APPROVAL = ApprovalCheck(
 )
 
 
+@pytest.fixture(autouse=True)
+def _stub_post_loop_judgments(monkeypatch):
+    """Keep these output-assembly unit tests OFFLINE. The post-loop judge_dev_stage /
+    judge_ct_summary calls hit the live LLM whenever a relevant trial exists (a search-set
+    trial counts); stub both to fixed values so no test reaches the network. The dedicated
+    synthesis test overrides these to assert the wiring."""
+    from indication_scout.agents.clinical_trials import clinical_trials_agent as cta
+    from indication_scout.services.dev_stage import StageJudgment
+
+    async def _stage(trials, cache_dir, **kw):
+        return StageJudgment(tier="untested", active_programs="None active")
+
+    async def _summary(trials, **kw):
+        return None
+
+    monkeypatch.setattr(cta, "judge_dev_stage", _stage)
+    monkeypatch.setattr(cta, "judge_ct_summary", _summary)
+
+
 def _make_agent(messages: list) -> MagicMock:
     agent = MagicMock()
     agent.ainvoke = AsyncMock(return_value={"messages": messages})
@@ -148,10 +167,13 @@ def _make_agent(messages: list) -> MagicMock:
 
 
 def _tool_msg(name: str, artifact) -> ToolMessage:
-    # finalize_analysis now returns a FinalizeClinicalTrialsArtifact, not a bare string.
-    # Accept a plain summary string for brevity and wrap it so existing call sites still work.
+    # finalize_analysis returns a FinalizeClinicalTrialsArtifact (relevance split only — no
+    # prose). Accept a string call-site arg as the relevance_reasoning so existing call sites
+    # keep working; they no longer carry a summary (the prose is authored post-loop by
+    # judge_ct_summary). With no verdicts the relevant set is empty, so judge_ct_summary is
+    # never reached and output.summary stays "".
     if name == "finalize_analysis" and isinstance(artifact, str):
-        artifact = FinalizeClinicalTrialsArtifact(summary=artifact)
+        artifact = FinalizeClinicalTrialsArtifact(relevance_reasoning=artifact)
     return ToolMessage(
         content=f"result of {name}",
         artifact=artifact,
@@ -217,8 +239,8 @@ async def test_run_clinical_trials_agent_whitespace_path():
     assert output.completed is None
     assert output.approval is None
 
-    # summary
-    assert output.summary == NARRATIVE
+    # summary: no relevant verdicts → judge_ct_summary not reached → prose stays empty
+    assert output.summary == ""
 
 
 # ------------------------------------------------------------------
@@ -279,28 +301,63 @@ async def test_run_clinical_trials_agent_active_trials_path():
     assert output.landscape.total_trial_count == 30
 
     assert output.terminated is None
-    assert output.summary == "5 trials found. ALS space is moderately active."
+    # no relevant verdicts → judge_ct_summary not reached → prose stays empty
+    assert output.summary == ""
 
 
 # ------------------------------------------------------------------
-# Summary extraction: comes from finalize_analysis artifact
+# Summary + closure: authored post-loop by judge_ct_summary, fed the resolved dev_stage
 # ------------------------------------------------------------------
 
 
-async def test_run_clinical_trials_agent_summary_from_finalize_analysis():
-    """The narrative summary is taken from the finalize_analysis ToolMessage artifact."""
-    final_narrative = "Final summary from finalize_analysis."
+async def test_run_clinical_trials_agent_summary_from_ct_summary_synthesis(monkeypatch):
+    """With a RELEVANT completed trial, the post-loop judge_ct_summary call authors the prose
+    and the typed closure, which flow into output.summary / output.closure. judge_dev_stage and
+    judge_ct_summary are mocked (this is output-assembly wiring, not the LLM judgment).
+    """
+    from indication_scout.agents.clinical_trials import clinical_trials_agent as cta
+    from indication_scout.services.clinical_trials_summary import CTSummary
+    from indication_scout.services.dev_stage import StageJudgment
+
+    finalize = FinalizeClinicalTrialsArtifact(
+        relevant_ncts=["NCT04111111"],
+        contaminated_ncts=[],
+        relevance_reasoning="the completed Phase 3 studies this exact pair",
+    )
     messages = [
         HumanMessage(content="Analyze somedrug in huntingtons"),
         _tool_msg("search_trials", SEARCH),
+        _tool_msg("get_completed", COMPLETED),
         _tool_msg("get_landscape", LANDSCAPE),
-        _tool_msg("finalize_analysis", final_narrative),
+        _tool_msg("finalize_analysis", finalize),
     ]
     agent = _make_agent(messages)
 
+    captured: dict = {}
+
+    async def _fake_dev_stage(trials, cache_dir, **kw):
+        return StageJudgment(tier="completed_phase3", active_programs="None active")
+
+    async def _fake_ct_summary(trials, *, stage, active_programs, first_approval, **kw):
+        captured["stage"] = stage
+        captured["trials"] = [t.nct_id for t in trials]
+        return CTSummary(
+            prose="A completed Phase 3 (NCT04111111) is on record.",
+            closure="live",
+            closure_reason="no negative readout",
+        )
+
+    monkeypatch.setattr(cta, "judge_dev_stage", _fake_dev_stage)
+    monkeypatch.setattr(cta, "judge_ct_summary", _fake_ct_summary)
+
     output = await run_clinical_trials_agent(agent, "somedrug", "huntingtons")
 
-    assert output.summary == final_narrative
+    # The synthesis call was fed the RESOLVED stage phrase and the relevant trial.
+    assert captured["stage"] == "Phase 3 completed for this indication"
+    assert captured["trials"] == ["NCT04111111"]
+    assert output.summary == "A completed Phase 3 (NCT04111111) is on record."
+    assert output.closure == "live"
+    assert output.closure_reason == "no negative readout"
 
 
 # ------------------------------------------------------------------
@@ -336,7 +393,8 @@ async def test_run_clinical_trials_agent_approval_path():
         "wegovy",
         "rybelsus",
     ]
-    assert output.summary == "Semaglutide is FDA-approved for type 2 diabetes mellitus."
+    # no relevant verdicts → judge_ct_summary not reached → prose stays empty
+    assert output.summary == ""
 
 
 async def test_run_clinical_trials_agent_approval_defaults_to_none_when_absent():

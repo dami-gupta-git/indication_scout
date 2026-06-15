@@ -3,11 +3,6 @@
 import re
 from datetime import datetime
 
-from indication_scout.agents.supervisor.supervisor_output import (
-    CandidateBlurb,
-    CandidateFindings,
-    SupervisorOutput,
-)
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
 )
@@ -15,6 +10,51 @@ from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     _classify_stop_reason,
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
+from indication_scout.agents.supervisor.supervisor_output import (
+    CandidateBlurb,
+    CandidateFindings,
+    SupervisorOutput,
+)
+from indication_scout.services.dev_stage import dev_stage_phrase
+
+# Max example trials enumerated per scope (completed / terminated). When the relevant
+# (non-contaminated) list exceeds this, the body shows the first N and discloses the
+# truncation so the rendered count can't read as the full list.
+_TRIAL_RENDER_CAP = 10
+
+
+def _trial_count_clause(total_on_record: int, n_fetched: int, n_shown: int) -> str:
+    """Build a reconciling clause for a completed/terminated trial header.
+
+    The header already states `total_on_record` (the raw API pair total — pre-filter). The OLD
+    formatter then appended ", N hidden as a different indication" where N was contamination
+    counted WITHIN the fetched (≤50) slice — a DIFFERENT population from total_on_record, so the
+    two read as if they subtracted ("64 total, 45 hidden" → looks like 19 visible, but 5 show).
+
+    This clause keeps every number against the SAME population it belongs to and only states what
+    is actually true of the fetched slice:
+      - all `total_on_record` trials were fetched (n_fetched == total_on_record): say how many of
+        them are relevant vs hidden-as-a-different-indication;
+      - only a slice was fetched (n_fetched < total_on_record): say "showing N relevant of the
+        first M fetched" so the rendered list count is never read against the full total.
+    Returns "" when there is nothing to disclose (everything fetched, nothing hidden).
+    """
+    n_hidden = n_fetched - n_shown
+    if n_fetched >= total_on_record:
+        # The full population was fetched, so hidden+shown reconcile against total_on_record.
+        if n_hidden:
+            return (
+                f" {n_shown} relevant; {n_hidden} hidden as a different indication"
+                f" (of {total_on_record})."
+            )
+        return ""
+    # Only a slice was fetched; never imply the shown count subtracts from total_on_record.
+    if n_hidden:
+        return (
+            f" showing {n_shown} relevant of the first {n_fetched} fetched"
+            f" ({n_hidden} of those fetched hidden as a different indication)."
+        )
+    return f" showing {n_shown} of the first {n_fetched} fetched."
 
 
 def _title_case_disease(name: str) -> str:
@@ -29,9 +69,19 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
 
     if lit.evidence_summary:
         es = lit.evidence_summary
-        strength_line = f"**Evidence strength:** {es.strength}"
-        if es.direction != "none":
-            strength_line += f", {es.direction}"
+        # class_level = the disease-relevant RCTs are for OTHER drugs in the class, not this
+        # one (judge_literature_strength). Make the line honest so the section never reads as
+        # direct drug evidence — strength/direction are forced to "none" for class_level in the
+        # parser, so this line is the only meaningful rendering.
+        if es.evidence_basis == "class_level":
+            strength_line = (
+                "**Evidence strength:** class-level signal "
+                "(no direct evidence for this drug)"
+            )
+        else:
+            strength_line = f"**Evidence strength:** {es.strength}"
+            if es.direction != "none":
+                strength_line += f", {es.direction}"
         lines.append(strength_line)
         lines.append(f"**Relevant studies:** {es.study_count}")
         if es.summary:
@@ -72,6 +122,13 @@ def _fmt_clinical_trials(
 ) -> str:
     lines: list[str] = []
     suppress_trial_tables = approval_relationship in _CONTAMINATED_RELATIONSHIPS
+
+    # Authoritative development-stage line — the SINGLE source of the phase-tier judgment
+    # (from judge_dev_stage). The CT sub-agent prose describes trials but must NOT judge the
+    # tier (see clinical_trials.txt), so the tier is stated here once and cannot contradict it.
+    stage_line = dev_stage_phrase(ct.signals) if ct.signals else None
+    if stage_line:
+        lines.append(f"**Development stage:** {stage_line}")
 
     if ct.summary:
         lines.append(ct.summary)
@@ -134,31 +191,33 @@ def _fmt_clinical_trials(
 
     if ct.completed:
         c = ct.completed
-        n_excluded = sum(1 for t in c.trials if t.nct_id in contaminated)
-        excl_note = (
-            f", {n_excluded} excluded as a different indication" if n_excluded else ""
-        )
-        lines.append(f"\n**Completed trials ({c.total_count} total{excl_note}):**")
         shown = [t for t in c.trials if t.nct_id not in contaminated]
-        for trial in shown[:10]:
+        lines.append(
+            f"\n**Completed trials ({c.total_count} total on record):**"
+            f"{_trial_count_clause(c.total_count, len(c.trials), len(shown))}"
+        )
+        for trial in shown[:_TRIAL_RENDER_CAP]:
             phase = trial.phase or "Unknown phase"
             status = trial.overall_status or ""
             lines.append(
                 f"- [{trial.nct_id}](https://clinicaltrials.gov/study/{trial.nct_id}) — {trial.title} ({phase}{', ' + status if status else ''})"
             )
+        if len(shown) > _TRIAL_RENDER_CAP:
+            lines.append(
+                f"- _…and {len(shown) - _TRIAL_RENDER_CAP} more relevant completed "
+                f"trial(s) not listed (showing first {_TRIAL_RENDER_CAP} of "
+                f"{len(shown)})._"
+            )
 
     if ct.terminated:
         term = ct.terminated
         if term.total_count:
-            n_excluded = sum(1 for t in term.trials if t.nct_id in contaminated)
-            excl_note = (
-                f", {n_excluded} excluded as a different indication"
-                if n_excluded
-                else ""
-            )
-            lines.append(f"\n**Terminated trials ({term.total_count}{excl_note}):**")
             shown = [t for t in term.trials if t.nct_id not in contaminated]
-            for t in shown[:10]:
+            lines.append(
+                f"\n**Terminated trials ({term.total_count} total on record):**"
+                f"{_trial_count_clause(term.total_count, len(term.trials), len(shown))}"
+            )
+            for t in shown[:_TRIAL_RENDER_CAP]:
                 reason = f" — *{t.why_stopped}*" if t.why_stopped else ""
                 title = f" {t.title}" if t.title else ""
                 phase = t.phase or "Unknown phase"
@@ -166,6 +225,12 @@ def _fmt_clinical_trials(
                 category = f" [{classified}]" if classified != t.why_stopped else ""
                 lines.append(
                     f"- [{t.nct_id}](https://clinicaltrials.gov/study/{t.nct_id}){title} ({phase}){category}{reason}"
+                )
+            if len(shown) > _TRIAL_RENDER_CAP:
+                lines.append(
+                    f"- _…and {len(shown) - _TRIAL_RENDER_CAP} more relevant terminated "
+                    f"trial(s) not listed (showing first {_TRIAL_RENDER_CAP} of "
+                    f"{len(shown)})._"
                 )
 
     if not lines:

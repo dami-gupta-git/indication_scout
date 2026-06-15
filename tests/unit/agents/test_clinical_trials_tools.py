@@ -1088,9 +1088,7 @@ async def _populate_shown(tools: list, *, completed=(), terminated=()) -> None:
 
 async def _finalize(tools: list, **args):
     return await _get_tool(tools, "finalize_analysis").ainvoke(
-        LCToolCall(
-            name="finalize_analysis", args=args, id="tc_fin", type="tool_call"
-        )
+        LCToolCall(name="finalize_analysis", args=args, id="tc_fin", type="tool_call")
     )
 
 
@@ -1102,10 +1100,8 @@ async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():
         tools, completed=["NCT00000001", "NCT00000002"], terminated=["NCT00000099"]
     )
 
-    text = "Completed Phase 3 on record; PAH trial excluded as a different disease."
     msg = await _finalize(
         tools,
-        summary=text,
         verdicts=[
             {"nct": "NCT00000001", "verdict": "relevant"},
             {"nct": "NCT00000002", "verdict": "relevant"},
@@ -1115,7 +1111,6 @@ async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():
     )
 
     art = msg.artifact
-    assert art.summary == text
     assert art.relevant_ncts == ["NCT00000001", "NCT00000002"]
     assert art.contaminated_ncts == ["NCT00000099"]
     assert (
@@ -1133,7 +1128,6 @@ async def test_finalize_analysis_rejects_missing_verdict():
 
     msg = await _finalize(
         tools,
-        summary="real summary",
         verdicts=[{"nct": "NCT00000001", "verdict": "relevant"}],
         relevance_reasoning="r",
     )
@@ -1150,7 +1144,6 @@ async def test_finalize_analysis_rejects_unknown_nct():
 
     msg = await _finalize(
         tools,
-        summary="real summary",
         verdicts=[
             {"nct": "NCT00000001", "verdict": "relevant"},
             {"nct": "NCT09999999", "verdict": "contaminated"},
@@ -1169,7 +1162,6 @@ async def test_finalize_analysis_empty_shown_accepts_empty_verdicts():
 
     msg = await _finalize(
         tools,
-        summary="No trial evidence on record for this pair.",
         verdicts=[],
         relevance_reasoning="No completed or terminated trials shown.",
     )
@@ -1178,18 +1170,6 @@ async def test_finalize_analysis_empty_shown_accepts_empty_verdicts():
     assert art.relevant_ncts == []
     assert art.contaminated_ncts == []
     assert "Analysis complete" in msg.content
-
-
-async def test_finalize_analysis_rejects_empty_summary():
-    """An empty/whitespace summary is rejected with an empty-string artifact so the loop retries."""
-    tools = build_clinical_trials_tools(date_before=None)
-
-    msg = await _finalize(
-        tools, summary="   ", verdicts=[], relevance_reasoning=""
-    )
-
-    assert msg.artifact == ""
-    assert "REJECTED" in msg.content
 
 
 # ------------------------------------------------------------------
@@ -1249,7 +1229,6 @@ async def _run_pair(tools, drug: str, indication: str, mesh_term: str, ncts: lis
         )
     return await _finalize(
         tools,
-        summary=f"{drug} × {indication}: trials on record.",
         verdicts=[{"nct": n, "verdict": "relevant"} for n in ncts],
         relevance_reasoning="all relevant to this pair",
     )
@@ -1270,11 +1249,17 @@ async def test_per_call_instances_keep_contaminated_sets_disjoint():
     tools_b = build_clinical_trials_tools(date_before=None)
 
     msg_a = await _run_pair(
-        tools_a, "metformin", "type 1 diabetes", "Diabetes Mellitus, Type 1",
+        tools_a,
+        "metformin",
+        "type 1 diabetes",
+        "Diabetes Mellitus, Type 1",
         ["NCT_A1", "NCT_A2"],
     )
     msg_b = await _run_pair(
-        tools_b, "metformin", "nafld", "Non-alcoholic Fatty Liver Disease",
+        tools_b,
+        "metformin",
+        "nafld",
+        "Non-alcoholic Fatty Liver Disease",
         ["NCT_B1", "NCT_B2", "NCT_B3"],
     )
 
@@ -1323,11 +1308,10 @@ async def test_shared_instance_across_pairs_raises_not_leaks():
     with pytest.raises(DataSourceError) as exc:
         await _finalize(
             shared,
-            summary="metformin × type 1 diabetes: trials on record.",
             verdicts=[{"nct": "NCT_A1", "verdict": "relevant"}],
             relevance_reasoning="relevant to T1D",
         )
-    assert "reused across drug" in str(exc.value)
+    assert "reused across indications" in str(exc.value)
 
 
 # ------------------------------------------------------------------
@@ -1678,3 +1662,105 @@ async def test_get_landscape_runs_normally_without_date_before():
 
     assert msg.artifact is landscape
     mock_client.get_landscape.assert_awaited_once()
+
+
+# ------------------------------------------------------------------
+# assigned_indication soft-reject (drift guard)
+# ------------------------------------------------------------------
+
+
+async def test_mismatched_indication_is_soft_rejected_without_network():
+    """A pair tool called with an indication other than the assigned one returns a REJECTED
+    message and an empty artifact, and never touches the network or the MeSH resolver.
+    """
+    tools = build_clinical_trials_tools(
+        date_before=None, assigned_indication="nicotine dependence"
+    )
+    resolve = AsyncMock()
+    with (
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+            new=resolve,
+        ),
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+        ) as client_cls,
+    ):
+        msg = await _get_tool(tools, "search_trials").ainvoke(
+            LCToolCall(
+                name="search_trials",
+                args={"drug": "bupropion", "indication": "smoking cessation"},
+                id="tc_mismatch",
+                type="tool_call",
+            )
+        )
+
+    assert isinstance(msg.artifact, SearchTrialsResult)
+    assert msg.artifact.total_count == 0
+    assert msg.artifact.trials == []
+    assert "REJECTED" in msg.content
+    assert "nicotine dependence" in msg.content
+    assert "smoking cessation" in msg.content
+    resolve.assert_not_awaited()
+    client_cls.assert_not_called()
+
+
+async def test_assigned_indication_match_is_case_insensitive():
+    """The assigned indication matches regardless of case/surrounding whitespace, so a
+    correctly-targeted call proceeds to the resolver."""
+    mock_client = _mock_client(
+        search_trials=SearchTrialsResult(total_count=0, trials=[])
+    )
+    tools = build_clinical_trials_tools(
+        date_before=None, assigned_indication="Nicotine Dependence"
+    )
+    with (
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+            new=AsyncMock(return_value=("D014029", "Tobacco Use Disorder")),
+        ),
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+            return_value=mock_client,
+        ),
+    ):
+        msg = await _get_tool(tools, "search_trials").ainvoke(
+            LCToolCall(
+                name="search_trials",
+                args={"drug": "bupropion", "indication": "  nicotine dependence  "},
+                id="tc_match",
+                type="tool_call",
+            )
+        )
+
+    assert "REJECTED" not in msg.content
+    mock_client.search_trials.assert_awaited_once()
+
+
+async def test_no_assigned_indication_disables_the_check():
+    """With assigned_indication=None the tools accept any indication (back-compat)."""
+    mock_client = _mock_client(
+        search_trials=SearchTrialsResult(total_count=0, trials=[])
+    )
+    tools = build_clinical_trials_tools(date_before=None, assigned_indication=None)
+    with (
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+            new=AsyncMock(return_value=("D016540", "Smoking Cessation")),
+        ),
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+            return_value=mock_client,
+        ),
+    ):
+        msg = await _get_tool(tools, "search_trials").ainvoke(
+            LCToolCall(
+                name="search_trials",
+                args={"drug": "bupropion", "indication": "smoking cessation"},
+                id="tc_nocheck",
+                type="tool_call",
+            )
+        )
+
+    assert "REJECTED" not in msg.content
+    mock_client.search_trials.assert_awaited_once()

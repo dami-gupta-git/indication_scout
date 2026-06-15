@@ -35,9 +35,70 @@ from indication_scout.services.approval_check import (
     list_approved_indications_at,
     list_approved_indications_from_labels,
 )
+from indication_scout.services.dev_stage import DEV_STAGE_PHRASE, dev_stage_phrase
+from indication_scout.services.judge_interpretive import judge_interpretive
 from indication_scout.services.llm import query_llm, strip_markdown_fences
 
 logger = logging.getLogger(__name__)
+
+# Authoritative development-stage phrase + renderer live in services/dev_stage (the single
+# home shared with the report formatter). Aliased to the local names used throughout.
+_DEV_STAGE_PHRASE = DEV_STAGE_PHRASE
+_dev_stage_phrase = dev_stage_phrase
+
+
+def _literature_oneliner(es) -> str:
+    """Deterministic one-line literature summary from the typed EvidenceSummary fields
+    (strength, direction, study design) — NOT free LLM prose. Fed to judge_interpretive as the
+    authoritative literature fact and used to overwrite the blurb's `literature` field, so the
+    design word always matches the authoritative is_observational token (this replaces the
+    earlier deterministic 'observational' text repair). Returns "None" when no evidence summary
+    is present.
+    """
+    if es is None:
+        return "None"
+    # class_level = the disease-relevant RCTs are for OTHER drugs in the class, not this one
+    # (judge_literature_strength). The card must NOT read "strong, RCT-backed" — there is no
+    # drug-specific body. State the basis plainly; strength/direction are forced to "none" for
+    # class_level in the parser, so the ranking path also sees no drug strength here.
+    if getattr(es, "evidence_basis", "none") == "class_level":
+        return "class-level signal (no direct evidence for this drug)"
+    design = (
+        "RCT-backed / controlled"
+        if es.is_observational is False
+        else "observational" if es.is_observational is True else "undetermined design"
+    )
+    direction = es.direction if es.direction and es.direction != "none" else ""
+    parts = [es.strength or "none"]
+    if direction:
+        parts.append(direction)
+    parts.append(design)
+    return ", ".join(parts)
+
+
+# False stage clause the LLM writes in a DEMOTION FOOTER line when it ignores the authoritative
+# dev_stage. Used ONLY for the footer / ranked-summary line, where the stage clause sits in a
+# controlled single-clause context ("- <disease> — <relationship> (… ; <stage clause> ; …)")
+# and a clean replacement is safe. NOT used on free-text blurb fields (verdict/blocker/prose):
+# mid-sentence substitution there mangled grammar (a partial match left "no dedicated Phase 3
+# completed for this indication"). Those fields are kept phase-free by the prompt instead.
+# Anchored to whole semicolon/paren-delimited clauses so a match spans a full clause, not a
+# fragment of a longer sentence.
+_FALSE_STAGE_FRAGMENT = re.compile(
+    r"Phase\s*4\s*exploratory\s*only[^;)]*|"
+    r"no\s+(?:dedicated|formal)\s+development\s+program[^;)]*|"
+    r"exploratory\s+(?:phase\s*4\s+)?only[^;)]*",
+    re.IGNORECASE,
+)
+
+# dev_stage tiers that assert a real Phase 3 program — only these trigger a footer stage fix.
+_PROGRAM_STAGES = {
+    "phase3_terminated_for_cause",
+    "completed_phase3",
+    "active_phase3",
+    "phase3_unknown_status",
+}
+
 
 # Fresh-context critic for the supervisor's candidate ranking. Given only the
 # blurbs (verdict + evidence + one-line fields), it checks ranking-order
@@ -69,16 +130,30 @@ signals).
 Report ordering violations — cases where a lower-ranked candidate should \
 clearly outrank a higher-ranked one under these rules.
 
-You ALSO repair one specific factual contradiction. Each candidate line carries a \
-FACT block stating whether a relevant COMPLETED Phase 3 trial is ON RECORD for that \
-pair (machine-derived, authoritative). When FACT says a completed Phase 3 IS on \
-record, NO field may claim the opposite. Rewrite any field that asserts there are no \
-Phase 3 TRIALS — e.g. "no Phase 3 on record", "Phase 3 never initiated", "all \
-activity is Phase 4", "Phase 4 exploratory only" — to reflect the completed Phase 3.
-CRITICAL DISTINCTION: a claim about no dedicated REGULATORY / NDA / pivotal \
+You ALSO repair factual contradictions against the per-candidate FACT block \
+(machine-derived, authoritative). The FACT states one of: a relevant COMPLETED Phase 3 \
+is on record; an ACTIVE/RECRUITING Phase 3 is on record; or no relevant Phase 3. NO \
+field may contradict the FACT.
+
+CASE 1 — FACT says a COMPLETED Phase 3 IS on record. Rewrite any field that asserts \
+there are no Phase 3 TRIALS — e.g. "no Phase 3 on record", "Phase 3 never initiated", \
+"all activity is Phase 4", "Phase 4 exploratory only" — to reflect the completed Phase 3.
+CRITICAL DISTINCTION (case 1 only): a claim about no dedicated REGULATORY / NDA / pivotal \
 *program* (commercial development) is SEPARATE and usually TRUE for a generic drug — \
 do NOT rewrite "no dedicated regulatory program", "no NDA filed", "no commercial \
-development". Only the TRIAL-existence claim is wrong. Change nothing else.
+development". Only the TRIAL-existence claim is wrong.
+
+CASE 2 — FACT says an ACTIVE/RECRUITING Phase 3 IS on record. An active Phase 3 trial \
+IS a development program. Rewrite ANY field claiming there is no development program or \
+only off-label/Phase 4 activity — e.g. "no development program", "no formal development \
+program", "no dedicated pivotal program", "Phase 4 activity reflects off-label use, not \
+a dedicated development program", "Multiple Phase 4 studies" used to mean nothing higher \
+exists — to reflect the active Phase 3 program (name the NCT ids from the FACT). Here the \
+"no dedicated program" wording IS false and MUST be corrected (unlike case 1). You MAY \
+still note the absence of a COMPLETED pivotal READOUT — that is true and different from \
+"no program".
+
+Change nothing else.
 
 Output a JSON object ONLY (no prose, no fences):
 {"ordering": "<short violation list, or 'consistent'>",
@@ -713,7 +788,9 @@ def build_supervisor_tools(
         # Fresh agent per call — isolates the tools' closure-scoped shown_by_pair so concurrent
         # candidate investigations don't accumulate each other's trials into this pair's
         # contaminated set (see the build-site note above).
-        ct_agent = build_clinical_trials_agent(llm=llm, date_before=date_before)
+        ct_agent = build_clinical_trials_agent(
+            llm=llm, date_before=date_before, assigned_indication=disease_name
+        )
         output = await run_clinical_trials_agent(
             ct_agent, drug_name, disease_name, first_approval=first_approval
         )
@@ -831,12 +908,19 @@ def build_supervisor_tools(
                 f"({', '.join(output.contaminated_nct_ids)})"
             )
 
-        # Prose summary is HUMAN-REPORT context only — carries the sub-agent's closure verdict
-        # in words. The supervisor TRUSTS that verdict; it must not re-judge closure from prose.
-        sub_agent_summary = output.summary or ""
+        # Closure is a TYPED field from the post-loop synthesis call (no longer parsed from
+        # prose). The supervisor TRUSTS it and must not re-judge closure. The prose summary is
+        # HUMAN-REPORT context only.
         summary = f"{header}{structured}\n\n{signals_block}"
-        if sub_agent_summary:
-            summary = f"{summary}\n\nSub-agent verdict (trust, do not re-judge closure):\n{sub_agent_summary}"
+        closure_line = f"closure={output.closure}"
+        if output.closure_reason:
+            closure_line += f" — {output.closure_reason}"
+        summary = (
+            f"{summary}\n\nSub-agent closure verdict (trust, do not re-judge closure):\n"
+            f"{closure_line}"
+        )
+        if output.summary:
+            summary = f"{summary}\n\nSub-agent trial-section prose (context):\n{output.summary}"
         # Write-through for the top-N evidence gate in finalize_supervisor.
         slot = findings_local.setdefault(
             disease_name.lower().strip(), {"literature": None, "clinical_trials": None}
@@ -1084,6 +1168,12 @@ def build_supervisor_tools(
                 "trials_terminated": n_terminated,
                 "relevant_highest_phase": relevant_highest_phase,
                 "relevant_phase3_terminated_for_cause": relevant_phase3_terminated,
+                # Authoritative development-stage tier — seed the LLM's ranking with the same
+                # fact the downstream blurb/footer/ranked-line render, so it isn't biased toward
+                # "Phase 4 only / no program" by a low highest_COMPLETED_phase that ignores
+                # active/recruiting pivotal trials (the T1DM active-Phase-3 case).
+                "dev_stage": ct_signals.dev_stage if ct_signals else None,
+                "dev_stage_phrase": _dev_stage_phrase(ct_signals),
             }
 
         _fan_t0 = time.perf_counter()
@@ -1108,11 +1198,18 @@ def build_supervisor_tools(
             )
             direction = a.get("literature_direction") or "none"
             dir_note = f"/{direction}" if direction not in ("none", "no data") else ""
+            # Authoritative dev_stage seeds the ranking; render it so the LLM ranks on the same
+            # fact the report will show, not on highest_completed_phase alone.
+            stage_note = (
+                f"; dev_stage {a['dev_stage']} ({a['dev_stage_phrase']})"
+                if a.get("dev_stage_phrase")
+                else ""
+            )
             lines.append(
                 f"  - {a['disease']}: literature {a['literature_strength']}{dir_note}, "
                 f"{a['literature_pmids']} PMIDs; trials {a['trials_total']} total, "
                 f"{a['trials_completed']} completed, {a['trials_terminated']} terminated; "
-                f"relevant highest phase {phase}{term_note}"
+                f"relevant highest phase {phase}{term_note}{stage_note}"
             )
         return "\n".join(lines), artifacts
 
@@ -1243,7 +1340,7 @@ def build_supervisor_tools(
         """Run the ranking/fact critic over `items`; return (ordering_text, repaired_blurbs).
 
         Feeds each blurb its authoritative per-disease Phase-3 FACT so the critic can repair a
-        false "no Phase 3 trials" claim (A2) while preserving true "no regulatory program"
+        false "no Phase 3 trials" claim while preserving true "no regulatory program"
         claims. On ANY parse failure or disease-set mismatch, returns the ORIGINAL items
         (data-loss guard). Used by both critique_ranking and finalize_supervisor so the repair
         always runs on the finalized blurbs, not only when the LLM pre-called critique_ranking.
@@ -1257,13 +1354,12 @@ def build_supervisor_tools(
             slot = findings_local.get(disease.lower().strip()) or {}
             ct = slot.get("clinical_trials")
             sig = ct.signals if ct else None
-            if sig is not None and sig.has_completed_phase3:
+            stage_phrase = _dev_stage_phrase(sig)
+            if stage_phrase is not None:
                 fact = (
-                    f"relevant COMPLETED Phase 3 IS on record "
-                    f"(highest={sig.highest_completed_phase or 'Phase 3'})"
+                    f"authoritative dev_stage = {sig.dev_stage} ({stage_phrase}) — "
+                    "do not contradict this stage"
                 )
-            elif sig is not None:
-                fact = "no relevant completed Phase 3 on record"
             else:
                 fact = "no trial signal available"
             lines.append(
@@ -1392,62 +1488,12 @@ def build_supervisor_tools(
         logger.info(
             "[TOOL] finalize_supervisor called with %d blurbs", len(blurbs or [])
         )
-        # A2 fact repair — GUARANTEED to run on the finalized blurbs. The supervisor is supposed
-        # to pass its draft to critique_ranking (which repairs + stores last_blurbs), but it does
-        # not always pass the SAME blurbs (or any) — when it doesn't, the repair would be silently
-        # skipped (observed: semaglutide 13:33 leaked, 13:49 worked). So: prefer the critic's
-        # stored repair when its disease set matches; OTHERWISE run the critic HERE on the passed
-        # blurbs. Either way the false "no Phase 3 trials" claim cannot reach the report.
-        passed = blurbs or []
-        critic_blurbs = critique_state.get("last_blurbs")
-        passed_set = {(b.get("disease") or "").strip().lower() for b in passed}
-        if (
-            critic_blurbs
-            and passed
-            and passed_set
-            == {(b.get("disease") or "").strip().lower() for b in critic_blurbs}
-        ):
-            repaired_source = critic_blurbs
-            logger.info(
-                "[TOOL] finalize_supervisor using critic-repaired blurbs (%d)",
-                len(passed),
-            )
-        elif passed and any(
-            (
-                (
-                    findings_local.get((b.get("disease") or "").strip().lower()) or {}
-                ).get("clinical_trials")
-                is not None
-            )
-            and getattr(
-                (findings_local.get((b.get("disease") or "").strip().lower()) or {})
-                .get("clinical_trials")
-                .signals,
-                "has_completed_phase3",
-                False,
-            )
-            for b in passed
-        ):
-            # The pre-call didn't cover these blurbs AND at least one has a completed Phase 3
-            # (the only case where the A2 false "no Phase 3" claim can occur) — run the fact
-            # critic now so the repair is never silently skipped. Gated to avoid an LLM call
-            # when no candidate could carry the false claim.
-            logger.warning(
-                "[TOOL] finalize_supervisor: critique blurbs missing/mismatched — "
-                "running fact critic at finalize (%d blurbs)",
-                len(passed),
-            )
-            _, repaired_source = await _run_fact_critic(passed)
-        else:
-            repaired_source = []
-        if repaired_source:
-            by_disease = {
-                (b.get("disease") or "").strip().lower(): b for b in repaired_source
-            }
-            blurbs = [
-                by_disease.get((b.get("disease") or "").strip().lower(), b)
-                for b in passed
-            ]
+        # NOTE: the former finalize-time fact-critic re-run (which repaired false "no Phase 3 /
+        # no development program" claims in the LLM-written verdict/blocker/prose) has been
+        # removed. Those interpretive fields are now authored ONLY by the isolated
+        # judge_interpretive call (in the enrich pass below), fed the resolved stage —  it cannot
+        # produce that false claim, so there is nothing to repair. critique_ranking (ordering
+        # audit) is unaffected and still runs as the pre-finalize gate above.
         validated: list[dict] = []
         structured_keys = (
             "stage",
@@ -1524,73 +1570,102 @@ def build_supervisor_tools(
                     lit_study_count,
                 )
                 continue
-            # Deterministic study-design repair: the LLM keeps describing RCT-backed evidence
-            # as "observational" despite the authoritative is_observational fact (advisory
-            # prompt rules failed on this — A3). When the literature agent determined the
-            # evidence is NOT purely observational (is_observational is False, i.e. an RCT/
-            # controlled trial is present), strip a false "observational" claim from every
-            # free-text field. Only the False case is repaired — True/None are left untouched
-            # so we never ADD a design word the fact doesn't support.
-            is_obs = (
-                lit.evidence_summary.is_observational
-                if lit and lit.evidence_summary
+            # Deterministic STAGE override: the development-stage tier is a fact the LLM must
+            # NOT author. The clinical-trials sub-agent computed an authoritative dev_stage from
+            # the relevance-filtered signals; render its phrase verbatim, overwriting whatever
+            # the LLM wrote for `stage`. This replaces the earlier per-signal regex repairs
+            # (false-"no Phase 3" / false-"no development program") with one source of truth, so
+            # there is no path left for the blurb stage to contradict the trial section. Only
+            # when a dev_stage phrase is available (sub-agent classified relevance) — otherwise
+            # the LLM's stage is left as-is rather than asserting a stage the signal doesn't show.
+            sig = ct.signals if ct else None
+            stage_phrase = _dev_stage_phrase(sig)
+            if stage_phrase is not None and stage_phrase != fields["stage"]:
+                logger.warning(
+                    "[TOOL] finalize_supervisor set stage from dev_stage=%s for disease=%r; "
+                    "was: %r",
+                    sig.dev_stage,
+                    disease,
+                    fields["stage"],
+                )
+                fields["stage"] = stage_phrase
+            # active_programs ("what is still moving") is also an authoritative fact from the
+            # isolated stage judgment (services/dev_stage), not a free-text interpretation — the
+            # blurb LLM kept mis-filling it (e.g. listing a COMPLETED trial as an active program).
+            # Render it verbatim from the signal, overwriting whatever the LLM wrote.
+            if sig is not None and sig.active_programs:
+                if sig.active_programs != fields["active_programs"]:
+                    logger.warning(
+                        "[TOOL] finalize_supervisor set active_programs from signal for "
+                        "disease=%r; was: %r",
+                        disease,
+                        fields["active_programs"],
+                    )
+                fields["active_programs"] = sig.active_programs
+            # literature: overwrite with the deterministic one-liner from the typed
+            # EvidenceSummary (strength + direction + design). One source of truth for the design
+            # word — replaces the earlier deterministic 'observational' text repair.
+            es = lit.evidence_summary if lit else None
+            if es is not None:
+                fields["literature"] = _literature_oneliner(es)
+            # Stash the RESOLVED facts for the interpretive enrich pass after the loop. The
+            # interpretive fields (blocker/key_risk/verdict/prose) are authored ONLY by the
+            # isolated judge_interpretive call fed these facts — never re-derived in the blurb
+            # pass (which contradicted the stage). `_interp_facts` is None when no stage phrase
+            # is available (sub-agent didn't classify) — then the LLM blurb text stays.
+            approved_ind = (
+                ct.approval.matched_indication
+                if (ct is not None and ct.approval is not None)
                 else None
             )
-            if is_obs is False:
-                for _k in ("prose",) + structured_keys:
-                    _val = prose if _k == "prose" else fields[_k]
-                    if _val and re.search(r"\bobservational\b", _val, re.IGNORECASE):
-                        _repaired = re.sub(
-                            r"\bobservational\b",
-                            "RCT-backed",
-                            _val,
-                            flags=re.IGNORECASE,
-                        )
-                        if _k == "prose":
-                            prose = _repaired
-                        else:
-                            fields[_k] = _repaired
-                        logger.warning(
-                            "[TOOL] finalize_supervisor repaired false 'observational' in "
-                            "%r field for disease=%r (is_observational=False)",
-                            _k,
-                            disease,
-                        )
-            # Deterministic STAGE repair (A2): the LLM applies the "Phase 4 exploratory only /
-            # Phase 3 never initiated" template even when the relevance-filtered signal shows a
-            # COMPLETED Phase 3 (metformin × PCOS). Prose rules leaked repeatedly — enforce in
-            # code, mirroring the A3 repair. Repair-only on the false-NEGATIVE direction: when
-            # has_completed_phase3 is True but the stage denies a Phase 3, rewrite `stage` from
-            # the authoritative highest_completed_phase. We never INVENT a phase the signal
-            # doesn't show. Gated on the relevance-filtered signal (ct.signals); the N2
-            # background-therapy refinement is deferred (errs toward omission, not fabrication).
-            sig = ct.signals if ct else None
-            stage_text = fields["stage"]
-            if (
-                sig is not None
-                and sig.has_completed_phase3
-                and stage_text
-                and re.search(
-                    r"exploratory only|never initiated|no (?:dedicated |pivotal )?"
-                    r"phase\s*3|phase\s*3\b[^.]*\bnot\b",
-                    stage_text,
-                    re.IGNORECASE,
-                )
-            ):
-                phase = sig.highest_completed_phase or "Phase 3"
-                fields["stage"] = (
-                    f"{phase} completed for this indication "
-                    f"(relevant completed Phase 3 on record)"
-                )
-                logger.warning(
-                    "[TOOL] finalize_supervisor repaired false 'no Phase 3' stage for "
-                    "disease=%r (has_completed_phase3=True, highest=%s); was: %r",
-                    disease,
-                    phase,
-                    stage_text,
-                )
-            entry = {"disease": disease, "prose": prose, **fields}
+            interp_facts = (
+                {
+                    "stage": stage_phrase,
+                    "active_programs": fields["active_programs"],
+                    "literature": fields["literature"],
+                    "relationship": (item.get("approval_relationship") or "none"),
+                    "approved_indication": approved_ind,
+                }
+                if stage_phrase is not None
+                else None
+            )
+            entry = {
+                "disease": disease,
+                "prose": prose,
+                "_interp_facts": interp_facts,
+                **fields,
+            }
             validated.append(entry)
+
+        # Enrich pass: synthesize the interpretive fields from the resolved facts, concurrently.
+        # judge_interpretive is the SINGLE author of blocker/key_risk/verdict/prose — fed the
+        # already-resolved stage/active_programs/literature/approval so it cannot contradict
+        # them (proven in scratch/{interpretive_fields,staged_blurb,approval_input}_harness.py).
+        # Entries without resolved facts (_interp_facts is None) keep their LLM blurb text.
+        _to_interp = [e for e in validated if e.get("_interp_facts")]
+        if _to_interp:
+            # drug name is for cache-readability/logging only (not part of the cache identity,
+            # which is the fact-tuple). A run is for one drug → take the single drug_facts key.
+            _drug = next(iter(drug_facts), "")
+            _results = await asyncio.gather(
+                *(
+                    judge_interpretive(
+                        **e["_interp_facts"],
+                        cache_dir=svc.cache_dir,
+                        drug=_drug,
+                        indication=e["disease"],
+                    )
+                    for e in _to_interp
+                )
+            )
+            for e, j in zip(_to_interp, _results):
+                if j is not None:
+                    e["blocker"] = j.blocker
+                    e["key_risk"] = j.key_risk
+                    e["verdict"] = j.verdict
+                    e["prose"] = j.prose
+        for e in validated:
+            e.pop("_interp_facts", None)
 
         if date_before is not None:
             # Holdout mode: ignore the LLM's summary string and rebuild it deterministically from
@@ -1607,6 +1682,65 @@ def build_supervisor_tools(
         # regex and longest-substring match strategy as the report formatter's
         # _splice_blurbs_into_summary so disease matching is consistent.
         validated_diseases = {e["disease"].lower().strip() for e in validated}
+
+        # Authoritative dev_stage phrase per disease, from the relevance-filtered signals of
+        # every investigated candidate (NOT just the ranked/validated ones — demoted candidates
+        # appear only in the footer and must be corrected there too). Used to overwrite a false
+        # stage clause the LLM wrote in a demotion footer line.
+        dev_stage_by_disease: dict[str, str] = {}
+        for _dkey, _slot in findings_local.items():
+            _ct = (_slot or {}).get("clinical_trials")
+            _phrase = _dev_stage_phrase(_ct.signals if _ct else None)
+            if _phrase is not None:
+                dev_stage_by_disease[_dkey] = _phrase
+
+        # Reuses the module-level _FALSE_STAGE_FRAGMENT / _PROGRAM_STAGES (shared with the blurb
+        # sibling-field scrub) so the footer, ranked line, and blurb fields enforce one rule.
+        footer_line = re.compile(r"^\s*-\s+(?P<disease>.+?)\s+—\s+.+$")
+
+        def _repair_stage_clause(disease_text: str, line: str, context: str) -> str:
+            """Replace a false 'no program / Phase 4 only' stage clause in `line` with the
+            authoritative dev_stage phrase, when the matched disease's dev_stage asserts a
+            real Phase 3 program. Used for BOTH the ranked summary line and the demotion
+            footer line — the same class of LLM-authored stage leak appears in both."""
+            head_lower = disease_text.lower()
+            # Match the disease by longest containing key (same strategy as ranked lines).
+            matched_key = next(
+                (
+                    d
+                    for d in sorted(dev_stage_by_disease, key=len, reverse=True)
+                    if d and d in head_lower
+                ),
+                None,
+            )
+            if matched_key is None:
+                return line
+            _ct = (findings_local.get(matched_key) or {}).get("clinical_trials")
+            _sig = _ct.signals if _ct else None
+            if _sig is None or _sig.dev_stage not in _PROGRAM_STAGES:
+                return line
+            if not _FALSE_STAGE_FRAGMENT.search(line):
+                return line
+            repaired = _FALSE_STAGE_FRAGMENT.sub(
+                dev_stage_by_disease[matched_key], line, count=1
+            )
+            logger.warning(
+                "[TOOL] finalize_supervisor repaired false stage in %s for "
+                "disease=%r (dev_stage=%s); was: %r",
+                context,
+                disease_text,
+                _sig.dev_stage,
+                line,
+            )
+            return repaired
+
+        def _repair_footer_stage(line: str) -> str:
+            """Correct a false stage clause in a demotion footer line ('- <disease> — ...')."""
+            fm = footer_line.match(line)
+            if fm is None:
+                return line
+            return _repair_stage_clause(fm.group("disease"), line, "demotion footer")
+
         rank_line = re.compile(
             r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)\s+—\s+(?P<tail>.+)$"
         )
@@ -1630,7 +1764,9 @@ def build_supervisor_tools(
                 continue
             m = rank_line.match(line)
             if m is None:
-                filtered_lines.append(line)
+                # Non-ranked line (e.g. a demotion footer entry). Correct a false stage clause
+                # against the authoritative dev_stage before passing it through.
+                filtered_lines.append(_repair_footer_stage(line))
                 continue
             head_lower = m.group("head").lower()
             keep = any(
@@ -1644,7 +1780,14 @@ def build_supervisor_tools(
                     m.group("head"),
                 )
                 continue
-            filtered_lines.append(f"{next_rank}. {m.group('head')} — {m.group('tail')}")
+            # Repair a false development-status clause in the ranked line's tail against the
+            # authoritative dev_stage (same leak class as the demotion footer: the LLM authors
+            # the dev-status phrase from the prompt's tier menu and can contradict the signal).
+            ranked_line = f"{next_rank}. {m.group('head')} — {m.group('tail')}"
+            ranked_line = _repair_stage_clause(
+                m.group("head"), ranked_line, "ranked summary line"
+            )
+            filtered_lines.append(ranked_line)
             next_rank += 1
         filtered_summary = "\n".join(filtered_lines)
 

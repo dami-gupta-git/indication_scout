@@ -1042,9 +1042,7 @@ async def test_semantic_search_respects_top_k_from_settings(svc, mock_pubtypes_e
             return_value=[mock_vector],
         ),
     ):
-        result = await svc.semantic_search(
-            "diabetes", "CHEMBL1431", ["111"], mock_db
-        )
+        result = await svc.semantic_search("diabetes", "CHEMBL1431", ["111"], mock_db)
 
     assert len(result) == top_k
 
@@ -1288,6 +1286,92 @@ async def test_synthesize_raises_on_invalid_json(svc):
     ):
         with pytest.raises(json.JSONDecodeError):
             await svc.synthesize("CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS)
+
+
+async def test_synthesize_overwrites_strength_with_drug_specific_judgment(svc):
+    """The isolated judge_literature_strength verdict OVERWRITES synthesize's strength/
+    direction/is_observational and sets evidence_basis — the Parkinson class-level fix. The LLM
+    response grades 'strong', but the drug-specific judgment downgrades it to class_level/none.
+    """
+    from indication_scout.services.literature_strength import LiteratureStrength
+
+    strong_response = json.dumps(
+        {
+            "summary": "Class-level GLP-1 RCTs; no direct drug evidence (PMID: 11111111).",
+            "study_count": 2,
+            "strength": "strong",
+            "direction": "supports",
+            "is_observational": False,
+            "supporting_pmids": ["11111111", "22222222"],
+        }
+    )
+    class_level = LiteratureStrength(
+        strength="none",
+        direction="none",
+        evidence_basis="class_level",
+        is_observational=None,
+    )
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=strong_response),
+        ),
+        patch(
+            "indication_scout.services.retrieval.judge_literature_strength",
+            new=AsyncMock(return_value=class_level),
+        ),
+    ):
+        result = await svc.synthesize(
+            "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
+        )
+
+    # overwritten by the drug-specific judgment
+    assert result.strength == "none"
+    assert result.direction == "none"
+    assert result.evidence_basis == "class_level"
+    assert result.is_observational is None
+    # prose untouched
+    assert result.summary.startswith("Class-level GLP-1 RCTs")
+    assert result.supporting_pmids == ["11111111", "22222222"]
+
+
+async def test_synthesize_holdout_skips_drug_specific_judgment(svc):
+    """In holdout_mode the relaxed rubric intentionally scores class-level evidence, so the
+    drug-specific override must NOT run — strength stays as synthesize set it."""
+    strong_response = json.dumps(
+        {
+            "summary": "Class-level evidence (PMID: 11111111).",
+            "study_count": 2,
+            "strength": "moderate",
+            "direction": "supports",
+            "supporting_pmids": ["11111111"],
+        }
+    )
+    judge = AsyncMock()
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=strong_response),
+        ),
+        patch(
+            "indication_scout.services.retrieval.judge_literature_strength", new=judge
+        ),
+    ):
+        result = await svc.synthesize(
+            "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS, holdout_mode=True
+        )
+
+    judge.assert_not_awaited()
+    assert result.strength == "moderate"
+    assert result.evidence_basis == "none"  # default, never set in holdout
 
 
 # --- get_drug_competitors ---
