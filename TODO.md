@@ -25,6 +25,13 @@ Active tasks organized by component. Items here are actionable and derived from 
 ## Data Sources
 
 - [ ] Implement `DrugBankClient.get_drug()` and `get_interactions()` in `data_sources/drugbank.py`
+- [ ] Dedup competitor entries case-insensitively. `data_sources/clinical_trials.py:720` keys
+      competitors on `f"{t.sponsor}|{drug_name}"` using RAW strings, so casing/whitespace
+      variants of the same drug from one sponsor produce duplicate rows — e.g. semaglutide's
+      competitive landscape shows "Efimosfermin alfa"/"Efimosfermin Alfa" (both GSK) and
+      "denifanstat"/"Denifanstat" (both Sagimet) as separate entries, inflating the count.
+      Fix: normalize the key (lower + strip, and ideally collapse internal whitespace) on both
+      sponsor and drug_name; pick a canonical display casing for the merged entry.
 
 ## API
 
