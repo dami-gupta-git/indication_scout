@@ -15,7 +15,6 @@
     "stroke",
     "diastolic heart failure",
     "cirrhosis of liver",
-    "cystic fibrosis",
     "pulmonary hypertension"
   ],
   "mechanism": {
@@ -76,7 +75,7 @@
         "target_function": "Plays a role in signal transduction by regulating the intracellular concentration of cyclic nucleotides. This phosphodiesterase catalyzes the specific hydrolysis of cGMP to 5'-GMP. Specifically regulates nitric-oxide- generated cGMP.."
       }
     ],
-    "summary": "Sildenafil acts primarily as a Phosphodiesterase 5A (PDE5A) inhibitor, elevating cGMP levels to promote smooth muscle relaxation — the basis of its approved uses in erectile dysfunction and pulmonary arterial hypertension. PDE5A's strongest disease associations are with coronary artery disease (overall score 0.661, with high clinical and genetic evidence) and benign prostatic hyperplasia (0.605, strong clinical evidence), both of which are already recognized therapeutic indications or active areas of investigation for sildenafil. Notably, PDE5A also shows associations with Parkinson's disease (0.300, driven by genetic evidence) and obesity (0.312), suggesting potential repurposing opportunities in neurodegeneration and metabolic disease. Additionally, literature-driven signals linking PDE5A to various cancers — including breast cancer and melanoma — point to an emerging area of oncology repurposing research, consistent with cGMP signaling's known role in tumor cell proliferation and apoptosis."
+    "summary": "Sildenafil acts primarily as a potent inhibitor of PDE5A (Phosphodiesterase 5A), which degrades cGMP and thereby regulates smooth muscle relaxation and vascular tone. PDE5A's strongest disease associations are with coronary artery disease (overall score 0.661), supported by high clinical (0.894) and genetic (0.720) evidence, and benign prostatic hyperplasia (overall score 0.605), with very strong clinical evidence (0.970) — the latter aligning with sildenafil's known off-label and investigational use in BPH. Notably, PDE5A also shows associations with Parkinson's disease (overall score 0.300, genetic evidence 0.462) and carotid artery disease (overall score 0.308), suggesting repurposing potential in neurodegeneration and broader cardiovascular disease beyond its approved indications. Finally, literature-driven signals linking PDE5A to cancer (breast cancer, melanoma, neoplasm) hint at an emerging oncology repurposing angle, consistent with growing research into cGMP signaling in tumor biology."
   },
   "disease_findings": [
     {
@@ -224,7 +223,6 @@
           "36408982",
           "21924956",
           "39556088",
-          "24313856",
           "40880357",
           "40204283",
           "27928151",
@@ -283,8 +281,8 @@
           "19028977",
           "31044326",
           "19298393",
-          "16432985",
           "17150221",
+          "16432985",
           "29364918",
           "23129569",
           "18076339",
@@ -343,12 +341,13 @@
           "37307938",
           "35413880",
           "37354146",
-          "42259581",
           "36597221",
           "11351772",
           "16858368",
           "21780138",
           "34537676",
+          "31630883",
+          "11146849",
           "20164566",
           "38030140",
           "11249556",
@@ -366,7 +365,6 @@
           "15224127",
           "17383621",
           "29660387",
-          "38862270",
           "39292699",
           "27872007",
           "23441682",
@@ -466,6 +464,7 @@
           "23575263",
           "16914104",
           "25163536",
+          "38862270",
           "17349888",
           "18596129",
           "39827331",
@@ -532,10 +531,10 @@
           "16432094",
           "23684677",
           "37080965",
-          "41515936",
           "38844781",
           "35328488",
           "28585207",
+          "41515936",
           "26682792",
           "15546990",
           "19089340",
@@ -615,7 +614,6 @@
           "30981710",
           "31184598",
           "12747961",
-          "42216994",
           "38552439",
           "29424564",
           "33483748",
@@ -629,6 +627,7 @@
           "19219301",
           "41232443",
           "23529183",
+          "42216994",
           "31689530",
           "23953980",
           "40209616",
@@ -783,7 +782,7 @@
           }
         ],
         "evidence_summary": {
-          "summary": "Multiple randomized, double-blind, placebo-controlled trials provide evidence supporting sildenafil for Raynaud's phenomenon. Modified-release sildenafil significantly reduced attack frequency by 44% versus 18.1% for placebo in patients with RP secondary to limited cutaneous systemic sclerosis (PMID: 21360507), and sildenafil improved digital blood flow and RP symptoms in SSc patients after 8 weeks (PMID: 28281457). However, an n-of-1 trial series found that while sildenafil was statistically superior to placebo, aggregated effect sizes were not clinically relevant and substantial heterogeneity in patient response was observed (PMID: 30383134). One abstract noted that sildenafil increased sympathetically mediated vascular tone via baroreflex sympathetic activation, which may partially offset its vasodilatory effects (PMID: 23443723).",
+          "summary": "Multiple randomized, double-blind, placebo-controlled trials provide evidence supporting sildenafil for Raynaud's phenomenon. Modified-release sildenafil significantly reduced attack frequency by 44% versus 18.1% for placebo in patients with RP secondary to limited cutaneous systemic sclerosis (PMID: 21360507), and sildenafil improved digital blood flow and RP symptoms in systemic sclerosis patients after 8 weeks (PMID: 28281457). However, an n-of-1 trial series found that while sildenafil was statistically superior to placebo, aggregated effect sizes were not clinically relevant and substantial heterogeneity in patient response was observed (PMID: 30383134). One abstract noted that sildenafil increases sympathetically mediated vascular tone via baroreflex activation, which may partially offset its vasodilatory effects (PMID: 23443723).",
           "study_count": 4,
           "strength": "strong",
           "direction": "supports",
@@ -794,9 +793,10 @@
             "Sildenafil 100 mg/day for 8 weeks significantly improved finger blood flow before and after cold stimulus (p=0.026 and p=0.028 respectively) compared to placebo in SSc patients (PMID: 28281457)",
             "Sildenafil significantly improved duration of RP attacks and VAS score for RP severity compared to placebo in SSc patients (PMID: 28281457)",
             "In a series of n-of-1 trials, the probability that sildenafil at 40 mg or 80 mg was more effective than placebo was greater than 90% for most outcomes, but aggregated effect sizes were not clinically relevant (PMID: 30383134)",
-            "Substantial heterogeneity in sildenafil's efficacy was observed among participants in the n-of-1 trial series, with clinically relevant efficacy in some patients but not others (PMID: 30383134)",
-            "Sildenafil increased sympathetically mediated vascular tone in healthy middle-aged men, with plasma norepinephrine significantly increased compared to placebo (P=0.02), which may partially offset vasodilation (PMID: 23443723)",
-            "The percentage reduction in forearm vascular resistance during phentolamine was significantly lower after sildenafil than placebo (-63% ± 3% vs -73% ± 3%; P=0.0002), indicating increased sympathetically mediated vascular tone (PMID: 23443723)"
+            "Substantial heterogeneity in sildenafil efficacy was observed among participants in the n-of-1 trial series, with clinically relevant efficacy in some patients but not overall (PMID: 30383134)",
+            "Sildenafil significantly increased sympathetically mediated vascular tone and plasma norepinephrine in healthy men, which may partially offset its vasodilatory effects (PMID: 23443723)",
+            "The percentage reduction in forearm vascular resistance during phentolamine was significantly lower after sildenafil than placebo (-63% vs -73%, P=0.0002), indicating increased sympathetic vascular tone (PMID: 23443723)",
+            "Decreases from baseline in Raynaud's Condition Score, duration of attacks, and RP pain score were not significantly different between modified-release sildenafil and placebo groups (PMID: 21360507)"
           ],
           "supporting_pmids": [
             "21360507",
@@ -804,11 +804,11 @@
             "30383134"
           ],
           "contradicting_pmids": [
-            "23443723",
-            "30383134"
+            "30383134",
+            "23443723"
           ]
         },
-        "summary": "Strong evidence supports sildenafil repurposing for Raynaud's disease based on retrieved PubMed abstracts."
+        "summary": "Evidence strength: strong, direction: supports"
       },
       "clinical_trials": {
         "search": {
@@ -1679,7 +1679,7 @@
             "vizarsin"
           ]
         },
-        "summary": "Clinical development of sildenafil in Raynaud's phenomenon and systemic sclerosis-related microvascular disease is supported by several completed trials. NCT01347008 was a completed Phase 3 study titled 'Effect of Sildenafil on the Microcirculatory Blood Flow and Endothelial Progenitor Cells in Systemic Sclerosis,' examining sildenafil's impact on microcirculatory parameters and endothelial progenitor cells in systemic sclerosis patients. NCT02050360 was a completed Phase 2/Phase 3 trial titled '\"As Required\" Oral Sildenafil in Raynaud's Phenomenon,' evaluating an on-demand dosing regimen of oral sildenafil for Raynaud's phenomenon. Additionally, NCT03027674 was a completed Early Phase 1 study comparing topical 10% nifedipine versus 5% sildenafil in secondary Raynaud's phenomenon. No trials in this indication are currently listed as active or ongoing.",
+        "summary": "Clinical development of sildenafil in Raynaud's phenomenon and systemic sclerosis-related microvascular disease is supported by several completed trials. NCT01347008 was a completed Phase 3 study titled 'Effect of Sildenafil on the Microcirculatory Blood Flow and Endothelial Progenitor Cells in Systemic Sclerosis,' examining sildenafil's impact on microcirculatory parameters and endothelial progenitor cells in systemic sclerosis patients. NCT02050360 was a completed Phase 2/Phase 3 trial titled '\"As Required\" Oral Sildenafil in Raynaud's Phenomenon,' evaluating an on-demand oral dosing regimen for Raynaud's phenomenon. Additionally, NCT03027674 was a completed Early Phase 1 study comparing topical 10% nifedipine versus 5% sildenafil in secondary Raynaud's phenomenon. No trials in this indication are currently listed as active or ongoing.",
         "closure": "live",
         "closure_reason": "No Phase 3 trial was terminated for safety or benefit-risk reasons, and no literature reports efficacy failure; the absence of a commercial filing for an off-patent drug does not constitute closure.",
         "relevant_nct_ids": [
@@ -1688,7 +1688,7 @@
           "NCT03027674"
         ],
         "contaminated_nct_ids": [],
-        "relevance_reasoning": "All three completed trials study sildenafil (oral or topical formulations) directly in Raynaud's phenomenon/disease, including both primary and secondary forms. NCT01347008 focuses on systemic sclerosis-associated Raynaud's (a clinically overlapping subtype that rolls up as real evidence), NCT02050360 is a direct Phase 2/3 on-demand sildenafil trial in Raynaud's phenomenon, and NCT03027674 compares topical sildenafil vs. nifedipine in secondary Raynaud's — all are relevant to this drug-indication pair.",
+        "relevance_reasoning": "All three completed trials study sildenafil (oral or topical formulations) directly in Raynaud's phenomenon/disease — including both primary and secondary Raynaud's associated with systemic sclerosis or other connective tissue diseases. Secondary Raynaud's is a clinically overlapping subtype that rolls up as real evidence for the parent indication, and sildenafil is the studied drug in each case.",
         "signals": {
           "highest_completed_phase": "Phase 3",
           "has_completed_phase3": true,
@@ -1725,8 +1725,8 @@
           "phosphodiesterase 5 inhibitors AND lung",
           "PDE5 inhibition AND lung",
           "PDE5A AND \"COVID-19\"",
-          "Viagra AND \"COVID-19\"",
-          "Revatio AND \"COVID-19\"",
+          "viagra AND \"COVID-19\"",
+          "revatio AND \"COVID-19\"",
           "phosphodiesterase inhibitors AND pulmonary",
           "cGMP signaling AND lung inflammation"
         ],
@@ -1873,6 +1873,7 @@
           "25314091",
           "40783516",
           "37950789",
+          "15817798",
           "35725975",
           "31273873",
           "28629920",
@@ -1884,7 +1885,6 @@
           "19272792",
           "21572384",
           "33836637",
-          "24092352",
           "25047735",
           "27769022",
           "34944010",
@@ -1993,7 +1993,6 @@
           "41839428",
           "9755101",
           "14636078",
-          "15817798",
           "36291124",
           "9922221",
           "28088782",
@@ -2092,6 +2091,7 @@
           "27695125",
           "16123210",
           "20859807",
+          "41771338",
           "21703411",
           "16682455",
           "19304913",
@@ -2101,7 +2101,6 @@
           "39513857",
           "20397815",
           "31364206",
-          "41771338",
           "19281073",
           "26455478",
           "11179103",
@@ -2179,7 +2178,6 @@
           "8812741",
           "9778491",
           "10988094",
-          "41710324",
           "8737690",
           "15183075",
           "29367458",
@@ -2220,11 +2218,11 @@
           "16729780",
           "9435174",
           "27418821",
-          "39485297",
+          "8818344",
           "37551664",
+          "39485297",
           "40045018",
           "31853617",
-          "41794266",
           "25353067",
           "40299433",
           "33360351",
@@ -2233,10 +2231,11 @@
           "30759374",
           "41378745",
           "22230399",
-          "41499484",
           "34276407",
+          "41794266",
           "40636259",
           "35341977",
+          "41499484",
           "36522238",
           "25446933",
           "20622042",
@@ -2336,19 +2335,19 @@
           }
         ],
         "evidence_summary": {
-          "summary": "Two randomized controlled trials directly evaluated sildenafil in COVID-19 patients. In a placebo-controlled RCT of severe COVID-19 patients with pulmonary arterial hypertension, sildenafil significantly reduced mortality and intubation risks when adjusted for PAH (OR=0.21 and OR=0.26, respectively) and shortened ICU stay (15 vs. 19 days, p<0.001) (PMID: 37243243). A pilot RCT in COVID-19 patients with perfusion mismatch found no significant difference in oxygenation parameters, but sildenafil was associated with zero patients requiring invasive mechanical ventilation versus 4 in the placebo group (p=0.04) and a shorter hospital stay (PMID: 34980198). The remaining three abstracts concern sildenafil in lung fibrosis with pulmonary hypertension, congestive heart failure, and exercise oscillatory breathing in heart failure — none of which involve COVID-19 — and are not directly relevant to this drug-disease pair.",
+          "summary": "Two randomized controlled trials directly evaluated sildenafil in COVID-19 patients. In a placebo-controlled RCT of severe COVID-19 patients with pulmonary arterial hypertension, sildenafil significantly reduced mortality and intubation risks when adjusted for PAH (OR=0.21 and OR=0.26, respectively) and shortened ICU stay (15 vs. 19 days, p<0.001) (PMID: 37243243). A pilot RCT in COVID-19 patients with perfusion mismatch found no significant improvement in oxygenation parameters but showed sildenafil reduced the need for invasive mechanical ventilation (0 vs. 4 patients, p=0.04) and shortened hospital stay (9 vs. 12 days, p=0.04) (PMID: 34980198). The remaining three abstracts concern sildenafil in lung fibrosis with pulmonary hypertension, congestive heart failure, and heart failure with exercise oscillatory breathing, which are not COVID-19 studies and do not directly inform the repurposing hypothesis.",
           "study_count": 2,
           "strength": "moderate",
           "direction": "supports",
           "evidence_basis": "drug_specific",
           "is_observational": false,
           "key_findings": [
-            "In a double-blind, placebo-controlled RCT of 150 ICU patients with severe COVID-19 and PAH, sildenafil (0.25 mg/kg t.i.d. for one week) significantly reduced mortality risk (OR=0.21, 95% CI: 0.05-0.89) and intubation risk (OR=0.26, 95% CI: 0.08-0.86) when adjusted for PAH (PMID: 37243243).",
-            "Sildenafil significantly reduced length of ICU stay compared to placebo (15 vs. 19 days, p<0.001) in severe COVID-19 patients with PAH (PMID: 37243243).",
-            "Unadjusted mortality rate was 4% vs. 13.3% (p=0.078) and intubation rate was 8% vs. 18.7% (p=0.09) for sildenafil vs. placebo in severe COVID-19 with PAH, not reaching statistical significance without PAH adjustment (PMID: 37243243).",
-            "In a triple-blinded pilot RCT of 40 COVID-19 patients with perfusion mismatch on sCTA, no statistically significant differences were found in PaO2/FiO2 ratios or A-a gradients between sildenafil and placebo groups (PMID: 34980198).",
-            "Invasive mechanical ventilation was required in 4 placebo patients and 0 sildenafil patients in the perfusion mismatch RCT (logrank p=0.04) (PMID: 34980198).",
-            "Sildenafil-treated COVID-19 patients with perfusion mismatch had a significantly shorter median hospital stay than placebo (9 days IQR 7-12 vs. 12 days IQR 9-21, p=0.04) (PMID: 34980198)."
+            "In a double-blind, placebo-controlled RCT of 150 ICU patients with severe COVID-19 and PAH, sildenafil (0.25 mg/kg t.i.d. for one week) significantly reduced mortality risk (OR=0.21, 95% CI: 0.05-0.89) and intubation risk (OR=0.26, 95% CI: 0.08-0.86) when adjusted for PAH (PMID: 37243243)",
+            "Sildenafil significantly reduced length of ICU stay compared to placebo (15 vs. 19 days, p<0.001) in severe COVID-19 patients with PAH (PMID: 37243243)",
+            "Unadjusted mortality rate was 4% vs. 13.3% (p=0.078) and intubation rate was 8% vs. 18.7% (p=0.09) for sildenafil vs. placebo in severe COVID-19 with PAH, not reaching statistical significance without PAH adjustment (PMID: 37243243)",
+            "In a triple-blinded pilot RCT of 40 COVID-19 patients with perfusion mismatch on sCTA, sildenafil (25 mg orally three times a day for 7 days) resulted in no patients requiring invasive mechanical ventilation vs. 4 patients in the placebo group (logrank p=0.04) (PMID: 34980198)",
+            "Sildenafil-treated COVID-19 patients with perfusion mismatch had a significantly shorter median hospital stay than placebo (9 IQR 7-12 days vs. 12 IQR 9-21 days, p=0.04) (PMID: 34980198)",
+            "No statistically significant differences in mean PaO2/FiO2 ratios or A-a gradients were found between sildenafil and placebo groups in COVID-19 patients with perfusion mismatch (repeated-measures ANOVA p=0.67 and p=0.69) (PMID: 34980198)"
           ],
           "supporting_pmids": [
             "37243243",
@@ -2356,7 +2355,7 @@
           ],
           "contradicting_pmids": []
         },
-        "summary": "Sildenafil shows moderate supporting evidence for repurposing in COVID-19, based on 5 semantically relevant PubMed abstracts retrieved and synthesized in this run."
+        "summary": "Evidence strength: moderate, direction: supports"
       },
       "clinical_trials": {
         "search": {
@@ -3118,14 +3117,14 @@
             "vizarsin"
           ]
         },
-        "summary": "Two trials are on record evaluating sildenafil in COVID-19. NCT04489446 is a completed Phase 1/Phase 2 study titled 'Sildenafil in COVID-19,' which has finished enrollment and data collection. NCT04304313 is a Phase 3 pilot study titled 'A Pilot Study of Sildenafil in COVID-19,' whose current status is unknown; no termination or completion has been formally recorded for this trial.",
+        "summary": "Two trials are on record evaluating sildenafil in COVID-19. NCT04489446 is a completed Phase 1/Phase 2 study titled 'Sildenafil in COVID-19,' which has finished enrollment and data collection. NCT04304313 is a Phase 3 pilot study titled 'A Pilot Study of Sildenafil in COVID-19,' whose current status is unknown; no completion or termination outcome has been publicly confirmed for this trial.",
         "closure": "unknown",
-        "closure_reason": "The Phase 3 trial (NCT04304313) has an unknown status with no documented termination for safety or efficacy failure, so the ultimate disposition of the program cannot be determined.",
+        "closure_reason": "The Phase 3 pilot trial (NCT04304313) has an unknown status with no reported safety failure or efficacy failure to indicate closure.",
         "relevant_nct_ids": [
           "NCT04489446"
         ],
         "contaminated_nct_ids": [],
-        "relevance_reasoning": "NCT04489446 explicitly studies sildenafil as the investigational drug in hospitalized COVID-19 patients to assess oxygenation improvement — a direct match to this drug × indication pair. No terminated trials were returned, so no additional verdicts are required.",
+        "relevance_reasoning": "NCT04489446 directly studies sildenafil (vs. placebo) in hospitalized COVID-19 patients to assess oxygenation improvement — it is unambiguously relevant to this drug × indication pair. No terminated trials were returned, so no additional verdicts are required.",
         "signals": {
           "highest_completed_phase": "Phase 1/Phase 2",
           "has_completed_phase3": false,
@@ -3141,12 +3140,12 @@
       "blurb": {
         "stage": "Phase 3 on record, status unknown",
         "literature": "moderate, supports, RCT-backed / controlled",
-        "blocker": "No active program to carry the Phase 3 evidence forward into regulatory submission or commercialization",
+        "blocker": "No active program and no approved indication anchor to sustain or advance the candidate",
         "active_programs": "None active",
-        "key_risk": "Controlled trial evidence exists but no sponsor is positioned to convert it into an approved indication",
+        "key_risk": "Without a sponsor driving development, controlled evidence may never translate into regulatory action",
         "verdict": "Stalled, regulatory gap",
         "watch": "",
-        "prose": "The hypothesis rests on a moderately sized, RCT-backed literature base that provides meaningful clinical support, yet no active development program exists to translate that evidence into a regulatory filing. Without a committed sponsor to bridge the gap between completed trials and approval, the candidate remains scientifically credible but commercially and regulatorily dormant.",
+        "prose": "The hypothesis carries meaningful scientific credibility, supported by randomized and controlled data, yet no active program exists to carry that evidence forward into a regulatory submission. The candidate sits in a holding pattern where the science is reasonably established but commercial and regulatory momentum has fully dissipated.",
         "approval_relationship": ""
       }
     },
@@ -3281,7 +3280,6 @@
           "27001306",
           "39168908",
           "31079941",
-          "41733393",
           "15161616",
           "16244212",
           "17209664",
@@ -3336,6 +3334,7 @@
           "38752352",
           "31412857",
           "30580340",
+          "41733393",
           "35636165",
           "31916341",
           "22269997",
@@ -3559,10 +3558,10 @@
           "19546307",
           "32212481",
           "37354146",
-          "42259581",
           "19718608",
           "36597221",
           "29259207",
+          "31264002",
           "33087445",
           "38656747",
           "17383621",
@@ -3622,7 +3621,6 @@
           "16808996",
           "15452190",
           "24877179",
-          "31264002",
           "8961086",
           "24464751",
           "17226792",
@@ -3705,11 +3703,11 @@
           "39206778",
           "34981661",
           "17965319",
-          "39963705",
           "21421555",
           "33687636",
           "29664809",
           "15907910",
+          "39963705",
           "32299297",
           "34926425",
           "40300852",
@@ -3757,7 +3755,6 @@
           "17627514",
           "15577703",
           "17122386",
-          "42227534",
           "17356110",
           "31115867",
           "22747425",
@@ -3823,6 +3820,7 @@
           "15073608",
           "17339532",
           "16214180",
+          "42227534",
           "30025857",
           "17275845",
           "18346713",
@@ -3978,7 +3976,6 @@
           "20023176",
           "16195486",
           "16719796",
-          "41723893",
           "11739394",
           "40439151",
           "32068004",
@@ -4003,13 +4000,13 @@
           "9737976",
           "39952300",
           "28050227",
-          "42216994",
           "19219301",
           "27569706",
           "22155162",
           "24498891",
           "25481005",
           "29424564",
+          "42216994",
           "25855081",
           "30880106",
           "25117404",
@@ -4026,6 +4023,7 @@
           "32561822",
           "14699879",
           "41365429",
+          "41723893",
           "24112301",
           "36746218",
           "12957877",
@@ -4306,7 +4304,8 @@
           "26232474",
           "19329023",
           "18300861",
-          "36252551"
+          "36252551",
+          "37002876"
         ],
         "semantic_search_results": [
           {
@@ -4370,30 +4369,31 @@
           }
         ],
         "evidence_summary": {
-          "summary": "Multiple clinical studies support the use of sildenafil for hypertension. A randomized, double-blind crossover study found that regular sildenafil (50 mg three times daily for 16 days) significantly reduced ambulatory and clinic blood pressure in untreated hypertensive subjects compared to placebo (PMID: 16940217). A post-hoc subanalysis of five RCTs found that sildenafil produced small but measurable reductions in systolic and diastolic blood pressure in men taking antihypertensive medication, though the authors considered these clinically modest (PMID: 11132612). However, one study found that sildenafil increased sympathetically mediated vascular tone and plasma norepinephrine in healthy men, suggesting a counteracting mechanism that may limit antihypertensive efficacy (PMID: 23443723).",
+          "summary": "Multiple clinical studies support sildenafil's potential as an antihypertensive agent. A randomized, double-blind crossover trial demonstrated that regular sildenafil (50 mg three times daily for 16 days) significantly reduced ambulatory systolic BP by 8 mmHg and diastolic BP by 6 mmHg compared to placebo in untreated hypertensive subjects, leading the authors to conclude that 'regular sildenafil constitutes effective antihypertensive therapy' (PMID: 16940217). Additionally, sildenafil reduced maternal blood pressure in women with preeclampsia compared to placebo (PMID: 27400005), and a post-hoc analysis showed modest but small BP reductions in men with erectile dysfunction taking antihypertensive medication (PMID: 11132612). However, one study found that sildenafil increased sympathetically mediated vascular tone and plasma norepinephrine in healthy men, suggesting a counteracting mechanism (PMID: 23443723).",
           "study_count": 4,
           "strength": "moderate",
           "direction": "supports",
           "evidence_basis": "drug_specific",
           "is_observational": false,
           "key_findings": [
-            "In a randomized, double-blind, 2-way crossover study of 22 untreated hypertensive subjects, sildenafil 50 mg three times daily for 16 days reduced average daytime ambulatory systolic BP by 8 mmHg versus an increase of 2 mmHg with placebo (P<0.01), and diastolic BP by 6 mmHg versus 0 mmHg with placebo (P<0.01) (PMID: 16940217)",
+            "In a randomized, double-blind, 2-way crossover study of 22 untreated hypertensive subjects, sildenafil 50 mg three times daily for 16 days reduced average daytime ambulatory systolic BP by 8 mmHg versus an increase of 2 mmHg with placebo (P<0.01) and diastolic BP by 6 mmHg versus 0 mmHg with placebo (P<0.01) (PMID: 16940217)",
             "Sildenafil also reduced clinic systolic BP by 5 mmHg versus an increase of 4 mmHg with placebo (P<0.01) and clinic diastolic BP by 5 mmHg versus an increase of 2 mmHg with placebo (P<0.01) in untreated hypertensive subjects (PMID: 16940217)",
-            "The authors of the crossover study concluded that regular sildenafil constitutes effective antihypertensive therapy and that further studies are warranted to evaluate longer-acting PDE5 inhibitors as antihypertensive agents (PMID: 16940217)",
-            "In a post-hoc subanalysis of five RCTs, mean changes from baseline in SBP/DBP for men taking antihypertensive medication were -3.6/-1.9 mmHg for sildenafil versus -0.8/-0.1 mmHg for placebo, with the authors concluding these effects were small and not likely to be clinically significant (PMID: 11132612)",
-            "In a randomized controlled trial of women with preeclampsia, maternal blood pressure 24 hours after randomization was significantly lower with sildenafil (100.3±5.6 mmHg) compared to baseline (116.4±5.1 mmHg, P<0.05), while placebo showed no significant change (PMID: 27400005)",
-            "In a randomized, double-blind crossover study in healthy middle-aged men, sildenafil 100 mg significantly increased plasma norepinephrine compared to placebo at 60 minutes post-administration and at end of study (P=0.02), and the percentage reduction in forearm vascular resistance during phentolamine was significantly lower after sildenafil than placebo (-63%±3% vs -73%±3%; P=0.0002), indicating increased sympathetically mediated vascular tone (PMID: 23443723)"
+            "The authors of the crossover trial concluded that 'regular sildenafil constitutes effective antihypertensive therapy' and called for further studies on longer-acting PDE5 inhibitors as antihypertensive agents (PMID: 16940217)",
+            "In a randomized double-blind placebo-controlled trial of women with preeclampsia, maternal mean arterial blood pressure was significantly lower 24 hours after randomization in the sildenafil group (100.3±5.6 mmHg vs 116.4±5.1 mmHg, P<0.05) but not in the placebo group (PMID: 27400005)",
+            "In a post-hoc subanalysis of five randomized controlled trials, mean changes from baseline in sitting systolic/diastolic BP for men taking antihypertensive medication were -3.6/-1.9 mmHg for sildenafil versus -0.8/-0.1 mmHg for placebo, with differences described as small and not likely to be clinically significant (PMID: 11132612)",
+            "In a randomized double-blind crossover study of 9 healthy middle-aged men, sildenafil 100 mg significantly increased plasma norepinephrine compared with placebo (P=0.02) and increased sympathetically mediated vascular tone, with the percentage reduction in forearm vascular resistance during phentolamine significantly lower after sildenafil than placebo (-63%±3% vs -73%±3%; P=0.0002) (PMID: 23443723)",
+            "The authors of the sympathetic tone study noted that alpha-adrenergic-mediated vasoconstriction may offset vasodilation during PDE-5 inhibition, potentially limiting antihypertensive efficacy (PMID: 23443723)"
           ],
           "supporting_pmids": [
             "16940217",
-            "11132612",
-            "27400005"
+            "27400005",
+            "11132612"
           ],
           "contradicting_pmids": [
             "23443723"
           ]
         },
-        "summary": "Sildenafil in hypertension: moderate evidence supporting repurposing, particularly for pulmonary arterial hypertension (PAH). The drug's PDE5 inhibition mechanism promotes vasodilation via the NO-cGMP pathway, which is directly relevant to blood pressure regulation. Retrieved abstracts highlight clinical and mechanistic support across pulmonary and systemic hypertension contexts."
+        "summary": "Sildenafil in hypertension: moderate evidence supporting repurposing, particularly for pulmonary arterial hypertension (PAH). The drug's PDE5 inhibition mechanism promotes vasodilation via the NO-cGMP pathway, which is directly relevant to blood pressure regulation. Key findings from retrieved abstracts support efficacy in PAH and suggest potential in systemic hypertension contexts."
       },
       "clinical_trials": {
         "search": {
@@ -14099,11 +14099,10 @@
             "vizarsin"
           ]
         },
-        "summary": "Sildenafil has been evaluated across a broad range of pulmonary hypertension (PH) settings. The most directly relevant active program is NCT07462260, a Phase 2/Phase 3 recruiting trial titled 'Sildenafil in Pulmonary Hypertension-Rheumatic Chronic Valvular Disease (RCT)', which represents the current pivotal-stage investigation in this indication. Several additional trials with UNKNOWN status remain on record: NCT01913847, a Phase 3 safety and efficacy study of HGP1207 in pulmonary hypertension patients; NCT01616381, a Phase 3 trial of sildenafil versus placebo in chronic heart failure with associated pulmonary hypertension; NCT01637675, a Phase 2/Phase 3 study of Sodium Tanshinone IIA Sulfonate on pulmonary hypertension; and NCT03763045, a Phase 2/Phase 3 trial of sildenafil in hemodialysis patients with pulmonary hypertension — all with unresolved status. In the broader PH landscape, NCT06317805 (Phase 4, recruiting) examines initial triple therapy including parenteral treprostinil versus initial double oral therapy in Group I PAH patients, and NCT01347216 (Not Applicable, recruiting) is the ongoing COMPERA/COMPERA-KIDS registry. Completed studies include NCT00150358 (Phase 4), a trial examining efficacy and safety of Viagra in arterial hypertension subjects, and NCT02620995 (Phase 4), which assessed sildenafil's effects on penile vascular function in hypertensive men with erectile dysfunction. Earlier-phase and non-interventional work includes a completed Phase 1 study of sildenafil in supine hypertension of autonomic failure (NCT00223717) and several completed non-phase-designated studies exploring sildenafil in resistant hypertension and exercise capacity.",
+        "summary": "Sildenafil has an extensive clinical trial history in pulmonary hypertension and related vascular conditions. The pivotal anchor of the current program is NCT07462260, a Phase 2/Phase 3 recruiting study titled 'Sildenafil in Pulmonary Hypertension-Rheumatic Chronic Valvular Disease (RCT)', which represents the active interventional development effort in this indication. Alongside this, a Phase 4 recruiting trial (NCT06317805) — 'Initial Triple Therapy Including Parenteral Treprostinil vs Initial Double Oral Therapy in PAH Group I Patients' — is ongoing and evaluates sildenafil-containing regimens in PAH Group I patients. Two additional recruiting trials of non-applicable design (NCT01347216, the COMPERA/COMPERA-KIDS registry, and NCT06753981, a real-world multicenter study of triple-targeted therapy in treatment-naive non-low-risk PAH) contribute observational and registry-level evidence. Earlier completed work includes a Phase 1 study of sildenafil in supine hypertension in autonomic failure (NCT00223717), a completed Phase 4 study examining sildenafil's effects on penile vascular function in hypertensive men with erectile dysfunction (NCT02620995), and several completed not-applicable studies exploring sildenafil in resistant hypertension, exercise capacity in hypertension, and nebivolol comparisons in autonomic failure (NCT01392638, NCT00599235, NCT01044693). Several Phase 2/Phase 3 and Phase 3 trials carry an unknown status: NCT01637675 (Sodium Tanshinone IIA Sulfonate on Pulmonary Hypertension), NCT03763045 (Sildenafil in Hemodialysis Patients With Pulmonary Hypertension), NCT01913847 (Safety and Efficacy of HGP1207 in Pulmonary Hypertension), and NCT01616381 (Sildenafil Versus Placebo in Chronic Heart Failure). A not-applicable unknown-status study (NCT03185364) examined sildenafil in severe post-capillary pulmonary hypertension caused by COPD.",
         "closure": "live",
-        "closure_reason": "The active Phase 2/Phase 3 recruiting trial (NCT07462260) confirms the program is ongoing, and no Phase 3 termination for safety or efficacy failure has been identified.",
+        "closure_reason": "An active Phase 2/Phase 3 recruiting trial (NCT07462260) is ongoing with no evidence of safety-based termination or reported efficacy failure for this indication.",
         "relevant_nct_ids": [
-          "NCT00150358",
           "NCT00223717",
           "NCT01392638",
           "NCT02620995",
@@ -14121,6 +14120,7 @@
           "NCT00644605",
           "NCT00159861",
           "NCT00159887",
+          "NCT00150358",
           "NCT00159913",
           "NCT00159874",
           "NCT01365585",
@@ -14174,7 +14174,7 @@
           "NCT01409031",
           "NCT02435303"
         ],
-        "relevance_reasoning": "The vast majority of trials in this dataset study sildenafil in pulmonary arterial hypertension (PAH) or pulmonary hypertension (PH) — a distinct vascular disease of the pulmonary circulation — which is contamination relative to the systemic hypertension indication queried. Only a small number of trials (NCT00150358, NCT01392638, NCT00599235, NCT02620995, NCT00223717, NCT01044693) explicitly study sildenafil in the context of systemic/arterial hypertension or supine hypertension in autonomic failure, and are classified as relevant.",
+        "relevance_reasoning": "The vast majority of completed and terminated trials in this result set study sildenafil in Pulmonary Arterial Hypertension (PAH) or other pulmonary hypertension subtypes — a distinct vascular disease from systemic hypertension — and are therefore contaminated. The small number of relevant trials (NCT01392638, NCT00599235, NCT02620995, NCT00223717, NCT01044693) explicitly study sildenafil in the context of systemic/arterial hypertension or supine hypertension in autonomic failure, directly addressing blood pressure in the systemic circulation.",
         "signals": {
           "highest_completed_phase": "Phase 4",
           "has_completed_phase3": false,
@@ -14186,20 +14186,41 @@
           "phase3_terminated_for_cause": false,
           "terminated_phase3_nct_ids": [],
           "dev_stage": "active_phase3",
-          "active_programs": "1 Phase 2/Phase 3 recruiting (NCT07462260)"
+          "active_programs": "1 Phase 2/Phase 3 recruiting (NCT07462260); also Phase 4 post-approval activity (NCT06317805) and non-applicable recruiting trials (NCT01347216, NCT06753981)"
         }
       },
       "blurb": {
         "stage": "Active Phase 3 development on record for this indication (NCT07462260)",
         "literature": "moderate, supports, RCT-backed / controlled",
-        "blocker": "No approved use for this indication; regulatory pathway requires full trial completion and review",
-        "active_programs": "1 Phase 2/Phase 3 recruiting (NCT07462260)",
-        "key_risk": "Trial results may not demonstrate sufficient efficacy or safety to support a new indication filing",
+        "blocker": "Not yet approved for this indication; awaiting Phase 3 trial completion and regulatory submission",
+        "active_programs": "1 Phase 2/Phase 3 recruiting (NCT07462260); also Phase 4 post-approval activity (NCT06317805) and non-applicable recruiting trials (NCT01347216, NCT06753981)",
+        "key_risk": "Phase 3 trial fails to replicate the controlled evidence seen in earlier studies",
         "verdict": "Maturing, awaiting readout",
         "watch": "NCT07462260",
-        "prose": "The hypothesis is actively advancing with a recruiting late-stage trial, reflecting meaningful institutional commitment to establishing this as a distinct therapeutic use. Moderate RCT-backed literature provides a supportive evidentiary foundation, though the pivotal readout remains the critical gating event before any regulatory submission can proceed.",
+        "prose": "The hypothesis is supported by a moderate body of RCT-backed literature and has advanced into active late-stage clinical development, positioning it as a credible but unconfirmed candidate. Because no approval exists for this indication and the relationship to any approved use is broader and distinct, the program must stand on its own trial outcomes before any regulatory pathway can be pursued.",
         "approval_relationship": ""
       }
+    },
+    {
+      "disease": "major depressive disorder",
+      "source": "competitor",
+      "literature": null,
+      "clinical_trials": null,
+      "blurb": null
+    },
+    {
+      "disease": "eisenmenger syndrome",
+      "source": "competitor",
+      "literature": null,
+      "clinical_trials": null,
+      "blurb": null
+    },
+    {
+      "disease": "benign prostatic hyperplasia",
+      "source": "both",
+      "literature": null,
+      "clinical_trials": null,
+      "blurb": null
     }
   ],
   "top_diseases": [
@@ -14207,5 +14228,5 @@
     "covid-19",
     "hypertension"
   ],
-  "summary": "Ranked repurposing signals for sildenafil:\n\n1. raynaud disease — strong RCT-level evidence, supports; Phase 3 completed\n2. covid-19 — moderate exploratory literature, supports; Phase 3 on record, status unknown\n\nDemoted — approval relationship:\n- hypertension (broader term; overlaps approved subtype pulmonary arterial hypertension)\n- pulmonary hypertension (broader term; overlaps approved subtype pulmonary arterial hypertension)\n\nEvidence gate exclusions: major depressive disorder, eisenmenger syndrome, benign prostatic hyperplasia, duchenne muscular dystrophy, heart disease, coronary artery disease, chronic obstructive pulmonary disease, infertility, stroke, diastolic heart failure, cirrhosis of liver, cystic fibrosis — not investigated this run (investigate_top_candidates returned only 3 candidates; remaining candidates beyond top 3 were not auto-investigated and no per-pair tools were available in FAN-OUT MODE)"
+  "summary": "Ranked repurposing signals for sildenafil:\n\n1. raynaud disease — strong RCT-level evidence, supports; Phase 3 completed, no regulatory approval for this indication\n2. covid-19 — moderate literature, supports; Phase 1/Phase 2 completed, Phase 3 on record with unknown status\n\nDemoted — approval relationship:\n- hypertension (broader term; overlaps approved subtype pulmonary arterial hypertension)\n- pulmonary hypertension (broader term; overlaps approved subtype pulmonary arterial hypertension)\n\nEvidence gate exclusions: major depressive disorder, eisenmenger syndrome, benign prostatic hyperplasia, duchenne muscular dystrophy, heart disease, coronary artery disease, chronic obstructive pulmonary disease, infertility, stroke, diastolic heart failure, cirrhosis of liver — not auto-investigated (beyond top-N cap); insufficient evidence artifacts available this run."
 }

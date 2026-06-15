@@ -5,13 +5,13 @@
     "glioblastoma multiforme",
     "lung cancer",
     "renal cell carcinoma",
+    "liver cancer",
     "melanoma",
     "pancreatic carcinoma",
     "colorectal cancer",
-    "multiple myeloma",
-    "liver cancer",
-    "gastric cancer",
     "prostate cancer",
+    "multiple myeloma",
+    "gastric cancer",
     "ovarian cancer",
     "thyroid cancer",
     "sarcoma",
@@ -113,7 +113,7 @@
         "target_function": "Tyrosine-protein kinase that acts as a cell-surface receptor for the cytokine KITLG/SCF and plays an essential role in the regulation of cell survival and proliferation, hematopoiesis, stem cell maintenance, gametogenesis, mast cell development, migration and function, and in melanogenesis. In response to KITLG/SCF binding, KIT can activate several signaling pathways. Phosphorylates PIK3R1, PLCG1, SH2B2/APS and CBL. Activates the AKT1 signaling pathway by phosphorylation of PIK3R1, the regulatory subunit of phosphatidylinositol 3-kinase. Activated KIT also transmits signals via GRB2 and activation of RAS, RAF1 and the MAP kinases MAPK1/ERK2 and/or MAPK3/ERK1. Promotes activation of STAT family members STAT1, STAT3, STAT5A and STAT5B. Activation of PLCG1 leads to the production of the cellular signaling molecules diacylglycerol and inositol 1,4,5- trisphosphate. KIT signaling is modulated by protein phosphatases, and by rapid internalization and degradation of the receptor. Activated KIT promotes phosphorylation of the protein phosphatases PTPN6/SHP-1 and PTPRU, and of the transcription factors STAT1, STAT3, STAT5A and STAT5B. Promotes phosphorylation of PIK3R1, CBL, CRK (isoform Crk-II), LYN, MAPK1/ERK2 and/or MAPK3/ERK1, PLCG1, SRC and SHC1.."
       }
     ],
-    "summary": "Imatinib is a multi-target tyrosine kinase inhibitor whose three most consequential targets — ABL1, KIT, and PDGFRB — collectively define a broad oncology and rare-disease pharmacology. ABL1 inhibition is most strongly associated with chronic myelogenous leukemia (overall score 0.822) and acute lymphoblastic leukemia (0.707), reflecting imatinib's established clinical use, but also surfaces neurodegenerative disease (0.502) and breast cancer (0.440) as potential repurposing opportunities. KIT inhibition is most powerfully linked to gastrointestinal stromal tumor (0.892), mastocytosis/cutaneous mastocytosis (0.810/0.718), and acute myeloid leukemia (0.730), suggesting further utility in mast-cell-driven and KIT-mutant malignancies. PDGFRB inhibition reveals strong associations with rare fibro-proliferative and calcification disorders — bilateral striopallidodentate calcinosis (0.782), infantile myofibromatosis (0.779), and basal ganglia calcification (0.782) — as well as non-small cell lung carcinoma (0.604) and chronic myeloproliferative disorders (0.580), pointing to underexplored repurposing avenues beyond imatinib's approved indications."
+    "summary": "Imatinib is a multi-target tyrosine kinase inhibitor whose three most consequential targets — ABL1, KIT, and PDGFRB — collectively define a broad oncology and rare-disease repurposing landscape. ABL1 inhibition is most strongly associated with chronic myelogenous leukemia (overall score 0.822) and acute lymphoblastic leukemia (0.707), its established indications, but also surfaces intriguing signals in neurodegenerative disease (0.502) via affected-pathway evidence, suggesting potential neuroprotective utility. KIT inhibition is most powerfully linked to gastrointestinal stromal tumor (0.892) — another approved imatinib indication — as well as mastocytosis and its subtypes (up to 0.810), where KIT gain-of-function mutations are the primary driver, pointing to strong repurposing rationale. PDGFRB inhibition reveals associations with rare fibro-proliferative and calcification disorders such as bilateral striopallidodentate calcinosis (0.782), infantile myofibromatosis (0.779), and acroosteolysis-premature aging syndrome (0.744), all driven by PDGFRB gain-of-function mutations, highlighting imatinib as a mechanistically rational candidate for these ultra-rare conditions."
   },
   "disease_findings": [
     {
@@ -734,10 +734,10 @@
           "29048665",
           "39392522",
           "34967073",
+          "42277880",
           "32437800",
           "41846012",
           "30099442",
-          "42277880",
           "35849320",
           "16021678",
           "26180082",
@@ -1049,7 +1049,7 @@
           "evidence_basis": "drug_specific",
           "is_observational": false,
           "key_findings": [
-            "A randomized phase 3 trial found no significant difference in PFS between imatinib plus hydroxyurea versus hydroxyurea alone in recurrent GBM (adjusted P=0.56, HR=0.93, median PFS 6 weeks in both arms, 6-month PFS 5% vs 7%) (PMID: 19688297)",
+            "A randomized phase 3 trial found no significant difference in PFS between imatinib plus hydroxyurea and hydroxyurea alone in recurrent GBM (adjusted P=0.56, HR=0.93, median PFS 6 weeks in both arms, 6-month PFS 5% vs 7%) (PMID: 19688297)",
             "A phase II neoadjuvant study found that while intact imatinib was detected in GBM tissue, histologic and immunoblotting evaluations suggested GBM proliferation and survival mechanisms were not substantially reduced by imatinib in most patients; median survival was 6.2 months (PMID: 19789313)",
             "A phase II EORTC study found single-agent imatinib (600-1000 mg/day) had limited antitumor activity in recurrent gliomas; 6-month PFS rate was 16% in GBM with only 3 partial responses among 51 GBM patients (PMID: 18824712)",
             "A phase II open-label trial found imatinib showed no measurable activity in newly diagnosed or recurrent GBM; median PFS was 2.8 months in arm A (newly diagnosed) and 2.1 months in arm B (recurrent) (PMID: 31514200)",
@@ -1065,7 +1065,7 @@
             "19904263"
           ]
         },
-        "summary": "Synthesized evidence for imatinib in glioblastoma multiforme is complete. Evidence strength is rated STRONG, with direction CONTRADICTS repurposing."
+        "summary": "Synthesize complete. EvidenceSummary produced for imatinib in glioblastoma multiforme."
       },
       "clinical_trials": {
         "search": {
@@ -4496,9 +4496,9 @@
             "sti 571"
           ]
         },
-        "summary": "Imatinib mesylate (Gleevec) has been evaluated across a broad clinical program in malignant glioma, spanning Phase 1 through Phase 3. The pivotal study in this indication is NCT00154375, a completed Phase 3 trial titled 'Study of Imatinib Mesylate in Combination With Hydroxyurea Versus Hydroxyurea Alone as an Oral Therapy in Patients With Temozolomide Resistant Progressive Glioblastoma,' which compared the combination regimen head-to-head against hydroxyurea monotherapy in a randomized design. Supporting Phase 2 work includes NCT00039364 (completed, 'Imatinib Mesylate in Treating Patients With Gliomas') and two terminated Phase 2 studies: NCT00290771 ('Efficacy and Safety of Imatinib Mesylate Plus Hydroxyurea in Patients With Recurrent Glioblastoma Multiforme'), stopped for lack of efficacy, and NCT00171938 ('Open-label Trial of Imatinib Mesylate in Patients With Unresectable Recurrent Glioblastoma Multiforme Expressing PDGFR'), also terminated. Earlier-stage work includes a completed Phase 1/2 study (NCT00010049) in recurrent malignant glioma or meningioma, and several completed Phase 1 combination studies pairing imatinib with temozolomide (NCT00354068), RAD001 plus hydroxyurea (NCT00613132), vatalanib plus hydroxyurea (NCT00387933), vandetanib plus hydroxyurea (NCT00613054), and a tumor tissue analysis study (NCT00401024). No trials in this indication are currently active.",
+        "summary": "Imatinib mesylate (Gleevec) has been evaluated across multiple phases of clinical development in malignant glioma, including glioblastoma multiforme (GBM). At the Phase 3 level, NCT00154375 (completed) examined imatinib mesylate in combination with hydroxyurea versus hydroxyurea alone as an oral therapy in patients with temozolomide-resistant progressive glioblastoma. Two Phase 2 trials were also conducted: NCT00039364 (completed) studied imatinib mesylate in patients with gliomas broadly, while NCT00290771 was terminated early due to lack of efficacy in recurrent GBM patients receiving imatinib plus hydroxyurea, and NCT00171938 was terminated in patients with unresectable recurrent GBM expressing PDGFR (the reason for termination was not specified in the record). An earlier Phase 1/Phase 2 study (NCT00010049, completed) assessed imatinib in recurrent malignant glioma or meningioma. Several Phase 1 combination studies were also completed, including imatinib with RAD001 and hydroxyurea (NCT00613132), imatinib with temozolomide (NCT00354068), imatinib with vatalanib and hydroxyurea (NCT00387933), imatinib with ZD6474 (Zactima) and hydroxyurea (NCT00613054), and a tumor tissue analysis study in patients receiving imatinib for malignant glioma (NCT00401024). No trials in this indication are currently listed as active or ongoing.",
         "closure": "closed",
-        "closure_reason": "Two Phase 2 trials were terminated for lack of efficacy, and no active programs remain in this indication.",
+        "closure_reason": "A completed Phase 2 trial (NCT00290771) was terminated specifically for lack of efficacy in recurrent GBM, and no active trials remain in this indication.",
         "relevant_nct_ids": [
           "NCT00154375",
           "NCT00039364",
@@ -4516,7 +4516,7 @@
           "NCT00615927",
           "NCT00354913"
         ],
-        "relevance_reasoning": "Trials studying imatinib (or Gleevec) directly in GBM, malignant glioma, or recurrent GBM are classified as relevant, as these are clinically overlapping or identical to GBM. NCT03632135 is contaminated because imatinib is not the studied drug (it tests a ChemoID assay guiding generic chemotherapy). NCT00615927 is contaminated because it targets Grade II low-grade glioma (LGG), a distinct disease from GBM. NCT00354913 is contaminated because it studies imatinib in meningioma, a distinct tumor type unrelated to GBM.",
+        "relevance_reasoning": "Trials studying imatinib (or Gleevec) directly in GBM, malignant glioma, or recurrent GBM are classified as relevant, as these are clinically overlapping or identical to glioblastoma multiforme. NCT03632135 is contaminated because the studied intervention is a ChemoID assay/chemosensitivity test, not imatinib. NCT00615927 is contaminated because it targets low-grade glioma (Grade II LGG), a distinct disease from GBM. NCT00354913 is contaminated because it studies imatinib in meningioma, a distinct CNS tumor type unrelated to GBM.",
         "signals": {
           "highest_completed_phase": "Phase 3",
           "has_completed_phase3": true,
@@ -4536,10 +4536,10 @@
         "literature": "strong, contradicts, RCT-backed / controlled",
         "blocker": "No active development program and no regulatory pathway pursued despite completed late-stage trial",
         "active_programs": "None active",
-        "key_risk": "Controlled trial evidence contradicts the hypothesis, undermining the scientific rationale for revival",
+        "key_risk": "Controlled trial evidence contradicts the hypothesis, undermining the scientific rationale for further investment",
         "verdict": "Closed signal",
         "watch": "",
-        "prose": "The drug has been rigorously tested for this indication and the controlled, RCT-backed literature contradicts its efficacy, effectively disproving the hypothesis at scale. With no active programs and no approval relationship established, the candidate appears to have reached a definitive negative conclusion with little basis for further pursuit.",
+        "prose": "The hypothesis has been tested rigorously through a completed late-stage randomized controlled trial, and the evidence that emerged contradicts the proposed benefit, effectively disproving the candidate indication. With no active programs, no approval relationship, and RCT-backed negative findings, the repurposing case for this indication has been closed rather than advanced.",
         "approval_relationship": ""
       }
     },
@@ -4557,7 +4557,7 @@
           "ABL1 AND breast cancer",
           "Gleevec AND \"Breast Neoplasms\"",
           "STI-571 AND breast neoplasm",
-          "stem cell growth factor receptor inhibition AND breast"
+          "stem cell growth factor receptor inhibitor AND breast"
         ],
         "pmids": [
           "39560382",
@@ -5519,22 +5519,21 @@
           }
         ],
         "evidence_summary": {
-          "summary": "Multiple phase II clinical trials of imatinib in metastatic breast cancer consistently show limited efficacy. Imatinib monotherapy showed no clinical benefit in 16 heavily pre-treated patients (PMID: 15803362), and combination with docetaxel produced only a 16% partial response rate with poor tolerability compared to single-agent docetaxel (PMID: 19933079). The combination of imatinib with letrozole yielded an 11% objective response rate and 46.7% clinical benefit rate but was deemed to have 'limited efficacy' (PMID: 30311036), while imatinib plus vinorelbine showed a 50% clinical benefit rate in pretreated patients though with frequent toxicities (PMID: 25171229), representing the most favorable signal across these trials.",
+          "summary": "Multiple phase II clinical trials of imatinib in metastatic breast cancer consistently show limited efficacy. Imatinib monotherapy showed no clinical benefit in 16 heavily pre-treated patients (PMID: 15803362), and combination with docetaxel produced only a 16% partial response rate with poor tolerability compared to single-agent docetaxel (PMID: 19933079). The combination of imatinib with letrozole yielded an 11% objective response rate and 46.7% clinical benefit rate but was deemed to have 'limited efficacy' (PMID: 30311036), while imatinib plus vinorelbine showed a 50% clinical benefit rate in pretreated patients though with frequent toxicities (PMID: 25171229). Overall, the evidence from four clinical trials contradicts meaningful repurposing of imatinib for breast cancer, particularly as monotherapy.",
           "study_count": 4,
           "strength": "moderate",
           "direction": "contradicts",
           "evidence_basis": "drug_specific",
           "is_observational": false,
           "key_findings": [
-            "Imatinib monotherapy at 800 mg/day showed no clinical benefit in 16 patients with metastatic breast cancer, with significant toxicity including fatigue, edema, nausea, and vomiting (PMID: 15803362)",
+            "Imatinib monotherapy (800 mg/day) showed no evidence of clinical benefit in 16 patients with metastatic breast cancer, with significant toxicity including fatigue, edema, nausea, and vomiting (PMID: 15803362)",
             "Only 1 of 13 testable tumor specimens was KIT positive and 4 were PDGFR positive, suggesting low target expression in unselected breast cancer patients (PMID: 15803362)",
-            "Combination of weekly docetaxel plus imatinib produced only a 16% partial response rate (6/37 patients) with poor tolerability primarily due to gastrointestinal toxicity; 8 patients stopped therapy before the 8-week evaluation due to toxicity (PMID: 19933079)",
-            "The combination of imatinib and docetaxel did not improve efficacy compared to single-agent docetaxel historical results (PMID: 19933079)",
-            "Imatinib mesylate combined with letrozole in 45 postmenopausal women with hormone receptor-positive metastatic breast cancer yielded no complete responses, 5 partial responses (11% ORR), and a 46.7% clinical benefit rate, but was deemed to have 'limited efficacy' (PMID: 30311036)",
+            "Combination of weekly docetaxel plus imatinib produced only a 16% partial response rate (6/37 patients) and was relatively poorly tolerated, with 8 patients stopping before the 8-week evaluation due to toxicity; efficacy was not improved compared to single-agent docetaxel (PMID: 19933079)",
+            "Imatinib mesylate combined with letrozole in hormone receptor-positive metastatic breast cancer yielded no complete responses, 5 partial responses (11% ORR), and a 46.7% clinical benefit rate, but was concluded to have 'limited efficacy' (PMID: 30311036)",
             "Median progression-free survival with imatinib plus letrozole was 8.7 months; most common grade 3+ adverse events were fatigue (20%) and diarrhea (16%) (PMID: 30311036)",
-            "Imatinib combined with vinorelbine in 33 MBC patients showed a clinical benefit rate of 50% (ITT) and 72.7% (ITT >28 days), with a median time to progression of 155 days (PMID: 25171229)",
-            "Response to imatinib plus vinorelbine was independent of PDGFR-α, PDGFR-β, and KIT receptor status (PMID: 25171229)",
-            "Toxicities with imatinib plus vinorelbine were frequent: 84.8% nausea, 48.5% vomiting, 36.4% dyspnea, 21.6% severe leukopenia, and 1 case of bowel perforation (PMID: 25171229)"
+            "Imatinib combined with vinorelbine in metastatic breast cancer showed a clinical benefit rate of 50% (ITT) and median time to progression of 155 days, with response independent of PDGFR-α, -β, and KIT receptor status (PMID: 25171229)",
+            "Toxicities with imatinib plus vinorelbine were frequent, including 84.8% nausea, 48.5% vomiting, 21.6% severe leukopenia, and 1 case of bowel perforation (PMID: 25171229)",
+            "The abstract for palbociclib (PMID: 39954390) is not relevant to imatinib and was not considered in this assessment."
           ],
           "supporting_pmids": [
             "25171229"
@@ -8221,9 +8220,9 @@
             "sti 571"
           ]
         },
-        "summary": "Imatinib has been evaluated in metastatic and advanced breast cancer across multiple completed studies. At the Phase 1 level, NCT00080665 completed a dose-finding study of docetaxel combined with imatinib in locally advanced or metastatic breast cancer. Several Phase 2 studies have since completed: NCT00045188 examined imatinib mesylate as a single agent in metastatic breast cancer; NCT00193180 tested the combination of docetaxel plus imatinib mesylate in metastatic breast cancer; and NCT00087152 (SWOG S0338) evaluated imatinib mesylate combined with capecitabine in women with progressive Stage IV breast cancer. A Phase 2 study, NCT00323063, combining gemcitabine with or without imatinib mesylate in previously treated metastatic breast cancer was terminated due to slow accrual. A completed Phase 4 study, NCT00372476, assessed the efficacy and safety of imatinib combined with vinorelbine in advanced breast cancer. A completed Not Applicable-phase study, NCT00342056, investigated the role of gene variation in the effectiveness of imatinib treatment. Currently, one recruiting Not Applicable-phase study is ongoing: NCT05722795, titled 'Use of Imatinib to Convert Triple Negative Breast Cancer Into ER-positive Breast Cancer (I-CONIC).'",
+        "summary": "Imatinib has been evaluated in metastatic and advanced breast cancer across multiple completed studies. At the Phase 1 level, NCT00080665 completed a dose-finding study of docetaxel combined with imatinib in locally advanced or metastatic breast cancer. Several Phase 2 studies have since completed: NCT00045188 examined imatinib mesylate as a single agent in metastatic breast cancer; NCT00193180 tested the combination of docetaxel plus imatinib mesylate in metastatic breast cancer; and NCT00087152 (SWOG S0338) evaluated imatinib mesylate combined with capecitabine in women with progressive Stage IV breast cancer. A Phase 2 study, NCT00323063, combining gemcitabine with or without imatinib mesylate in previously treated metastatic breast cancer was terminated due to slow accrual. A completed Phase 4 study, NCT00372476, assessed the efficacy and safety of imatinib combined with vinorelbine in advanced breast cancer. A completed Not Applicable-phase study, NCT00342056, investigated the role of gene variation in the effectiveness of imatinib treatment. Currently, one recruiting Not Applicable-phase study, NCT05722795 (I-CONIC), is examining the use of imatinib to convert triple negative breast cancer into ER-positive breast cancer.",
         "closure": "live",
-        "closure_reason": "An actively recruiting study (NCT05722795) is ongoing, and no relevant trial has been terminated for safety or benefit:risk reasons.",
+        "closure_reason": "The only terminated trial stopped for operational reasons (slow accrual), not for safety or efficacy failure, and an actively recruiting study remains ongoing.",
         "relevant_nct_ids": [
           "NCT00342056",
           "NCT00193180",
@@ -8236,7 +8235,7 @@
         "contaminated_nct_ids": [
           "NCT03878524"
         ],
-        "relevance_reasoning": "NCT00342056 through NCT00080665 (completed) and NCT00323063 (terminated) all directly study imatinib (or imatinib mesylate/Gleevec) in breast cancer patients, making them clearly relevant. NCT03878524 is a broad multi-drug basket trial (SMMART PRIME) studying numerous agents across multiple hematologic and solid tumor indications — imatinib is not the primary studied drug for breast cancer in this context, and the mesh terms are dominated by myeloid/hematologic diseases, making it contaminated.",
+        "relevance_reasoning": "All six completed trials and one terminated trial (NCT00323063) directly study imatinib (or imatinib mesylate/Gleevec) as the primary intervention in breast cancer patients (metastatic, advanced, or locally advanced), making them clearly relevant. NCT03878524 is a broad multi-drug basket trial (SMMART PRIME) studying numerous agents across multiple hematologic and solid tumor indications — imatinib is not the primary studied drug for breast cancer in that trial, and its mesh terms span CML and myeloproliferative disorders, making it contamination.",
         "signals": {
           "highest_completed_phase": "Phase 4",
           "has_completed_phase3": false,
@@ -8612,9 +8611,9 @@
           "27393082",
           "33491756",
           "30392436",
-          "41679523",
           "40479551",
           "29989448",
+          "41679523",
           "26260811",
           "37937797",
           "32327172",
@@ -8816,7 +8815,6 @@
           "15150607",
           "42052821",
           "38170222",
-          "36412203",
           "9171936",
           "38279417",
           "26362062",
@@ -8835,6 +8833,7 @@
           "37202561",
           "41350729",
           "36758782",
+          "36412203",
           "15541812",
           "35610003",
           "29073620",
@@ -9049,8 +9048,8 @@
           "18696232",
           "24710685",
           "3030941",
-          "20679350",
           "21212155",
+          "20679350",
           "2285230",
           "11720747",
           "15753374",
@@ -9250,18 +9249,18 @@
           }
         ],
         "evidence_summary": {
-          "summary": "The available evidence from two Phase II clinical trials of imatinib in small cell lung cancer (SCLC) contradicts the repurposing hypothesis. In a single-agent Phase II trial, imatinib produced no objective responses in 19 SCLC patients, with a median time to progression of less than 1.3 months in both untreated and relapsed groups (PMID: 14676110). In a combination trial of irinotecan, carboplatin, and imatinib in 68 extensive-stage SCLC patients, the addition of imatinib did not improve outcomes beyond what was expected from chemotherapy alone (PMID: 17805064). The remaining abstracts concern other drugs (axitinib, seralutinib, gemcitabine+imatinib in mesothelioma) and are not relevant to imatinib in lung cancer.",
+          "summary": "The evidence from the provided abstracts consistently contradicts the repurposing of imatinib for lung cancer (specifically small-cell lung cancer, SCLC). A phase II trial of imatinib monotherapy in SCLC showed no objective responses and a median time to progression of less than 1.3 months in untreated patients and 1.2 months in sensitive-relapse patients (PMID: 14676110). A multicenter phase II trial combining irinotecan, carboplatin, and imatinib in extensive-stage SCLC found that the addition of imatinib did not improve outcomes beyond what was expected with chemotherapy alone (PMID: 17805064). The remaining abstracts are irrelevant to imatinib in lung cancer (PMID: 26845191 concerns axitinib in mesothelioma; PMID: 40788460 concerns seralutinib in pulmonary arterial hypertension; PMID: 32102735 concerns imatinib in mesothelioma, not lung cancer).",
           "study_count": 2,
           "strength": "moderate",
           "direction": "contradicts",
           "evidence_basis": "drug_specific",
           "is_observational": false,
           "key_findings": [
-            "In a Phase II trial of imatinib monotherapy (600 mg/day) in 19 SCLC patients, there were no objective responses; median time to progression was 0.8 months in untreated and 1.2 months in sensitive-relapse patients (PMID: 14676110).",
-            "Only 4 of 19 (21%) SCLC tumor samples expressed the KIT receptor (CD117), the imatinib target, limiting the rationale for its use in unselected SCLC (PMID: 14676110).",
-            "In a multicenter Phase II trial of irinotecan, carboplatin, and imatinib in 68 extensive-stage SCLC patients, the objective response rate was 66%, median progression-free survival was 5.4 months, and median overall survival was 8.4 months, but the addition of imatinib did not improve results beyond those expected with chemotherapy alone (PMID: 17805064).",
-            "KIT expression was detected in 86% of available tumor specimens in the combination trial but did not correlate with progression-free survival or overall survival in retrospective analysis (PMID: 17805064).",
-            "Grade 3/4 toxicities in the combination trial included neutropenia (43%), diarrhea (19%), fatigue (24%), and nausea (26%), indicating meaningful toxicity burden without added benefit (PMID: 17805064)."
+            "In a phase II trial of imatinib monotherapy (600 mg/day) in 19 SCLC patients, there were no objective responses; median time to progression was 0.8 months in untreated and 1.2 months in sensitive-relapse patients (PMID: 14676110).",
+            "Only 4 of 19 (21%) SCLC tumor samples expressed the imatinib target KIT receptor (CD117), limiting the potential target population (PMID: 14676110).",
+            "In a multicenter phase II trial of irinotecan, carboplatin, and imatinib in 68 extensive-stage SCLC patients, the objective response rate was 66% but median overall survival was only 8.4 months, and the addition of imatinib did not improve results beyond those expected with chemotherapy alone (PMID: 17805064).",
+            "KIT expression was detected in 86% of available tumor specimens in the combination trial, but KIT expression did not correlate with progression-free survival or overall survival in retrospective analysis (PMID: 17805064).",
+            "Grade 3/4 toxicities in the combination imatinib trial included neutropenia (43%), diarrhea (19%), fatigue (24%), and nausea (26%), indicating meaningful toxicity burden without added benefit (PMID: 17805064)."
           ],
           "supporting_pmids": [],
           "contradicting_pmids": [
@@ -13068,9 +13067,9 @@
             "sti 571"
           ]
         },
-        "summary": "Imatinib (Gleevec/Imatinib Mesylate) has been evaluated in lung cancer across a substantial number of completed and terminated Phase 1 and Phase 2 trials spanning both small cell lung cancer (SCLC) and non-small cell lung cancer (NSCLC).\n\nIn SCLC, four trials examined imatinib in the extensive-stage setting. NCT00052494 (Phase 1, completed) and NCT00045604 (Phase 1, completed) assessed imatinib in combination with chemotherapy in extensive-stage SCLC. NCT00193349 (Phase 2, completed) evaluated Gleevec combined with irinotecan and carboplatin in previously untreated extensive-stage SCLC. NCT00156286 (Phase 2, completed) studied Gleevec as maintenance therapy after induction irinotecan and cisplatin in c-Kit positive extensive SCLC. NCT00248482 (Phase 2, completed) examined imatinib after irinotecan and cisplatin in extensive-stage SCLC. NCT00052949 (Phase 2, completed) investigated imatinib in patients with recurrent SCLC.\n\nIn NSCLC, several Phase 2 trials were conducted. NCT00425646 (Phase 2, completed) studied imatinib mesylate and bevacizumab after first-line chemotherapy and bevacizumab in Stage IIIB or Stage IV NSCLC. NCT01011075 (Phase 2, completed) evaluated Gleevec and weekly paclitaxel in patients aged 70 or older with advanced NSCLC. NCT00222144 (Phase 2, completed) assessed Gleevec and docetaxel in recurrent NSCLC. NCT01083589 (Phase 2, completed) examined imatinib mesylate and docetaxel in NSCLC. NCT02127372 (Phase 1/Phase 2, terminated) studied docetaxel/cisplatin plus imatinib; this trial was closed due to poor accrual. NCT00323362 (Phase 2, terminated) evaluated gemcitabine and imatinib mesylate in recurrent or metastatic NSCLC; this trial was stopped due to toxicity.",
+        "summary": "Imatinib (Gleevec/Imatinib Mesylate) has been evaluated in lung cancer across a substantial number of completed and terminated Phase 1 and Phase 2 trials spanning both small cell lung cancer (SCLC) and non-small cell lung cancer (NSCLC).\n\nIn SCLC, four Phase 1/2 studies were conducted. NCT00052494 (Phase 1, completed) and NCT00045604 (Phase 1, completed) examined imatinib in combination with chemotherapy in extensive-stage SCLC. NCT00193349 (Phase 2, completed) tested Gleevec combined with irinotecan and carboplatin in previously untreated extensive-stage SCLC. NCT00156286 (Phase 2, completed) evaluated Gleevec as maintenance therapy after induction irinotecan and cisplatin in c-Kit positive extensive SCLC. NCT00248482 (Phase 2, completed) studied imatinib after irinotecan and cisplatin in extensive-stage SCLC. NCT00052949 (Phase 2, completed) assessed imatinib in patients with recurrent SCLC.\n\nIn NSCLC, several Phase 2 trials were completed. NCT00425646 (Phase 2, completed) examined imatinib combined with bevacizumab as maintenance after first-line chemotherapy and bevacizumab in Stage IIIB/IV NSCLC. NCT01011075 (Phase 2, completed) studied Gleevec with weekly paclitaxel in patients aged 70 or older with advanced NSCLC. NCT00222144 (Phase 2, completed) evaluated Gleevec with docetaxel in recurrent NSCLC. NCT01083589 (Phase 2, completed) investigated imatinib with docetaxel in NSCLC.\n\nTwo trials were terminated before completion. NCT02127372 (Phase 1/Phase 2) — a study of docetaxel/cisplatin plus imatinib — was closed due to poor accrual. NCT00323362 (Phase 2), which examined gemcitabine and imatinib in recurrent or metastatic NSCLC, was terminated due to toxicity.",
         "closure": "closed",
-        "closure_reason": "NCT00323362, a Phase 2 trial of imatinib plus gemcitabine in NSCLC, was terminated due to toxicity, representing a safety-driven negative signal for this combination approach.",
+        "closure_reason": "NCT00323362, a Phase 2 trial of imatinib combined with gemcitabine in NSCLC, was terminated due to toxicity, representing a real safety-based negative signal for this drug-indication pair.",
         "relevant_nct_ids": [
           "NCT00052949",
           "NCT00193349",
@@ -13089,7 +13088,7 @@
           "NCT00154388",
           "NCT00171912"
         ],
-        "relevance_reasoning": "All trials studying imatinib (or its trade name Gleevec/STI571) specifically in SCLC or NSCLC subtypes of lung cancer are classified as relevant, as these are direct subtypes of lung cancer. NCT00154388 (rare diseases basket trial with no lung cancer focus) and NCT00171912 (multi-malignancy basket trial focused on hematologic/other rare diseases) are classified as contaminated because lung cancer is not the primary studied indication and the trials are not designed around lung cancer patients.",
+        "relevance_reasoning": "All trials directly studying imatinib (or its trade name Gleevec/STI571) in SCLC or NSCLC subtypes of lung cancer are classified as relevant, as these are clinically overlapping subtypes of lung cancer. NCT00154388 (rare diseases basket study with no lung cancer mesh focus) and NCT00171912 (multi-malignancy basket study primarily covering hematologic/other rare diseases) are classified as contaminated because lung cancer is not the primary studied indication and the trials cover a broad range of distinct diseases.",
         "signals": {
           "highest_completed_phase": "Phase 2",
           "has_completed_phase3": false,
@@ -13105,12 +13104,12 @@
       "blurb": {
         "stage": "Phase 2 completed for this indication, no Phase 3",
         "literature": "moderate, contradicts, RCT-backed / controlled",
-        "blocker": "No active development program and no approved basis to build on, leaving the program without regulatory or commercial momentum.",
+        "blocker": "No active development program and no approved basis to anchor regulatory progress",
         "active_programs": "None active",
-        "key_risk": "Contradictory controlled evidence undermines the core hypothesis and discourages reinvestment.",
-        "verdict": "Stalled, evidence undermined",
+        "key_risk": "Contradictory controlled evidence undermines the core mechanistic hypothesis",
+        "verdict": "Stalled, evidence divided",
         "watch": "",
-        "prose": "Controlled trial data have produced contradictory results, casting serious doubt on whether the drug's mechanism translates to meaningful benefit in this indication. With no active programs and no approved use to leverage, the hypothesis has effectively stalled and would require a compelling new rationale or trial design to be revived.",
+        "prose": "Controlled trial data have produced conflicting results, casting serious doubt on whether the drug exerts a meaningful effect in this indication. With no active programs carrying the work forward, the hypothesis has effectively stalled despite having reached a meaningful level of clinical testing.",
         "approval_relationship": ""
       }
     }
@@ -13120,5 +13119,5 @@
     "breast cancer",
     "lung cancer"
   ],
-  "summary": "Ranked repurposing signals for imatinib:\n\n1. glioblastoma multiforme — strong RCT-level evidence, contradicts (drug failed); Phase 3 completed, no approval\n2. breast cancer — moderate literature, contradicts (drug failed); stalled post-Phase 2\n3. lung cancer — moderate literature, contradicts (drug failed); stalled post-Phase 2\n\nDemoted — approval relationship:\n- systemic mastocytosis (same as approved indication: aggressive systemic mastocytosis)\n- acute myeloid leukemia (same as approved indication: myeloid leukemia)\n- sarcoma (broader term; overlaps approved subtype GIST/DFSP)\n\nEvidence gate exclusions: acroosteolysis-keloid-like lesions-premature aging syndrome, hepatocellular carcinoma (not investigated — beyond top-6 list position)"
+  "summary": "Ranked repurposing signals for imatinib:\n\n1. glioblastoma multiforme — strong RCT-level evidence, contradicts (drug failed); Phase 3 completed\n2. breast cancer — moderate literature, contradicts (drug failed); Phase 2 completed\n3. lung cancer — moderate literature, contradicts (drug failed); Phase 2 completed\n\nClosed signals: glioblastoma multiforme (Phase 3 completed, strong contradicts literature), breast cancer (Phase 2 completed, moderate contradicts literature), lung cancer (Phase 2 completed, moderate contradicts literature)\n\nEvidence gate exclusions: renal cell carcinoma, liver cancer, melanoma, pancreatic carcinoma, colorectal cancer, prostate cancer, multiple myeloma, gastric cancer, ovarian cancer, thyroid cancer, sarcoma, acroosteolysis-keloid-like lesions-premature aging syndrome, hepatocellular carcinoma, acute myeloid leukemia, systemic mastocytosis (not investigated this run — beyond top-N cap)"
 }
