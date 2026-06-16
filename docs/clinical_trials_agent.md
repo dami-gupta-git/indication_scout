@@ -1,288 +1,366 @@
 # Clinical Trials Agent
 
-Assesses the clinical trial landscape for a drug-disease pair. Returns structured data
-(trial records, whitespace signal, competitive landscape, terminated trials) plus a
-2–3 sentence natural language summary.
+Assesses the clinical trial landscape for a drug × indication pair. The agent loop
+fetches trial records (all-status, completed, terminated), the competitive
+landscape, and FDA-label approval, and classifies every shown completed/terminated
+trial as RELEVANT or CONTAMINATED. The narrative summary, development-stage tier,
+and live-vs-closed verdict are authored **post-loop** by isolated LLM judgments —
+not by the agent inside the loop.
 
 ---
 
 ## Architecture
 
 ```
-build_clinical_trials_agent(llm, date_before)  ← LangGraph create_react_agent
-    └─ build_clinical_trials_tools(date_before)
-         ├─ detect_whitespace(drug, indication)
+build_clinical_trials_agent(llm, date_before, assigned_indication)  ← gated ReAct loop
+    └─ build_clinical_trials_tools(date_before, assigned_indication)
+         ├─ check_fda_approval(drug, indication)
          ├─ search_trials(drug, indication)
-         ├─ get_landscape(indication)
+         ├─ get_completed(drug, indication)
          ├─ get_terminated(drug, indication)
-         └─ finalize_analysis(summary)            ← terminates the loop
+         ├─ get_landscape(indication)
+         └─ finalize_analysis(verdicts, relevance_reasoning)   ← gates the loop closed
 
-run_clinical_trials_agent(agent, drug_name, disease_name)
+run_clinical_trials_agent(agent, drug_name, disease_name, first_approval)
     └─ agent.ainvoke(...)
-    └─ Walk message history → assemble ClinicalTrialsOutput
+    └─ Walk message history → assemble base ClinicalTrialsOutput (field_map)
+    └─ derive_trial_signals(...)            → output.signals  (deterministic)
+    └─ judge_dev_stage(...)                 → signals.dev_stage / active_programs (LLM)
+    └─ judge_ct_summary(...)                → output.summary / closure / closure_reason (LLM)
 ```
 
-Each tool first resolves `indication → MeSH D-number` via
-`services.disease_helper.resolve_mesh_id` and forwards it to the client as
-`target_mesh_id` so the client can post-filter Essie's recall-first results.
-If the resolver returns `None` the tool short-circuits to the empty-result
-shape and logs a WARNING — no client call is made.
+Each trial-fetching tool resolves `indication → (mesh_id, mesh_term)` via
+`services.disease_helper.resolve_mesh_id` and passes `mesh_term` to the client,
+which filters **server-side** with `AREA[ConditionMeshTerm]"<mesh_term>"`. If the
+resolver returns `None`, the tool short-circuits to the empty-result shape and
+logs a WARNING — no client call is made.
 
 ### Files
 
 | File | Role |
 |---|---|
-| `agents/clinical_trials/clinical_trials_agent.py` | `build_clinical_trials_agent` + `run_clinical_trials_agent`, system prompt, message-history → output assembly |
-| `agents/clinical_trials/clinical_trials_tools.py` | LangChain `@tool` wrappers around the client; calls `resolve_mesh_id` per tool |
-| `agents/clinical_trials/clinical_trials_output.py` | `ClinicalTrialsOutput` — the agent's return type |
-| `data_sources/clinical_trials.py` | ClinicalTrials.gov API v2 client (incl. `_filter_by_mesh`) |
-| `models/model_clinical_trials.py` | Pydantic models between client and agents |
-| `services/disease_helper.py` | `resolve_mesh_id` (NCBI E-utilities, cached) |
+| `agents/clinical_trials/clinical_trials_agent.py` | `build_clinical_trials_agent` + `run_clinical_trials_agent`, message-history → output assembly, post-loop judgment orchestration |
+| `agents/clinical_trials/clinical_trials_tools.py` | LangChain `@tool` wrappers around the client; per-tool `resolve_mesh_id`; date-cutoff scrubbing; finalize verdict validation |
+| `agents/clinical_trials/clinical_trials_output.py` | `ClinicalTrialsOutput`, `TrialSignals`, `FinalizeClinicalTrialsArtifact` |
+| `agents/_react_loop.py` | `build_gated_react_loop` — ReAct graph that ends the moment `finalize` succeeds |
+| `agents/_trial_signals.py` | `derive_trial_signals` — deterministic phase/closure signals from relevant trials |
+| `data_sources/clinical_trials.py` | ClinicalTrials.gov API v2 client (server-side MeSH filter, stop-reason classification) |
+| `models/model_clinical_trials.py` | Pydantic models between client and agent |
+| `services/disease_helper.py` | `resolve_mesh_id` → `(mesh_id, mesh_term)` (NCBI E-utilities, cached) |
+| `services/dev_stage.py` | `judge_dev_stage` (LLM tier) + `dev_stage_phrase` (tier → display string) |
+| `services/clinical_trials_summary.py` | `judge_ct_summary` (LLM prose + closure verdict) |
+| `prompts/clinical_trials.txt` | the agent's system prompt |
 
 ---
 
 ## Entry Point
 
 ```python
-def build_clinical_trials_agent(llm, date_before: date | None = None)
-async def run_clinical_trials_agent(agent, drug_name: str, disease_name: str) -> ClinicalTrialsOutput
+def build_clinical_trials_agent(llm, date_before: date | None = None,
+                                assigned_indication: str | None = None)
+async def run_clinical_trials_agent(agent, drug_name: str, disease_name: str,
+                                    first_approval: int | None = None) -> ClinicalTrialsOutput
 ```
 
 `date_before` is captured via closure inside `build_clinical_trials_tools` and
-applied to every client call so all queries in a session operate on a
-consistent time window.
+applied to every client call, so all queries operate on a consistent time window
+(used for holdout validation). `assigned_indication` is pinned to the tools — a
+tool call for any *other* indication is soft-rejected with a nudge back to the
+assigned one (the `finalize` validator also raises `DataSourceError` if tools were
+reused across indications, treating it as a wiring bug, not a retryable error).
 
-`run_clinical_trials_agent` invokes the LangGraph ReAct agent with a single
-`HumanMessage("Analyze {drug_name} in {disease_name}")` and walks the
-resulting message history, pulling typed artifacts off `ToolMessage`s and
-mapping each tool name to its slot in `ClinicalTrialsOutput`:
-
-| Tool name | ClinicalTrialsOutput field |
-|---|---|
-| `detect_whitespace` | `whitespace` |
-| `search_trials` | `trials` |
-| `get_landscape` | `landscape` |
-| `get_terminated` | `terminated` |
-| `finalize_analysis` | `summary` |
+`first_approval` (year the drug was first approved anywhere, from ChEMBL) is **not**
+used in the loop — it is fed only to `judge_ct_summary` so its closure judgment can
+distinguish "old off-patent drug, no commercial NDA" from "efficacy failure."
 
 ---
 
-## ReAct Loop
+## Gated ReAct Loop — `agents/_react_loop.py`
 
-The agent is built via `langgraph.prebuilt.create_react_agent`. The system
-prompt (in `clinical_trials_agent.py`) instructs:
+The agent is built via `build_gated_react_loop(llm, tools, SYSTEM_PROMPT,
+_finalize_done)`. This is LangGraph's two-node ReAct graph (model + ToolNode)
+except the tools→model edge is conditional: after the tools node runs,
+`_finalize_done(messages)` is checked, and if `finalize_analysis` produced a
+truthy artifact in the **trailing** block of `ToolMessage`s, the graph returns
+`END` immediately (no extra model turn). A *rejected* finalize returns an
+empty-string artifact, which the gate treats as falsy, so the loop continues.
 
-1. Typically start with `detect_whitespace`.
-2. ALWAYS call `get_terminated` alongside `search_trials` and `get_landscape` — terminated trials are evidence whether or not active trials exist.
-3. Batch independent tool calls into a single response when possible.
-4. `finalize_analysis(summary)` MUST be the final tool call — it terminates the loop and supplies the 2–3 sentence plain-text assessment.
+Prompt caching: an `ephemeral` `cache_control` breakpoint is set on the system
+message (caches the static system+tools prefix), and on the last message each turn
+(caches the growing conversation).
 
-The summary covers: whether trials exist for the pair, competitive landscape
-(crowded vs. open), red flags from terminated trials, overall opportunity
-assessment. It must reference only information returned by the tools in this
-run (no facts from the LLM's training).
+### System prompt workflow
+
+The prompt (`prompts/clinical_trials.txt`) instructs the agent to:
+
+1. Call `check_fda_approval` **first**.
+2. Call **all** of `search_trials`, `get_completed`, `get_terminated`,
+   `get_landscape` — batched in parallel; do NOT skip any based on the approval
+   result.
+3. Classify **every** completed/terminated trial it was shown as `relevant` or
+   `contaminated`, judging from the trial's interventions (is this the studied
+   drug?), title, and brief summary (these separate, e.g., systemic from pulmonary
+   disease, and catch other-drug trials swept in by recall-first search).
+4. Call `finalize_analysis(verdicts, relevance_reasoning)` as the **last** action.
+   Any plain-text prose after this is discarded — the trial-section summary is
+   authored separately, post-loop.
 
 ---
 
 ## Tools
 
-Tools are thin `@tool(response_format="content_and_artifact")` wrappers that
-call `ClinicalTrialsClient`. Each one resolves the indication to a MeSH
-D-number first; if the resolver returns `None`, the tool returns an empty
-artifact with a "MeSH unresolved, skipped" content message and never
-contacts CT.gov. All tools share the `date_before` cutoff via closure.
+All tools are `@tool(response_format="content_and_artifact")` wrappers over
+`ClinicalTrialsClient`. Trial-fetching tools resolve the indication to a MeSH
+descriptor first; if `resolve_mesh_id` returns `None`, the tool returns an empty
+artifact and never contacts CT.gov. All share the `date_before` cutoff via closure.
 
-Sizing limits below come from settings (snake_case in `config.py`,
-overridable via env vars in `.env.constants` — the values shown are the
-example defaults).
+Sizing limits come from settings (snake_case in `config.py`, overridable via
+`.env.constants`) and `constants.py` (e.g. `CLINICAL_TRIALS_FETCH_MAX = 50`).
 
-### `detect_whitespace(drug, indication) → (str, WhitespaceResult)`
+### Date-cutoff scrubbing
 
-Detects whether the drug-indication pair has been explored. Runs three concurrent queries:
+`_scrub_post_cutoff_outcome(trial, cutoff) → (trial, was_scrubbed)` enforces the
+holdout window: a trial whose terminal outcome (completion/termination) occurred
+*after* the cutoff has its `overall_status` / `why_stopped` / `completion_date`
+stripped (rendered UNKNOWN). `search_trials` keeps such trials with status UNKNOWN;
+`get_completed` / `get_terminated` **drop** them and decrement `total_count`.
 
-- **Exact match**: trials with both drug AND indication (cap: `clinical_trials_whitespace_exact_max = 50`)
-- **Drug-only count**: total trials with this drug (no MeSH filter applied — there is no indication to filter against)
-- **Indication-only count**: total trials with this indication (paginated + MeSH-filtered when `target_mesh_id` is set; otherwise short-circuits on the API's `totalCount`)
+### `check_fda_approval(drug, indication) → (str, ApprovalCheck)`
 
-When no exact matches exist (whitespace), also fetches up to `clinical_trials_whitespace_indication_max = 200`
-indication trials filtered to `CLINICAL_TRIALS_WHITESPACE_PHASE_FILTER = "(PHASE2 OR PHASE3 OR PHASE4)"`,
-applies the MeSH filter, ranks by phase desc then active status, deduplicates by
-drug name, and returns the top `clinical_trials_whitespace_top_drugs = 50` unique
-drugs as `indication_drugs`.
+- **Live path:** `resolve_drug_name(drug)` → ChEMBL id → `get_all_drug_names` →
+  `FDAClient.get_all_label_indications` → `extract_approved_from_labels`.
+- **Holdout path (`date_before` set):** looks the pair up in a hardcoded
+  approval table `as_of=date_before`.
 
-Returns a `WhitespaceResult` artifact.
+Returns `ApprovalCheck(is_approved, label_found, matched_indication,
+drug_names_checked)`. `label_found=False` means the drug isn't in openFDA at all
+(e.g. withdrawn) → approval status undetermined.
 
-### `search_trials(drug, indication) → (str, list[Trial])`
+### `search_trials(drug, indication) → (str, SearchTrialsResult)`
 
-Fetches trial records for the pair, capped at `clinical_trials_search_max = 50`,
-sorted by `EnrollmentCount:desc`. Results are MeSH-post-filtered before return.
+All-status trial query for the pair. Returns `total_count` (exact, via CT.gov
+`countTotal`), `by_status` (counts for RECRUITING / ACTIVE_NOT_RECRUITING /
+WITHDRAWN / UNKNOWN — not COMPLETED/TERMINATED), and the top trials by enrollment
+(`CLINICAL_TRIALS_FETCH_MAX = 50`). Post-cutoff trials are kept as UNKNOWN.
 
-Returns a list of `Trial` artifacts.
+### `get_completed(drug, indication) → (str, CompletedTrialsResult)`
+
+COMPLETED trials for the pair: exact `total_count` + top 50 by enrollment.
+Post-cutoff completions are dropped (count decremented). Records the shown NCT ids
+under the normalized indication key for `finalize_analysis` verification.
+
+### `get_terminated(drug, indication) → (str, TerminatedTrialsResult)`
+
+TERMINATED trials for the pair: exact `total_count` + top 50 by enrollment, each
+carrying `why_stopped`. The content message counts safety/efficacy stops among the
+shown set (`_classify_stop_reason(why_stopped) in {safety, efficacy}`). Post-cutoff
+terminations are dropped (count decremented). Also records shown NCT ids for
+finalize verification.
 
 ### `get_landscape(indication) → (str, IndicationLandscape)`
 
-Fetches up to `clinical_trials_landscape_max_trials = 50` trials for the
-indication sorted by `StartDate:desc`, MeSH-post-filters them, then aggregates
-into the top `10` competitors grouped by sponsor + drug. Drug/Biological
-interventions only; vaccines (matched by `VACCINE_NAME_KEYWORDS`) are excluded.
+Competitive landscape for the indication: `total_trial_count`, top 10 competitors
+(grouped by sponsor + drug, ranked by max phase then recency), `phase_distribution`,
+and `recent_starts` (`CLINICAL_TRIALS_RECENT_START_YEAR`+). Drug/Biological
+interventions only; vaccines excluded. **Skipped entirely when `date_before` is set**
+(returns an empty `IndicationLandscape()`), because landscape aggregates would leak
+post-cutoff trial outcomes.
 
-Returns an `IndicationLandscape` artifact with `competitors`,
-`phase_distribution`, and `recent_starts`.
+### `finalize_analysis(verdicts, relevance_reasoning) → (str, FinalizeClinicalTrialsArtifact | "")`
 
-### `get_terminated(drug, indication) → (str, TrialOutcomes)`
-
-Runs four concurrent queries and returns a `TrialOutcomes` with four
-scope-labelled lists:
-
-- **drug_wide** (`list[TerminatedTrial]`): TERMINATED trials for this drug, ANY indication, page size `clinical_trials_terminated_drug_page_size = 50`. Filtered to `stop_category in {safety, efficacy}` only — business/enrollment/unknown are dropped as noise. Not MeSH-filtered (no indication to filter against).
-- **indication_wide** (`list[TerminatedTrial]`): TERMINATED trials for ANY drug in this indication. MeSH-filtered, then capped at `clinical_trials_terminated_indication_max = 20`. All stop categories retained.
-- **pair_specific** (`list[TerminatedTrial]`): TERMINATED trials for this drug AND this indication. MeSH-filtered. All stop categories retained — a safety/efficacy entry here means the exact hypothesis has been directly tested and stopped early.
-- **pair_completed** (`list[Trial]`): COMPLETED trials for this drug AND this indication. MeSH-filtered. Catches Phase 3 trials that ran to protocol end but missed their primary endpoint (CT.gov marks those COMPLETED, not TERMINATED).
-
-### `finalize_analysis(summary) → (str, str)`
-
-Terminates the agent loop. Receives the agent's 2–3 sentence plain-text
-summary and returns it as the artifact, which `run_clinical_trials_agent`
-maps to `ClinicalTrialsOutput.summary`.
+Gates the loop closed. `verdicts` is a list of `{"nct": ..., "verdict":
+"relevant" | "contaminated"}`. Validates that **every** NCT shown by `get_completed`
+/ `get_terminated` has a verdict and that no verdict names an unseen NCT — on
+mismatch it returns `("REJECTED: …", "")`, which fails the gate and loops back to
+the model. On success it returns a `FinalizeClinicalTrialsArtifact(relevant_ncts,
+contaminated_ncts, relevance_reasoning)`.
 
 ---
 
-## Client: `ClinicalTrialsClient`
+## Result Assembly & Post-Loop Judgments
 
-Extends `BaseClient`. Base URL: `https://clinicaltrials.gov/api/v2/studies`. Page size: 100.
+`run_clinical_trials_agent` walks the message history after `ainvoke()`:
 
-### Pagination
+**1. Harvest artifacts.** Each `ToolMessage` carries a typed `.artifact`; the tool
+name maps to a slot via `field_map`:
 
-`_paginated_search()` is the core loop shared by all trial-fetching methods. It pages via
-`nextPageToken` until `max_results` is reached or no more pages are returned.
+| Tool name | slot |
+|---|---|
+| `search_trials` | `search` |
+| `get_completed` | `completed` |
+| `get_terminated` | `terminated` |
+| `get_landscape` | `landscape` |
+| `check_fda_approval` | `approval` |
+| `finalize_analysis` | `finalize` |
 
-### Query building
+A WARNING is logged if `check_fda_approval` was never called. The `finalize`
+artifact is unpacked defensively — if finalize never succeeded, a default
+`FinalizeClinicalTrialsArtifact()` is used. The base `ClinicalTrialsOutput` is
+built from these plus `relevant_nct_ids` / `contaminated_nct_ids` /
+`relevance_reasoning` from the finalize artifact.
 
-`_build_search_params()` constructs the API query:
+**2. `derive_trial_signals`** (deterministic, only when finalize succeeded) →
+`output.signals` (`TrialSignals`). Computes the phase signals below from RELEVANT
+trials only.
 
-| Parameter | API field | Notes |
-|---|---|---|
-| `drug` | `query.intr` | Free-text intervention search |
-| `indication` | `query.cond` | Free-text condition search |
-| `date_before` | `query.term` | `AREA[StartDate]RANGE[MIN, date]` |
-| `phase_filter` | `query.term` | `AREA[Phase](PHASE2 OR ...)` syntax |
-| `status_filter` | `filter.overallStatus` | e.g. `TERMINATED` |
-| `sort` | `sort` | e.g. `EnrollmentCount:desc` |
+**3. `judge_dev_stage`** (LLM, when signals + relevant trials exist) → overwrites
+`signals.dev_stage` and `signals.active_programs`. The relevant-trial set fed here
+is completed + terminated filtered by `relevant_nct_ids`, **plus** all-status
+search trials not in `contaminated_nct_ids` and not already seen (so an active
+Phase 3 that lives only in the search set is not missed).
 
-### MeSH post-filter
+**4. `judge_ct_summary`** (LLM) → `output.summary` (prose), `output.closure`,
+`output.closure_reason`. Fed `dev_stage_phrase(signals)` and `active_programs` so
+its prose cannot contradict the resolved tier, plus `first_approval`.
 
-`_filter_by_mesh(trials, target_mesh_id)` keeps trials whose
-`mesh_conditions` or `mesh_ancestors` (both extracted from
-`derivedSection.conditionBrowseModule`) contain the target D-number.
-Trials with both lists empty are dropped (cannot be verified against the
-MeSH tree). Comparison is on the D-number `id` field, not `term`.
+> **LOAD-BEARING ORDER:** `judge_dev_stage` MUST run before `judge_ct_summary` —
+> the summary judgment is fed the resolved stage phrase and must not re-author it.
 
-When `target_mesh_id` is supplied, `_count_trials` also paginates and
-applies the filter — it cannot use the API's `totalCount` because that
-reflects the unfiltered Essie query.
-
-### Stop reason classification
-
-`_classify_stop_reason(why_stopped)` maps free-text termination reasons to categories using
-`STOP_KEYWORDS`. Checks for negation prefixes to avoid false positives (e.g. "no safety
-concerns"). Returns: `safety`, `efficacy`, `business`, `enrollment`, `other`, or `unknown`.
-
-### Phase normalisation
-
-`_phase_rank()` maps phase strings to integers (0–8, higher = later stage) for sorting.
-`_normalize_phase()` converts the v2 API's phase list (e.g. `["PHASE2", "PHASE3"]`) to
-a human-readable string (`"Phase 2/Phase 3"`).
+Both LLM judgments are cached (`JUDGMENT_CACHE_TTL`) and return a safe floor /
+`None` on parse failure — they never fabricate a tier or prose.
 
 ---
 
-## Data Models
-
-### `WhitespaceResult`
-
-| Field | Type | Description |
-|---|---|---|
-| `is_whitespace` | `bool \| None` | True if no exact-match trials exist |
-| `no_data` | `bool \| None` | True if drug AND indication both have zero trials anywhere |
-| `exact_match_count` | `int \| None` | Number of trials with both drug and indication |
-| `drug_only_trials` | `int \| None` | Total trials for this drug (any indication) |
-| `indication_only_trials` | `int \| None` | Total trials for this indication (any drug) |
-| `indication_drugs` | `list[IndicationDrug]` | Other drugs in the indication space (whitespace case only) |
+## Data Models — `models/model_clinical_trials.py`
 
 ### `Trial`
 
-Core trial record. Key fields: `nct_id`, `title`, `phase`, `overall_status`,
-`why_stopped`, `indications` (list of condition strings),
-`mesh_conditions` / `mesh_ancestors` (lists of `MeshTerm`, used by
-`_filter_by_mesh`), `interventions` (list of `Intervention`), `sponsor`,
-`enrollment`, `start_date`, `completion_date`, `primary_outcomes`, `references` (PMIDs).
+Core trial record. Key fields: `nct_id`, `title`, `brief_summary`, `phase`,
+`overall_status`, `why_stopped`, `indications` (condition strings),
+`mesh_conditions` / `mesh_ancestors` (`list[MeshTerm]`), `interventions`
+(`list[Intervention]`), `sponsor`, `enrollment`, `start_date`, `completion_date`
+(prefers `primaryCompletionDate`), `primary_outcomes` (`list[PrimaryOutcome]`),
+`references` (PMIDs).
+
+`MeshTerm`: `id` (descriptor, e.g. `D003924`), `term`.
+`Intervention`: `intervention_type`, `intervention_name`, `description`.
+`PrimaryOutcome`: `measure`, `time_frame`.
+
+### `SearchTrialsResult`
+
+| Field | Type | Description |
+|---|---|---|
+| `total_count` | `int` | Exact all-status count for the pair |
+| `by_status` | `dict[str, int]` | RECRUITING / ACTIVE_NOT_RECRUITING / WITHDRAWN / UNKNOWN (excludes COMPLETED/TERMINATED) |
+| `trials` | `list[Trial]` | Top 50 by enrollment |
+
+### `CompletedTrialsResult` / `TerminatedTrialsResult`
+
+Each: `total_count` (exact COMPLETED / TERMINATED count) + `trials` (top 50 by
+enrollment). Terminated trials carry `why_stopped`.
 
 ### `IndicationLandscape`
 
 | Field | Type | Description |
 |---|---|---|
-| `total_trial_count` | `int \| None` | Total trials for this indication (post-MeSH-filter when `target_mesh_id` is set; otherwise the API's `totalCount`) |
-| `competitors` | `list[CompetitorEntry]` | Top N by `max_phase` desc, then `most_recent_start` desc |
-| `phase_distribution` | `dict[str, int]` | Count of trials per phase |
+| `total_trial_count` | `int \| None` | Exact count for the indication |
+| `competitors` | `list[CompetitorEntry]` | Top 10 by `max_phase` desc, then `most_recent_start` desc |
+| `phase_distribution` | `dict[str, int]` | Count of trials per phase (post vaccine filter) |
 | `recent_starts` | `list[RecentStart]` | Trials starting ≥ `CLINICAL_TRIALS_RECENT_START_YEAR` |
 
-`CompetitorEntry` groups by sponsor + drug: `max_phase`, `trial_count`,
-`statuses`, `total_enrollment`, `most_recent_start`.
+`CompetitorEntry` groups by sponsor + drug: `drug_type`, `max_phase`,
+`trial_count`, `statuses`, `total_enrollment`, `most_recent_start`.
+`RecentStart`: `nct_id`, `sponsor`, `drug`, `phase`.
 
-### `TerminatedTrial`
+### `ApprovalCheck`
 
-A standalone Pydantic model (not a `Trial` subclass) — fields:
-`nct_id`, `title`, `drug_name`, `indication`, `mesh_conditions`, `phase`,
-`why_stopped`, `stop_category`, `enrollment`, `sponsor`, `start_date`,
-`termination_date`. `stop_category` is one of: `safety`, `efficacy`,
-`business`, `enrollment`, `other`, `unknown`.
+`is_approved`, `label_found`, `matched_indication`, `drug_names_checked`.
 
-### `TrialOutcomes`
+### `TrialSignals` (in `clinical_trials_output.py`)
 
-Returned by `get_terminated`. Fields: `drug_wide: list[TerminatedTrial]`,
-`indication_wide: list[TerminatedTrial]`, `pair_specific: list[TerminatedTrial]`,
-`pair_completed: list[Trial]`. See the `get_terminated` tool description above
-for the semantics of each scope.
-
-### `ClinicalTrialsOutput`
-
-The agent's return type:
+Deterministic, computed from RELEVANT trials by `derive_trial_signals`. `dev_stage`
+and `active_programs` start at floor defaults and are overwritten by
+`judge_dev_stage`.
 
 | Field | Type | Notes |
 |---|---|---|
-| `whitespace` | `WhitespaceResult \| None` | From `detect_whitespace` |
-| `landscape` | `IndicationLandscape \| None` | From `get_landscape`; None if skipped |
-| `trials` | `list[Trial]` | From `search_trials`; empty if not called |
-| `terminated` | `TrialOutcomes` | From `get_terminated`; empty `TrialOutcomes()` if not called |
-| `summary` | `str` | From `finalize_analysis` — the 2–3 sentence natural language assessment |
+| `highest_completed_phase` | `str \| None` | Highest completed phase incl. pure Phase 4. **Display fact only** — not a pivotal-evidence signal; do not make tier/closure decisions on it |
+| `has_completed_phase3` | `bool` | A relevant completed trial in band {Phase 2/Phase 3, Phase 3, Phase 3/Phase 4} |
+| `completed_phase3_nct_ids` | `list[str]` | their NCT ids |
+| `has_active_phase3` | `bool` | An active Phase-3-band trial on the all-status search set (best-effort contamination drop) |
+| `active_phase3_nct_ids` | `list[str]` | their NCT ids |
+| `phase3_terminated_for_cause` | `bool` | A relevant Phase-3-band trial (excl. Phase 3/Phase 4) terminated for safety/efficacy |
+| `terminated_phase3_nct_ids` | `list[str]` | their NCT ids |
+| `dev_stage` | `str` | floor `"untested"`; set by `judge_dev_stage` |
+| `active_programs` | `str` | floor `"None active"`; set by `judge_dev_stage` |
 
-Fields are `None`/empty when the agent chose not to call the corresponding tool — this is
-expected, not an error.
+Phase bands: active/completed pivotal = Phase 2/Phase 3 … Phase 3/Phase 4 inclusive;
+cause-termination pivotal excludes Phase 3/Phase 4 (ambiguous). Pure Phase 4 ranks
+above Phase 3 but is NOT a pivotal band (post-approval / off-label).
+
+### `ClinicalTrialsOutput`
+
+The agent's return type.
+
+| Field | Type | Notes |
+|---|---|---|
+| `search` | `SearchTrialsResult \| None` | from `search_trials` |
+| `completed` | `CompletedTrialsResult \| None` | from `get_completed` |
+| `terminated` | `TerminatedTrialsResult \| None` | from `get_terminated` |
+| `landscape` | `IndicationLandscape \| None` | from `get_landscape`; empty under holdout |
+| `approval` | `ApprovalCheck \| None` | from `check_fda_approval` |
+| `summary` | `str` | post-loop prose from `judge_ct_summary`; `""` if synthesis returned None |
+| `closure` | `Literal["live", "closed", "unknown"]` | typed verdict from `judge_ct_summary`; supervisor consumes directly |
+| `closure_reason` | `str` | one-sentence justification |
+| `relevant_nct_ids` | `list[str]` | from finalize |
+| `contaminated_nct_ids` | `list[str]` | from finalize — excluded from signals |
+| `relevance_reasoning` | `str` | finalize justification |
+| `signals` | `TrialSignals \| None` | deterministic facts + resolved dev_stage |
+
+`FinalizeClinicalTrialsArtifact`: `relevant_ncts`, `contaminated_ncts`,
+`relevance_reasoning`. (Prose is no longer authored at finalize.)
 
 ---
 
-## Result Assembly
+## Client: `ClinicalTrialsClient` — `data_sources/clinical_trials.py`
 
-`run_clinical_trials_agent` walks the agent's message history after
-`ainvoke()` completes:
+Extends `BaseClient`. Base URL `https://clinicaltrials.gov/api/v2/studies`, page
+size 100.
 
-- Each `ToolMessage` carries a typed `.artifact` (set by the tool's
-  `response_format="content_and_artifact"`). The tool name is mapped to a
-  `ClinicalTrialsOutput` field via the `field_map` in
-  `clinical_trials_agent.py` and the artifact assigned directly — no JSON
-  parsing or model reconstruction is needed.
-- `finalize_analysis`'s artifact is the summary string.
+### Pagination & query building
+
+`_paginated_search()` pages via `nextPageToken` until `max_results` / `max_pages`
+is hit or pages exhaust (returns `(trials, saturated)`). `_count_trials_total()`
+makes one cheap `pageSize=1, countTotal=true` call. `_build_search_params()` maps:
+
+| Parameter | API field | Notes |
+|---|---|---|
+| `drug` | `query.intr` | Free-text intervention search |
+| `mesh_term` | `query.cond` | **Server-side** MeSH filter via `AREA[ConditionMeshTerm]"<mesh_term>"` (`_mesh_cond`) — same filter for counts and fetch |
+| `date_before` | `query.term` | `AREA[StartDate]RANGE[MIN, date]` |
+| `phase_filter` | `query.term` | `AREA[Phase](PHASE2 OR …)` |
+| `status_filter` | `filter.overallStatus` | e.g. `TERMINATED` |
+| `sort` | `sort` | e.g. `EnrollmentCount:desc` |
+
+> Note (`_mesh_cond`, line ~40): `AREA[ConditionMeshTerm]` is a documented KNOWN
+> BUG — it can over-match on the MeSH *term* string. There is no longer a
+> client-side `_filter_by_mesh` post-filter; filtering is entirely server-side.
+
+### Stop-reason classification
+
+`_classify_stop_reason(why_stopped)` maps free-text termination reasons to
+`safety`, `efficacy`, `enrollment`, `business`, or `unknown` using `STOP_KEYWORDS`
+(specific phrases checked before catch-alls, e.g. "enrollment futility" before
+"futility"). A `NEGATION_PREFIXES` lookback (`no `, `not `, `unrelated to `,
+`without `, `non-`) within ~20 chars suppresses false positives (e.g. "no safety
+concerns"), unless a separator intervenes. Falls back to the raw text when nothing
+matches.
+
+### Phase handling
+
+`_phase_rank()` maps phase strings to integers (Not Applicable=0 … Phase 4=8) for
+sorting. `_normalize_phase()` converts the v2 API's phase list (e.g.
+`["PHASE2", "PHASE3"]`) to a human-readable string (`"Phase 2/Phase 3"`).
 
 ---
 
 ## Known Limitations & Future Work
 
-See [future.md](../future.md) for the full list. The two most relevant:
+See [future.md](../future.md) for the full list. Most relevant:
 
-1. **Drug synonym expansion** — `query.intr` is a free-text field. A drug registered as
-   "metformin hydrochloride" or a brand name won't match a query for "metformin", causing
-   false whitespace signals.
-
-2. **`is_whitespace` is binary** — it doesn't capture "early stage, unproven." For example,
-   metformin + glioblastoma returns `is_whitespace=False` with 9 trials, but those are all
-   Phase 1/2 with small enrollment. The maturity dimension lives only in the free-text
-   summary, not in the structured data.
+1. **Drug synonym expansion** — `query.intr` is free-text; a trial registered under
+   "metformin hydrochloride" or a brand name may miss a query for "metformin".
+2. **`AREA[ConditionMeshTerm]` over-match** — the server-side MeSH condition filter
+   matches on the term string and can pull in clinically distinct diseases sharing
+   wording; this is exactly what the agent's relevance split
+   (`relevant` vs `contaminated`) is there to clean up downstream.
