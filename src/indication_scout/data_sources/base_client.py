@@ -212,15 +212,12 @@ class BaseClient(ABC):
                 # Retry on 429/5xx
                 if resp.status in {429, 500, 502, 503, 504}:
                     if attempt < self.max_retries:
-                        # 429s usually need real time to clear (server-side rate limits) —
-                        # enforce a 90s floor so the first retry doesn't fire before the
-                        # window resets. 5xx is more transient, no floor needed.
+                        # Short exponential backoff (2s/4s/8s). These are per-second
+                        # rate limits (e.g. NCBI 10 req/s), so a 429 clears within
+                        # ~1s — no long floor needed.
                         delay = min(2**attempt, 90)
-                        if resp.status == 429:
-                            delay = max(delay, 90)
                         ctx_suffix = f" ({context})" if context else ""
-                        # WARNING, not debug: a 429 forces a 90s sleep that otherwise
-                        # shows up only as an unexplained stall. Surfacing it makes
+                        # WARNING, not debug: surfacing the retry makes
                         # rate-limiting visible instead of looking like a hang.
                         logger.warning(
                             "%s: HTTP %d on %s%s; sleeping %ds and retrying (attempt %d/%d)",

@@ -294,6 +294,12 @@ async def normalize_batch(
 _NCBI_PRECALL_SLEEP_BASE: float = 1.5
 _NCBI_PRECALL_SLEEP_JITTER: float = 0.5
 
+# Per-request timeout for NCBI MeSH calls. Without an explicit timeout a stalled
+# connection can hang on aiohttp's 5min default before TimeoutError fires; a tight
+# cap fails fast into the 3s/6s/9s retry. sock_connect bounds connection setup.
+_NCBI_TIMEOUT_TOTAL: float = 30.0
+_NCBI_SOCK_CONNECT: float = 10.0
+
 
 async def _ncbi_get_json(
     session: aiohttp.ClientSession,
@@ -301,10 +307,10 @@ async def _ncbi_get_json(
     params: dict[str, Any],
     indication: str,
 ) -> dict[str, Any]:
-    """GET json from NCBI with up to 3 90s-spaced retries on transient failure.
+    """GET json from NCBI with up to 3 linearly-spaced retries on transient failure.
 
-    Initial attempt + 3 retries (4 total tries). Each retry waits 90s before
-    firing. If all 4 attempts fail, the program exits non-zero — NCBI is
+    Initial attempt + 3 retries (4 total tries). Each retry waits min(3*(attempt+1), 90)s
+    (3s/6s/9s) before firing. If all 4 attempts fail, the program exits non-zero — NCBI is
     a hard dependency for MeSH resolution and continuing without it would
     silently produce degraded clinical analysis.
 
@@ -330,15 +336,19 @@ async def _ncbi_get_json(
         except (aiohttp.ClientError, asyncio.TimeoutError) as e:
             last_exc = e
             if attempt < max_retries:
+                # NCBI eutils is a per-second rate limit, so a transient
+                # failure clears within ~1s — short linear backoff is enough.
+                delay = min(3 * (attempt + 1), 90)
                 logger.warning(
-                    "MeSH resolver: NCBI request failed for '%s': %s; sleeping 90s "
+                    "MeSH resolver: NCBI request failed for '%s': %s; sleeping %ds "
                     "and retrying (attempt %d/%d)",
                     indication,
                     e,
+                    delay,
                     attempt + 1,
                     max_retries,
                 )
-                await asyncio.sleep(90)
+                await asyncio.sleep(delay)
             else:
                 logger.error(
                     "MeSH resolver: NCBI request failed for '%s' after %d retries "
@@ -418,7 +428,10 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
     if api_key:
         esearch_params["api_key"] = api_key
 
-    async with _mesh_semaphore(), aiohttp.ClientSession() as session:
+    _timeout = aiohttp.ClientTimeout(
+        total=_NCBI_TIMEOUT_TOTAL, sock_connect=_NCBI_SOCK_CONNECT
+    )
+    async with _mesh_semaphore(), aiohttp.ClientSession(timeout=_timeout) as session:
         # NCBI's MeSH backend intermittently returns empty idlist for valid
         # terms. Retry up to 3 times on empty before treating as a real miss.
         for attempt in range(3):

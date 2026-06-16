@@ -292,23 +292,29 @@ class PubMedClient(BaseClient):
 
         if batch_size is None:
             batch_size = get_settings().pubmed_efetch_batch_size
-        all_articles: list[PubmedAbstract] = []
-
-        for i in range(0, len(pmids), batch_size):
-            batch = pmids[i : i + batch_size]
+        async def _fetch_batch(batch: list[str]) -> list[PubmedAbstract]:
             params: dict[str, Any] = {
                 "db": "pubmed",
                 "id": ",".join(batch),
                 "retmode": "xml",
                 "rettype": "abstract",
             }
-
+            # Semaphore (PUBMED_MAX_CONCURRENT_REQUESTS) bounds concurrency
+            # against NCBI's per-IP rate ceiling.
             async with self._get_semaphore():
                 xml_text = await self._rest_get_xml(
                     self.FETCH_URL, self._inject_api_key(params)
                 )
+            return self._parse_pubmed_xml(xml_text)
 
-            articles = self._parse_pubmed_xml(xml_text)
+        batches = [
+            pmids[i : i + batch_size] for i in range(0, len(pmids), batch_size)
+        ]
+        # gather preserves order, so abstracts stay in PMID-batch order.
+        results = await asyncio.gather(*[_fetch_batch(b) for b in batches])
+
+        all_articles: list[PubmedAbstract] = []
+        for articles in results:
             all_articles.extend(articles)
 
         return all_articles
