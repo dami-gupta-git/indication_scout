@@ -185,6 +185,17 @@ export function App() {
         <p className="disclaimer">
           Not for clinical use; for research purposes only
         </p>
+
+        <footer className="credit">
+          Built by{" "}
+          <a
+            href="https://www.linkedin.com/in/dami-gupta/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Dami Gupta
+          </a>
+        </footer>
       </aside>
 
       <main className="main">

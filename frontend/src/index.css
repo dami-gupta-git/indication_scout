@@ -129,6 +129,18 @@ body {
   text-align: center;
 }
 
+.credit {
+  margin-top: 0.75rem;
+  color: #6b7280;
+  font-size: 0.8rem;
+  text-align: center;
+}
+
+.credit a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* Desktop: the bottom-of-sidebar disclaimer shows; the mobile copy (above the
    PoC banner) is hidden. The mobile media block flips this. */
 .disclaimer-mobile {

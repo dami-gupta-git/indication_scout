@@ -2,6 +2,8 @@
 
 An agentic system for discovering drug repurposing opportunities.
 
+**Live demo:** <https://indicationscout-production.up.railway.app/>
+
 ## Overview
 
 IndicationScout is an agentic drug repurposing system. A drug name goes in; coordinated AI agents query multiple biomedical data sources and produce a repurposing report.
@@ -34,8 +36,8 @@ Data sources:
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/dgupta/IndicationScout.git
-cd IndicationScout/indication_scout
+git clone https://github.com/dami-gupta-git/indication_scout.git
+cd indication_scout
 ```
 
 ### Install Dependencies
@@ -82,7 +84,6 @@ Required environment variables:
 | `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude LLM calls |
 | `NCBI_API_KEY` | No | NCBI API key for PubMed (increases rate limits) |
 | `PUBMED_API_KEY` | No | PubMed API key (separate from NCBI key in config) |
-| `OPENAI_API_KEY` | No | OpenAI API key |
 | `OPENFDA_API_KEY` | No | OpenFDA API key |
 | `LLM_MODEL` | No | Primary LLM model (default: `claude-sonnet-4-6`) |
 | `SMALL_LLM_MODEL` | No | Lightweight LLM model (default: `claude-haiku-4-5-20251001`) |
@@ -122,8 +123,6 @@ scout find -d "metformin" --out-dir reports/       # custom markdown output dire
 scout find -d "metformin" --no-write               # print the markdown report to stdout (JSON payload is still saved to ./test_reports)
 scout --help
 ```
-
-
 
 ### Web UI (React + FastAPI)
 
@@ -186,7 +185,6 @@ pytest tests/integration/
 pytest tests/unit/
 ```
 
-
 ### Code Formatting & Linting
 
 ```bash
@@ -232,9 +230,27 @@ src/indication_scout/
 - **Abstract-only indexing**: PubMed articles without an abstract (letters, editorials, conference summaries) are excluded from the vector store and will not appear in semantic search results. Only articles with a non-empty abstract are embedded and cached.
 - **Incomplete Open Targets approval data**: Open Targets does not record all approved indications for every drug. Approved indications missing from Open Targets will not be filtered from repurposing candidates and may appear as false positives. For example, tofacitinib's ulcerative colitis and ankylosing spondylitis approvals are absent from Open Targets, causing them to appear as repurposing candidates.
 
-### Citations
-Open Targets: Ochoa, D. et al. (2023). The next-generation Open Targets Platform: reimagined, redesigned, rebuilt. 
-Nucleic Acids Research, 51(D1), D1353–D1359. DOI: 10.1093/nar/gkac1037. 
+## Citations
+
+This project relies on the following public data sources and models:
+
+- **Open Targets** — Ochoa, D. et al. (2023). The next-generation Open Targets Platform:
+  reimagined, redesigned, rebuilt. *Nucleic Acids Research*, 51(D1), D1353–D1359.
+  DOI: [10.1093/nar/gkac1046](https://doi.org/10.1093/nar/gkac1046).
+- **ClinicalTrials.gov** — National Library of Medicine (NLM). ClinicalTrials.gov.
+  <https://clinicaltrials.gov> (API v2).
+- **PubMed / NCBI E-utilities** — Sayers, E.W. et al. (2024). Database resources of the
+  National Center for Biotechnology Information. *Nucleic Acids Research*, 52(D1), D33–D43.
+  DOI: [10.1093/nar/gkad1044](https://doi.org/10.1093/nar/gkad1044).
+- **ChEMBL** — Zdrazil, B. et al. (2024). The ChEMBL Database in 2023: a drug discovery
+  platform spanning multiple bioactivity data types and time periods. *Nucleic Acids Research*,
+  52(D1), D1180–D1192. DOI: [10.1093/nar/gkad1004](https://doi.org/10.1093/nar/gkad1004).
+- **openFDA** — Kass-Hout, T.A. et al. (2016). OpenFDA: an innovative platform providing
+  access to a wealth of FDA's publicly available data. *Journal of the American Medical
+  Informatics Association*, 23(3), 596–600. DOI: [10.1093/jamia/ocv153](https://doi.org/10.1093/jamia/ocv153).
+- **BioLORD-2023** — Remy, F. et al. (2024). BioLORD-2023: semantic textual representations
+  fusing large language models and clinical knowledge graph insights. *Journal of the American
+  Medical Informatics Association*, 31(9), 1844–1855. DOI: [10.1093/jamia/ocae029](https://doi.org/10.1093/jamia/ocae029).
 
 ## Acknowledgments
 
@@ -243,6 +259,3 @@ This codebase was created with the help of [Claude Code](https://claude.com/clau
 ## License
 
 MIT
-
-
-IN progress: Railway deploy US area
