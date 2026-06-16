@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://indicationscout-production.up.railway.app/sitemap.xml

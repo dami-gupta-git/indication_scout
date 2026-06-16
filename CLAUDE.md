@@ -133,7 +133,7 @@ When creating a plan:
 - All external data contracts must use Pydantic `BaseModel`. Do not use raw dicts for structured data crossing module boundaries.
 - All data source clients must extend `BaseClient` (async context manager, lazy session via `_get_session()`).
 - Raise `DataSourceError` (not generic exceptions) from data source clients. Include source name and context in the error.
-- When making changes to the cli, flag that corresponding changes need to be made in streamlit UI.
+- When making changes to the cli, flag that corresponding changes need to be made in the React UI.
 - The cache is disposable, do not write code to be backward compatible on the cache. Correct cache design is more important.
 
 ## Pydantic Defensive Defaults
