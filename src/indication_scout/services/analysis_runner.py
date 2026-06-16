@@ -20,7 +20,7 @@ from indication_scout.agents.supervisor.supervisor_agent import (
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
 from indication_scout.config import get_settings
 from indication_scout.constants import DEFAULT_CACHE_DIR
-from indication_scout.db.session import get_db
+from indication_scout.db.session import make_session_factory
 from indication_scout.helpers.drug_helpers import normalize_drug_name
 from indication_scout.report.format_report import format_report
 from indication_scout.services.retrieval import RetrievalService
@@ -30,6 +30,7 @@ logger = logging.getLogger(__name__)
 
 def build_agent(
     db: Session,
+    session_factory=None,
     date_before: date | None = None,
     cache_dir: Path = DEFAULT_CACHE_DIR,
 ):
@@ -41,7 +42,9 @@ def build_agent(
         anthropic_api_key=settings.anthropic_api_key,
     )
     svc = RetrievalService(cache_dir)
-    return build_supervisor_agent(llm, svc=svc, db=db, date_before=date_before)
+    return build_supervisor_agent(
+        llm, svc=svc, db=db, session_factory=session_factory, date_before=date_before
+    )
 
 
 async def run_analysis(
@@ -57,6 +60,10 @@ async def run_analysis(
         api_timing_snapshot,
         reset_api_timing,
     )
+    from indication_scout.services.embeddings import (
+        embed_timing_snapshot,
+        reset_embed_timing,
+    )
 
     from indication_scout.data_sources.chembl import resolve_drug_name
 
@@ -64,9 +71,16 @@ async def run_analysis(
     # Fail fast: one quick Open Targets search confirms the drug exists before any agents run.
     # Raises DataSourceError if not found; the result is cached for the in-agent resolves.
     await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
-    db = next(get_db())
+    # One shared sessionmaker (single engine/pool) for the whole run. The run-level
+    # `db` serves the sequential seed tools; the concurrent investigate_top_candidates
+    # fan-out checks out its own per-call sessions from this same factory (see
+    # build_supervisor_tools). Do NOT create a factory per call — that leaks an engine
+    # and pool each time.
+    session_factory = make_session_factory()
+    db = session_factory()
     _t0 = time.perf_counter()
     reset_api_timing()
+    reset_embed_timing()
 
     # Warm the embedding model off the critical path. It lazy-loads (~10s+) on
     # first embed(), and the literature stage hits it from many parallel callers
@@ -88,7 +102,7 @@ async def run_analysis(
 
     try:
         agent, get_merged_allowlist, get_auto_findings = build_agent(
-            db, date_before=date_before
+            db, session_factory, date_before=date_before
         )
         output = await run_supervisor_agent(
             agent, get_merged_allowlist, drug, get_auto_findings=get_auto_findings
@@ -101,12 +115,28 @@ async def run_analysis(
         per_source = ", ".join(
             f"{src}={secs:.1f}s/{cnt} calls" for src, (cnt, secs) in sorted(api.items())
         )
+        embed_calls, embed_total = embed_timing_snapshot()
+        # Whatever is left after external API + BioLORD encode is Claude inference plus
+        # agent-loop/serialization overhead. These three buckets are sequential enough that
+        # the remainder is a useful proxy for "time spent waiting on the LLM".
+        other = total - api_total - embed_total
         logger.warning("[TIMING] run_analysis(%s) total: %.1fs", drug, total)
         logger.warning(
             "[TIMING] external API total: %.1fs (%.0f%% of run) — %s",
             api_total,
             100 * api_total / total if total else 0,
             per_source or "no calls",
+        )
+        logger.warning(
+            "[TIMING] embedding (BioLORD) total: %.1fs (%.0f%% of run) — %d encode calls",
+            embed_total,
+            100 * embed_total / total if total else 0,
+            embed_calls,
+        )
+        logger.warning(
+            "[TIMING] LLM + overhead (remainder): %.1fs (%.0f%% of run)",
+            other,
+            100 * other / total if total else 0,
         )
         return output, format_report(output)
     finally:

@@ -81,7 +81,9 @@ def _finalize_done(messages: list) -> bool:
     return False
 
 
-def build_supervisor_agent(llm, svc, db, date_before: date | None = None):
+def build_supervisor_agent(
+    llm, svc, db, session_factory=None, date_before: date | None = None
+):
     """Return (compiled supervisor agent, get_merged_allowlist, get_auto_findings).
 
     - get_merged_allowlist: snapshots the competitor + mechanism disease allowlist after the run.
@@ -95,7 +97,7 @@ def build_supervisor_agent(llm, svc, db, date_before: date | None = None):
     "obvious" ones) rather than skipping based on training knowledge of the drug's eventual use.
     """
     tools, get_merged_allowlist, get_auto_findings = build_supervisor_tools(
-        llm=llm, svc=svc, db=db, date_before=date_before
+        llm=llm, svc=svc, db=db, session_factory=session_factory, date_before=date_before
     )
     fanout = date_before is None and get_settings().supervisor_fanout
     prompt_file = (

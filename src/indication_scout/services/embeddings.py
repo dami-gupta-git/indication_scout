@@ -22,6 +22,7 @@ scripts/prefetch_embedding_model.py.
 import asyncio
 import logging
 import os
+import time
 from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
@@ -32,6 +33,23 @@ logger = logging.getLogger(__name__)
 
 # Module-level singleton. None until the first call to embed().
 _model: SentenceTransformer | None = None
+
+# Cumulative embedding timing → [call_count, total_seconds]. Measures wall-clock spent
+# inside model.encode() (CPU-bound BioLORD inference), summed across all embed() calls.
+# Read/reset via embed_timing_snapshot() / reset_embed_timing() to attribute how much of
+# a run is local embedding vs. external API vs. Claude inference.
+_EMBED_TIMING: list[float] = [0.0, 0.0]
+
+
+def reset_embed_timing() -> None:
+    """Clear the cumulative embedding-timing accumulator (call at the start of a run)."""
+    _EMBED_TIMING[0] = 0.0
+    _EMBED_TIMING[1] = 0.0
+
+
+def embed_timing_snapshot() -> tuple[int, float]:
+    """Return (call_count, total_seconds) of model.encode() time so far."""
+    return int(_EMBED_TIMING[0]), _EMBED_TIMING[1]
 
 # Serialises model init + encode(). Created lazily and rebound when the running
 # event loop changes — an asyncio.Lock binds to the loop it is created on, so a
@@ -111,7 +129,10 @@ def embed(texts: list[str]) -> list[list[float]]:
     model = _get_model()
     # convert_to_numpy=True returns an ndarray; we convert to plain Python
     # floats so the vectors can be stored directly via SQLAlchemy/pgvector.
+    _t0 = time.perf_counter()
     vectors = model.encode(texts, convert_to_numpy=True)
+    _EMBED_TIMING[0] += 1
+    _EMBED_TIMING[1] += time.perf_counter() - _t0
     return [v.tolist() for v in vectors]
 
 
@@ -133,5 +154,19 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
     Returns:
         Same as embed().
     """
+    # Split lock-wait from encode so we can tell a slow encode apart from one that
+    # was merely queued behind another caller's batch (the lock serialises all
+    # embeds across the parallel disease fan-out).
+    _t_wait = time.perf_counter()
     async with _model_lock():
-        return await asyncio.to_thread(embed, texts)
+        _wait = time.perf_counter() - _t_wait
+        _t_enc = time.perf_counter()
+        result = await asyncio.to_thread(embed, texts)
+        _enc = time.perf_counter() - _t_enc
+        logger.info(
+            "[EMBED] %d texts: lock_wait=%.2fs encode=%.2fs",
+            len(texts),
+            _wait,
+            _enc,
+        )
+        return result

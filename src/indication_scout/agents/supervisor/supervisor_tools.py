@@ -14,7 +14,7 @@ from datetime import date
 from typing import Literal
 
 from langchain_core.tools import tool
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from indication_scout.agents.supervisor.candidate_dedup import (
     run_hierarchical_dedup,
@@ -217,11 +217,18 @@ def build_supervisor_tools(
     llm,
     svc: RetrievalService,
     db: Session,
+    session_factory: "sessionmaker | None" = None,
     date_before: date | None = None,
 ) -> tuple[list, "callable", "callable"]:
     """Build supervisor tools that close over the sub-agents.
 
     The literature and clinical trials agents are compiled once here and reused across calls.
+
+    `session_factory` is a shared `sessionmaker` (one engine/pool) used by the concurrent
+    investigate_top_candidates fan-out: each analyze_literature call checks out its own
+    Session from it, because a SQLAlchemy Session is not safe for concurrent use. When None
+    (single-threaded callers, tests), a factory bound to the run `db`'s existing engine is
+    derived — reusing that engine, never creating a new one (which would leak a pool).
 
     `date_before` is forwarded to the literature and clinical trials sub-agents so all PubMed and
     ClinicalTrials.gov queries share the same temporal cutoff. The mechanism sub-agent doesn't
@@ -231,6 +238,12 @@ def build_supervisor_tools(
     competitor + mechanism disease allowlist (lowercase name → (canonical_name, source)),
     intended to be read after the agent loop has finished.
     """
+    # Reuse the run db's engine when no shared factory was passed (single-threaded callers,
+    # tests). Binding to db.get_bind() means no new engine/pool is created.
+    if session_factory is None:
+        session_factory = sessionmaker(
+            autocommit=False, autoflush=False, bind=db.get_bind()
+        )
 
     # Build the mechanism sub-agent once at supervisor construction (it runs once in the seed
     # phase, not in the concurrent per-candidate fan-out). The clinical-trials agent is built
@@ -702,15 +715,21 @@ def build_supervisor_tools(
 
         # logger.warning("[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name)
 
-        lit_agent = build_literature_agent(
-            llm=llm, svc=svc, db=db, date_before=date_before
-        )
         logger.warning(
             "[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name
         )
 
+        # Per-call DB session from the shared pool. investigate_top_candidates fans
+        # candidates out concurrently (asyncio.gather), and a SQLAlchemy Session is not
+        # safe for concurrent use — sharing one across the fan-out parks a connection in
+        # an open transaction nothing advances (flat CPU / idle Postgres hang). Each call
+        # checks out its own Session and closes it here.
         _t0 = time.perf_counter()
-        output = await run_literature_agent(lit_agent, drug_name, disease_name)
+        with session_factory() as call_db:
+            lit_agent = build_literature_agent(
+                llm=llm, svc=svc, db=call_db, date_before=date_before
+            )
+            output = await run_literature_agent(lit_agent, drug_name, disease_name)
         logger.warning(
             "[TIMING] literature %s: %.1fs", disease_name, time.perf_counter() - _t0
         )
