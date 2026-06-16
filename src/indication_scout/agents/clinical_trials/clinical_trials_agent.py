@@ -104,7 +104,11 @@ async def run_clinical_trials_agent(
             + details.get("ephemeral_1h_input_tokens", 0)
         ) or details.get("cache_creation", 0)
         total_out += out_tok
-        called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
+        # Include args so repeated search_trials/get_* calls across turns show WHAT each
+        # retry is querying (e.g. a reworded disease term), not just that a tool re-ran.
+        called = (
+            ", ".join(f"{tc['name']}({tc['args']})" for tc in msg.tool_calls) or "(final)"
+        )
         logger.warning(
             "[LLMTURN] clinical_trials %s turn %d/%d: in=%d out=%d cache_read=%d "
             "cache_write=%d -> %s",
