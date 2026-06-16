@@ -87,6 +87,7 @@ ENTRYPOINT ["entrypoint.sh"]
 FROM python-base AS api-dev
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
+COPY scripts/ ./scripts/
 EXPOSE 8000
 CMD ["uvicorn", "indication_scout.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
 
@@ -98,6 +99,7 @@ CMD ["uvicorn", "indication_scout.api.main:app", "--host", "0.0.0.0", "--port", 
 FROM python-base AS api
 COPY alembic/ ./alembic/
 COPY alembic.ini ./
+COPY scripts/ ./scripts/
 COPY --from=frontend-build /frontend/dist ./frontend/dist
 EXPOSE 8000
 # Shell form so ${PORT} expands at runtime (PaaS hosts assign it dynamically).
