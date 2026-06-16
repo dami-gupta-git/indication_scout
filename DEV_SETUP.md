@@ -1,5 +1,7 @@
 # Dev Setup
 
+> See also: [README.md](README.md) (project overview, installation, env/database setup, CLI usage).
+
 Two ways to develop: **fully in Docker** (one command, matches prod) or
 **natively** (backend + frontend on the host, only Postgres in Docker — fastest
 reload, easiest debugging). Pick one.

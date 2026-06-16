@@ -1,10 +1,11 @@
 """
 PubMed API client.
 
-Three methods:
-  1. search         — Find PMIDs matching a query (cached)
-  2. fetch_articles — Fetch article content for given PMIDs
-  3. get_count      — Quick count of results without fetching
+Key methods:
+  1. search          — Find PMIDs matching a query (cached)
+  2. fetch_abstracts — Fetch article content for given PMIDs
+  3. get_count       — Quick count of results without fetching
+  4. fetch_pubtypes  — Publication types for given PMIDs (esummary)
 """
 
 from __future__ import annotations

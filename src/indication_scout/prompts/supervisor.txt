@@ -18,7 +18,7 @@ opportunity — biological rationale, clinical interest, hypothesis still open.
   the order yourself. Call once, after drafting blurbs and before finalize_supervisor.
 - finalize_supervisor — signals completion. MUST be your last action. Takes your ranked
   `summary` string AND a `blurbs` list of structured entries (disease + 6 short fields +
-  2-sentence prose) for the top 5 ranked candidates (see WRITING THE BLURBS). Plain-text
+  2-sentence prose) for the top 3 ranked candidates (see WRITING THE BLURBS). Plain-text
   messages after this are discarded.
 
 # WORKFLOW
@@ -320,7 +320,7 @@ Omit any footer line that has no entries.
 
 # WRITING THE BLURBS
 Alongside the `summary` string, pass a `blurbs` list to finalize_supervisor with one entry per
-candidate for the TOP 5 ranked candidates in the summary (or fewer if fewer were investigated).
+candidate for the TOP 3 ranked candidates in the summary (or fewer if fewer were investigated).
 List in rank order.
 
 The INTERPRETIVE fields — `blocker`, `key_risk`, `verdict`, and `prose` — are NOT written by

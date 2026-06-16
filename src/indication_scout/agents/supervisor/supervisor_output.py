@@ -16,7 +16,7 @@ class CandidateBlurb(BaseModel):
 
     Single-line fields plus a 2-sentence prose synthesis. Fields are independently optional — an
     empty string means nothing to write for that field this run, and the formatter omits empty
-    fields. Populated only for the top 5 ranked candidates in production runs; None in holdout runs
+    fields. Populated only for the top 3 ranked candidates in production runs; None in holdout runs
     and for un-ranked candidates.
     """
 
@@ -117,7 +117,7 @@ class CandidateFindings(BaseModel):
         description=(
             "Structured supervisor-written synthesis of the literature and "
             "clinical-trials sub-agent summaries for this disease. Populated "
-            "only for the supervisor's top 5 ranked candidates in production "
+            "only for the supervisor's top 3 ranked candidates in production "
             "runs; None in holdout runs and for un-ranked candidates."
         ),
     )

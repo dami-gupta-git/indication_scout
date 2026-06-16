@@ -15,8 +15,11 @@ Returns a list of PMIDs matching a query string. Used by `PubMedClient.search()`
 
 ```
 GET https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi
-    ?db=pubmed&term=metformin+colorectal+cancer&retmax=50&retmode=json
+    ?db=pubmed&term=metformin+colorectal+cancer&retmax=50&retmode=json&sort=relevance
 ```
+
+`retmax` defaults to `settings.pubmed_search_default_max_results` (the `50` above is illustrative).
+Results are sorted by relevance.
 
 Response shape (JSON):
 ```json
@@ -175,11 +178,11 @@ Both record types are normalised into the same Pydantic model:
 ```python
 class PubmedAbstract(BaseModel):
     pmid: str = ""           # e.g. "38000001"
-    title: str | None        # article or chapter title
-    abstract: str | None     # full text, sections joined with spaces
+    title: str = ""          # article or chapter title
+    abstract: str | None = None  # full text, sections joined with spaces
     authors: list[str] = []  # ["Smith, Jane", "Jones, Bob"]
-    journal: str | None      # journal title or book title
-    pub_date: str | None     # "2023", "2023-06", or "2023-06-15"
+    journal: str | None = None   # journal title or book title
+    pub_date: str | None = None  # "2023", "2023-06", or "2023-06-15"
     mesh_terms: list[str] = []   # [] for book chapters
     keywords: list[str] = []
 ```
@@ -205,12 +208,18 @@ async with PubMedClient() as client:
 
 | Method | Returns | Notes |
 |---|---|---|
-| `search(query, max_results, date_before)` | `list[str]` | PMIDs; results cached to `cache/` |
-| `fetch_abstracts(pmids, batch_size)` | `list[PubmedAbstract]` | Batches requests in groups of 100 |
+| `search(query, max_results, date_before)` | `list[str]` | PMIDs; results cached to `cache/`. Sorted by relevance |
+| `fetch_abstracts(pmids, batch_size)` | `list[PubmedAbstract]` | Batches via `pubmed_efetch_batch_size` |
 | `get_count(query, date_before)` | `int` | Fast count with no content fetch |
+| `fetch_pubtypes(pmids, batch_size)` | `dict[str, list[str]]` | esummary publication types (e.g. `["Journal Article", "Randomized Controlled Trial"]`); per-PMID cached, batched via `pubmed_esummary_batch_size` |
 
 `fetch_abstracts` handles both `PubmedArticle` and `PubmedBookArticle` transparently.
 Callers always receive `list[PubmedAbstract]` regardless of record type.
+
+`search` does **not** apply a post-search publication-date filter. The esummary date guard
+(formerly inline here) now lives in `RetrievalService.fetch_and_cache`, which reads `pub_date`
+from pgvector for known PMIDs and only calls esummary for unknowns. The standalone filter,
+`PubMedClient._filter_pmids_by_date`, still exists and is used by some tests.
 
 ---
 

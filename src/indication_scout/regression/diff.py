@@ -6,7 +6,7 @@ Severity levels:
   Diff is produced.
 - warn: visible but non-blocking drift (small numeric drift within tolerance,
   prose length swing). Rendered by the diff CLI but does not fail tests.
-- info: notable but expected differences (e.g. blurb only present on top-5).
+- info: notable but expected differences (e.g. blurb only present on top-3).
 """
 
 from __future__ import annotations

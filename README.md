@@ -13,21 +13,21 @@ IndicationScout pulls **live evidence** from multiple biomedical databases at qu
 A **Supervisor** agent orchestrates three specialist sub-agents:
 
 - **Literature agent** — Queries PubMed via EUtils, then runs a RAG pipeline: fetch abstracts, embed with BioLORD-2023, semantic search, and LLM-based synthesis of evidence for each candidate disease.
-- **Clinical Trials agent** — Queries ClinicalTrials.gov v2 (REST) per drug × indication pair: all-status search (whitespace verdict + per-status counts), completed-trial query (with Phase 3 count), terminated-trial query (with `why_stopped` text classified into safety / efficacy / business / enrollment categories at the tool layer), competitive landscape for the indication, and an FDA-label approval check (the candidate is still investigated fully even when the drug is already approved — the approval status is recorded for the supervisor rather than short-circuiting the analysis). Indications are resolved to a MeSH descriptor via NCBI E-utilities and the resolved preferred term is fed to CT.gov's server-side `AREA[ConditionMeshTerm]"<term>"` filter — so e.g. "hypertension" trials aren't mixed in with unrelated free-text matches like glaucoma. (Known bug: `AREA[ConditionMeshTerm]` also matches on MeSH ancestors, so a parent term like "hypertension" can still pull in pulmonary-hypertension trials; the post-filter fix is not yet implemented.)
+- **Clinical Trials agent** — Queries ClinicalTrials.gov v2 (REST) per drug × indication pair: all-status search (whitespace verdict + per-status counts), completed-trial query (with Phase 3 count), terminated-trial query (with `why_stopped` text classified into safety / efficacy / business / enrollment / unknown categories at the tool layer, falling back to the raw `why_stopped` text when no keyword matches), competitive landscape for the indication, and an FDA-label approval check (the candidate is still investigated fully even when the drug is already approved — the approval status is recorded for the supervisor rather than short-circuiting the analysis). Indications are resolved to a MeSH descriptor via NCBI E-utilities and the resolved preferred term is fed to CT.gov's server-side `AREA[ConditionMeshTerm]"<term>"` filter — so e.g. "hypertension" trials aren't mixed in with unrelated free-text matches like glaucoma. (Known bug: `AREA[ConditionMeshTerm]` also matches on MeSH ancestors, so a parent term like "hypertension" can still pull in pulmonary-hypertension trials; the post-filter fix is not yet implemented.)
 - **Mechanism agent** — Queries Open Targets target-level data (GraphQL) to retrieve disease associations with evidence scores and Reactome pathway annotations.
 
 The Supervisor first calls `find_candidates` (Open Targets competitor analysis) and `analyze_mechanism` in parallel, then delegates to the Literature and Clinical Trials agents per candidate disease.
 
-### Top-5 candidate blurbs
+### Top-3 candidate blurbs
 
-After investigating candidates, the Supervisor produces a ranked Summary. For each of the **top 5 ranked candidates**, the Supervisor also writes a **2-sentence interpretive blurb** characterizing the *state of the hypothesis* — live, stalled, niche, untested, post-readout-and-stuck, etc. — grounded in the literature and clinical-trials sub-agent summaries seen during that run. Mechanism content is intentionally excluded from the blurb to keep it focused on clinical evidence. Before finalizing, the Supervisor must call `critique_ranking` once — a separate reviewer LLM audits the ranking order (closed/adverse-signal candidates must not outrank live ones) and repairs specific factual contradictions in the blurb fields; `finalize_supervisor` is rejected until it has run. The blurbs are then emitted by `finalize_supervisor` and rendered inline under each disease in the Summary section of both the Markdown report and the web UI Overview tab. 
+After investigating candidates, the Supervisor produces a ranked Summary. For each of the **top 3 ranked candidates**, the Supervisor also writes a **2-sentence interpretive blurb** characterizing the *state of the hypothesis* — live, stalled, niche, untested, post-readout-and-stuck, etc. — grounded in the literature and clinical-trials sub-agent summaries seen during that run. Mechanism content is intentionally excluded from the blurb to keep it focused on clinical evidence. Before finalizing, the Supervisor must call `critique_ranking` once — a separate reviewer LLM audits the ranking order (closed/adverse-signal candidates must not outrank live ones) and repairs specific factual contradictions in the blurb fields; `finalize_supervisor` is rejected until it has run. The blurbs are then emitted by `finalize_supervisor` and rendered inline under each disease in the Summary section of both the Markdown report and the web UI Overview tab. 
 
 Data sources:
 
 - Open Targets (GraphQL) — drug targets, disease associations, competitor drugs
 - ClinicalTrials.gov (REST v2) — trial search, whitespace detection, competitive landscape
 - PubMed (NCBI EUtils) — literature retrieval and abstract indexing
-- NCBI MeSH (E-utilities) — indication → MeSH D-number resolution for clinical-trials post-filtering
+- NCBI MeSH (E-utilities) — indication → MeSH descriptor resolution for the clinical-trials server-side `AREA[ConditionMeshTerm]` filter
 - ChEMBL — molecule metadata and ATC classifications
 - openFDA — drug labels for FDA-approval extraction
 
@@ -81,13 +81,16 @@ Required environment variables:
 | `DATABASE_URL` | Yes | PostgreSQL connection string (e.g. `postgresql+psycopg2://scout:scout@localhost:5438/scout`) |
 | `DB_PASSWORD` | Yes | Database password |
 | `TEST_DATABASE_URL` | No | Separate PostgreSQL URL for integration tests (e.g. `postgresql+psycopg2://scout:scout@localhost:5438/scout_test`) |
-| `ANTHROPIC_API_KEY` | Yes | Anthropic API key for Claude LLM calls |
+| `ANTHROPIC_API_KEY` | Yes¹ | Anthropic API key for Claude LLM calls |
 | `NCBI_API_KEY` | No | NCBI API key for PubMed (increases rate limits) |
 | `PUBMED_API_KEY` | No | PubMed API key (separate from NCBI key in config) |
 | `OPENFDA_API_KEY` | No | OpenFDA API key |
 | `LLM_MODEL` | No | Primary LLM model (default: `claude-sonnet-4-6`) |
 | `SMALL_LLM_MODEL` | No | Lightweight LLM model (default: `claude-haiku-4-5-20251001`) |
 | `EMBEDDING_MODEL` | No | Embedding model (default: `FremyCompany/BioLORD-2023`) |
+
+¹ `ANTHROPIC_API_KEY` is required at runtime, not at startup: the app boots with an empty key
+and fails on the first Claude call. Set it before running any analysis.
 
 The project requires a PostgreSQL database with the `pgvector` extension for storing PubMed abstract embeddings. See `docs/rag.md` for the Docker setup.
 
@@ -121,8 +124,20 @@ Replace `<password>` with the value of `DB_PASSWORD` from your `.env` file.
 scout find -d "metformin"                          # writes <drug>_<timestamp>.md to ./snapshots and <drug>_<timestamp>.json to ./test_reports
 scout find -d "metformin" --out-dir reports/       # custom markdown output directory
 scout find -d "metformin" --no-write               # print the markdown report to stdout (JSON payload is still saved to ./test_reports)
+scout find -d "metformin" --date-before 2020-01-01 # temporal holdout: only evidence dated before the cutoff (see Temporal Holdout below)
 scout --help
 ```
+
+#### Temporal holdout (`--date-before`)
+
+`--date-before YYYY-MM-DD` runs IndicationScout "as of" a past cutoff: PubMed and
+ClinicalTrials.gov queries are restricted to records dated strictly before the cutoff, and
+trials that complete on/after the cutoff have their outcome fields scrubbed so they appear
+still-in-progress. This simulates whether the system would have surfaced a repurposing
+opportunity that was only validated later. Mechanism (Open Targets) data has no date filter and
+is always current. Holdout reports are written to `snapshots/holdouts/` as
+`<drug>_holdout_<cutoff>_<timestamp>.md` with a `> **HOLDOUT**` banner. See
+[holdout.md](holdout.md) for the full per-layer methodology.
 
 ### Web UI (React + FastAPI)
 
@@ -130,6 +145,9 @@ The web app is two processes: a **FastAPI backend** (the API + agent runner) and
 **Vite/React frontend** (the UI). In development they run side by side — Vite serves the
 UI on port 5173 and proxies all `/api` requests to uvicorn on port 8000. You open the
 **frontend** URL in your browser; the proxy handles the rest.
+
+> For the full dev workflow (native vs Dockerized, rebuild rules), see
+> [DEV_SETUP.md](DEV_SETUP.md).
 
 **First time only** — install the frontend dependencies:
 
@@ -172,6 +190,9 @@ FastAPI serves directly; uvicorn alone then hosts both the API and the UI on por
 
 ## Development
 
+> **[DEV_SETUP.md](DEV_SETUP.md)** is the authoritative dev-workflow doc — native vs Dockerized
+> dev, command quick-reference tables, test/rebuild rules. The commands below are a quick summary.
+
 ### Running Tests
 
 ```bash
@@ -203,7 +224,7 @@ src/indication_scout/
 │   ├── _trial_formatting.py # Shared trial formatting helpers
 │   ├── supervisor/         # Supervisor agent (orchestrates sub-agents) — supervisor_agent.py, supervisor_tools.py, supervisor_output.py
 │   ├── literature/         # Literature agent (PubMed RAG) — literature_agent.py, literature_tools.py, literature_output.py
-│   ├── clinical_trials/    # Clinical Trials agent (ClinicalTrials.gov + MeSH post-filter) — clinical_trials_agent.py, clinical_trials_tools.py, clinical_trials_output.py
+│   ├── clinical_trials/    # Clinical Trials agent (ClinicalTrials.gov + MeSH descriptor filter) — clinical_trials_agent.py, clinical_trials_tools.py, clinical_trials_output.py
 │   └── mechanism/          # Mechanism agent (Open Targets targets) — mechanism_agent.py, mechanism_tools.py, mechanism_output.py, mechanism_candidates.py, mechanism_row_builder.py
 ├── api/             # FastAPI application (main.py, routes/, schemas/) — /health + async analyses routes (POST/GET/report.md/DELETE), drill-down routes, and example-cache routes; serves the built React frontend in prod
 ├── cli/             # Click-based CLI (cli.py) — exposes the `scout` command

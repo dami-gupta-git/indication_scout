@@ -9,7 +9,7 @@ scattered across test bodies.
 # runs of the same input show how stable the candidate set is at temperature=0.
 CANDIDATE_SET_JACCARD_MIN = 0.7
 
-# Same threshold for top_diseases (the supervisor's ranked top-5).
+# Same threshold for top_diseases (the supervisor's ranked top-3).
 TOP_DISEASES_JACCARD_MIN = 0.6
 
 # For each shared candidate, tolerated absolute drift on numeric fields.

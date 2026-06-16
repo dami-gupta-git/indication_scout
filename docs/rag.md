@@ -24,10 +24,12 @@ the most relevant papers, not just keyword matches.
 ## Architecture
 
 Implemented as `RetrievalService` in `services/retrieval.py`, orchestrated by `runners/rag_runner.py`.
-Processes a drug across its top 15 disease indications. `RetrievalService.get_drug_competitors()`
-fetches raw competitor data from `OpenTargetsClient` (returns `CompetitorRawData`), uses an LLM call
-(`merge_duplicate_diseases`) to deduplicate disease names, removes overly broad terms, sorts by
-competitor count, and slices to the top 15.
+Processes a drug across its top disease indications (capped at `settings.literature_top_k`).
+`RetrievalService.get_drug_competitors(chembl_id, date_before)` fetches raw competitor data from
+`OpenTargetsClient` (which returns `CompetitorRawData`), uses an LLM call (`merge_duplicate_diseases`
+in `services/disease_helper.py`) to deduplicate disease names, removes overly broad terms, sorts by
+competitor count, and slices to the top `literature_top_k`. It returns `dict[str, set[str]]`
+(disease name → set of competitor drug names).
 
 ```
 Drug name
@@ -35,7 +37,7 @@ Drug name
   v
 RetrievalService.get_drug_competitors  -->  raw data from OpenTargetsClient
   |                                          + LLM merge/dedup
-  |                                          + sort + top-15 slice
+  |                                          + sort + top-literature_top_k slice
   v
 RetrievalService.build_drug_profile    -->  DrugProfile (name, synonyms, targets, mechanisms, ATC)
   |
@@ -97,27 +99,31 @@ symbols, mechanisms of action, ATC codes, ATC descriptions, drug type) to Haiku
 (`claude-haiku-4-5-20251001`) to generate diverse PubMed keyword queries across 5 axes: drug name,
 drug class + organ, mechanism + organ, target gene, synonym. Per-axis caps yield 5–10 queries total.
 Organ term is pre-extracted via a separate Haiku call (`extract_organ_term`). Both functions cache
-results.
+results. The small-LLM model is `settings.small_llm_model` (currently
+`claude-haiku-4-5-20251001`), not hardcoded.
 
-Signature: `expand_search_terms(drug_name, disease_name, drug_profile: DrugProfile) -> list[str]`.
+Signature: `expand_search_terms(chembl_id: str, disease_name: str, drug_profile: DrugProfile) -> list[str]`.
 
 Example for "Metformin + colorectal": `"metformin AND colorectal neoplasm"`,
 `"biguanide AND colorectal"`, `"metformin AND AMPK AND colon"`, ...
 
 ### Stage 1 — Fetch and Cache (`fetch_and_cache`)
 
-Signature: `fetch_and_cache(queries: list[str], db: Session) -> list[str]`.
+Signature: `fetch_and_cache(queries: list[str], db: Session, date_before: date | None = None) -> list[str]`.
 
 ```
-For each PubMed keyword query:
-  1. Search PubMed E-utilities → up to 200 PMIDs (PUBMED_MAX_RESULTS constant)
-  2. Filter to PMIDs not already in pgvector
-  3. Fetch abstracts for new PMIDs (batch)
+Across all queries (batched, not per-query loops):
+  1. Search PubMed E-utilities for each query (max_results = pubmed_search_default_max_results)
+  2. Single bulk check against pgvector for already-stored PMIDs
+  3. Single fetch for all new abstracts
   4. Discard abstract-less articles (letters, editorials) — no text to embed
-  5. Embed each remaining abstract with BioLORD-2023
+  5. Single batch embed of remaining abstracts with BioLORD-2023
   6. Store (pmid, title, abstract, authors, journal, pub_date, embedding) in pgvector
-  7. Return full list of PMIDs (cached + newly added)
+  7. Return deduplicated list of all PMIDs returned by search (cached + newly added)
 ```
+
+When `date_before` is set, the esummary date guard reads `pub_date` from pgvector for known
+PMIDs and only calls esummary for unknowns.
 
 **Note:** Not every returned PMID has a row in `pubmed_abstracts`. Articles without an abstract are
 excluded before insert. Callers that pass this list to `semantic_search` will see those PMIDs
@@ -125,8 +131,10 @@ silently skipped by the `WHERE pmid = ANY(:pmids)` clause, which is intentional.
 
 ### Stage 2 — Semantic Search (`semantic_search`)
 
-Signature: `semantic_search(disease: str, drug: str, pmids: list[str], db: Session, top_k: int = 5)
--> list[dict]`.
+Signature: `semantic_search(disease: str, chembl_id: str, pmids: list[str], db: Session,
+date_before: date | None = None) -> list[AbstractResult]`. Top-k is config-driven (a setting,
+not a parameter). Each `AbstractResult` carries `pmid`, `title`, `abstract`, `similarity`,
+`pubtype`.
 
 ```
 1. Build therapeutic query: "Evidence for {drug} as a treatment for {disease}, ..."
@@ -136,7 +144,7 @@ Signature: `semantic_search(disease: str, drug: str, pmids: list[str], db: Sessi
    - Inner query: compute 1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
    - WHERE pmid = ANY(:pmids) restricts to the current drug-disease PMID set
    - Outer query: ORDER BY similarity DESC, LIMIT top_k
-5. Return top_k abstracts as dicts with pmid, title, abstract, similarity
+5. Return top_k `AbstractResult` objects (pmid, title, abstract, similarity, pubtype)
 ```
 
 Finds conceptually relevant papers even without exact keyword matches (e.g. "biguanide antineoplastic
@@ -144,19 +152,24 @@ mechanisms" matches a metformin/cancer query).
 
 ### Stage 3 — Synthesize (`synthesize`)
 
-Top abstracts from `semantic_search` (default 5) are stuffed into a Claude (`claude-sonnet-4-6`)
-prompt. Claude reads the actual retrieved papers — not training data. Output is a structured
-`EvidenceSummary` with PMIDs attached to every claim.
+`synthesize(chembl_id, disease, top_abstracts: list[AbstractResult], holdout_mode=False)` stuffs the
+top abstracts into a Claude (`settings.llm_model`, currently `claude-sonnet-4-6`) prompt. Claude reads
+the actual retrieved papers — not training data. Output is a structured `EvidenceSummary` with PMIDs
+attached to every claim.
 
 ```python
 EvidenceSummary(
-    summary: str,
-    study_count: int,
-    study_types: list[str],            # e.g. RCT, cohort, preclinical
-    strength: Literal["strong", "moderate", "weak", "none"],
-    has_adverse_effects: bool,
-    key_findings: list[str],
-    supporting_pmids: list[str],
+    summary: str = "",
+    study_count: int = 0,
+    # strength = evidence quantity/quality only; direction = which way it points
+    strength: Literal["strong", "moderate", "weak", "none"] = "none",
+    direction: Literal["supports", "contradicts", "mixed", "none"] = "none",
+    # whether strength/direction grade THIS drug or only its class
+    evidence_basis: Literal["drug_specific", "class_level", "none"] = "none",
+    is_observational: bool | None = None,   # None = undetermined (no-data)
+    key_findings: list[str] = [],
+    supporting_pmids: list[str] = [],
+    contradicting_pmids: list[str] = [],
 )
 ```
 
@@ -189,10 +202,10 @@ Both the `drug AND disease` and `drug AND broader` PubMed counts are cached unde
 using their respective query strings as keys. Same SHA-256-keyed JSON format and `CACHE_TTL` constant
 as the Open Targets client.
 
-**Pre-merge normalization in the competitor pipeline:** Before `merge_duplicate_diseases` runs,
-`RetrievalService._normalize_disease_groups()` (in `services/retrieval.py`, line 54) calls
-`llm_normalize_disease` for every disease name in the raw competitor data and merges groups that
-collapse to the same normalized key. This reduces LLM noise before the merge step.
+**Pre-merge normalization in the competitor pipeline:** `RetrievalService._normalize_disease_groups()`
+(which called `llm_normalize_disease` per disease and merged groups collapsing to the same key) is
+**deprecated and commented out** in `services/retrieval.py`. Disease dedup now happens solely through
+`merge_duplicate_diseases` in `services/disease_helper.py`.
 
 ---
 
@@ -296,8 +309,9 @@ volumes:
    keywords; enables conceptual matches.
 5. **Fetch → embed → store at ingest time** — embeddings computed once and cached; semantic search
    only needs to embed the query.
-6. **200 PMIDs per keyword query** (`PUBMED_MAX_RESULTS`) — wider initial retrieval net; semantic
-   search handles noise reduction; reduced from 500 to limit embedding time on cold cache.
+6. **200 PMIDs per keyword query** (`PUBMED_MAX_RESULTS` env var → `pubmed_search_default_max_results`
+   setting; 200 in prod) — wider initial retrieval net; semantic search handles noise reduction;
+   reduced from 500 to limit embedding time on cold cache.
 7. **Grounded generation with PMIDs** — Claude synthesises from retrieved documents, not training
    weights; every claim in `EvidenceSummary` is traceable to a real paper.
 8. **Cache-first retrieval** — avoid redundant PubMed API calls and re-embedding.
@@ -319,5 +333,7 @@ volumes:
   PubMed searches, and Open Targets data. pgvector itself acts as the abstract/embedding cache.
 - **Service class:** `RetrievalService(cache_dir: Path)` in `services/retrieval.py` is the single
   entry point for all pipeline operations.
-- **Runner:** `run_rag(drug_name, db, cache_dir)` in `runners/rag_runner.py` orchestrates the full
-  pipeline with per-step timing logs and a final ranking by evidence strength.
+- **Runner:** `run_rag(drug_name, db, cache_dir) -> dict[str, EvidenceSummary]` in
+  `runners/rag_runner.py` orchestrates the full pipeline. Disease indications are processed
+  concurrently (capped by `RAG_DISEASE_CONCURRENCY`), with per-step timing logs and a final
+  ranking by evidence strength.

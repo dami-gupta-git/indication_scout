@@ -1,5 +1,7 @@
 # Temporal Holdout Methodology
 
+> See also: [README.md](README.md) (project overview and CLI usage).
+
 ## Purpose
 
 The temporal holdout simulates running IndicationScout "as of" a past cutoff date so the system can
@@ -49,8 +51,9 @@ prepended to the markdown ([cli.py:81-89](src/indication_scout/cli/cli.py#L81-L8
 
 In holdout mode the supervisor's tool list gets `investigate_top_candidates` inserted before
 `finalize_supervisor`. This tool auto-runs `analyze_literature` and `analyze_clinical_trials` in
-parallel for the top 10 entries of the merged competitor + mechanism allowlist, removing the LLM's
-ability to skip the "obvious" candidate that the holdout is specifically testing.
+parallel for the top `SUPERVISOR_INVESTIGATION_CAP` entries (currently 3) of the merged competitor +
+mechanism allowlist, removing the LLM's ability to skip the "obvious" candidate that the holdout is
+specifically testing.
 
 The auto-investigated artifacts are stashed in a closure (`auto_findings`) because they are
 invoked outside the ReAct message loop. They are merged into `findings_by_disease` after the run
@@ -148,7 +151,7 @@ get a hit from a non-holdout run (or a different cutoff). Examples:
 | Layer                        | Holdout behavior                                                                 |
 |------------------------------|----------------------------------------------------------------------------------|
 | Supervisor prompt            | Swapped to `supervisor_holdout.txt`                                              |
-| Supervisor tool list         | `investigate_top_candidates` inserted, auto-investigates top-10 allowlist        |
+| Supervisor tool list         | `investigate_top_candidates` inserted, auto-investigates top `SUPERVISOR_INVESTIGATION_CAP` (currently 3) allowlist |
 | PubMed search                | `date_before` filter on E-utilities; pgvector + esummary date check on results   |
 | CT.gov fetch                 | Restrict to `start_date < cutoff`                                                |
 | CT.gov outcome fields        | Trials completing on/after cutoff have status/why_stopped/completion_date scrubbed |
