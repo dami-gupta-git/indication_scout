@@ -88,6 +88,9 @@ def build_literature_tools(
         if not queries:
             return "No queries — call expand_search_terms first.", []
         _t0 = time.perf_counter()
+        logger.warning(
+            "[INVEST] fetch_and_cache %s: %d queries -> PubMed", drug_name, len(queries)
+        )
         pmids = await svc.fetch_and_cache(queries, db, date_before=date_before)
         store["pmids"] = pmids
         logger.warning(

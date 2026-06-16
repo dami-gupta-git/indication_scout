@@ -4,6 +4,7 @@ import pytest
 
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.pubmed import PubMedClient
+from indication_scout.utils.cache import cache_get
 
 # --- _parse_pubmed_xml ---
 
@@ -196,3 +197,59 @@ def test_book_article_excludes_editors_from_authors(tmp_path):
 
     assert len(result) == 1
     assert result[0].authors == ["Author, One"]
+
+
+# --- _parse_pubmed_xml warms the pubtypes cache ---
+
+
+def test_parse_warms_pubtypes_cache_for_article(tmp_path):
+    """Parsing a journal article writes its PublicationType list to the pubtypes cache,
+    so a later fetch_pubtypes() hits the cache instead of an esummary round-trip."""
+    client = PubMedClient(tmp_path)
+    xml = """<?xml version="1.0"?>
+    <PubmedArticleSet>
+        <PubmedArticle>
+            <MedlineCitation>
+                <PMID>12345678</PMID>
+                <Article>
+                    <ArticleTitle>Test Article Title</ArticleTitle>
+                    <PublicationTypeList>
+                        <PublicationType UI="D016428">Journal Article</PublicationType>
+                        <PublicationType UI="D016449">Randomized Controlled Trial</PublicationType>
+                    </PublicationTypeList>
+                </Article>
+            </MedlineCitation>
+        </PubmedArticle>
+    </PubmedArticleSet>
+    """
+
+    result = client._parse_pubmed_xml(xml)
+
+    assert len(result) == 1
+    assert result[0].pmid == "12345678"
+    cached = cache_get("pubmed_pubtypes", {"pmid": "12345678"}, tmp_path)
+    assert cached == ["Journal Article", "Randomized Controlled Trial"]
+
+
+def test_parse_warms_pubtypes_cache_empty_when_absent(tmp_path):
+    """A book article with no PublicationType caches an empty list (a real answer,
+    not a miss), so fetch_pubtypes() won't refetch it. cache_get returns [] not None."""
+    client = PubMedClient(tmp_path)
+    xml = """<?xml version="1.0"?>
+    <PubmedArticleSet>
+        <PubmedBookArticle>
+            <BookDocument>
+                <PMID>20301421</PMID>
+                <Book><BookTitle>GeneReviews</BookTitle></Book>
+                <ArticleTitle>ALS2-Related Disorder</ArticleTitle>
+            </BookDocument>
+        </PubmedBookArticle>
+    </PubmedArticleSet>
+    """
+
+    result = client._parse_pubmed_xml(xml)
+
+    assert len(result) == 1
+    assert result[0].pmid == "20301421"
+    cached = cache_get("pubmed_pubtypes", {"pmid": "20301421"}, tmp_path)
+    assert cached == []

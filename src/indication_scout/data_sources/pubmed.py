@@ -383,6 +383,17 @@ class PubMedClient(BaseClient):
 
             keywords = [kw.text for kw in article_elem.findall(".//Keyword") if kw.text]
 
+            # Warm the pubtypes cache from the efetch XML so semantic_search's
+            # later fetch_pubtypes() call hits the cache instead of a second
+            # esummary round-trip. efetch PublicationType text matches esummary
+            # pubtype strings exactly (verified), so the boost lookup is unaffected.
+            pubtypes = [
+                pt.text
+                for pt in article_elem.findall(".//PublicationType")
+                if pt.text
+            ]
+            cache_set("pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir)
+
             articles.append(
                 PubmedAbstract(
                     pmid=pmid,
@@ -447,6 +458,14 @@ class PubMedClient(BaseClient):
                             pub_date += f"-{day}"
 
             keywords = [kw.text for kw in doc.findall(".//Keyword") if kw.text]
+
+            # Book articles carry PublicationType too; warm the cache to avoid
+            # a later esummary refetch. Empty list is persisted (no pubtype field
+            # is a real answer, not a miss) — same policy as fetch_pubtypes.
+            pubtypes = [
+                pt.text for pt in doc.findall(".//PublicationType") if pt.text
+            ]
+            cache_set("pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir)
 
             articles.append(
                 PubmedAbstract(

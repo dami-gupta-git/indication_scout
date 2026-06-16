@@ -1080,6 +1080,7 @@ def build_supervisor_tools(
         # populated. A plain dict input returns just the content string and loses the typed artifact.
         async def _invest(disease: str) -> tuple[str, dict]:
             disease_slug = disease.lower().replace(" ", "_")
+            logger.warning("[INVEST] starting %s", disease)
             lit_call = analyze_literature.ainvoke(
                 {
                     "name": "analyze_literature",
@@ -1172,6 +1173,11 @@ def build_supervisor_tools(
             }
 
         _fan_t0 = time.perf_counter()
+        logger.warning(
+            "[INVEST] fanning out %d candidates: %s",
+            len(canonical_diseases),
+            canonical_diseases,
+        )
         results = await asyncio.gather(*(_invest(d) for d in canonical_diseases))
         logger.warning(
             "[TIMING] investigate_top_candidates: %d candidates in parallel took %.1fs",
