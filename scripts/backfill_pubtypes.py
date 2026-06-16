@@ -7,6 +7,7 @@ that gap once: it reads every PMID from pubmed_abstracts, diffs against the pubt
 fetches the missing ones via the same `fetch_pubtypes` path (which writes the cache as it goes).
 
 Idempotent: re-running only fetches whatever is still missing. Safe to interrupt and resume.
+Will sppedup 
 
 Run:
     python scripts/backfill_pubtypes.py
