@@ -14,6 +14,14 @@ from pathlib import Path
 # -- LLM defaults -----------------------------------------------------------
 DEFAULT_LLM_MODEL: str = "claude-sonnet-4-6"
 
+# -- Embedding --------------------------------------------------------------
+# Chunk size for embed_async's lock-release loop. A large bulk embed (hundreds
+# of abstracts) is encoded in chunks of this size, releasing the shared model
+# lock between chunks so a concurrent caller's small query-embed can slip in
+# rather than waiting for the whole batch (the `embed_query: 130s` stall). Total
+# encode compute is unchanged — this only removes head-of-line blocking.
+EMBED_LOCK_CHUNK_SIZE: int = 64
+
 # -- Cache ------------------------------------------------------------------
 # (cache dir resolution below; see SCOUT_CACHE_DIR override note)
 # Anchored to the project root (two levels above this package's src/ dir) so

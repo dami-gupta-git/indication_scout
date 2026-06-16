@@ -28,6 +28,7 @@ from pathlib import Path
 from sentence_transformers import SentenceTransformer
 
 from indication_scout.config import get_settings
+from indication_scout.constants import EMBED_LOCK_CHUNK_SIZE
 
 logger = logging.getLogger(__name__)
 
@@ -148,25 +149,45 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
     polling, concurrent analyses). The lock still serializes encodes (the model
     is not safe to run concurrently), but the loop stays free while waiting.
 
+    Head-of-line fairness: a large batch is embedded in chunks of
+    EMBED_LOCK_CHUNK_SIZE, releasing and re-acquiring the lock between chunks.
+    This lets a concurrent caller's small query-embed slip in between chunks
+    instead of waiting for a 700-abstract batch to finish (the `embed_query:
+    130s` stall). Total encode compute is unchanged — only the interleaving is
+    fairer. Vectors are concatenated in input order so the contract is identical
+    to a single encode() call.
+
     Args:
         texts: Same as embed().
 
     Returns:
         Same as embed().
     """
-    # Split lock-wait from encode so we can tell a slow encode apart from one that
-    # was merely queued behind another caller's batch (the lock serialises all
-    # embeds across the parallel disease fan-out).
-    _t_wait = time.perf_counter()
-    async with _model_lock():
-        _wait = time.perf_counter() - _t_wait
-        _t_enc = time.perf_counter()
-        result = await asyncio.to_thread(embed, texts)
-        _enc = time.perf_counter() - _t_enc
-        logger.info(
-            "[EMBED] %d texts: lock_wait=%.2fs encode=%.2fs",
-            len(texts),
-            _wait,
-            _enc,
-        )
-        return result
+    if not texts:
+        return []
+
+    chunk_size = EMBED_LOCK_CHUNK_SIZE
+    vectors: list[list[float]] = []
+    total_wait = 0.0
+    total_enc = 0.0
+    n_chunks = 0
+    for start in range(0, len(texts), chunk_size):
+        chunk = texts[start : start + chunk_size]
+        # Acquire the lock per chunk so a waiting small embed can interleave.
+        _t_wait = time.perf_counter()
+        async with _model_lock():
+            total_wait += time.perf_counter() - _t_wait
+            _t_enc = time.perf_counter()
+            chunk_vectors = await asyncio.to_thread(embed, chunk)
+            total_enc += time.perf_counter() - _t_enc
+        vectors.extend(chunk_vectors)
+        n_chunks += 1
+
+    logger.info(
+        "[EMBED] %d texts in %d chunk(s): lock_wait=%.2fs encode=%.2fs",
+        len(texts),
+        n_chunks,
+        total_wait,
+        total_enc,
+    )
+    return vectors

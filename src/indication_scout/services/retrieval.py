@@ -4,6 +4,7 @@ import asyncio
 import calendar
 import json
 import logging
+import time
 from datetime import date
 from pathlib import Path
 
@@ -514,6 +515,7 @@ class RetrievalService:
             that pass this list to semantic_search will see those PMIDs silently skipped
             by the WHERE pmid = ANY(:pmids) clause, which is intentional and correct.
         """
+        _t_search = time.perf_counter()
         async with PubMedClient(cache_dir=self.cache_dir) as client:
             # 1. Search all queries concurrently
             search_results = await asyncio.gather(
@@ -531,6 +533,18 @@ class RetrievalService:
             all_pmids: list[str] = list(
                 dict.fromkeys(pmid for pmids in search_results for pmid in pmids)
             )
+            _dt_search = time.perf_counter() - _t_search
+
+            # Per-query attribution: which query returned which PMIDs. Lets an
+            # offline audit see whether organ-axis queries contribute any survivors
+            # to the final top-k, or only off-topic volume.
+            for _q, _pmids in zip(queries, search_results):
+                logger.warning(
+                    "[QUERYMAP] query=%r returned %d pmids: %s",
+                    _q,
+                    len(_pmids),
+                    ",".join(_pmids),
+                )
 
             # 1.5 Cutoff post-guard. PubMed's eutils maxdate filter is not
             # strictly respected, so we re-verify each PMID's publication
@@ -546,17 +560,35 @@ class RetrievalService:
             stored = self.get_stored_pmids(all_pmids, db)
 
             # 3. Single fetch for all new abstracts
+            _t_fetch = time.perf_counter()
             new_abstracts = await self.fetch_new_abstracts(all_pmids, stored, client)
+            _dt_fetch = time.perf_counter() - _t_fetch
 
         # Articles with no abstract (letters, editorials) are excluded —
         # they have no text to embed meaningfully.
         abstracts_with_text = [a for a in new_abstracts if a.abstract]
 
         # 4. Single embed call for the entire batch
+        _t_embed = time.perf_counter()
         pairs = await self.embed_abstracts(abstracts_with_text)
+        _dt_embed = time.perf_counter() - _t_embed
 
         # 5. Single bulk insert
+        _t_insert = time.perf_counter()
         self.insert_abstracts(pairs, db)
+        _dt_insert = time.perf_counter() - _t_insert
+
+        logger.warning(
+            "[TIMING] fetch_and_cache breakdown: search=%.1fs fetch_abstracts=%.1fs "
+            "embed=%.1fs(%d new) insert=%.1fs | %d total pmids, %d stored",
+            _dt_search,
+            _dt_fetch,
+            _dt_embed,
+            len(abstracts_with_text),
+            _dt_insert,
+            len(all_pmids),
+            len(stored),
+        )
 
         return all_pmids
 
@@ -602,7 +634,13 @@ class RetrievalService:
             "including clinical trials, efficacy data, mechanism of action, "
             "and preclinical studies"
         )
+        _t_embed = time.perf_counter()
         query_vector = (await embed_async([query_string]))[0]
+        logger.warning(
+            "[TIMING] semantic_search %s embed_query: %.1fs",
+            disease,
+            time.perf_counter() - _t_embed,
+        )
 
         # Over-fetch cap: pull top-N by similarity from pgvector, then rerank
         # by pubtype in Python. Cap gives the boost headroom to reorder
@@ -611,6 +649,27 @@ class RetrievalService:
         top_k = _settings.semantic_search_top_k
         rerank_cap = max(top_k * 10, 100)
 
+        # Relevance audit: how many of the fetched PMIDs actually have an embedding
+        # row (i.e. truly competed in the rerank), independent of the rerank_cap
+        # LIMIT below. Compares against len(pmids) to expose over-fetch — abstracts
+        # fetched + embedded but never surfaced in the top-k. Read-only COUNT.
+        _embedded_count = db.execute(
+            text(
+                "SELECT count(*) FROM pubmed_abstracts WHERE pmid = ANY(:pmids)"
+            ),
+            {"pmids": pmids},
+        ).scalar()
+        logger.warning(
+            "[RELEVANCE] semantic_search %s: %d pmids fetched, %d had embeddings, "
+            "rerank_cap=%d, top_k kept=%d",
+            disease,
+            len(pmids),
+            _embedded_count or 0,
+            rerank_cap,
+            top_k,
+        )
+
+        _t_scan = time.perf_counter()
         rows = db.execute(
             text("""
                 SELECT pmid, title, abstract, similarity
@@ -629,13 +688,26 @@ class RetrievalService:
                 "rerank_cap": rerank_cap,
             },
         ).fetchall()
+        logger.warning(
+            "[TIMING] semantic_search %s pgvector_scan: %.1fs (%d pmids in)",
+            disease,
+            time.perf_counter() - _t_scan,
+            len(pmids),
+        )
 
         if not rows:
             return []
 
         candidate_pmids = [row[0] for row in rows]
+        _t_pt = time.perf_counter()
         async with PubMedClient(cache_dir=self.cache_dir) as client:
             pubtypes_map = await client.fetch_pubtypes(candidate_pmids)
+        logger.warning(
+            "[TIMING] semantic_search %s fetch_pubtypes: %.1fs (%d candidates)",
+            disease,
+            time.perf_counter() - _t_pt,
+            len(candidate_pmids),
+        )
 
         if not pubtypes_map:
             logger.warning(
@@ -673,6 +745,19 @@ class RetrievalService:
             len(scored),
             rerank_cap,
         )
+
+        # Surfaced top-k: the exact papers that survive into synthesis for this pair.
+        # Logged so a relevance audit can read + judge them per drug-disease pair.
+        for _r, _b, _fs in scored[:top_k]:
+            logger.warning(
+                "[TOPK] %s | %s | pmid=%s sim=%.4f final=%.4f | %s",
+                chembl_id,
+                disease,
+                _r.pmid,
+                _r.similarity,
+                _fs,
+                _r.title,
+            )
         # for result, boost, final_score in scored[:20]:
         #     logger.info(
         #         "  pmid=%s title=%r sim=%.4f pubtype=%s boost=%.2f final=%.4f",
