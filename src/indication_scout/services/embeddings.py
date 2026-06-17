@@ -35,6 +35,51 @@ logger = logging.getLogger(__name__)
 # Module-level singleton. None until the first call to embed().
 _model: SentenceTransformer | None = None
 
+
+def _cgroup_cpu_quota() -> int | None:
+    """Return the container's CPU quota in whole vCPUs from the cgroup v2 limit, or None.
+
+    cgroup v2 exposes the limit at /sys/fs/cgroup/cpu.max as "<quota> <period>" (e.g.
+    "2400000 100000" = 24 vCPU). Returns None when the file is missing, set to "max"
+    (unlimited), or unparseable — caller then leaves torch's default thread count alone.
+    No fabricated value: an unknown quota stays unknown.
+    """
+    try:
+        raw = Path("/sys/fs/cgroup/cpu.max").read_text().split()
+    except OSError:
+        return None
+    if len(raw) != 2 or raw[0] == "max":
+        return None
+    try:
+        quota, period = int(raw[0]), int(raw[1])
+    except ValueError:
+        return None
+    if quota <= 0 or period <= 0:
+        return None
+    return max(1, quota // period)
+
+
+def _pin_torch_threads() -> None:
+    """Cap torch's intra-op thread count to the cgroup CPU quota to avoid oversubscription.
+
+    In a container, torch defaults its thread count to os.cpu_count(), which reports the HOST
+    cores (e.g. 48) — not the cgroup quota (e.g. 24). The extra threads contend for CPU the
+    cgroup won't grant, causing scheduler thrash that slows encode. Pin to the quota when known.
+    Only ever reduces the count; a no-op when the quota is unknown or already >= cpu_count.
+    """
+    import torch
+
+    quota = _cgroup_cpu_quota()
+    if quota is None:
+        return
+    if quota < torch.get_num_threads():
+        torch.set_num_threads(quota)
+        logger.info(
+            "Pinned torch threads to cgroup quota: %d (was reporting %d cores)",
+            quota,
+            os.cpu_count(),
+        )
+
 # Cumulative embedding timing → [call_count, total_seconds]. Measures wall-clock spent
 # inside model.encode() (CPU-bound BioLORD inference), summed across all embed() calls.
 # Read/reset via embed_timing_snapshot() / reset_embed_timing() to attribute how much of
@@ -100,6 +145,7 @@ def _get_model() -> SentenceTransformer:
     """
     global _model
     if _model is None:
+        _pin_torch_threads()
         model_name = get_settings().embedding_model
         cached = _is_model_cached(model_name)
         if cached:
