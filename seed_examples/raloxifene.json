@@ -44,7 +44,7 @@
       }
     ],
     "candidates": [],
-    "summary": "Raloxifene acts as a selective estrogen receptor modulator (SERM) on both ESR1 (ERα) and ESR2 (ERβ). ESR1 carries the strongest disease associations, with breast cancer (overall score 0.743), osteoporosis (0.725), and endometriosis (0.664) topping the list — all supported by high clinical and genetic evidence — which aligns well with raloxifene's approved indications for osteoporosis and breast cancer risk reduction. ESR2 associations reinforce the breast cancer and osteoporosis signals, but also surface intriguing repurposing opportunities in atrial fibrillation (driven by strong genetic association, 0.797), major depressive disorder, and schizophrenia — conditions where estrogen signaling through ERβ has been implicated but remains underexplored therapeutically. Together, the target-disease landscape suggests that beyond its established uses, raloxifene may warrant investigation in cardiovascular arrhythmias and neuropsychiatric disorders where ERβ-mediated pathways play a role."
+    "summary": "Raloxifene acts as a selective estrogen receptor modulator (SERM) on both ESR1 (ERα) and ESR2 (ERβ). ESR1 carries the strongest disease associations, with breast cancer (overall score 0.743), osteoporosis (0.725), and endometriosis (0.664) topping the list — all backed by high clinical and genetic evidence — which aligns well with raloxifene's approved indications for osteoporosis and breast cancer risk reduction. ESR2 associations reinforce the breast cancer and osteoporosis signals, but also surface intriguing repurposing opportunities in atrial fibrillation (driven by strong genetic association, 0.797), major depressive disorder, and schizophrenia, suggesting that ERβ-mediated estrogenic signaling in cardiac and neuropsychiatric contexts may be therapeutically relevant. Together, these findings support exploring raloxifene beyond its current indications — particularly in cardiovascular arrhythmia and psychiatric disorders — where ESR2 modulation could provide benefit."
   },
   "disease_findings": [
     {
@@ -1517,7 +1517,7 @@
           "NCT01050842"
         ],
         "contaminated_nct_ids": [],
-        "relevance_reasoning": "NCT01050842 directly studies raloxifene (combined with bicalutamide) in patients with metastatic or hormone-refractory prostate cancer, making it fully relevant to this drug × indication pair. There are no terminated trials and no contaminating trials in the dataset.",
+        "relevance_reasoning": "NCT01050842 directly studies raloxifene (combined with bicalutamide) in patients with metastatic or hormone-refractory prostate cancer, which is a subtype of prostate cancer — it is clearly relevant. There were no terminated trials to classify.",
         "signals": {
           "highest_completed_phase": "Early Phase 1",
           "has_completed_phase3": false,
@@ -2736,7 +2736,7 @@
             "10960626"
           ]
         },
-        "summary": "Evidence synthesis for raloxifene in menopause returned strength: none and direction: none, despite strong semantic retrieval (top similarity 0.82) across 1,084 cached abstracts. The synthesizer could not extract structured efficacy findings from the top-ranked abstracts sufficient to characterize a repurposing signal. This may reflect that the retrieved literature addresses raloxifene's established indications (e.g., osteoporosis, breast cancer risk reduction in postmenopausal women) rather than a novel repurposing context for menopause as a primary indication, or that the abstracts lack the clinical outcome data needed for synthesis."
+        "summary": "The pipeline completed successfully for raloxifene in menopause. Despite retrieving 1,084 PubMed abstracts and achieving a strong top semantic similarity score of 0.82, the synthesizer returned an evidence strength of \"none\" with no directional signal. This indicates that while the retrieved abstracts are topically relevant to the drug-disease pair, the top-ranked abstracts did not yield extractable, structured findings sufficient to populate an EvidenceSummary (e.g., no quantified outcomes, no clear efficacy or safety signals, or no study designs meeting synthesis criteria were present in the top results). This does not mean no literature exists on raloxifene and menopause — it reflects the limits of what was extractable from the specific abstracts surfaced in this run."
       },
       "clinical_trials": {
         "search": {
@@ -2824,7 +2824,7 @@
         "closure_reason": "",
         "relevant_nct_ids": [],
         "contaminated_nct_ids": [],
-        "relevance_reasoning": "No completed or terminated trials were returned for raloxifene × menopause, so there are no trials to classify. The search returned zero results across all statuses, indicating no trial record exists for this exact pair in the database.",
+        "relevance_reasoning": "No completed or terminated trials were returned for raloxifene × menopause, so there are no trials to classify for relevance or contamination.",
         "signals": {
           "highest_completed_phase": null,
           "has_completed_phase3": false,
@@ -3344,7 +3344,7 @@
             "14567773"
           ]
         },
-        "summary": "The full pipeline was executed for raloxifene in atrophy: drug profile built (2 targets, 2 mechanisms), 8 PubMed queries generated, 406 abstracts fetched and cached, 5 semantically relevant abstracts retrieved (top similarity: 0.74). Despite reasonable retrieval, the synthesizer returned an evidence strength of \"none\" with no directional signal, indicating that the retrieved abstracts do not provide sufficient evidence to support or refute raloxifene as a repurposing candidate for atrophy based on the current PubMed literature captured in this run."
+        "summary": "The full pipeline was executed for raloxifene in atrophy: drug profile built (2 targets, 2 mechanisms), 8 PubMed queries generated, 406 abstracts fetched and cached, semantic search returned 5 abstracts (top similarity 0.74), but synthesis yielded evidence strength: none and direction: none. The retrieved abstracts did not provide sufficient evidence to support or refute raloxifene as a repurposing candidate for atrophy based on the current PubMed literature retrieved."
       },
       "clinical_trials": {
         "search": {
@@ -3818,5 +3818,5 @@
   "top_diseases": [
     "prostate cancer"
   ],
-  "summary": "Ranked repurposing signals for raloxifene:\n\n1. prostate cancer — moderate exploratory literature, supports; early-stage, Early Phase 1 completed, no further development on record\n\nEvidence gate exclusions: menopause (0 trials, literature direction=none), atrophy (0 trials, literature direction=none)"
+  "summary": "Ranked repurposing signals for raloxifene:\n\n1. prostate cancer — moderate literature signal, supports; early-phase only, no completed pivotal readout\n\nEvidence gate exclusions: menopause, atrophy"
 }

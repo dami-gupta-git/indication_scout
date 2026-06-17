@@ -1,11 +1,21 @@
 {
+  "baricitinib": 1781402686.0,
   "bupropion": 1781498521.0,
   "dulaglutide": 1781580691.0,
+  "duloxetine": 1781460761.0,
   "empagliflozin": 1781581330.0,
+  "evacetrapib": 1781580305.0,
+  "gefitinib": 1781467340.0,
+  "hydroxychloroquine": 1781579318.0,
   "imatinib": 1781499587.0,
+  "lanabecestat": 1781580017.0,
   "lenvatinib": 1781581125.0,
   "metformin": 1781498924.0,
-  "raloxifene": 1781579766.0,
+  "methotrexate": 1781374490.0,
+  "minoxidil": 1781580448.0,
+  "raloxifene": 1781580570.0,
+  "riluzole": 1781331016.0,
   "semaglutide": 1781498690.0,
-  "sildenafil": 1781499278.0
+  "sildenafil": 1781499278.0,
+  "thalidomide": 1781580951.0
 }
