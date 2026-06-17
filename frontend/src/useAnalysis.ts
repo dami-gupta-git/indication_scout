@@ -90,6 +90,7 @@ export function useAnalysis() {
         status: "done",
         result,
         error: null,
+        progress: [],
       },
       error: null,
     });

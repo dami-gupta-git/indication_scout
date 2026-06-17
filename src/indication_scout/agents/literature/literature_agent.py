@@ -78,7 +78,7 @@ async def run_literature_agent(
         ) or details.get("cache_creation", 0)
         total_out += out_tok
         called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
-        logger.warning(
+        logger.info(
             "[LLMTURN] %s turn %d/%d: in=%d out=%d cache_read=%d cache_write=%d -> %s",
             disease_name,
             i + 1,
@@ -89,7 +89,7 @@ async def run_literature_agent(
             cache_write,
             called,
         )
-    logger.warning(
+    logger.info(
         "[LLMTURN] %s: %d turns, %d total output tokens",
         disease_name,
         len(ai_turns),

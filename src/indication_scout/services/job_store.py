@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 from typing import Literal
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+from indication_scout.api.schemas.progress import ProgressEvent
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +27,9 @@ class Job:
 
     `task` is the live background `asyncio.Task` running the analysis; it is retained so the run
     can be cancelled (F5). `result` is populated only when `status == "done"`; `error` only when
-    `status == "error"`. This is not an external-data model — it carries a live Task handle — so
-    it is a dataclass, not a Pydantic ingestion model.
+    `status == "error"`. `progress` is a live feed of user-facing milestones, appended by the
+    runner via `emit` and returned on every poll. This is not an external-data model — it
+    carries a live Task handle — so it is a dataclass, not a Pydantic ingestion model.
     """
 
     job_id: str
@@ -36,6 +38,12 @@ class Job:
     result: SupervisorOutput | None = None
     error: str | None = None
     task: Task | None = field(default=None, repr=False)
+    progress: list[ProgressEvent] = field(default_factory=list)
+
+    def emit(self, phase: str, message: str) -> None:
+        """Append a progress milestone. Latest event per phase wins on the frontend; we keep
+        the full append-only list so the UI can render counts as each phase completes."""
+        self.progress.append(ProgressEvent(phase=phase, message=message))
 
 
 class JobStore:

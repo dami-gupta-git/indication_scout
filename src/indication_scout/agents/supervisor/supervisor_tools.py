@@ -38,6 +38,13 @@ from indication_scout.services.approval_check import (
 from indication_scout.services.dev_stage import DEV_STAGE_PHRASE, dev_stage_phrase
 from indication_scout.services.judge_interpretive import judge_interpretive
 from indication_scout.services.llm import query_llm, strip_markdown_fences
+from indication_scout.services.progress import (
+    PHASE_CANDIDATES,
+    PHASE_MECHANISM,
+    PHASE_SUMMARY,
+    PHASE_TRIALS,
+    emit_progress,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -549,6 +556,9 @@ def build_supervisor_tools(
         content = "\n".join(lines)
 
         merged_names = [canonical for canonical, _ in merged]
+        emit_progress(
+            PHASE_CANDIDATES, f"Found {len(merged)} candidate diseases"
+        )
         return content, merged_names
 
     async def merge_and_dedup(drug_name: str) -> None:
@@ -1033,6 +1043,11 @@ def build_supervisor_tools(
         summary = (
             f"{header}\n\n{sub_agent_summary}".strip() if sub_agent_summary else header
         )
+        emit_progress(
+            PHASE_MECHANISM,
+            f"Analyzed mechanism: {n_targets} targets, "
+            f"{len(output.candidates)} associations",
+        )
         return summary, output
 
     @tool
@@ -1197,7 +1212,26 @@ def build_supervisor_tools(
             len(canonical_diseases),
             canonical_diseases,
         )
-        results = await asyncio.gather(*(_invest(d) for d in canonical_diseases))
+        n_total_candidates = len(canonical_diseases)
+        emit_progress(
+            PHASE_TRIALS,
+            f"Investigating trials + literature for {n_total_candidates} candidates",
+        )
+        _done_count = 0
+
+        async def _invest_tracked(disease: str) -> tuple[str, dict]:
+            nonlocal _done_count
+            result = await _invest(disease)
+            _done_count += 1
+            emit_progress(
+                PHASE_TRIALS,
+                f"Investigated {_done_count}/{n_total_candidates} candidates",
+            )
+            return result
+
+        results = await asyncio.gather(
+            *(_invest_tracked(d) for d in canonical_diseases)
+        )
         logger.warning(
             "[TIMING] investigate_top_candidates: %d candidates in parallel took %.1fs",
             len(canonical_diseases),
@@ -1442,6 +1476,7 @@ def build_supervisor_tools(
         - blurbs: your draft ranked blurbs, same shape as finalize_supervisor.
         """
         critique_state["ran"] = True
+        emit_progress(PHASE_SUMMARY, "Ranking candidates and writing the summary")
         items = blurbs or []
         if not items:
             return "No blurbs provided — nothing to critique."

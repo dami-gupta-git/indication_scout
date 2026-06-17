@@ -6,6 +6,7 @@ The response wraps the existing `SupervisorOutput` — its shape is NOT re-deriv
 from pydantic import BaseModel, Field
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+from indication_scout.api.schemas.progress import ProgressEvent
 from indication_scout.services.job_store import JobStatus
 
 
@@ -33,3 +34,4 @@ class AnalysisStatusResponse(BaseModel):
     status: JobStatus
     result: SupervisorOutput | None = None
     error: str | None = None
+    progress: list[ProgressEvent] = []

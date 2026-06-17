@@ -201,7 +201,7 @@ export function App() {
       <main className="main">
         <div className="poc-banner poc-banner-main">Proof of Concept</div>
         {state.status === "idle" && <LandingHero />}
-        {busy && <LoadingState drug={drug} />}
+        {busy && <LoadingState drug={drug} progress={state.data?.progress ?? []} />}
         <StatusBanner status={state.status} error={state.error} />
         {result && (
           <>

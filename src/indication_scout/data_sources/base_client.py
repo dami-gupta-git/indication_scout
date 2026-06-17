@@ -108,7 +108,12 @@ def _build_context_string(
         for key in _CONTEXT_PRIORITY_KEYS:
             if key in source_dict and source_dict[key] not in (None, ""):
                 value = source_dict[key]
-                rendered = f"{key}={value!r}"
+                # PubMed efetch id lists are long and noisy; log a count, not the ids.
+                if key in ("id", "ids"):
+                    n = len(str(value).split(","))
+                    rendered = f"{key}=<{n} ids>"
+                else:
+                    rendered = f"{key}={value!r}"
                 if len(rendered) > _CONTEXT_MAX_LEN:
                     rendered = rendered[: _CONTEXT_MAX_LEN - 3] + "..."
                 return rendered

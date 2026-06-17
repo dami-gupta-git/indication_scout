@@ -970,6 +970,68 @@ body {
   }
 }
 
+/* ---- Live progress checklist (overrides the static-step styling) ---- */
+.loading-steps-live li {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.35rem 0;
+  animation: none; /* state, not a blanket pulse, conveys progress here */
+}
+
+.loading-steps-live li::before {
+  content: none; /* replaced by the explicit per-state marker */
+}
+
+.loading-step-marker {
+  width: 1.1rem;
+  display: inline-flex;
+  justify-content: center;
+  flex: none;
+}
+
+/* One dark color per pipeline phase; the line and its ✓ marker share it.
+   Scoped under `.loading-steps-live li` so each beats the generic
+   `.loading-steps li` grey (class+element) on specificity. */
+.loading-steps-live li.loading-phase-candidates {
+  color: #14532d; /* dark green */
+}
+.loading-steps-live li.loading-phase-mechanism {
+  color: #1e3a8a; /* dark blue */
+}
+.loading-steps-live li.loading-phase-trials {
+  color: #7c2d12; /* dark orange/brown */
+}
+.loading-steps-live li.loading-phase-literature {
+  color: #581c87; /* dark purple */
+}
+.loading-steps-live li.loading-phase-summary {
+  color: #831843; /* dark magenta */
+}
+/* Marker inherits the line color. */
+.loading-steps-live li[class*="loading-phase-"] .loading-step-marker {
+  color: inherit;
+}
+
+.loading-step-done .loading-step-marker {
+  font-weight: 700;
+}
+
+.loading-step-active {
+  font-weight: 600;
+}
+
+/* Inline spinner for the active step (smaller than the header spinner). */
+.step-spinner {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 2px solid #dbe3f3;
+  border-top-color: #2d6cdf;
+  border-radius: 50%;
+  display: inline-block;
+  animation: spin 0.8s linear infinite;
+}
+
 /* ---- Skeletons ---- */
 .skeleton-kpis {
   display: flex;

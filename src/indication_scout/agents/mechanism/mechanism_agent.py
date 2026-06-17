@@ -100,7 +100,7 @@ async def run_mechanism_agent(
         ) or details.get("cache_creation", 0)
         total_out += out_tok
         called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
-        logger.warning(
+        logger.info(
             "[LLMTURN] mechanism %s turn %d/%d: in=%d out=%d cache_read=%d cache_write=%d -> %s",
             drug_name,
             i + 1,
@@ -111,7 +111,7 @@ async def run_mechanism_agent(
             cache_write,
             called,
         )
-    logger.warning(
+    logger.info(
         "[LLMTURN] mechanism %s: %d turns, %d total output tokens, agent loop %.1fs",
         drug_name,
         len(ai_turns),

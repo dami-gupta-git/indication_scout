@@ -51,7 +51,7 @@ def build_literature_tools(
         chembl_id = await _get_chembl(drug_name)
         profile = await svc.build_drug_profile(chembl_id)
         store["drug_profile"] = profile
-        logger.warning(
+        logger.info(
             "[TIMING] build_drug_profile %s: %.1fs",
             drug_name,
             time.perf_counter() - _t0,

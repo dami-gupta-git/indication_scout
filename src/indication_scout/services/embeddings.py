@@ -217,8 +217,17 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
     total_wait = 0.0
     total_enc = 0.0
     n_chunks = 0
+    total_chunks = (len(texts) + chunk_size - 1) // chunk_size
     for start in range(0, len(texts), chunk_size):
         chunk = texts[start : start + chunk_size]
+        logger.warning(
+            "[EMBED] chunk %d/%d (%d texts), %d/%d embedded",
+            n_chunks + 1,
+            total_chunks,
+            len(chunk),
+            start,
+            len(texts),
+        )
         # Acquire the lock per chunk so a waiting small embed can interleave.
         _t_wait = time.perf_counter()
         async with _model_lock():

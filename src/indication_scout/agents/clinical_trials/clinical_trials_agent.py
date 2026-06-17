@@ -109,7 +109,7 @@ async def run_clinical_trials_agent(
         called = (
             ", ".join(f"{tc['name']}({tc['args']})" for tc in msg.tool_calls) or "(final)"
         )
-        logger.warning(
+        logger.info(
             "[LLMTURN] clinical_trials %s turn %d/%d: in=%d out=%d cache_read=%d "
             "cache_write=%d -> %s",
             disease_name,
@@ -121,7 +121,7 @@ async def run_clinical_trials_agent(
             cache_write,
             called,
         )
-    logger.warning(
+    logger.info(
         "[LLMTURN] clinical_trials %s: %d turns, %d total output tokens, "
         "agent loop %.1fs",
         disease_name,

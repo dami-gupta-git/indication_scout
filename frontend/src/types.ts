@@ -144,12 +144,26 @@ export interface AnalysisCreated {
   status: JobStatus;
 }
 
+// One of the five fixed pipeline phases (see services/progress.py PHASES).
+export type ProgressPhase =
+  | "candidates"
+  | "mechanism"
+  | "trials"
+  | "literature"
+  | "summary";
+
+export interface ProgressEvent {
+  phase: ProgressPhase;
+  message: string;
+}
+
 export interface AnalysisStatus {
   job_id: string;
   drug_name: string;
   status: JobStatus;
   result: SupervisorOutput | null;
   error: string | null;
+  progress: ProgressEvent[];
 }
 
 export const TERMINAL_STATUSES: JobStatus[] = ["done", "error", "cancelled"];

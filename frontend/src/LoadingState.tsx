@@ -1,18 +1,21 @@
-// Loading state shown while a run is in flight (polling). A spinner + the
-// drug name, the pipeline steps the agents work through, and skeleton
-// placeholders for the KPI band and tabs so the page reads as "working" rather
-// than frozen. Phase 9 streaming replaces this with a live progress matrix;
-// until then (and as the SSE fallback) this is the in-flight view.
+// Loading state shown while a run is in flight (polling). A spinner + the drug
+// name, then an append-only feed of the progress events the backend emits — only
+// what has actually happened, newest at the bottom, no greyed-out "forthcoming"
+// items. The most recent line is the live/active one (spins); earlier lines are
+// done (✓). Skeleton placeholders for the KPI band and tabs keep the page reading
+// as "working" rather than frozen.
 
-const STEPS = [
-  "Surfacing candidate diseases",
-  "Analyzing molecular mechanism (Open Targets)",
-  "Searching clinical trials (ClinicalTrials.gov)",
-  "Synthesizing literature evidence (PubMed)",
-  "Ranking and writing the summary",
-];
+import type { ProgressEvent } from "./types";
 
-export function LoadingState({ drug }: { drug: string }) {
+export function LoadingState({
+  drug,
+  progress,
+}: {
+  drug: string;
+  progress: ProgressEvent[];
+}) {
+  const lastIdx = progress.length - 1;
+
   return (
     <div className="loading" role="status" aria-live="polite">
       <div className="loading-head">
@@ -27,12 +30,29 @@ export function LoadingState({ drug }: { drug: string }) {
         </div>
       </div>
 
-      <ul className="loading-steps">
-        {STEPS.map((s, i) => (
-          <li key={s} style={{ animationDelay: `${i * 0.25}s` }}>
-            {s}
+      <ul className="loading-steps loading-steps-live">
+        {progress.length === 0 && (
+          <li className="loading-step loading-step-active">
+            <span className="loading-step-marker" aria-hidden="true">
+              <span className="step-spinner" />
+            </span>
+            <span className="loading-step-text">Starting analysis…</span>
           </li>
-        ))}
+        )}
+        {progress.map((ev, i) => {
+          const active = i === lastIdx;
+          return (
+            <li
+              key={i}
+              className={`loading-step loading-step-${active ? "active" : "done"} loading-phase-${ev.phase}`}
+            >
+              <span className="loading-step-marker" aria-hidden="true">
+                {active ? <span className="step-spinner" /> : "✓"}
+              </span>
+              <span className="loading-step-text">{ev.message}</span>
+            </li>
+          );
+        })}
       </ul>
 
       {/* Skeleton of the KPI band + tabs that will appear on completion. */}

@@ -22,6 +22,7 @@ from indication_scout.helpers.drug_helpers import normalize_drug_name
 from indication_scout.report.format_report import format_report
 from indication_scout.services.analysis_runner import run_analysis
 from indication_scout.services.job_store import Job, job_store
+from indication_scout.services.progress import reset_emitter, set_emitter
 from indication_scout.services.seed_reports import load_fresh_seed_report
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,10 @@ router = APIRouter(prefix="/api/analyses", tags=["analyses"])
 async def _execute(job: Job) -> None:
     """Run the analysis for `job`, recording status/result/error. Catches cancellation."""
     job.status = "running"
+    # Bind this job's progress feed for the duration of the run. The supervisor tools and
+    # retrieval service call emit_progress(...) at user-facing milestones; those append to
+    # job.progress and ride the existing poll. Reset in finally so the contextvar doesn't leak.
+    token = set_emitter(job.emit)
     try:
         seed = load_fresh_seed_report(job.drug_name)
         if seed is not None:
@@ -54,6 +59,8 @@ async def _execute(job: Job) -> None:
         job.error = str(exc)
         job.status = "error"
         logger.exception("Job %s failed", job.job_id)
+    finally:
+        reset_emitter(token)
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
@@ -87,6 +94,7 @@ async def get_analysis(job_id: str) -> AnalysisStatusResponse:
         status=job.status,
         result=job.result,
         error=job.error,
+        progress=job.progress,
     )
 
 

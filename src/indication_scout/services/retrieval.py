@@ -32,6 +32,7 @@ from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
 from indication_scout.services.embeddings import embed_async
+from indication_scout.services.progress import PHASE_LITERATURE, emit_progress
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.literature_strength import judge_literature_strength
 from indication_scout.services.llm import (
@@ -150,9 +151,6 @@ class RetrievalService:
             #                len(raw["diseases"]), list(raw["diseases"].keys()))
 
         top_40 = raw["diseases"]
-        logger.warning(
-            "[COMP] after normalize: %d diseases: %s", len(top_40), list(top_40.keys())
-        )
 
         drug_indications = raw["drug_indications"]
         disease_names = list(top_40.keys())
@@ -298,6 +296,9 @@ class RetrievalService:
         if not abstracts:
             return []
 
+        emit_progress(
+            PHASE_LITERATURE, f"Embedding {len(abstracts)} new abstracts"
+        )
         texts = [f"{a.title}. {a.abstract or ''}" for a in abstracts]
         vectors = await embed_async(texts)
         return list(zip(abstracts, vectors))
@@ -743,18 +744,6 @@ class RetrievalService:
             rerank_cap,
         )
 
-        # Surfaced top-k: the exact papers that survive into synthesis for this pair.
-        # Logged so a relevance audit can read + judge them per drug-disease pair.
-        for _r, _b, _fs in scored[:top_k]:
-            logger.warning(
-                "[TOPK] %s | %s | pmid=%s sim=%.4f final=%.4f | %s",
-                chembl_id,
-                disease,
-                _r.pmid,
-                _r.similarity,
-                _fs,
-                _r.title,
-            )
         # for result, boost, final_score in scored[:20]:
         #     logger.info(
         #         "  pmid=%s title=%r sim=%.4f pubtype=%s boost=%.2f final=%.4f",

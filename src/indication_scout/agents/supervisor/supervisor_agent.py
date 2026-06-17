@@ -25,6 +25,7 @@ from indication_scout.agents.supervisor.supervisor_output import (
 )
 from indication_scout.agents.supervisor.supervisor_tools import build_supervisor_tools
 from indication_scout.config import get_settings
+from indication_scout.services.progress import PHASE_SUMMARY, emit_progress
 
 logger = logging.getLogger(__name__)
 
@@ -140,6 +141,7 @@ async def run_supervisor_agent(
         }
     )
     _agent_elapsed = time.perf_counter() - _agent_t0
+    emit_progress(PHASE_SUMMARY, "Ranking candidates and writing the summary")
 
     # Per-turn LLM accounting for the supervisor's own ReAct loop (same as the
     # sub-agents). Isolates the supervisor's orchestration round-trips from the
@@ -163,7 +165,7 @@ async def run_supervisor_agent(
         ) or _details.get("cache_creation", 0)
         _total_out += _out_tok
         _called = ", ".join(tc["name"] for tc in _msg.tool_calls) or "(final)"
-        logger.warning(
+        logger.info(
             "[LLMTURN] supervisor turn %d/%d: in=%d out=%d cache_read=%d "
             "cache_write=%d -> %s",
             _i + 1,
@@ -174,7 +176,7 @@ async def run_supervisor_agent(
             _cache_write,
             _called,
         )
-    logger.warning(
+    logger.info(
         "[LLMTURN] supervisor: %d turns, %d total output tokens, agent loop %.1fs",
         len(_ai_turns),
         _total_out,
