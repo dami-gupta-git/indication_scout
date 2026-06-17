@@ -535,15 +535,11 @@ class RetrievalService:
             )
             _dt_search = time.perf_counter() - _t_search
 
-            # Per-query attribution: which query returned which PMIDs. Lets an
-            # offline audit see whether organ-axis queries contribute any survivors
-            # to the final top-k, or only off-topic volume.
+            # Per-query attribution: how many PMIDs each query returned (PMIDs themselves
+            # omitted to keep logs readable).
             for _q, _pmids in zip(queries, search_results):
                 logger.warning(
-                    "[QUERYMAP] query=%r returned %d pmids: %s",
-                    _q,
-                    len(_pmids),
-                    ",".join(_pmids),
+                    "[QUERYMAP] query=%r returned %d pmids", _q, len(_pmids)
                 )
 
             # 1.5 Cutoff post-guard. PubMed's eutils maxdate filter is not
@@ -568,7 +564,8 @@ class RetrievalService:
         # they have no text to embed meaningfully.
         abstracts_with_text = [a for a in new_abstracts if a.abstract]
 
-        # 4. Single embed call for the entire batch
+        # 4. Single embed call for the entire batch (embed_async chunks internally and releases
+        # the lock between chunks so concurrent candidates' query-embeds stay responsive).
         _t_embed = time.perf_counter()
         pairs = await self.embed_abstracts(abstracts_with_text)
         _dt_embed = time.perf_counter() - _t_embed

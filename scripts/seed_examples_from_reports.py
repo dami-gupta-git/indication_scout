@@ -7,7 +7,7 @@ filename timestamp) into seed_examples/captured_at.json. Existing manifest entri
 for drugs not processed are left untouched.
 
 Usage:
-    python scripts/seed_examples_from_reports.py                 # EXAMPLE_DRUGS
+    python scripts/seed_examples_from_reports.py                 # every drug in test_reports/
     python scripts/seed_examples_from_reports.py metformin bupropion
 """
 
@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
-from indication_scout.constants import EXAMPLE_DRUGS, EXAMPLE_SEED_DIR
+from indication_scout.constants import EXAMPLE_SEED_DIR
 from indication_scout.helpers.drug_helpers import normalize_drug_name
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
@@ -47,6 +47,25 @@ def _latest_report(drug: str) -> tuple[Path, float] | None:
         if latest is None or epoch > latest[1]:
             latest = (path, epoch)
     return latest
+
+
+def _all_report_drugs() -> list[str]:
+    """Return every distinct drug with a parseable test_reports payload, sorted."""
+    drugs: set[str] = set()
+    for path in TEST_REPORTS_DIR.glob("*.json"):
+        stem = path.stem
+        sep = stem.rfind("_", 0, stem.rfind("_"))  # split before the date_time stamp
+        if sep == -1:
+            logger.warning("Skipping unparseable filename %s", path.name)
+            continue
+        drug, stamp = stem[:sep], stem[sep + 1 :]
+        try:
+            datetime.strptime(stamp, _TIMESTAMP_FMT)
+        except ValueError:
+            logger.warning("Skipping unparseable filename %s", path.name)
+            continue
+        drugs.add(drug)
+    return sorted(drugs)
 
 
 def seed_from_reports(drugs: list[str]) -> None:
@@ -82,7 +101,7 @@ def seed_from_reports(drugs: list[str]) -> None:
 
 
 def main() -> None:
-    drugs = sys.argv[1:] or list(EXAMPLE_DRUGS)
+    drugs = sys.argv[1:] or _all_report_drugs()
     seed_from_reports(drugs)
 
 

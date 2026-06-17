@@ -212,10 +212,10 @@ class BaseClient(ABC):
                 # Retry on 429/5xx
                 if resp.status in {429, 500, 502, 503, 504}:
                     if attempt < self.max_retries:
-                        # Short exponential backoff (2s/4s/8s). These are per-second
-                        # rate limits (e.g. NCBI 10 req/s), so a 429 clears within
+                        # Short exponential backoff starting at 2s (2s/4s/8s). These are
+                        # per-second rate limits (e.g. NCBI 10 req/s), so a 429 clears within
                         # ~1s — no long floor needed.
-                        delay = min(2**attempt, 90)
+                        delay = min(2 ** (attempt + 1), 90)
                         ctx_suffix = f" ({context})" if context else ""
                         # WARNING, not debug: surfacing the retry makes
                         # rate-limiting visible instead of looking like a hang.
