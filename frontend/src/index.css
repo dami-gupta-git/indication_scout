@@ -890,7 +890,8 @@ body {
   margin: -1rem 0 0;
   font-size: 0.82rem;
   line-height: 1.5;
-  color: #6b7280;
+  font-weight: 500;
+  color: #b23a48;
 }
 
 @media (max-width: 768px) {
