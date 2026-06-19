@@ -832,6 +832,8 @@ body {
   margin: 3rem auto;
   text-align: center;
   padding: 0 1rem;
+  display: flex;
+  flex-direction: column;
 }
 
 .hero-mark {
@@ -899,8 +901,9 @@ body {
     grid-template-columns: 1fr;
   }
   .hero-scope-note {
+    order: -1;
     font-size: 0.78rem;
-    margin-top: -0.5rem;
+    margin: 0 0 1.25rem;
   }
   .hero-title {
     font-size: 2rem;
