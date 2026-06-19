@@ -5,11 +5,13 @@ data via a closure-scoped store dict. No InjectedState, no LangGraph state machi
 """
 
 import logging
+from datetime import date
 
 from langchain_core.tools import tool
 
+from indication_scout.agents.mechanism.ot_score import recompute_overall
 from indication_scout.config import get_settings
-from indication_scout.constants import MECHANISM_SIGNAL_KEYS
+from indication_scout.constants import MECHANISM_SIGNAL_KEYS, OT_LEAKY_DATASOURCES
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import resolve_drug_name
 from indication_scout.data_sources.open_targets import OpenTargetsClient
@@ -20,12 +22,23 @@ logger = logging.getLogger(__name__)
 _settings = get_settings()
 
 
-def build_mechanism_tools() -> list:
+def build_mechanism_tools(date_before: date | None = None) -> list:
     """Build tools that share data via a closure-scoped store dict.
 
     get_drug must be called first — it populates the store with the symbol→target_id map that
     get_target_associations uses to resolve target symbols.
+
+    `date_before` switches get_target_associations to a leak-free ranking: in holdout mode the
+    overall score is recomputed with the clinical_precedence datasource dropped, so post-cutoff
+    trial/approval data cannot bias which associations the agent sees.
     """
+
+    def ranking_score(association: Association) -> float:
+        if date_before is None:
+            return association.overall_score or 0.0
+        return recompute_overall(
+            association.datasource_scores, exclude=OT_LEAKY_DATASOURCES
+        )
 
     store: dict = {}
 
@@ -97,7 +110,7 @@ def build_mechanism_tools() -> list:
                 for k in MECHANISM_SIGNAL_KEYS
             )
         ]
-        top = sorted(filtered, key=lambda a: a.overall_score or 0, reverse=True)[
+        top = sorted(filtered, key=ranking_score, reverse=True)[
             : _settings.mechanism_associations_cap
         ]
 

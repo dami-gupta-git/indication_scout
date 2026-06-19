@@ -21,7 +21,11 @@ from indication_scout.models.model_open_targets import (
 
 
 def _assoc(
-    disease_id: str, disease_name: str, score: float, desc: str = ""
+    disease_id: str,
+    disease_name: str,
+    score: float,
+    desc: str = "",
+    datasource_scores: dict[str, float] | None = None,
 ) -> Association:
     return Association(
         disease_id=disease_id,
@@ -29,6 +33,7 @@ def _assoc(
         disease_description=desc,
         overall_score=score,
         datatype_scores={},
+        datasource_scores=datasource_scores or {},
         therapeutic_areas=[],
     )
 
@@ -71,6 +76,8 @@ async def test_build_candidate_rows_basic_shape():
         "disease_name": "T2D",
         "disease_id": "EFO_001",
         "overall_score": 0.9,
+        # Production mode (date_before=None): ranking_score mirrors overall_score.
+        "ranking_score": 0.9,
         "evidences": evidences["EFO_001"],
         "disease_description": "Sugar disease.",
         "target_function": "GLP-1 receptor description.",
@@ -145,6 +152,47 @@ async def test_build_candidate_rows_no_associations_returns_empty_list():
     # No efo_ids → get_target_evidences still gets called with []; that's
     # fine because the client itself short-circuits on empty.
     client.get_target_evidences.assert_awaited_once_with("ENSG0001", [])
+
+
+async def test_build_candidate_rows_holdout_reranks_without_clinical_precedence():
+    """In holdout mode (date_before set), ranking drops the clinical_precedence datasource.
+
+    `clin` has a high overall_score driven entirely by clinical_precedence; `gen` is lower overall
+    but backed by a non-leaky datasource. With date_before set, gen must outrank clin and the row's
+    ranking_score must differ from overall_score for the clinical-dominated row.
+    """
+    from datetime import date
+
+    target = TargetData(
+        target_id="ENSG0001",
+        symbol="TGT",
+        function_descriptions=["fn"],
+        associations=[
+            _assoc(
+                "EFO_CLIN",
+                "clin",
+                0.85,
+                datasource_scores={"clinical_precedence": 0.95},
+            ),
+            _assoc(
+                "EFO_GEN",
+                "gen",
+                0.40,
+                datasource_scores={"gwas_credible_sets": 0.70},
+            ),
+        ],
+    )
+    client = _mock_client(target, {"EFO_GEN": [], "EFO_CLIN": []})
+
+    rows = await build_candidate_rows(
+        client, "ENSG0001", {"INHIBITOR"}, top_n=2, date_before=date(2022, 1, 1)
+    )
+
+    assert [r["disease_name"] for r in rows] == ["gen", "clin"]
+    clin_row = next(r for r in rows if r["disease_name"] == "clin")
+    # clinical_precedence dropped → its only datasource is excluded → ranking_score collapses to 0.
+    assert clin_row["ranking_score"] == 0.0
+    assert clin_row["overall_score"] == 0.85
 
 
 async def test_build_candidate_rows_uses_first_function_description():

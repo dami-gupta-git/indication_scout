@@ -109,8 +109,9 @@ def select_top_candidates(
 
     Each row is expected to carry the fields below — assembled upstream by whichever code is doing the OT
     fetching. Keeps only POSITIVE rows whose disease is not in `approved_diseases` (case-insensitive
-    exact match), sorts by `overall_score` descending, takes `limit`, and returns MechanismCandidate
-    objects. No scores surfaced.
+    exact match), sorts by `ranking_score` descending, takes `limit`, and returns MechanismCandidate
+    objects. No scores surfaced. `ranking_score` is OT's overall_score in production and the leak-free
+    recomputed score in holdout mode (set by build_candidate_rows).
 
     Direction aggregation uses majority voting over the row's `evidences` list (see
     `aggregate_directions`) — robust to a few outlier records contradicting a strong majority, which
@@ -122,6 +123,7 @@ def select_top_candidates(
         disease_name: str
         disease_id: str | None
         overall_score: float | None
+        ranking_score: float | None      # leak-free in holdout; == overall_score in production
         evidences: list[EvidenceRecord]   # raw records, direction-voted internally
         disease_description: str
         target_function: str
@@ -143,7 +145,7 @@ def select_top_candidates(
             continue
         positives.append(row)
 
-    positives.sort(key=lambda r: r.get("overall_score") or 0.0, reverse=True)
+    positives.sort(key=lambda r: r.get("ranking_score") or 0.0, reverse=True)
 
     return [
         MechanismCandidate(

@@ -505,3 +505,50 @@ async def test_empagliflozin_candidates(open_targets_client):
     # Should be subtracted (APPROVAL stage)
     assert "heart failure" not in diseases
     assert "type 2 diabetes mellitus" not in diseases
+
+
+# --- leak-free overall-score recompute (drift check against live OT) ---
+
+
+@no_review
+async def test_recompute_overall_matches_live_ot(open_targets_client):
+    """Pin recompute_overall to live OT overall_score, catching weight/datasource-count drift.
+
+    If OT changes its datasource count or weights, the recomputed score diverges from the live
+    overall_score and this fails — surfacing the drift instead of letting it pass silently.
+    """
+    from indication_scout.agents.mechanism.ot_score import recompute_overall
+
+    target = await open_targets_client.get_target_data("ENSG00000162434")  # JAK1
+    checked = 0
+    for assoc in sorted(
+        target.associations, key=lambda a: a.overall_score or 0.0, reverse=True
+    )[:25]:
+        if not assoc.datasource_scores or assoc.overall_score is None:
+            continue
+        recomputed = recompute_overall(assoc.datasource_scores, exclude=set())
+        assert abs(recomputed - assoc.overall_score) < 0.05, (
+            f"{assoc.disease_name}: recomputed={recomputed:.4f} "
+            f"overall={assoc.overall_score:.4f}"
+        )
+        checked += 1
+    assert checked >= 10, "expected at least 10 scored associations to verify"
+
+
+@no_review
+async def test_clinical_datatype_is_single_datasource(open_targets_client):
+    """Verify the clinical datatype is fed only by clinical_precedence — so excluding that one
+    datasource fully de-leaks the holdout ranking."""
+    target = await open_targets_client.get_target_data("ENSG00000162434")  # JAK1
+    checked = 0
+    for assoc in target.associations:
+        clinical_dt = assoc.datatype_scores.get("clinical")
+        if clinical_dt is None:
+            continue
+        cp = assoc.datasource_scores.get("clinical_precedence")
+        assert cp is not None and abs(cp - clinical_dt) < 1e-9, (
+            f"{assoc.disease_name}: clinical datatype={clinical_dt} "
+            f"clinical_precedence={cp}"
+        )
+        checked += 1
+    assert checked >= 5, "expected at least 5 clinical-datatype associations to verify"

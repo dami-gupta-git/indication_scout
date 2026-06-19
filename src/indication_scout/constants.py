@@ -77,6 +77,27 @@ DRUG_APPROVALS_PATH: Path = _PROJECT_ROOT / "drug_approvals.json"
 # -- Open Targets -----------------------------------------------------------
 OPEN_TARGETS_BASE_URL: str = "https://api.platform.opentargets.org/api/v4/graphql"
 
+# -- Open Targets overall-score recomputation (holdout leak removal) ---------
+# OT's overall association score is a weighted harmonic sum over per-datasource
+# scores, normalized by the harmonic sum of OT_PLATFORM_DATASOURCE_COUNT ones.
+# We recompute it locally to drop the clinical_precedence datasource in holdout
+# mode (it encodes current trials/approvals and leaks post-cutoff information).
+# Default datasource weight is 1.0; only the entries below are downweighted.
+# Source: https://platform-docs.opentargets.org/associations
+OT_DATASOURCE_WEIGHTS: dict[str, float] = {
+    "europepmc": 0.2,
+    "expression_atlas": 0.2,
+    "impc": 0.2,
+    "cancer_biomarkers": 0.5,
+}
+OT_DEFAULT_DATASOURCE_WEIGHT: float = 1.0
+# Fixed number of datasources OT normalizes the harmonic sum against. Empirically
+# reproduces published overall_score to ~0.01 mean abs error.
+OT_PLATFORM_DATASOURCE_COUNT: int = 29
+# Datasources excluded from the recomputed score in holdout mode. clinical_precedence
+# is the ChEMBL/known_drug channel (trials + approvals) — current data, hence leaky.
+OT_LEAKY_DATASOURCES: set[str] = {"clinical_precedence"}
+
 # -- ChEMBL -----------------------------------------------------------------
 CHEMBL_BASE_URL: str = "https://www.ebi.ac.uk/chembl/api/data"
 

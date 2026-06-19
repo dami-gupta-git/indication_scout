@@ -199,15 +199,19 @@ def _row(
     action_types=None,
     disease_name="disease x",
     overall_score=0.5,
+    ranking_score=None,
     evidences=None,
     disease_description="",
     target_function="",
 ):
+    # ranking_score defaults to overall_score, matching production (in holdout the row builder sets a
+    # leak-free recomputed value; select_top_candidates always sorts on ranking_score).
     return {
         "target_symbol": target_symbol,
         "action_types": action_types if action_types is not None else {"INHIBITOR"},
         "disease_name": disease_name,
         "overall_score": overall_score,
+        "ranking_score": ranking_score if ranking_score is not None else overall_score,
         "evidences": evidences or [],
         "disease_description": disease_description,
         "target_function": target_function,

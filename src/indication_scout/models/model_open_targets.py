@@ -22,6 +22,9 @@ class Association(BaseModel):
     datatype_scores: dict[str, float] = (
         {}
     )  # e.g. {"genetic_association": 0.7, "literature": 0.9}
+    datasource_scores: dict[str, float] = (
+        {}
+    )  # e.g. {"clinical_precedence": 0.99, "gwas_credible_sets": 0.52}
     therapeutic_areas: list[str] = []
 
     @model_validator(mode="before")

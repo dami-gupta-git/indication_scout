@@ -794,6 +794,9 @@ class OpenTargetsClient(BaseClient):
 
     def _parse_association(self, raw: dict) -> Association:
         datatype_scores = {s["id"]: s["score"] for s in raw.get("datatypeScores", [])}
+        datasource_scores = {
+            s["id"]: s["score"] for s in raw.get("datasourceScores", [])
+        }
         disease = raw["disease"]
         therapeutic_areas = [ta["name"] for ta in disease.get("therapeuticAreas", [])]
         return Association(
@@ -802,6 +805,7 @@ class OpenTargetsClient(BaseClient):
             disease_description=disease.get("description") or "",
             overall_score=raw["score"],
             datatype_scores=datatype_scores,
+            datasource_scores=datasource_scores,
             therapeutic_areas=therapeutic_areas,
         )
 
@@ -1025,6 +1029,7 @@ query($id: String!) {
                 }
                 score
                 datatypeScores { id score }
+                datasourceScores { id score }
             }
         }
 
@@ -1109,6 +1114,7 @@ query($id: String!, $index: Int!, $size: Int!) {
                 }
                 score
                 datatypeScores { id score }
+                datasourceScores { id score }
             }
         }
     }

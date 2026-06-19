@@ -259,7 +259,7 @@ def build_supervisor_tools(
     # concurrently (asyncio.gather), so a single shared instance would accumulate every pair's
     # trials across candidates and race on that mutable state. A fresh build per call isolates
     # the closure state (graph compile only, no I/O — cheap relative to the network/LLM work).
-    mech_agent = build_mechanism_agent(llm=llm)
+    mech_agent = build_mechanism_agent(llm=llm, date_before=date_before)
 
     # Closure-scoped allowlist — populated by find_candidates and analyze_mechanism, checked by
     # analyze_literature / analyze_clinical_trials.

@@ -52,9 +52,13 @@ Steps:
 Do not call get_target_associations on more than 3 targets."""
 
 
-def build_mechanism_agent(llm) -> object:
-    """Return a compiled ReAct agent."""
-    tools = build_mechanism_tools()
+def build_mechanism_agent(llm, date_before: date | None = None) -> object:
+    """Return a compiled ReAct agent.
+
+    `date_before` is forwarded to the tools so get_target_associations ranks leak-free in holdout
+    mode (clinical_precedence dropped from the recomputed overall score).
+    """
+    tools = build_mechanism_tools(date_before=date_before)
     return create_react_agent(
         model=llm,
         tools=tools,
@@ -216,6 +220,7 @@ async def _assemble_candidates(
                     target_id,
                     symbol_to_actions.get(symbol, set()),
                     _settings.mechanism_associations_per_target,
+                    date_before=date_before,
                 )
                 for symbol, target_id in drug_targets.items()
             ],
