@@ -886,9 +886,20 @@ body {
   color: #6b7280;
 }
 
+.hero-scope-note {
+  margin: -1rem 0 0;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: #6b7280;
+}
+
 @media (max-width: 768px) {
   .hero-steps {
     grid-template-columns: 1fr;
+  }
+  .hero-scope-note {
+    font-size: 0.78rem;
+    margin-top: -0.5rem;
   }
   .hero-title {
     font-size: 2rem;

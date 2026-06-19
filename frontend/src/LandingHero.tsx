@@ -39,6 +39,11 @@ export function LandingHero() {
           </div>
         ))}
       </div>
+
+      <p className="caption hero-scope-note" style={{ fontStyle: "italic" }}>
+        Candidates come from OpenTargets target–disease associations only; off-target
+        indications (e.g. duloxetine for pain) won't appear.
+      </p>
     </div>
   );
 }
