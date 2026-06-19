@@ -59,7 +59,7 @@ tracing/eval utilities. None are part of the installed package; run them directl
 ## validation/
 
 Holdout-validation harnesses for checking the pipeline against known approvals;
-read against `runbook.xt`. Outputs go to `results/holdout_validation/`.
+read against `runbook.txt`. Outputs go to `results/holdout_validation/`.
 
 - **run_validation.py** — Holdout harness. Runs `scout find` per runbook row and
   uses an LLM equivalence judge to score whether each known indication surfaced
@@ -79,6 +79,6 @@ read against `runbook.xt`. Outputs go to `results/holdout_validation/`.
 
 ### validation/ data files
 
-- **runbook.xt** — CSV (`drug,indication,date`) of known approvals; input for
+- **runbook.txt** — CSV (`drug,indication,date`) of known approvals; input for
   `run_validation.py` and `probe_rank.py`.
 - **drug_approvals.json** — Per-drug `{disease, approved}` approval records.

@@ -51,7 +51,7 @@ from indication_scout.services.llm import query_llm, strip_markdown_fences  # no
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("validation")
-RUNBOOK = VALIDATION_DIR / "runbook.xt"
+RUNBOOK = VALIDATION_DIR / "runbook.txt"
 REPORTS_DIR = PROJECT_ROOT / "results" / "holdout_validation"
 RESULTS = REPORTS_DIR / "validation_results.md"
 HOLDOUTS_DIR = PROJECT_ROOT / "snapshots" / "holdouts"
@@ -90,7 +90,7 @@ Reply with ONLY a JSON object, no prose:
 
 
 def read_runbook(start: int = 0, count: int | None = None) -> list[dict[str, str]]:
-    """Parse runbook.xt into a list of {drug, indication, date} rows.
+    """Parse runbook.txt into a list of {drug, indication, date} rows.
 
     start: 0-based index of the first data row to include.
     count: number of rows from start (None = to end).

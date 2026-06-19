@@ -62,3 +62,22 @@ everolimus,prevention of organ rejection in liver transplant,2012-05-15
 everolimus,TSC-associated partial-onset seizures,2017-07-10
 methotrexate,benign prostatic hyperplasia,1992-03-31
 methotrexate,male pattern hair loss,1997-03-31
+minoxidil,hypertension,1979-10-22
+minoxidil,androgenetic alopecia,1988-08-18
+thalidomide,morning sickness,1957-10-01
+thalidomide,erythema nodosum leprosum,1998-07-16
+thalidomide,multiple myeloma,2006-05-25
+finasteride,benign prostatic hyperplasia,1992-06-19
+finasteride,androgenetic alopecia,1997-12-22
+rituximab,non-hodgkin lymphoma,1997-11-26
+rituximab,rheumatoid arthritis,2006-02-28
+rituximab,pemphigus vulgaris,2018-06-07
+topiramate,epilepsy,1996-12-24
+topiramate,migraine prophylaxis,2004-08-12
+topiramate,alcohol dependence,2007-10-10
+empagliflozin,type 2 diabetes mellitus,2014-08-01
+empagliflozin,heart failure with reduced ejection fraction,2021-08-18
+empagliflozin,chronic kidney disease,2023-09-22
+baricitinib,rheumatoid arthritis,2018-05-31
+baricitinib,severe covid-19 hospitalization,2022-05-10
+baricitinib,alopecia areata,2022-06-13
