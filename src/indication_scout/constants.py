@@ -449,22 +449,6 @@ CURATED_FDA_COMBINATION_ONLY_CANDIDATES: dict[str, list[str]] = {
     "bupropion": ["obesity"],
 }
 
-
-# STOPGAP: curated NCT ids to force-classify as "contaminated" in the clinical-trials
-# relevance gate, regardless of the LLM verdict. Needed because CT.gov's
-# AREA[ConditionMeshTerm] filter matches a trial via its MeSH ANCESTORS too, so a broad
-# umbrella query (e.g. "mood disorder") pulls in trials whose DIRECT condition is an
-# approved sub-indication (e.g. Seasonal Affective Disorder, a child of Mood Disorders).
-# The proper fix is dropping ancestor-only matches in clinical_trials._mesh_cond; until
-# then, exclude specific known-contaminating NCTs here. Keyed by NCT id.
-CURATED_CONTAMINATED_NCTS: frozenset[str] = frozenset(
-    {
-        # "Prevention of Seasonal Affective Disorder" — SAD is an APPROVED bupropion
-        # indication; it surfaced under the "mood disorder" candidate via MeSH ancestry.
-        "NCT00046241",
-    }
-)
-
 # -- Supervisor: mechanism-sourced candidate threshold -----------------------
 # Minimum Open Targets overall_score for a mechanism-surfaced disease
 # association to be promoted into the supervisor's investigation allowlist.

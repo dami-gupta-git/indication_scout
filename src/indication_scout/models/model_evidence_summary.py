@@ -15,9 +15,11 @@ class EvidenceSummary(BaseModel):
     # Whether the strength/direction above grade evidence FOR THIS DRUG or only for other drugs
     # in the same class. Set by the isolated judge_literature_strength call (authoritative).
     # "class_level" means the disease-relevant RCTs are for sibling drugs, not this one — the
-    # strength is then NOT "strong" (services/literature_strength.py). Renderers surface the
-    # basis so a card never claims "strong, RCT-backed" for class-level-only evidence.
-    evidence_basis: Literal["drug_specific", "class_level", "none"] = "none"
+    # strength is then NOT "strong" (services/literature_strength.py). "approved" means the only
+    # relevant this-drug evidence studies an APPROVED sub-indication of a broad candidate (already
+    # approved, not repurposing) — strength is also forced to none. Renderers surface the basis so
+    # a card never claims "strong, RCT-backed" for class-level-only or already-approved evidence.
+    evidence_basis: Literal["drug_specific", "approved", "class_level", "none"] = "none"
     # True when the relevant evidence includes at least one RCT/controlled trial, False when
     # it is purely observational, None when undetermined (no-data). Lets the supervisor avoid
     # calling RCT-backed evidence "observational". None stays None (no default coercion).

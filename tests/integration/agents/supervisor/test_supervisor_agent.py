@@ -223,6 +223,20 @@ async def test_semaglutide_sibling_kept_and_contaminated_labels(supervisor_agent
     assert nafld is not None, "NAFLD must be kept as a candidate, not dropped"
     assert nafld.approval_relationship == "contaminated"
 
+    # Approval-aware relevance (severity-qualifier rule): semaglutide's approval is "MASH with
+    # fibrosis". A NASH trial/paper is the approved sub-indication (the fibrosis qualifier is
+    # stripped), so it must be EXCLUDED from the broad NAFLD candidate's evidence — keeping the
+    # trial gate and the literature judge consistent (they previously disagreed run-to-run).
+    # Literature: NASH/MASH papers are the only relevant ones here, so the broad candidate grades
+    # evidence_basis "approved" (no genuinely-broader NAFLD repurposing evidence).
+    assert nafld.literature is not None
+    assert nafld.literature.evidence_summary is not None
+    assert nafld.literature.evidence_summary.evidence_basis == "approved"
+    # Trials: the pivotal NASH Phase 3 (NCT04822181) is the approved sub-indication → contaminated,
+    # so it does NOT credit the broad NAFLD candidate with Phase 3 maturity.
+    assert nafld.clinical_trials is not None
+    assert "NCT04822181" in set(nafld.clinical_trials.contaminated_nct_ids)
+
     # Approved indications (T2DM, obesity) must NOT appear as kept findings — dropped upstream.
     assert _find_finding(output, "type 2 diabetes") is None
     assert _find_finding(output, "obesity") is None

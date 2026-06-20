@@ -115,7 +115,7 @@ ReAct-style agents.
 ### Supervisor (`agents/supervisor/`)
 
 `build_supervisor_agent(llm, svc, db, date_before)` returns
-`(compiled_agent, get_merged_allowlist, get_auto_findings)`. The supervisor wraps each
+`(compiled_agent, get_merged_allowlist, get_auto_findings, get_approval_labels)`. The supervisor wraps each
 sub-agent as a tool and orchestrates the run via a gated ReAct loop
 (`build_gated_react_loop`). After the loop finishes, `run_supervisor_agent` walks the
 message history, canonicalises disease names against the merged competitor + mechanism
@@ -177,6 +177,7 @@ SupervisorOutput
  |-- disease_findings: list[CandidateFindings]   # top_diseases first (rank order), then the rest
  |        |-- disease: str
  |        |-- source: "competitor" | "mechanism" | "both"
+ |        |-- approval_relationship: "contaminated" | "combination_only" | "none"  # label-grounded, set upstream
  |        |-- literature: LiteratureOutput | None
  |        |-- clinical_trials: ClinicalTrialsOutput | None
  |        +-- blurb: CandidateBlurb | None        # structured per-candidate synthesis (top 5 only)
@@ -631,6 +632,83 @@ ApprovalCheck
 `is_approved` is True when the indication appears on a current FDA label for any known name
 of the drug. `label_found` distinguishes "no label exists for this drug in openFDA" (e.g.
 withdrawn drugs) from "label exists but indication not present".
+
+---
+
+## Approval-Relationship Labeling
+
+A repurposing candidate's relationship to the drug's existing FDA approvals is decided **once,
+upstream, from the FDA label** — never authored by an LLM blurb — and threaded down to every layer
+that consumes it. The contract is a four-way `ApprovalLabel` (`services/approval_check.py`):
+
+| Label | Meaning | Disposition |
+|-------|---------|-------------|
+| `approved` | Drug is already approved for this exact indication | **Dropped** upstream; never reaches findings |
+| `combination_only` | Approved for this disease ONLY as a fixed-dose combination product, never as monotherapy | **Demoted** — not a monotherapy repurposing lead |
+| `contaminated` | A real, broader repurposing target whose trial/literature counts are polluted by an approved narrower subset | **Kept and ranked**, but trial tables suppressed |
+| `none` | No relationship to an approved indication | **Kept**, clean signal |
+
+`get_fda_approved_disease_mapping(drug_name, candidate_diseases)` returns one `ApprovalLabel` per
+candidate via a two-tier lookup:
+
+1. **Curated short-circuit** — exact, case-sensitive match against the drug's curated lists in
+   `constants.py` (`CURATED_FDA_APPROVED_CANDIDATES`, `CURATED_FDA_COMBINATION_ONLY_CANDIDATES`,
+   `CURATED_FDA_CONTAMINATED_CANDIDATES`, `CURATED_FDA_REJECTED_CANDIDATES`). Skips the LLM. Used
+   where the bare disease term mis-leads the label-grounded LLM (e.g. `sotorasib` × colorectal
+   cancer is approved only for KRAS-G12C mCRC → `contaminated`; `bupropion` × obesity is approved
+   only as Contrave → `combination_only`).
+2. **LLM fallback** — remaining candidates: the drug is expanded to all ChEMBL aliases, all matching
+   openFDA labels are fetched, and the candidates are batched into one label-grounded LLM call.
+
+Labels are cached per-drug (`cache/fda_drug_disease_approval/`, one file per drug, per-disease TTL).
+`_coerce_label` validates every value from both the LLM-parse and the cache loader — an invalid or
+legacy (bool-shaped) value is **skipped, never silently coerced**. Any failure (ChEMBL, FDA fetch,
+LLM parse) defaults a candidate to `none` so a failure can never *drop* a candidate.
+
+### Threading the label down
+
+- **Supervisor level.** `get_fda_approved_disease_mapping` runs inside `supervisor_tools.py` during
+  candidate surfacing. `approved` candidates are dropped immediately. `contaminated` /
+  `combination_only` labels are buffered in a `{lowercase_disease: label}` map exposed via
+  `get_approval_labels()`. After the ReAct loop, `run_supervisor_agent` sets
+  `CandidateFindings.approval_relationship` from this map (matching on both the canonical and the
+  finding's own disease string) — **not** from any LLM-authored field. The approval relationship was
+  removed from `CandidateBlurb` entirely; the model never decides it.
+- **Trial level (current).** A `contaminated` candidate has its trial tables suppressed in
+  `format_report.py` (the verbatim total counts stay, but the example trial list is replaced with
+  "overlaps an approved related indication and cannot be cleanly separated"). This suppression is
+  report-rendering only — the underlying per-trial relevance gate does **not** yet know which
+  subtypes are approved (see Planned, below).
+
+### Planned: approval-aware relevance at the trial & literature level
+
+The contamination fact is currently known at the drug-disease level but does **not** yet reach the
+per-trial / per-paper relevance checks — so an approved sub-indication's trial or paper can still
+count as repurposing evidence for the broader candidate. The root mechanism is that CT.gov's
+`AREA[ConditionMeshTerm]` filter matches via MeSH **ancestors**, so a broad umbrella query (e.g.
+"mood disorder") pulls in trials whose direct condition is an approved child (e.g. Seasonal
+Affective Disorder, a child of Mood Disorders).
+
+`PLAN_approval_aware_relevance.md` threads the drug's **approved-indication list** (already
+collected in the supervisor store as `entry["approved_indications"]`, fully seeded before fan-out)
+into both relevance checks. Both prompt rules are harness-validated (11/11 each on the trials and
+literature harnesses in `scratch/`, including a list-on/list-off control proving the exclusion is
+list-driven, not model-invented):
+
+- the **clinical-trials relevance gate** (`prompts/clinical_trials.txt`) — an ordered first-match
+  test: TEST 1 a trial whose condition IS an approved indication (or a narrower form of one) →
+  CONTAMINATION, overriding the "narrower subtype rolls up" rule; TEST 2 distinct-disease /
+  wrong-drug → CONTAMINATION; TEST 3 otherwise → RELEVANT. Replaces the removed
+  `CURATED_CONTAMINATED_NCTS` hardcode with a general rule.
+- the **literature strength judge** (`judge_literature_strength`) — a paper studying the drug for an
+  approved sub-indication is `evidence_basis="approved"` (strength capped at weak/none, direction
+  none), excluded from the broader candidate's signal.
+
+Deliberately **not** excluded (these roll up as relevant): *siblings* of an approved indication
+(T1DM vs approved T2DM) and trials/papers *broader* than a minority-biomarker approval (all-comers
+NSCLC vs approved EGFR-mutated NSCLC). This is the accuracy-over-coverage principle applied at the
+evidence layer: an approved sub-indication's evidence must not prop up the broader repurposing
+candidate, but genuinely-broader or sibling evidence still counts.
 
 ---
 

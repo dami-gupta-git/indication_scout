@@ -27,11 +27,15 @@ def build_literature_tools(
     svc: RetrievalService,
     db: Session,
     date_before: date | None = None,
+    approved_indications: list[str] | None = None,
 ) -> list:
     """Build tools that share data via a closure-scoped store dict.
 
     Tools write to the store themselves as a side effect, so subsequent tools can read prior results
     without the LLM passing them around.
+
+    `approved_indications` is the drug's FDA-approved indication list, threaded into synthesize so
+    the strength judge can exclude papers about an approved sub-indication of a broad candidate.
     """
 
     store: dict = {}
@@ -132,6 +136,7 @@ def build_literature_tools(
             chembl_id,
             disease_name,
             abstracts,
+            approved_indications=approved_indications,
         )
         logger.warning(
             "[TIMING] synthesize %s: %.1fs", disease_name, time.perf_counter() - _t0

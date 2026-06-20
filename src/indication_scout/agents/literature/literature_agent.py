@@ -29,12 +29,18 @@ def build_literature_agent(
     svc,
     db,
     date_before=None,
+    approved_indications=None,
 ):
-    """Return a compiled ReAct agent. No graph wiring required."""
+    """Return a compiled ReAct agent. No graph wiring required.
+
+    `approved_indications` is the drug's FDA-approved indication list, forwarded to the synthesize
+    tool so the strength judge can exclude approved-sub-indication papers from a broad candidate.
+    """
     tools = build_literature_tools(
         svc,
         db,
         date_before=date_before,
+        approved_indications=approved_indications,
     )
     return create_react_agent(
         model=llm,

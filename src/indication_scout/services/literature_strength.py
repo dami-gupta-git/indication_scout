@@ -28,7 +28,7 @@ from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
-_BASIS_VALUES = ("drug_specific", "class_level", "none")
+_BASIS_VALUES = ("drug_specific", "approved", "class_level", "none")
 _STRENGTH_VALUES = ("strong", "moderate", "weak", "none")
 _DIRECTION_VALUES = ("supports", "contradicts", "mixed", "none")
 
@@ -37,6 +37,7 @@ evidence for repurposing ONE drug to treat ONE disease, using ONLY the abstracts
 
 Drug: {drug}
 Disease: {disease}
+Drug's FDA-approved indications: {approved_indications}
 
 CRITICAL — strength and direction grade evidence for THIS EXACT DRUG only:
 - An abstract about a DIFFERENT drug — even one in the same mechanistic class (e.g. another GLP-1
@@ -47,9 +48,29 @@ CRITICAL — strength and direction grade evidence for THIS EXACT DRUG only:
   that the drug TREATS this disease. It does not support the repurposing hypothesis. Set
   evidence_basis="none" in that case (there is no relevant evidence for treating this disease),
   even though the abstracts are about this drug and mention this disease.
+- APPROVED-INDICATION EXCLUSION: the candidate disease may be a BROAD term that includes one of
+  the drug's APPROVED indications listed above (e.g. candidate "mood disorder" includes approved
+  "major depressive disorder"). An abstract studying THIS DRUG for an APPROVED sub-indication is
+  ALREADY-APPROVED evidence, NOT evidence for repurposing the drug to the broader candidate — do
+  NOT count it toward strength/direction. Only abstracts about the candidate's NON-approved scope
+  (e.g. bipolar disorder, dysthymia for "mood disorder") count as repurposing evidence.
+  SEVERITY/STAGE QUALIFIER: ignore a severity/stage/biomarker QUALIFIER on the approved indication
+  when matching — it does NOT create a separable disease. If the approval is "X with
+  <severity/stage>" (e.g. "MASH with moderate-to-advanced fibrosis"), an abstract about the bare
+  disease X or its near-synonyms (e.g. "NASH"/"steatohepatitis") IS the approved sub-indication and
+  is EXCLUDED. Example: approved "MASH (NASH) with fibrosis"; candidate "NAFLD" -> abstracts on
+  "NASH"/"MASH"/"steatohepatitis" are EXCLUDED (approved); only abstracts on the broad
+  NAFLD/simple-steatosis spectrum count as repurposing evidence.
+  SIBLINGS of an approved indication (e.g. type 1 diabetes vs approved type 2 diabetes), and
+  evidence BROADER than a MINORITY-BIOMARKER approval (e.g. all-comers NSCLC vs approved
+  EGFR-mutated NSCLC, biomarker ~10-15%) are NOT approved sub-indications — they count as
+  repurposing evidence. (A severity grade is NOT a minority biomarker: "NASH" is the approved
+  disease, not a broad parent of it.)
 - evidence_basis:
   - "drug_specific": at least one abstract reports clinical/preclinical evidence for THIS drug
-    used to TREAT THIS disease.
+    used to TREAT THIS disease in the candidate's NON-approved scope.
+  - "approved": the only relevant this-drug evidence studies an APPROVED sub-indication of the
+    broad candidate; there is no repurposing evidence for the candidate's uncovered scope.
   - "class_level": the disease-relevant evidence is for OTHER drugs in the class; there is no
     direct evidence for this drug in this disease.
   - "none": no relevant evidence for treating this disease with this drug — neither drug-specific
@@ -57,7 +78,7 @@ CRITICAL — strength and direction grade evidence for THIS EXACT DRUG only:
     population (the therapeutic-intent case above).
 - strength grades DRUG-SPECIFIC evidence quantity/quality only:
   - "strong": multiple drug-specific clinical studies (RCTs, large cohorts) for THIS drug in THIS
-    disease. NEVER "strong" when evidence_basis is "class_level" or "none".
+    disease. NEVER "strong" when evidence_basis is "approved", "class_level", or "none".
   - "moderate": small drug-specific clinical studies, case series, or strong drug-specific
     preclinical data.
   - "weak": drug-specific case reports only, or drug-specific in-vitro/animal data only.
@@ -72,7 +93,7 @@ Abstracts:
 {abstracts}
 
 Respond with ONLY a JSON object:
-{{"evidence_basis": "drug_specific"|"class_level"|"none", \
+{{"evidence_basis": "drug_specific"|"approved"|"class_level"|"none", \
 "strength": "strong"|"moderate"|"weak"|"none", \
 "direction": "supports"|"contradicts"|"mixed"|"none", \
 "is_observational": true|false|null, "reason": "<one short sentence>"}}"""
@@ -97,29 +118,68 @@ class LiteratureStrength:
 
     strength: Literal["strong", "moderate", "weak", "none"]
     direction: Literal["supports", "contradicts", "mixed", "none"]
-    evidence_basis: Literal["drug_specific", "class_level", "none"]
+    evidence_basis: Literal["drug_specific", "approved", "class_level", "none"]
     is_observational: bool | None
+
+
+def _extract_json_object(text: str) -> dict | None:
+    """Return the JSON object from an LLM response, or None.
+
+    Tolerant of (a) ```json fences and (b) reasoning prose emitted BEFORE the JSON — the model
+    sometimes explains its grade first, which broke the old fence-split (it grabbed the prose
+    segment). We try a direct parse, then the fenced block, then the LAST balanced {...} block.
+    """
+    stripped = text.strip()
+    # 1) direct
+    try:
+        obj = json.loads(stripped)
+        return obj if isinstance(obj, dict) else None
+    except json.JSONDecodeError:
+        pass
+    # 2) ```json ... ``` fence (take the segment AFTER a json fence marker if present)
+    if "```" in stripped:
+        parts = stripped.split("```")
+        for seg in parts:
+            seg = seg.strip()
+            if seg.lower().startswith("json"):
+                seg = seg[4:].strip()
+            try:
+                obj = json.loads(seg)
+                if isinstance(obj, dict):
+                    return obj
+            except json.JSONDecodeError:
+                continue
+    # 3) last balanced {...} block anywhere in the text
+    end = stripped.rfind("}")
+    if end != -1:
+        depth = 0
+        for i in range(end, -1, -1):
+            if stripped[i] == "}":
+                depth += 1
+            elif stripped[i] == "{":
+                depth -= 1
+                if depth == 0:
+                    try:
+                        obj = json.loads(stripped[i : end + 1])
+                        return obj if isinstance(obj, dict) else None
+                    except json.JSONDecodeError:
+                        return None
+    return None
 
 
 def _parse_strength(text: str) -> LiteratureStrength | None:
     """Extract the judgment from the LLM JSON. None on parse failure or an out-of-enum value
     (caller keeps the synthesize values as fallback — never fabricates a stronger grade).
     """
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        parts = stripped.split("```")
-        if len(parts) >= 2:
-            stripped = parts[1]
-            if stripped.lower().startswith("json"):
-                stripped = stripped[4:]
-            stripped = stripped.strip()
+    data = _extract_json_object(text)
+    if data is None:
+        return None
     try:
-        data = json.loads(stripped)
         basis = data.get("evidence_basis")
         strength = data.get("strength")
         direction = data.get("direction")
         is_obs = data.get("is_observational")
-    except (json.JSONDecodeError, AttributeError):
+    except AttributeError:
         return None
     if (
         basis not in _BASIS_VALUES
@@ -151,19 +211,30 @@ async def judge_literature_strength(
     drug: str,
     indication: str,
     cache_dir: Path,
+    approved_indications: list[str] | None = None,
 ) -> LiteratureStrength | None:
     """Return the DRUG-SPECIFIC strength/direction/basis for the abstract set, or None.
 
     `abstracts` are the same top abstracts synthesize sees (dicts with pmid/title/abstract).
+    `approved_indications` is the drug's FDA-approved indication list; a paper about an APPROVED
+    sub-indication of a broad candidate is graded evidence_basis="approved" (excluded from
+    repurposing strength), not drug_specific. Empty/None → the exclusion never fires.
     Returns None when there are no abstracts, or on a parse failure (the caller keeps the
     existing synthesize values rather than fabricating). Cached on the sorted PMID set + drug +
-    indication (PMIDs are stable; mirrors synthesize's own cache key) under JUDGMENT_CACHE_TTL.
+    indication + sorted approved set (the same PMIDs grade differently under different approved
+    lists, so the approved set MUST be in the key) under JUDGMENT_CACHE_TTL.
     """
     if not abstracts:
         return None
 
+    approved = sorted({i.strip() for i in (approved_indications or []) if i.strip()})
     pmids = sorted(str(a.get("pmid", "")) for a in abstracts)
-    cache_params = {"drug": drug, "indication": indication, "pmids": pmids}
+    cache_params = {
+        "drug": drug,
+        "indication": indication,
+        "pmids": pmids,
+        "approved_indications": approved,
+    }
     cached = cache_get("literature_strength", cache_params, cache_dir)
     if isinstance(cached, dict) and cached.get("evidence_basis") in _BASIS_VALUES:
         return LiteratureStrength(
@@ -174,7 +245,10 @@ async def judge_literature_strength(
         )
 
     prompt = _LITERATURE_STRENGTH_PROMPT.format(
-        drug=drug, disease=indication, abstracts=_format_abstracts(abstracts)
+        drug=drug,
+        disease=indication,
+        approved_indications=", ".join(approved) if approved else "(none)",
+        abstracts=_format_abstracts(abstracts),
     )
     response = await query_llm(prompt)
     judgment = _parse_strength(response)

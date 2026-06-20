@@ -65,6 +65,7 @@ async def run_clinical_trials_agent(
     drug_name: str,
     disease_name: str,
     first_approval: int | None = None,
+    approved_indications: list[str] | None = None,
 ) -> ClinicalTrialsOutput:
     """Invoke the agent and assemble a ClinicalTrialsOutput from the run.
 
@@ -72,13 +73,26 @@ async def run_clinical_trials_agent(
     to the agent so its closure judgment can tell "old/generic drug, no new NDA expected"
     (no-approval is not failure) from a genuine negative. When None, the literal "unknown"
     is passed — never a default year (CLAUDE.md no-fallback).
+
+    `approved_indications` is the drug's FDA-approved indications (from the supervisor store).
+    Rendered into the task so the relevance gate's TEST 1 can mark a trial whose condition is an
+    approved sub-indication of a broad candidate as CONTAMINATION. Empty/None renders "(none)",
+    which disables TEST 1 (no behavior change for non-contaminated candidates).
     """
     approval_line = (
         f"first_approval (year first approved anywhere): {first_approval}"
         if first_approval is not None
         else "first_approval (year first approved anywhere): unknown"
     )
-    task = f"Analyze {drug_name} in {disease_name}\n" f"DRUG FACT — {approval_line}"
+    approved_line = (
+        "FDA-approved indications of this drug: "
+        + (", ".join(approved_indications) if approved_indications else "(none)")
+    )
+    task = (
+        f"Analyze {drug_name} in {disease_name}\n"
+        f"DRUG FACT — {approval_line}\n"
+        f"DRUG FACT — {approved_line}"
+    )
     _agent_t0 = time.perf_counter()
     result = await agent.ainvoke({"messages": [HumanMessage(content=task)]})
     _agent_elapsed = time.perf_counter() - _agent_t0

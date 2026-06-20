@@ -763,6 +763,7 @@ class RetrievalService:
         disease: str,
         top_abstracts: list[AbstractResult],
         holdout_mode: bool = False,
+        approved_indications: list[str] | None = None,
     ) -> EvidenceSummary:
         """Summarize PubMed evidence for a drug-disease pair using an LLM.
 
@@ -844,12 +845,21 @@ class RetrievalService:
                 drug=pref_name,
                 indication=disease,
                 cache_dir=self.cache_dir,
+                approved_indications=approved_indications,
             )
             if ls is not None:
                 summary.strength = ls.strength
                 summary.direction = ls.direction
                 summary.is_observational = ls.is_observational
                 summary.evidence_basis = ls.evidence_basis
+            else:
+                # Judge returned None (parse failure / no abstracts) — its strength cap never ran.
+                # synthesize already graded THIS drug's evidence, so keep its strength/direction but
+                # force evidence_basis to agree so the rendered card can't show the contradictory
+                # state basis="none" + strength="strong" (which surfaced when the judge's JSON had
+                # reasoning before it and failed to parse). The renderer keys the headline off
+                # evidence_basis, so this keeps the two halves consistent without fabricating.
+                summary.evidence_basis = "drug_specific"
 
         cache_set(
             "synthesize",

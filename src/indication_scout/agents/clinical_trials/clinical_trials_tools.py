@@ -9,7 +9,7 @@ from indication_scout.agents._trial_formatting import (
     _phase_distribution,
 )
 from indication_scout.config import get_settings
-from indication_scout.constants import CURATED_CONTAMINATED_NCTS, DEFAULT_CACHE_DIR
+from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
@@ -572,9 +572,10 @@ def build_clinical_trials_tools(
         - verdicts: one entry PER trial shown to you — across the search, completed, AND
           terminated scopes — each a dict {"nct": "<NCT id>", "verdict": "relevant" |
           "contaminated"}. You MUST classify EVERY shown trial — omit none. "relevant" =
-          studies this drug for THIS exact indication (a narrower subtype rolls up).
-          "contaminated" = a DISTINCT disease (e.g. pulmonary vs systemic hypertension) or a
-          different drug's trial.
+          studies this drug for THIS exact indication (a narrower NON-approved subtype rolls up).
+          "contaminated" = the condition is an APPROVED indication of this drug (or a narrower form
+          of one) — already-approved evidence, not repurposing; OR a DISTINCT disease (e.g.
+          pulmonary vs systemic hypertension); OR a different drug's trial.
         - relevance_reasoning: 1-2 sentences justifying the split.
 
         Do NOT write a prose summary — the trial-section prose is authored separately after
@@ -628,18 +629,6 @@ def build_clinical_trials_tools(
             for v in verdicts
             if v.get("verdict") == "contaminated" and v.get("nct")
         ]
-        # STOPGAP override: force curated NCTs to contaminated regardless of the LLM verdict.
-        # These slip in via CT.gov MeSH-ancestor matching (e.g. an approved-SAD trial under a
-        # "mood disorder" query). See constants.CURATED_CONTAMINATED_NCTS.
-        forced = CURATED_CONTAMINATED_NCTS.intersection(relevant_ncts)
-        if forced:
-            relevant_ncts = [n for n in relevant_ncts if n not in forced]
-            contaminated_ncts = list(dict.fromkeys(contaminated_ncts + sorted(forced)))
-            logger.info(
-                "[TOOL] finalize_analysis: forced %d curated NCT(s) to contaminated: %s",
-                len(forced),
-                sorted(forced),
-            )
         artifact = FinalizeClinicalTrialsArtifact(
             relevant_ncts=relevant_ncts,
             contaminated_ncts=contaminated_ncts,

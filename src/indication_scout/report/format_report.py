@@ -78,6 +78,11 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
                 "**Evidence strength:** class-level signal "
                 "(no direct evidence for this drug)"
             )
+        elif es.evidence_basis == "approved":
+            strength_line = (
+                "**Evidence strength:** evidence is for an already-approved "
+                "sub-indication (not repurposing)"
+            )
         else:
             strength_line = f"**Evidence strength:** {es.strength}"
             if es.direction != "none":
@@ -108,21 +113,11 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
     return "\n".join(lines)
 
 
-# Relationships where the trial/literature artifacts are contaminated by an approved subtype
-# the registry pulls in (e.g. PAH under a "Hypertension" search) and the subtype cannot be
-# cleanly separated. The example trial tables are suppressed for these — a curated-looking list
-# is misleading when most of it is the approved subtype's trials. Set UPSTREAM by the FDA
-# approval-relationship check (CandidateFindings.approval_relationship), not by the LLM.
-_CONTAMINATED_RELATIONSHIPS = frozenset({"contaminated"})
-
-
 def _fmt_clinical_trials(
     ct: ClinicalTrialsOutput,
     indication: str = "",
-    approval_relationship: str = "",
 ) -> str:
     lines: list[str] = []
-    suppress_trial_tables = approval_relationship in _CONTAMINATED_RELATIONSHIPS
 
     # Authoritative development-stage line — the SINGLE source of the phase-tier judgment
     # (from judge_dev_stage). The CT sub-agent prose describes trials but must NOT judge the
@@ -167,28 +162,14 @@ def _fmt_clinical_trials(
                 "- _Whitespace: no trials found for this drug × indication pair._"
             )
 
-    # Rendered example trials skip contamination (trials the CT agent judged a different
-    # indication pulled in by the recall-first search). The total_count headers stay verbatim
-    # per the broader_distinct rule — only the listed examples are filtered.
+    # Rendered example trials skip contamination — the per-trial relevance gate (including the
+    # approval-aware TEST 1) already tagged approved-sub-indication / different-indication trials
+    # as contaminated_nct_ids, so the filtered `shown` list below is clean for THIS candidate even
+    # when the candidate is approval-relationship "contaminated". (We no longer blanket-suppress the
+    # whole table for contaminated candidates — that discarded the trials the gate had already
+    # cleanly isolated. The total_count header stays verbatim; only contaminated examples are
+    # filtered, and `_trial_count_clause` discloses the gap.)
     contaminated = set(ct.contaminated_nct_ids)
-
-    if suppress_trial_tables:
-        # Show the verbatim total but no example list — the artifact is dominated by the
-        # approved subtype's trials and cannot be cleanly filtered to this indication.
-        if ct.completed:
-            lines.append(
-                f"\n**Completed trials ({ct.completed.total_count} total):** "
-                "not listed — the trial record overlaps an approved related "
-                "indication and cannot be cleanly separated for this candidate."
-            )
-        if ct.terminated and ct.terminated.total_count:
-            lines.append(
-                f"\n**Terminated trials ({ct.terminated.total_count}):** "
-                "not listed — the trial record overlaps an approved related indication."
-            )
-        if not lines:
-            lines.append("_No clinical trials data available._")
-        return "\n".join(lines)
 
     if ct.completed:
         c = ct.completed
@@ -490,12 +471,10 @@ def format_report(output: SupervisorOutput) -> str:
                 ]
 
             if finding.clinical_trials:
-                # Suppression keys off the label-grounded typed field, NOT LLM prose.
-                rel = finding.approval_relationship
                 lines += [
                     "#### Clinical Trials",
                     "",
-                    _fmt_clinical_trials(finding.clinical_trials, finding.disease, rel),
+                    _fmt_clinical_trials(finding.clinical_trials, finding.disease),
                     "",
                 ]
 

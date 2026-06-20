@@ -70,6 +70,11 @@ def _literature_oneliner(es) -> str:
     # class_level in the parser, so the ranking path also sees no drug strength here.
     if getattr(es, "evidence_basis", "none") == "class_level":
         return "class-level signal (no direct evidence for this drug)"
+    # approved = the only relevant this-drug evidence studies an APPROVED sub-indication of this
+    # broad candidate (already-approved, not repurposing). Strength/direction are forced to "none"
+    # for this basis too, so the ranking path sees no repurposing strength here.
+    if getattr(es, "evidence_basis", "none") == "approved":
+        return "evidence is for an already-approved sub-indication (not repurposing)"
     design = (
         "RCT-backed / controlled"
         if es.is_observational is False
@@ -750,10 +755,19 @@ def build_supervisor_tools(
         # safe for concurrent use — sharing one across the fan-out parks a connection in
         # an open transaction nothing advances (flat CPU / idle Postgres hang). Each call
         # checks out its own Session and closes it here.
+        # Read the drug's approved-indication list as a LITERAL here (not a deferred closure):
+        # find_candidates has already seeded it before any fan-out, so it is complete. Threaded
+        # into the literature agent so judge_literature_strength excludes papers about an approved
+        # sub-indication of this (possibly broad) candidate.
+        approved_indications = list(_ensure_drug_entry(drug_name)["approved_indications"])
         _t0 = time.perf_counter()
         with session_factory() as call_db:
             lit_agent = build_literature_agent(
-                llm=llm, svc=svc, db=call_db, date_before=date_before
+                llm=llm,
+                svc=svc,
+                db=call_db,
+                date_before=date_before,
+                approved_indications=approved_indications,
             )
             output = await run_literature_agent(lit_agent, drug_name, disease_name)
         logger.warning(
@@ -836,8 +850,16 @@ def build_supervisor_tools(
         ct_agent = build_clinical_trials_agent(
             llm=llm, date_before=date_before, assigned_indication=disease_name
         )
+        # Approved indications fully seeded by find_candidates before fan-out (label-grounded;
+        # see PLAN_approval_aware_relevance.md §A). Threaded into the task so the relevance gate's
+        # TEST 1 treats an approved sub-indication's trial as contamination, not roll-up evidence.
+        ct_approved = list(_ensure_drug_entry(drug_name)["approved_indications"])
         output = await run_clinical_trials_agent(
-            ct_agent, drug_name, disease_name, first_approval=first_approval
+            ct_agent,
+            drug_name,
+            disease_name,
+            first_approval=first_approval,
+            approved_indications=ct_approved,
         )
         logger.warning(
             "[TIMING] clinical_trials %s: %.1fs",

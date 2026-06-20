@@ -164,3 +164,34 @@ async def test_judge_cache_key_is_pmid_order_independent(tmp_path):
         await judge_literature_strength(a, drug="d", indication="i", cache_dir=tmp_path)
         await judge_literature_strength(b, drug="d", indication="i", cache_dir=tmp_path)
     assert mock.await_count == 1
+
+
+def test_parse_strength_approved_forces_none_strength_and_direction():
+    """The new 'approved' basis (paper studies an approved sub-indication) carries no repurposing
+    strength, even if the model returns one — same enforced invariant as class_level/none."""
+    s = _parse_strength(
+        '{"evidence_basis": "approved", "strength": "strong", '
+        '"direction": "supports", "is_observational": true}'
+    )
+    assert s.evidence_basis == "approved"
+    assert s.strength == "none"
+    assert s.direction == "none"
+    assert s.is_observational is True
+
+
+async def test_judge_cache_key_includes_approved_indications(tmp_path):
+    """The same PMID set under DIFFERENT approved lists must not collide — the approved set is
+    part of the cache key, so each list triggers its own LLM call."""
+    mock = AsyncMock(return_value=_OK)
+    with patch("indication_scout.services.literature_strength.query_llm", new=mock):
+        await judge_literature_strength(
+            _ABS, drug="d", indication="i", cache_dir=tmp_path, approved_indications=[]
+        )
+        await judge_literature_strength(
+            _ABS,
+            drug="d",
+            indication="i",
+            cache_dir=tmp_path,
+            approved_indications=["major depressive disorder"],
+        )
+    assert mock.await_count == 2

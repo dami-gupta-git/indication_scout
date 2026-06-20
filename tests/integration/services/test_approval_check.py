@@ -7,31 +7,9 @@ from indication_scout.data_sources.fda import FDAClient
 from indication_scout.services import approval_check
 from indication_scout.services.approval_check import (
     extract_approved_from_labels,
-    get_all_fda_approved_diseases,
     get_fda_approved_disease_mapping,
     list_approved_indications_from_labels,
 )
-
-
-async def test_semaglutide_NASH(test_cache_dir):
-
-    result = await get_all_fda_approved_diseases(
-        drug_names=["semaglutide"],
-        cache_dir=test_cache_dir,
-    )
-
-    assert result
-
-
-# TODO delete
-async def test_semaglutide(test_cache_dir):
-
-    result = await get_all_fda_approved_diseases(
-        drug_names=["semaglutide"],
-        cache_dir=test_cache_dir,
-    )
-
-    assert result
 
 
 @pytest.mark.parametrize(

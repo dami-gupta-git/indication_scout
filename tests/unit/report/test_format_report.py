@@ -284,39 +284,41 @@ def test_fmt_clinical_trials_terminated_skips_contaminated_examples():
     assert "NCT01392638" in table
 
 
-def test_fmt_clinical_trials_contaminated_suppresses_trial_tables():
-    # Hypertension labeled "contaminated" upstream (PAH is the approved related indication). The
-    # artifact is dominated by PAH trials that can't be cleanly filtered, so example tables are
-    # suppressed while the verbatim total_count is still reported.
+def test_fmt_clinical_trials_filters_contaminated_examples_but_lists_relevant():
+    # No more whole-table suppression for contaminated candidates: the per-trial relevance gate
+    # already tagged the contaminated NCTs (contaminated_nct_ids), so the renderer filters those
+    # examples but STILL lists the relevant trial and reports the verbatim total. (Hypertension:
+    # the PAH trial is contaminated; a real systemic-HTN trial is kept.)
     pah = Trial(
         nct_id="NCT00323297",
         title="Sildenafil + Bosentan in PAH",
         phase="Phase 4",
         overall_status="Completed",
     )
+    systemic = Trial(
+        nct_id="NCT00223717",
+        title="Sildenafil in Supine Hypertension of Autonomic Failure",
+        phase="Phase 2",
+        overall_status="Completed",
+    )
     out = ClinicalTrialsOutput(
-        completed=CompletedTrialsResult(total_count=64, trials=[pah]),
-        terminated=TerminatedTrialsResult(
-            total_count=18,
-            trials=[
-                Trial(nct_id="NCT00586794", title="PAH in Eisenmenger", phase="Phase 3")
-            ],
-        ),
+        completed=CompletedTrialsResult(total_count=64, trials=[pah, systemic]),
+        contaminated_nct_ids=["NCT00323297"],
     )
-    rendered = _fmt_clinical_trials(
-        out, "hypertension", approval_relationship="contaminated"
-    )
-    # Verbatim totals are reported.
-    assert "**Completed trials (64 total):**" in rendered
-    assert "**Terminated trials (18):**" in rendered
-    # But no example trials are listed.
-    assert "NCT00323297" not in rendered
-    assert "NCT00586794" not in rendered
-    assert "contaminated by approved subtype" in rendered
+    rendered = _fmt_clinical_trials(out, "hypertension")
+    # Verbatim total is still reported, table is NOT suppressed.
+    assert "**Completed trials (64 total on record):**" in rendered
+    assert "overlaps an approved related indication" not in rendered
+    # The relevant systemic-HTN trial IS listed as an example.
+    assert "NCT00223717" in rendered
+    # The contaminated PAH trial is filtered from the example LIST (its clickable study link),
+    # though it may still be named in the "excluded as a different indication" disclosure note.
+    assert "study/NCT00323297" not in rendered
+    assert "excluded as a different indication: NCT00323297" in rendered
 
 
-def test_fmt_clinical_trials_non_contaminated_still_lists_trials():
-    # A non-contaminated relationship ("none") renders the example tables normally.
+def test_fmt_clinical_trials_lists_trials_normally():
+    # A candidate with no contamination renders the example tables normally.
     trial = Trial(
         nct_id="NCT04567890",
         title="Drug in Crohn's",
@@ -326,9 +328,7 @@ def test_fmt_clinical_trials_non_contaminated_still_lists_trials():
     out = ClinicalTrialsOutput(
         completed=CompletedTrialsResult(total_count=3, trials=[trial])
     )
-    rendered = _fmt_clinical_trials(
-        out, "crohn's disease", approval_relationship="none"
-    )
+    rendered = _fmt_clinical_trials(out, "crohn's disease")
     assert "NCT04567890" in rendered
 
 
