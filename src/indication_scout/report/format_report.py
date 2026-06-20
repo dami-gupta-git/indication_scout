@@ -111,8 +111,9 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
 # Relationships where the trial/literature artifacts are contaminated by an approved subtype
 # the registry pulls in (e.g. PAH under a "Hypertension" search) and the subtype cannot be
 # cleanly separated. The example trial tables are suppressed for these — a curated-looking list
-# is misleading when most of it is the approved subtype's trials.
-_CONTAMINATED_RELATIONSHIPS = frozenset({"broader_distinct", "broader_overlapping"})
+# is misleading when most of it is the approved subtype's trials. Set UPSTREAM by the FDA
+# approval-relationship check (CandidateFindings.approval_relationship), not by the LLM.
+_CONTAMINATED_RELATIONSHIPS = frozenset({"contaminated"})
 
 
 def _fmt_clinical_trials(
@@ -177,13 +178,13 @@ def _fmt_clinical_trials(
         if ct.completed:
             lines.append(
                 f"\n**Completed trials ({ct.completed.total_count} total):** "
-                "not listed — trial record contaminated by approved subtype; "
-                "see the demotion note in the summary."
+                "not listed — the trial record overlaps an approved related "
+                "indication and cannot be cleanly separated for this candidate."
             )
         if ct.terminated and ct.terminated.total_count:
             lines.append(
                 f"\n**Terminated trials ({ct.terminated.total_count}):** "
-                "not listed — trial record contaminated by approved subtype."
+                "not listed — the trial record overlaps an approved related indication."
             )
         if not lines:
             lines.append("_No clinical trials data available._")
@@ -489,7 +490,8 @@ def format_report(output: SupervisorOutput) -> str:
                 ]
 
             if finding.clinical_trials:
-                rel = finding.blurb.approval_relationship if finding.blurb else ""
+                # Suppression keys off the label-grounded typed field, NOT LLM prose.
+                rel = finding.approval_relationship
                 lines += [
                     "#### Clinical Trials",
                     "",

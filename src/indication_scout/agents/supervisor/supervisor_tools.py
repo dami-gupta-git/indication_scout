@@ -299,6 +299,13 @@ def build_supervisor_tools(
     # lowercase canonical disease name → {"literature": ..., "clinical_trials": ...}.
     auto_findings: dict[str, dict] = {}
 
+    # Upstream FDA approval-relationship labels for kept candidates, keyed by lowercase disease
+    # name → "contaminated" | "combination_only". "approved" diseases are dropped (never recorded
+    # here); "none" diseases are omitted (no relationship). run_supervisor_agent reads this via
+    # get_approval_labels() to set CandidateFindings.approval_relationship from the label-grounded
+    # source, NOT from LLM prose.
+    approval_labels: dict[str, str] = {}
+
     # Per-disease sub-agent artifacts written by analyze_literature and analyze_clinical_trials as
     # the supervisor runs. Used by finalize_supervisor to enforce the top-N evidence gate (drop
     # blurbs for candidates failing the (0 trials AND <N PMIDs) check). Keyed by lowercase
@@ -469,8 +476,17 @@ def build_supervisor_tools(
                     cache_dir=svc.cache_dir,
                 )
                 fda_approved = {
-                    disease for disease, is_approved in mapping.items() if is_approved
+                    disease
+                    for disease, label in mapping.items()
+                    if label == "approved"
                 }
+                # Record the non-"approved" relationship labels for KEPT candidates so the
+                # report can render them from the label-grounded source (not LLM prose).
+                # "none" carries no relationship → omitted. Holdout (date_before) path has no
+                # label data, so labels are only captured here in the live path.
+                for disease, label in mapping.items():
+                    if label in ("contaminated", "combination_only"):
+                        approval_labels[disease.lower().strip()] = label
             if fda_approved:
                 _log_disease_banner(
                     f"FDA-DROPPED (already approved for {drug_name}, source: "
@@ -1678,7 +1694,10 @@ def build_supervisor_tools(
                     "stage": stage_phrase,
                     "active_programs": fields["active_programs"],
                     "literature": fields["literature"],
-                    "relationship": (item.get("approval_relationship") or "none"),
+                    # Authoritative upstream FDA label relationship (NOT the LLM blurb value).
+                    "relationship": approval_labels.get(
+                        disease.lower().strip(), "none"
+                    ),
                     "approved_indication": approved_ind,
                 }
                 if stage_phrase is not None
@@ -1867,6 +1886,15 @@ def build_supervisor_tools(
         """
         return dict(auto_findings)
 
+    def get_approval_labels() -> dict[str, str]:
+        """Snapshot upstream FDA approval-relationship labels for kept candidates.
+
+        Returns {lowercase_disease: "contaminated" | "combination_only"}. Diseases
+        with no relationship ("none") or that were dropped ("approved") are absent.
+        Empty in holdout runs (no label data on the date_before path).
+        """
+        return dict(approval_labels)
+
     fanout = get_settings().supervisor_fanout
     holdout = date_before is not None
     tools = [
@@ -1892,4 +1920,4 @@ def build_supervisor_tools(
         tools = [
             t for t in tools if t not in (analyze_literature, analyze_clinical_trials)
         ]
-    return tools, get_merged_allowlist, get_auto_findings
+    return tools, get_merged_allowlist, get_auto_findings, get_approval_labels

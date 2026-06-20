@@ -64,12 +64,13 @@ async def test_metformin_supervisor_agent(supervisor_agent):
     - summary is non-empty and matches the structured fact-list shape (finalize_supervisor was
       called)
     """
-    agent, get_merged_allowlist, get_auto_findings = supervisor_agent
+    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = supervisor_agent
     output = await run_supervisor_agent(
         agent,
         get_merged_allowlist,
         "metformin",
         get_auto_findings=get_auto_findings,
+        get_approval_labels=get_approval_labels,
     )
 
     assert isinstance(output, SupervisorOutput)
@@ -152,7 +153,7 @@ async def test_imatinib_holdout_2006(db_session_truncating, test_cache_dir):
     """End-to-end holdout: supervisor agent run for imatinib with date_before
     2006-01-01 must surface imatinib's known/emerging 2006-era indications in
     candidate_diseases (exact names)."""
-    agent, get_merged_allowlist, get_auto_findings = build_agent(
+    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = build_agent(
         db_session_truncating,
         date_before=date(2006, 1, 1),
         cache_dir=test_cache_dir,
@@ -162,8 +163,106 @@ async def test_imatinib_holdout_2006(db_session_truncating, test_cache_dir):
         get_merged_allowlist,
         "imatinib",
         get_auto_findings=get_auto_findings,
+        get_approval_labels=get_approval_labels,
     )
 
     assert isinstance(output, SupervisorOutput)
     assert output.drug_name == "imatinib"
     assert _EXPECTED_IMATINIB_DISEASES.issubset(set(output.candidate_diseases))
+
+
+# ------------------------------------------------------------------
+# Approval-relationship labeling + search-pool relevance gate
+#
+# Two behavior-defining regressions (verified by live runs on 2026-06-20):
+#   - semaglutide: a SIBLING of an approved indication (T1DM vs approved T2DM) must NOT be
+#     dropped/demoted (label "none", kept); a broader parent of an approved subtype (NAFLD over
+#     approved MASH) is kept but label "contaminated".
+#   - sildenafil: systemic "hypertension" (approved indication is PAH) is kept with label
+#     "contaminated", and the PAH trials that a hypertension query pulls in are tagged
+#     contaminated — including SEARCH-pool active trials, which previously bypassed the gate and
+#     leaked into the "Phase 3 active" dev-stage signal.
+# Rankings are LLM-driven and may shift run-to-run, so we assert the typed labels and the
+# contamination tagging (the deterministic behavior), not exact rank positions.
+# ------------------------------------------------------------------
+
+
+def _find_finding(output: SupervisorOutput, substr: str) -> CandidateFindings | None:
+    """Return the first finding whose disease name contains `substr` (lowercased), or None."""
+    for f in output.disease_findings:
+        if substr in f.disease.lower():
+            return f
+    return None
+
+
+async def test_semaglutide_sibling_kept_and_contaminated_labels(supervisor_agent):
+    """Semaglutide: T1DM sibling kept (label 'none'); NAFLD broader-parent kept ('contaminated').
+
+    Regression for the approval-relationship upstream labeling. Before the fix, T1DM (a sibling of
+    approved T2DM) was demoted into a footer and the report surfaced a weaker candidate; NAFLD was
+    mislabeled. Now both are KEPT with label-grounded relationships. Verified 2026-06-20.
+    """
+    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = supervisor_agent
+    output = await run_supervisor_agent(
+        agent,
+        get_merged_allowlist,
+        "semaglutide",
+        get_auto_findings=get_auto_findings,
+        get_approval_labels=get_approval_labels,
+    )
+
+    assert output.drug_name == "semaglutide"
+
+    # T1DM — sibling of approved T2DM — kept and labeled "none" (NOT dropped, NOT demoted).
+    t1dm = _find_finding(output, "type 1 diabetes")
+    assert t1dm is not None, "Type 1 Diabetes must be kept as a candidate, not dropped"
+    assert t1dm.approval_relationship == "none"
+
+    # NAFLD — broader parent of approved MASH — kept and labeled "contaminated".
+    nafld = _find_finding(output, "non-alcoholic fatty liver")
+    assert nafld is not None, "NAFLD must be kept as a candidate, not dropped"
+    assert nafld.approval_relationship == "contaminated"
+
+    # Approved indications (T2DM, obesity) must NOT appear as kept findings — dropped upstream.
+    assert _find_finding(output, "type 2 diabetes") is None
+    assert _find_finding(output, "obesity") is None
+
+
+async def test_sildenafil_hypertension_contaminated_and_pah_trials_tagged(supervisor_agent):
+    """Sildenafil: systemic hypertension kept ('contaminated'); PAH search trials tagged contaminated.
+
+    Two regressions in one pair:
+      1. Approval labeling: hypertension (approved = PAH) is KEPT with label 'contaminated', not
+         demoted.
+      2. Search-pool relevance gate: PAH trials a hypertension query pulls into the SEARCH scope
+         (where active/recruiting trials live) are now classified and tagged contaminated, so they
+         cannot inflate the "Phase 3 active" dev-stage signal. NCT07462260 / NCT06317805 are PAH
+         active trials that previously leaked through as relevant. Verified 2026-06-20.
+    """
+    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = supervisor_agent
+    output = await run_supervisor_agent(
+        agent,
+        get_merged_allowlist,
+        "sildenafil",
+        get_auto_findings=get_auto_findings,
+        get_approval_labels=get_approval_labels,
+    )
+
+    assert output.drug_name == "sildenafil"
+
+    hyp = _find_finding(output, "hypertension")
+    assert hyp is not None, "systemic hypertension must be kept as a candidate, not dropped"
+    # Distinguish systemic hypertension from the approved 'pulmonary (arterial) hypertension'.
+    assert "pulmonary" not in hyp.disease.lower()
+    assert hyp.approval_relationship == "contaminated"
+
+    # The approved indication (pulmonary/PAH) must NOT be a kept ranked finding.
+    assert "pulmonary" not in " ".join(output.top_diseases).lower()
+
+    # PAH trials pulled into the hypertension SEARCH scope must be tagged contaminated.
+    assert hyp.clinical_trials is not None
+    contaminated = set(hyp.clinical_trials.contaminated_nct_ids)
+    assert {"NCT07462260", "NCT06317805"}.issubset(contaminated), (
+        "PAH search-pool trials must be tagged contaminated (search relevance gate). "
+        f"Got contaminated_nct_ids={sorted(contaminated)}"
+    )

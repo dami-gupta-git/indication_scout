@@ -85,20 +85,28 @@ def _finalize_done(messages: list) -> bool:
 def build_supervisor_agent(
     llm, svc, db, session_factory=None, date_before: date | None = None
 ):
-    """Return (compiled supervisor agent, get_merged_allowlist, get_auto_findings).
+    """Return (agent, get_merged_allowlist, get_auto_findings, get_approval_labels).
 
     - get_merged_allowlist: snapshots the competitor + mechanism disease allowlist after the run.
     - get_auto_findings: snapshots artifacts from the holdout-only investigate_top_candidates tool
       (empty in non-holdout runs). run_supervisor_agent merges these into findings_by_disease
       because those tool calls bypass the LangGraph ReAct loop.
+    - get_approval_labels: snapshots upstream FDA approval-relationship labels (contaminated /
+      combination_only) for kept candidates, used to set CandidateFindings.approval_relationship.
 
     `date_before` is forwarded to the literature and clinical trials sub-agents so PubMed and
     ClinicalTrials.gov queries share the same temporal cutoff. When set, the supervisor loads a
     holdout-specific prompt telling the LLM to treat all candidates as open hypotheses (even
     "obvious" ones) rather than skipping based on training knowledge of the drug's eventual use.
     """
-    tools, get_merged_allowlist, get_auto_findings = build_supervisor_tools(
-        llm=llm, svc=svc, db=db, session_factory=session_factory, date_before=date_before
+    tools, get_merged_allowlist, get_auto_findings, get_approval_labels = (
+        build_supervisor_tools(
+            llm=llm,
+            svc=svc,
+            db=db,
+            session_factory=session_factory,
+            date_before=date_before,
+        )
     )
     fanout = date_before is None and get_settings().supervisor_fanout
     prompt_file = (
@@ -112,7 +120,7 @@ def build_supervisor_agent(
     )
     prompt = _load_system_prompt(holdout_mode=date_before is not None, fanout=fanout)
     agent = build_gated_react_loop(llm, tools, prompt, _finalize_done)
-    return agent, get_merged_allowlist, get_auto_findings
+    return agent, get_merged_allowlist, get_auto_findings, get_approval_labels
 
 
 async def run_supervisor_agent(
@@ -120,6 +128,7 @@ async def run_supervisor_agent(
     get_merged_allowlist,
     drug_name: str,
     get_auto_findings=None,
+    get_approval_labels=None,
 ) -> SupervisorOutput:
     """Invoke the supervisor and assemble a SupervisorOutput from the run.
 
@@ -280,6 +289,18 @@ async def run_supervisor_agent(
             ):
                 findings.clinical_trials = artifacts["clinical_trials"]
 
+    # Set the label-grounded approval relationship on each finding from the upstream FDA check
+    # (NOT from LLM prose). Keyed by lowercase disease; canonicalised names may differ, so match on
+    # both the canonical key and the finding's own disease string. Absent → stays "none".
+    approval_labels = get_approval_labels() if get_approval_labels is not None else {}
+    if approval_labels:
+        for canonical, finding in findings_by_disease.items():
+            label = approval_labels.get(canonical.lower().strip()) or approval_labels.get(
+                finding.disease.lower().strip()
+            )
+            if label in ("contaminated", "combination_only"):
+                finding.approval_relationship = label
+
     # Attach supervisor-written blurbs to the matching CandidateFindings. Blurbs only attach to
     # diseases investigated this run (already in findings_by_disease). Names are canonicalised
     # through the allowlist so casing / synonym variants land right. Holdout runs send no blurbs.
@@ -291,7 +312,6 @@ async def run_supervisor_agent(
         "key_risk",
         "verdict",
         "watch",
-        "approval_relationship",
     )
     for entry in blurbs:
         disease_raw = entry.get("disease", "")

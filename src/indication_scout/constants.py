@@ -411,11 +411,6 @@ CURATED_FDA_REJECTED_CANDIDATES: dict[str, list[str]] = {
     # aches and pains," not as a treatment indication. The LLM reads the
     # phrase as an approval.
     "acetaminophen": ["common cold"],
-    # Lumakras has a CRC approval but only for KRAS G12C-mutated mCRC in
-    # combination with panitumumab (~3-4% of mCRC patients). The bare
-    # candidate "colorectal cancer" is too broad — the LLM matches on the
-    # word's presence in the label without checking how narrow the subset is.
-    "sotorasib": ["colorectal cancer"],
     # Semaglutide labels list "non-fatal stroke" as a component of the
     # MACE composite endpoint ("reduce the risk of major adverse cardiovascular
     # events (cardiovascular death, non-fatal myocardial infarction, or
@@ -424,6 +419,51 @@ CURATED_FDA_REJECTED_CANDIDATES: dict[str, list[str]] = {
     # is just one component of the composite endpoint.
     "semaglutide": ["ischemic stroke"],
 }
+
+
+# Curated per-drug list of candidate phrasings to short-circuit as "contaminated"
+# (a real repurposing target whose trial counts are polluted by the approved
+# narrower subset — KEEP and rank, but suppress trial tables). Use for minority-
+# biomarker approvals where the bare disease term is much broader than the approved
+# subset. Exact, case-sensitive match skips the LLM.
+CURATED_FDA_CONTAMINATED_CANDIDATES: dict[str, list[str]] = {
+    # Lumakras has a CRC approval but only for KRAS G12C-mutated mCRC in
+    # combination with panitumumab (~3-4% of mCRC patients). The bare candidate
+    # "colorectal cancer" is a real, much-broader target whose registry counts
+    # inherit the approved-subset trials → contaminated, not dropped.
+    "sotorasib": ["colorectal cancer"],
+}
+
+
+# Curated per-drug list of candidate phrasings to short-circuit as "combination_only"
+# (approved for this disease ONLY as a component of a combination product, never as
+# monotherapy — demote, not a monotherapy repurposing opportunity). Needed because the
+# bare single-drug FDA label often does NOT mention the combination product, so the
+# label-grounded LLM check cannot detect the combo approval on its own. Exact,
+# case-sensitive match skips the LLM.
+CURATED_FDA_COMBINATION_ONLY_CANDIDATES: dict[str, list[str]] = {
+    # Bupropion is approved for chronic weight management ONLY via the fixed-dose
+    # combination naltrexone/bupropion (Contrave). The bare bupropion label does not
+    # list obesity, so the standalone-label check returns "none". Curate it as
+    # combination_only so it is correctly demoted, not surfaced as a monotherapy lead.
+    "bupropion": ["obesity"],
+}
+
+
+# STOPGAP: curated NCT ids to force-classify as "contaminated" in the clinical-trials
+# relevance gate, regardless of the LLM verdict. Needed because CT.gov's
+# AREA[ConditionMeshTerm] filter matches a trial via its MeSH ANCESTORS too, so a broad
+# umbrella query (e.g. "mood disorder") pulls in trials whose DIRECT condition is an
+# approved sub-indication (e.g. Seasonal Affective Disorder, a child of Mood Disorders).
+# The proper fix is dropping ancestor-only matches in clinical_trials._mesh_cond; until
+# then, exclude specific known-contaminating NCTs here. Keyed by NCT id.
+CURATED_CONTAMINATED_NCTS: frozenset[str] = frozenset(
+    {
+        # "Prevention of Seasonal Affective Disorder" — SAD is an APPROVED bupropion
+        # indication; it surfaced under the "mood disorder" candidate via MeSH ancestry.
+        "NCT00046241",
+    }
+)
 
 # -- Supervisor: mechanism-sourced candidate threshold -----------------------
 # Minimum Open Targets overall_score for a mechanism-surfaced disease

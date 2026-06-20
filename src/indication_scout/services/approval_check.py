@@ -11,12 +11,14 @@ import re
 from datetime import date, datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from indication_scout.config import get_settings
 from indication_scout.constants import (
     CACHE_TTL,
     CURATED_FDA_APPROVED_CANDIDATES,
+    CURATED_FDA_COMBINATION_ONLY_CANDIDATES,
+    CURATED_FDA_CONTAMINATED_CANDIDATES,
     CURATED_FDA_REJECTED_CANDIDATES,
     DEFAULT_CACHE_DIR,
     DRUG_APPROVALS_PATH,
@@ -42,6 +44,26 @@ _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 _DRUG_APPROVAL_NS = "fda_drug_disease_approval"
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
+# Per-candidate approval relationship, decided once from the FDA label. Only "approved" removes a
+# candidate; "combination_only" demotes; "contaminated" and "none" both rank (contaminated also
+# flags trial-table suppression). See PLAN_approval_labeling_upstream.md.
+ApprovalLabel = Literal["approved", "combination_only", "contaminated", "none"]
+APPROVAL_LABELS: frozenset[str] = frozenset(
+    ("approved", "combination_only", "contaminated", "none")
+)
+
+
+def _coerce_label(value: Any) -> ApprovalLabel | None:
+    """Validate a raw value as an ApprovalLabel. Returns None if invalid.
+
+    Single source of truth for label validation — used by both the LLM-parse path
+    and the per-drug cache loader so an invalid/legacy value is skipped, never
+    silently coerced (e.g. a bool or stale string must NOT become "approved").
+    """
+    if isinstance(value, str) and value in APPROVAL_LABELS:
+        return value  # type: ignore[return-value]
+    return None
+
 
 def _drug_approval_path(drug_name: str, cache_dir: Path) -> Path:
     """Return the per-drug cache file path for the approvals namespace.
@@ -60,11 +82,12 @@ def _drug_approval_path(drug_name: str, cache_dir: Path) -> Path:
 
 
 def _load_drug_approvals(drug_name: str, cache_dir: Path) -> dict[str, dict[str, Any]]:
-    """Load the per-drug approvals file as {disease_lower: {verdict, cached_at, ttl}}.
+    """Load the per-drug approvals file as {disease_lower: {label, cached_at, ttl}}.
 
     Returns an empty dict if the file is missing or unparseable. Expired
     entries are dropped lazily; the file is rewritten only when a caller
-    invokes _save_drug_approvals.
+    invokes _save_drug_approvals. Entries whose `label` is missing or not a
+    valid ApprovalLabel are skipped (stale bool-shaped caches do not survive).
     """
     path = _drug_approval_path(drug_name, cache_dir)
     if not path.exists():
@@ -85,13 +108,15 @@ def _load_drug_approvals(drug_name: str, cache_dir: Path) -> dict[str, dict[str,
         try:
             cached_at = datetime.fromisoformat(entry["cached_at"])
             ttl = int(entry.get("ttl", CACHE_TTL))
-            verdict = bool(entry["verdict"])
         except (KeyError, TypeError, ValueError):
+            continue
+        label = _coerce_label(entry.get("label"))
+        if label is None:
             continue
         if (now - cached_at).total_seconds() > ttl:
             continue
         fresh[disease_key] = {
-            "verdict": verdict,
+            "label": label,
             "cached_at": entry["cached_at"],
             "ttl": ttl,
         }
@@ -100,24 +125,24 @@ def _load_drug_approvals(drug_name: str, cache_dir: Path) -> dict[str, dict[str,
 
 def _save_drug_approvals(
     drug_name: str,
-    new_verdicts: dict[str, bool],
+    new_labels: dict[str, ApprovalLabel],
     cache_dir: Path,
     ttl: int = CACHE_TTL,
 ) -> None:
-    """Merge new_verdicts into the per-drug file and write it back.
+    """Merge new_labels into the per-drug file and write it back.
 
-    Existing unexpired entries are preserved; new verdicts overwrite any
+    Existing unexpired entries are preserved; new labels overwrite any
     prior entry for the same disease (refreshing its cached_at).
     """
-    if not new_verdicts:
+    if not new_labels:
         return
     path = _drug_approval_path(drug_name, cache_dir)
     path.parent.mkdir(parents=True, exist_ok=True)
     existing = _load_drug_approvals(drug_name, cache_dir)
     now_iso = datetime.now().isoformat()
-    for disease, verdict in new_verdicts.items():
+    for disease, label in new_labels.items():
         existing[disease.lower()] = {
-            "verdict": bool(verdict),
+            "label": label,
             "cached_at": now_iso,
             "ttl": ttl,
         }
@@ -430,17 +455,16 @@ async def get_fda_approved_disease_mapping(
     drug_name: str,
     candidate_diseases: list[str],
     cache_dir: Path = DEFAULT_CACHE_DIR,
-) -> dict[str, bool]:
-    """Decide, per candidate, whether the drug is FDA-approved for that disease.
+) -> dict[str, ApprovalLabel]:
+    """Classify each candidate's relationship to the drug's approved indications.
 
     Two-tier lookup:
-      1. Curated short-circuit — if a candidate string EXACTLY matches
-         (case-sensitive) any string in CURATED_FDA_APPROVED_CANDIDATES[drug_name],
-         it returns True without calling the LLM.
+      1. Curated short-circuit — exact (case-sensitive) match against the drug's
+         curated approved / contaminated / rejected lists; skips the LLM.
       2. LLM fallback — for remaining candidates, the input drug_name is
          expanded to all known aliases (generic, trade, INN, USAN, salt forms)
          via ChEMBL, all matching openFDA labels are fetched, and the
-         candidates are batched into one LLM call that returns true/false
+         candidates are batched into one LLM call that returns one ApprovalLabel
          per candidate.
 
     Args:
@@ -449,39 +473,46 @@ async def get_fda_approved_disease_mapping(
         cache_dir: Cache directory.
 
     Returns:
-        Dict mapping each input candidate (verbatim) to True if the drug is
-        FDA-approved for it, False otherwise. Every input candidate is always
-        present as a key. Defaults to False on any failure (chembl, FDA fetch,
-        LLM parse).
+        Dict mapping each input candidate (verbatim) to an ApprovalLabel:
+        "approved" (already covered → drop), "combination_only" (demote),
+        "contaminated" (keep, suspect trial counts), or "none" (keep, clean).
+        Every input candidate is always present as a key. Defaults to "none"
+        on any failure (chembl, FDA fetch, LLM parse) — a failure must NOT
+        drop a candidate.
     """
-    result: dict[str, bool] = {c: False for c in candidate_diseases}
+    result: dict[str, ApprovalLabel] = {c: "none" for c in candidate_diseases}
 
     if not drug_name or not candidate_diseases:
         return result
 
     # Curated short-circuit: exact, case-sensitive match against the drug's
-    # curated approved-candidate list (force True) and rejected-candidate
-    # list (force False). Hits skip both the FDA fetch and the LLM call.
+    # curated lists. Hits skip both the FDA fetch and the LLM call.
     approved_set = set(CURATED_FDA_APPROVED_CANDIDATES.get(drug_name, []))
+    contaminated_set = set(CURATED_FDA_CONTAMINATED_CANDIDATES.get(drug_name, []))
+    combination_set = set(CURATED_FDA_COMBINATION_ONLY_CANDIDATES.get(drug_name, []))
     rejected_set = set(CURATED_FDA_REJECTED_CANDIDATES.get(drug_name, []))
     uncurated: list[str] = []
     for c in candidate_diseases:
         if c in approved_set:
-            result[c] = True
+            result[c] = "approved"
+        elif c in combination_set:
+            result[c] = "combination_only"
+        elif c in contaminated_set:
+            result[c] = "contaminated"
         elif c in rejected_set:
-            result[c] = False
+            result[c] = "none"
         else:
             uncurated.append(c)
 
     if not uncurated:
         return result
 
-    # Per-pair drug-disease verdict cache: one file per drug holding a
-    # {disease_lower: {verdict, cached_at, ttl}} map. Apply unexpired hits
+    # Per-pair drug-disease label cache: one file per drug holding a
+    # {disease_lower: {label, cached_at, ttl}} map. Apply unexpired hits
     # directly to result; only the still-missing candidates are sent to
-    # ChEMBL/FDA/LLM below. New verdicts are merged back into the same file
+    # ChEMBL/FDA/LLM below. New labels are merged back into the same file
     # after the LLM call. Curated entries are applied above and never cached
-    # here, so curated overrides always win. TTL is per-verdict, preserving
+    # here, so curated overrides always win. TTL is per-label, preserving
     # the previous semantics where each (drug, disease) pair expired
     # independently.
     drug_cache = _load_drug_approvals(drug_name, cache_dir)
@@ -491,7 +522,7 @@ async def get_fda_approved_disease_mapping(
         if entry is None:
             still_missing.append(c)
         else:
-            result[c] = bool(entry["verdict"])
+            result[c] = entry["label"]
 
     if not still_missing:
         return result
@@ -562,7 +593,7 @@ async def get_fda_approved_disease_mapping(
     # to the still-missing candidates so a stray key cannot overwrite a curated
     # or already-cached value.
     lower_to_verbatim = {c.lower(): c for c in still_missing}
-    llm_verdicts: dict[str, bool] = {}
+    llm_labels: dict[str, ApprovalLabel] = {}
     for key, value in parsed.items():
         if not isinstance(key, str):
             continue
@@ -573,19 +604,20 @@ async def get_fda_approved_disease_mapping(
                 key,
             )
             continue
-        if not isinstance(value, bool):
+        label = _coerce_label(value)
+        if label is None:
             logger.error(
-                "get_fda_approved_disease_mapping: value for %r is not a bool: %s",
+                "get_fda_approved_disease_mapping: value for %r is not a valid label: %r",
                 key,
-                type(value),
+                value,
             )
             continue
-        result[original] = value
-        llm_verdicts[original] = value
+        result[original] = label
+        llm_labels[original] = label
 
-    # Merge fresh verdicts into the per-drug cache file. Only candidates the
-    # LLM actually returned a bool for are cached — parse failures or skipped
+    # Merge fresh labels into the per-drug cache file. Only candidates the LLM
+    # returned a valid label for are cached — parse failures or skipped
     # candidates remain uncached so a future call can retry them.
-    _save_drug_approvals(drug_name, llm_verdicts, cache_dir, ttl=CACHE_TTL)
+    _save_drug_approvals(drug_name, llm_labels, cache_dir, ttl=CACHE_TTL)
 
     return result

@@ -207,24 +207,20 @@ async def run_clinical_trials_agent(
         # trial set. Keeps the deterministic dev_stage already on signals as the fallback when
         # the relevant set is empty.
         #
-        # Trial set for the judgment:
-        #   - completed + terminated filtered by relevant_nct_ids (the agent's relevance split)
-        #   - PLUS search-set trials that are NOT contaminated and NOT already in that set —
-        #     active/recruiting Phase 3s live only in the search set and are never classified
-        #     into completed/terminated, so relevance-filtering alone would drop them (the E4
-        #     gap). Contamination exclusion is best-effort, matching derive_trial_signals.
+        # Trial set for the judgment: completed + terminated + search, all filtered by
+        # relevant_nct_ids (the agent's relevance split). search-pool trials — where
+        # active/recruiting Phase 3s live — are now classified by the relevance gate too (they
+        # are added to shown_by_indication in search_trials), so the SAME positive
+        # `in relevant_set` filter applies to every scope. This closes the gap where a
+        # contaminated active trial (e.g. a PAH trial under a systemic-hypertension query) drove
+        # the "Phase 3 active" dev-stage signal because search trials bypassed the gate.
         relevant_set = set(output.relevant_nct_ids)
-        contaminated_set = set(output.contaminated_nct_ids)
         seen: set[str] = set()
         relevant_trials = []
         for t in (output.completed.trials if output.completed else []) + (
             output.terminated.trials if output.terminated else []
-        ):
+        ) + (output.search.trials if output.search else []):
             if t.nct_id and t.nct_id in relevant_set and t.nct_id not in seen:
-                seen.add(t.nct_id)
-                relevant_trials.append(t)
-        for t in output.search.trials if output.search else []:
-            if t.nct_id and t.nct_id not in contaminated_set and t.nct_id not in seen:
                 seen.add(t.nct_id)
                 relevant_trials.append(t)
         if relevant_trials:

@@ -113,6 +113,22 @@ def _parse_interpretive(text: str) -> InterpretiveJudgment | None:
     )
 
 
+# Plain-language phrasing for each approval-relationship label fed to the judge LLM. The raw
+# label words ("contaminated"/"combination_only") are INTERNAL verbiage and must never reach the
+# report — the judge can echo whatever it is given into prose, so translate before passing.
+_RELATIONSHIP_PHRASE: dict[str, str] = {
+    "contaminated": (
+        "this candidate is a broader/related disease that overlaps an approved related "
+        "indication, so its trial record cannot be cleanly separated from the approved use"
+    ),
+    "combination_only": (
+        "the drug is approved for this disease only as part of a combination product, not as "
+        "monotherapy"
+    ),
+    "none": "no notable relationship to an approved indication",
+}
+
+
 async def judge_interpretive(
     *,
     stage: str,
@@ -128,8 +144,8 @@ async def judge_interpretive(
     parse failure (the caller then leaves the fields empty — one source of truth, no fabrication).
 
     Cached per the fact-tuple (stage, active_programs, literature, relationship,
-    approved_indication) so a candidate is judged once within the TTL window. Pass the RAW
-    approval_relationship enum (e.g. "related_family") for a stable cache key — not prose.
+    approved_indication) so a candidate is judged once within the TTL window. `relationship` is
+    the upstream FDA label (e.g. "contaminated" / "combination_only" / "none") — not prose.
     """
     approved = approved_indication or "none"
     cache_params = {
@@ -150,11 +166,16 @@ async def judge_interpretive(
             prose=cached.get("prose", ""),
         )
 
+    # Translate the internal label to plain language before the LLM sees it (the raw label word
+    # must not appear in report prose). Cache key above keeps the raw label for stability.
+    relationship_phrase = _RELATIONSHIP_PHRASE.get(
+        relationship or "none", _RELATIONSHIP_PHRASE["none"]
+    )
     prompt = _INTERP_PROMPT.format(
         stage=stage,
         active_programs=active_programs,
         literature=literature,
-        relationship=relationship or "none",
+        relationship=relationship_phrase,
         approved_indication=approved,
     )
     response = await query_llm(prompt)

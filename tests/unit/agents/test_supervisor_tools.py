@@ -64,7 +64,7 @@ def _build_tools_with_drug_facts(
             new=MagicMock(return_value=MagicMock()),
         ),
     ):
-        tools, _, _ = build_supervisor_tools(llm=llm, svc=svc, db=db)
+        tools, _, _, _ = build_supervisor_tools(llm=llm, svc=svc, db=db)
 
     by_name = {t.name: t for t in tools}
 
@@ -165,7 +165,7 @@ def _build_tools_and_allowlists(
             new=MagicMock(return_value=MagicMock()),
         ),
     ):
-        tools, _, _ = build_supervisor_tools(llm=llm, svc=svc, db=db)
+        tools, _, _, _ = build_supervisor_tools(llm=llm, svc=svc, db=db)
 
     by_name = {t.name: t for t in tools}
     fc = by_name["find_candidates"]
@@ -389,7 +389,7 @@ def _holdout_tools_and_closure(cutoff: date | None):
             new=MagicMock(return_value=MagicMock()),
         ),
     ):
-        tools, _, _ = build_supervisor_tools(
+        tools, _, _, _ = build_supervisor_tools(
             llm=llm, svc=svc, db=db, date_before=cutoff
         )
 

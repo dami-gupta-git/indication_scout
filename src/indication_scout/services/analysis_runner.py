@@ -101,11 +101,15 @@ async def run_analysis(
     _warmup_task = asyncio.create_task(_warm_embeddings())
 
     try:
-        agent, get_merged_allowlist, get_auto_findings = build_agent(
+        agent, get_merged_allowlist, get_auto_findings, get_approval_labels = build_agent(
             db, session_factory, date_before=date_before
         )
         output = await run_supervisor_agent(
-            agent, get_merged_allowlist, drug, get_auto_findings=get_auto_findings
+            agent,
+            get_merged_allowlist,
+            drug,
+            get_auto_findings=get_auto_findings,
+            get_approval_labels=get_approval_labels,
         )
         total = time.perf_counter() - _t0
         # External-API breakdown: how much of the run was spent awaiting HTTP responses

@@ -284,10 +284,10 @@ def test_fmt_clinical_trials_terminated_skips_contaminated_examples():
     assert "NCT01392638" in table
 
 
-def test_fmt_clinical_trials_broader_distinct_suppresses_trial_tables():
-    # Hypertension demoted broader_distinct (PAH is the approved subtype). The artifact is
-    # dominated by PAH trials that can't be cleanly filtered, so example tables are suppressed
-    # while the verbatim total_count is still reported.
+def test_fmt_clinical_trials_contaminated_suppresses_trial_tables():
+    # Hypertension labeled "contaminated" upstream (PAH is the approved related indication). The
+    # artifact is dominated by PAH trials that can't be cleanly filtered, so example tables are
+    # suppressed while the verbatim total_count is still reported.
     pah = Trial(
         nct_id="NCT00323297",
         title="Sildenafil + Bosentan in PAH",
@@ -304,7 +304,7 @@ def test_fmt_clinical_trials_broader_distinct_suppresses_trial_tables():
         ),
     )
     rendered = _fmt_clinical_trials(
-        out, "hypertension", approval_relationship="broader_distinct"
+        out, "hypertension", approval_relationship="contaminated"
     )
     # Verbatim totals are reported.
     assert "**Completed trials (64 total):**" in rendered
@@ -315,8 +315,8 @@ def test_fmt_clinical_trials_broader_distinct_suppresses_trial_tables():
     assert "contaminated by approved subtype" in rendered
 
 
-def test_fmt_clinical_trials_related_family_still_lists_trials():
-    # A non-contaminated relationship renders the example tables normally.
+def test_fmt_clinical_trials_non_contaminated_still_lists_trials():
+    # A non-contaminated relationship ("none") renders the example tables normally.
     trial = Trial(
         nct_id="NCT04567890",
         title="Drug in Crohn's",
@@ -327,7 +327,7 @@ def test_fmt_clinical_trials_related_family_still_lists_trials():
         completed=CompletedTrialsResult(total_count=3, trials=[trial])
     )
     rendered = _fmt_clinical_trials(
-        out, "crohn's disease", approval_relationship="related_family"
+        out, "crohn's disease", approval_relationship="none"
     )
     assert "NCT04567890" in rendered
 

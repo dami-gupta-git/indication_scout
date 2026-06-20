@@ -7,12 +7,30 @@ from unittest.mock import AsyncMock, patch
 import pytest
 
 from indication_scout.services.approval_check import (
+    _coerce_label,
     _load_drug_approvals_table,
     extract_approved_from_labels,
     get_approved_indications,
     list_approved_indications_at,
     list_approved_indications_from_labels,
 )
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("approved", "approved"),
+        ("combination_only", "combination_only"),
+        ("contaminated", "contaminated"),
+        ("none", "none"),
+        # A stale bool-shaped cache value must be REJECTED, never coerced to a
+        # truthy "approved" — this is the regression the label cache guards.
+        (True, None),
+        ("bogus", None),
+    ],
+)
+def test_coerce_label(value, expected):
+    assert _coerce_label(value) == expected
 
 # --- extract_approved_from_labels ---
 

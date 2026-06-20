@@ -78,23 +78,8 @@ class CandidateBlurb(BaseModel):
             "clinical-trials sub-agent summaries for this disease."
         ),
     )
-    approval_relationship: Literal[
-        "same",
-        "narrower",
-        "broader_overlapping",
-        "broader_distinct",
-        "related_family",
-        "combination",
-        "",
-    ] = Field(
-        default="",
-        description=(
-            "Relationship to an approved indication, set by the supervisor per the "
-            "APPROVAL RELATIONSHIPS rules. Empty when no related approval. For "
-            "broader_distinct / broader_overlapping the trial and literature artifacts "
-            "are contaminated by the approved subtype and cannot be cleanly separated."
-        ),
-    )
+    # NOTE: the approval relationship is NOT a blurb field. It is set UPSTREAM from the FDA
+    # label and lives on CandidateFindings.approval_relationship — never authored by the LLM.
 
     @model_validator(mode="before")
     @classmethod
@@ -110,6 +95,15 @@ class CandidateFindings(BaseModel):
 
     disease: str
     source: Literal["competitor", "mechanism", "both"] = "competitor"
+    approval_relationship: Literal["contaminated", "combination_only", "none"] = Field(
+        default="none",
+        description=(
+            "Label-grounded relationship to the drug's FDA approvals, set UPSTREAM by "
+            "get_fda_approved_disease_mapping — NOT by the LLM. 'contaminated' (kept, trial "
+            "counts suspect), 'combination_only' (demoted), or 'none' (kept, no relationship). "
+            "'approved' candidates are dropped upstream and never reach findings."
+        ),
+    )
     literature: LiteratureOutput | None = None
     clinical_trials: ClinicalTrialsOutput | None = None
     blurb: CandidateBlurb | None = Field(

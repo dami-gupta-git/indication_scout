@@ -38,36 +38,55 @@ async def test_semaglutide(test_cache_dir):
     "drug_name, candidates, expected",
     [
         # Curated short-circuit (approved): "morbid obesity" is in
-        # CURATED_FDA_APPROVED_CANDIDATES["semaglutide"] → forced True without
-        # an LLM call. "alzheimer's disease" falls through to the LLM path
-        # and should come back False (semaglutide is not approved for AD).
+        # CURATED_FDA_APPROVED_CANDIDATES["semaglutide"] → forced "approved"
+        # without an LLM call. "alzheimer's disease" falls through to the LLM
+        # path and should come back "none" (unrelated to semaglutide).
         (
             "semaglutide",
             ["morbid obesity", "alzheimer's disease"],
-            {"morbid obesity": True, "alzheimer's disease": False},
+            {"morbid obesity": "approved", "alzheimer's disease": "none"},
         ),
-        # Curated short-circuit (rejected): "ischemic stroke" is in
-        # CURATED_FDA_REJECTED_CANDIDATES["semaglutide"] → forced False.
-        # "type 2 diabetes mellitus" goes through the LLM path against the
-        # real Ozempic/Rybelsus labels and should come back True.
+        # Curated short-circuit (rejected → "none"): "ischemic stroke" is in
+        # CURATED_FDA_REJECTED_CANDIDATES["semaglutide"]. "type 2 diabetes
+        # mellitus" goes through the LLM against the real labels → "approved".
         (
             "semaglutide",
             ["ischemic stroke", "type 2 diabetes mellitus"],
-            {"ischemic stroke": False, "type 2 diabetes mellitus": True},
+            {"ischemic stroke": "none", "type 2 diabetes mellitus": "approved"},
         ),
-        # Pure LLM path: trade-name input expanded via ChEMBL aliases.
-        # Ozempic is FDA-approved for T2DM; hypertension is unrelated.
+        # The bug this whole change fixes: a SIBLING of an approved indication
+        # must NOT be dropped. T1DM (sibling of approved T2DM) → "none" (kept);
+        # NAFLD (broader parent of approved MASH) → "contaminated" (kept,
+        # suspect trial counts); T2DM/obesity → "approved" (dropped).
         (
-            "ozempic",
-            ["type 2 diabetes mellitus", "hypertension"],
-            {"type 2 diabetes mellitus": True, "hypertension": False},
+            "semaglutide",
+            [
+                "type 1 diabetes mellitus",
+                "non-alcoholic fatty liver disease",
+                "obesity",
+                "parkinson disease",
+            ],
+            {
+                "type 1 diabetes mellitus": "none",
+                "non-alcoholic fatty liver disease": "contaminated",
+                "obesity": "approved",
+                "parkinson disease": "none",
+            },
+        ),
+        # Curated short-circuit (contaminated): "colorectal cancer" is in
+        # CURATED_FDA_CONTAMINATED_CANDIDATES["sotorasib"] (KRAS G12C is only
+        # ~3-4% of CRC) → forced "contaminated" without an LLM call.
+        (
+            "sotorasib",
+            ["colorectal cancer"],
+            {"colorectal cancer": "contaminated"},
         ),
     ],
 )
 async def test_get_fda_approved_disease_mapping(
     test_cache_dir, drug_name, candidates, expected
 ):
-    """Verify per-candidate FDA-approval mapping across curated and LLM paths."""
+    """Per-candidate approval-relationship labels across curated and LLM paths."""
     result = await get_fda_approved_disease_mapping(
         drug_name=drug_name,
         candidate_diseases=candidates,
@@ -79,8 +98,8 @@ async def test_get_fda_approved_disease_mapping(
 @pytest.mark.parametrize(
     "drug_name, candidates, expected",
     [
-        # Empty drug_name → early return; every candidate keyed False.
-        ("", ["obesity"], {"obesity": False}),
+        # Empty drug_name → early return; every candidate keyed "none".
+        ("", ["obesity"], {"obesity": "none"}),
         # Empty candidates → early return; empty dict.
         ("semaglutide", [], {}),
     ],

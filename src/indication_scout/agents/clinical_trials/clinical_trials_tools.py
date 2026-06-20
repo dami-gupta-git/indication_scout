@@ -9,7 +9,7 @@ from indication_scout.agents._trial_formatting import (
     _phase_distribution,
 )
 from indication_scout.config import get_settings
-from indication_scout.constants import DEFAULT_CACHE_DIR
+from indication_scout.constants import CURATED_CONTAMINATED_NCTS, DEFAULT_CACHE_DIR
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
@@ -214,6 +214,13 @@ def build_clinical_trials_tools(
             f"Phase distribution (shown): {phase_dist}\n"
             f"Trials shown (top {_settings.clinical_trials_cap} by enrollment):\n"
             f"{table}"
+        )
+        # Record the search-pool trials in the classification set too, so the relevance gate
+        # forces a verdict on them at finalize. Without this, search trials (which feed the
+        # active / dev-stage signal) bypass the gate and a contaminated active trial — e.g. a
+        # PAH trial under a systemic-hypertension query — leaks into the "Phase 3 active" signal.
+        shown_by_indication.setdefault(indication.lower().strip(), set()).update(
+            t.nct_id for t in result.trials if t.nct_id
         )
         return content, result
 
@@ -562,11 +569,12 @@ def build_clinical_trials_tools(
         """Signal that the analysis is complete.
 
         Call this as the very last step. Pass:
-        - verdicts: one entry PER completed/terminated trial shown to you, each a dict
-          {"nct": "<NCT id>", "verdict": "relevant" | "contaminated"}. You MUST classify
-          EVERY shown trial — omit none. "relevant" = studies this drug for THIS exact
-          indication (a narrower subtype rolls up). "contaminated" = a DISTINCT disease
-          (e.g. pulmonary vs systemic hypertension) or a different drug's trial.
+        - verdicts: one entry PER trial shown to you — across the search, completed, AND
+          terminated scopes — each a dict {"nct": "<NCT id>", "verdict": "relevant" |
+          "contaminated"}. You MUST classify EVERY shown trial — omit none. "relevant" =
+          studies this drug for THIS exact indication (a narrower subtype rolls up).
+          "contaminated" = a DISTINCT disease (e.g. pulmonary vs systemic hypertension) or a
+          different drug's trial.
         - relevance_reasoning: 1-2 sentences justifying the split.
 
         Do NOT write a prose summary — the trial-section prose is authored separately after
@@ -620,6 +628,18 @@ def build_clinical_trials_tools(
             for v in verdicts
             if v.get("verdict") == "contaminated" and v.get("nct")
         ]
+        # STOPGAP override: force curated NCTs to contaminated regardless of the LLM verdict.
+        # These slip in via CT.gov MeSH-ancestor matching (e.g. an approved-SAD trial under a
+        # "mood disorder" query). See constants.CURATED_CONTAMINATED_NCTS.
+        forced = CURATED_CONTAMINATED_NCTS.intersection(relevant_ncts)
+        if forced:
+            relevant_ncts = [n for n in relevant_ncts if n not in forced]
+            contaminated_ncts = list(dict.fromkeys(contaminated_ncts + sorted(forced)))
+            logger.info(
+                "[TOOL] finalize_analysis: forced %d curated NCT(s) to contaminated: %s",
+                len(forced),
+                sorted(forced),
+            )
         artifact = FinalizeClinicalTrialsArtifact(
             relevant_ncts=relevant_ncts,
             contaminated_ncts=contaminated_ncts,
