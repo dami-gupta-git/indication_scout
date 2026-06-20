@@ -25,6 +25,13 @@ class TrialSignals(BaseModel):
     highest_completed_phase: str | None = None
     has_completed_phase3: bool = False
     completed_phase3_nct_ids: list[str] = []
+    # Subset of completed_phase3 that are PURE Phase 3 ("Phase 3" / "Phase 3/Phase 4"), excluding
+    # combined "Phase 2/Phase 3". A completed Phase 2/3 trial is NOT a completed pivotal Phase 3
+    # readout on its own — when has_completed_phase3 is True but this is empty, the "Phase 3
+    # completed" stage came only from a Phase 2/3 trial and the dev-stage judge must not call it a
+    # completed pivotal Phase 3 (prefer active_phase3 framing if active pure Phase 3 exists).
+    has_completed_pure_phase3: bool = False
+    completed_pure_phase3_nct_ids: list[str] = []
     # An active/recruiting Phase 3 (>= Phase 2/Phase 3 floor) on the all-status search set.
     # The recruiting-pipeline analog of has_completed_phase3 — blocks a false "no
     # development program / Phase 4 only" claim. Best-effort contamination drop only.

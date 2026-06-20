@@ -12,39 +12,98 @@ from indication_scout.services.literature_strength import (
 )
 
 _ABS = [{"pmid": "111", "title": "T", "abstract": "A"}]
+_PMIDS = ["111"]
 
 _OK = (
-    '{"evidence_basis": "drug_specific", "strength": "strong", "direction": "supports", '
+    '{"verdicts": {"111": "relevant"}, '
+    '"evidence_basis": "drug_specific", "strength": "strong", "direction": "supports", '
     '"is_observational": false, "reason": "two RCTs of this drug"}'
 )
 
 
 def test_parse_strength_plain_json():
-    s = _parse_strength(_OK)
+    s = _parse_strength(_OK, input_pmids=_PMIDS)
     assert s == LiteratureStrength(
         strength="strong",
         direction="supports",
         evidence_basis="drug_specific",
         is_observational=False,
+        relevant_pmids=("111",),
+        contaminated_pmids=(),
     )
 
 
 def test_parse_strength_fenced_json():
     s = _parse_strength(
-        '```json\n{"evidence_basis": "class_level", "strength": "none", '
-        '"direction": "none", "is_observational": null}\n```'
+        '```json\n{"verdicts": {"111": "contaminated"}, '
+        '"evidence_basis": "class_level", "strength": "none", '
+        '"direction": "none", "is_observational": null}\n```',
+        input_pmids=_PMIDS,
     )
     assert s.evidence_basis == "class_level"
     assert s.strength == "none"
     assert s.direction == "none"
     assert s.is_observational is None
+    assert s.relevant_pmids == ()
+    assert s.contaminated_pmids == ("111",)
+
+
+def test_parse_strength_per_pmid_split():
+    """Mixed verdict map splits the input PMIDs into relevant / contaminated over the input set."""
+    s = _parse_strength(
+        '{"verdicts": {"111": "relevant", "222": "contaminated"}, '
+        '"evidence_basis": "drug_specific", "strength": "moderate", '
+        '"direction": "supports", "is_observational": true}',
+        input_pmids=["111", "222"],
+    )
+    assert s.relevant_pmids == ("111",)
+    assert s.contaminated_pmids == ("222",)
+    assert s.evidence_basis == "drug_specific"
+    assert s.strength == "moderate"
+
+
+def test_parse_strength_omitted_pmid_is_contaminated():
+    """An input PMID missing from the verdicts map is conservatively treated as contaminated."""
+    s = _parse_strength(
+        '{"verdicts": {"111": "relevant"}, '
+        '"evidence_basis": "drug_specific", "strength": "weak", '
+        '"direction": "supports", "is_observational": true}',
+        input_pmids=["111", "999"],
+    )
+    assert s.relevant_pmids == ("111",)
+    assert s.contaminated_pmids == ("999",)
+
+
+def test_parse_strength_empty_relevant_with_drug_specific_is_none():
+    """A drug_specific grade with no surviving relevant abstract is inconsistent -> None."""
+    assert (
+        _parse_strength(
+            '{"verdicts": {"111": "contaminated"}, '
+            '"evidence_basis": "drug_specific", "strength": "strong", '
+            '"direction": "supports", "is_observational": false}',
+            input_pmids=_PMIDS,
+        )
+        is None
+    )
+
+
+def test_parse_strength_missing_verdicts_is_none():
+    assert (
+        _parse_strength(
+            '{"evidence_basis": "drug_specific", "strength": "strong", '
+            '"direction": "supports", "is_observational": false}',
+            input_pmids=_PMIDS,
+        )
+        is None
+    )
 
 
 def test_parse_strength_unknown_basis_is_none():
     assert (
         _parse_strength(
-            '{"evidence_basis": "indirect", "strength": "strong", '
-            '"direction": "supports", "is_observational": false}'
+            '{"verdicts": {"111": "relevant"}, "evidence_basis": "indirect", '
+            '"strength": "strong", "direction": "supports", "is_observational": false}',
+            input_pmids=_PMIDS,
         )
         is None
     )
@@ -53,8 +112,9 @@ def test_parse_strength_unknown_basis_is_none():
 def test_parse_strength_unknown_strength_is_none():
     assert (
         _parse_strength(
-            '{"evidence_basis": "drug_specific", "strength": "very strong", '
-            '"direction": "supports", "is_observational": false}'
+            '{"verdicts": {"111": "relevant"}, "evidence_basis": "drug_specific", '
+            '"strength": "very strong", "direction": "supports", "is_observational": false}',
+            input_pmids=_PMIDS,
         )
         is None
     )
@@ -63,15 +123,16 @@ def test_parse_strength_unknown_strength_is_none():
 def test_parse_strength_non_bool_is_observational_is_none():
     assert (
         _parse_strength(
-            '{"evidence_basis": "drug_specific", "strength": "moderate", '
-            '"direction": "supports", "is_observational": "yes"}'
+            '{"verdicts": {"111": "relevant"}, "evidence_basis": "drug_specific", '
+            '"strength": "moderate", "direction": "supports", "is_observational": "yes"}',
+            input_pmids=_PMIDS,
         )
         is None
     )
 
 
 def test_parse_strength_garbage_is_none():
-    assert _parse_strength("not json at all") is None
+    assert _parse_strength("not json at all", input_pmids=_PMIDS) is None
 
 
 def test_parse_strength_class_level_forces_none_strength_and_direction():
@@ -79,8 +140,9 @@ def test_parse_strength_class_level_forces_none_strength_and_direction():
     model returns one — every consumer (incl. the supervisor ranking path) depends on this.
     """
     s = _parse_strength(
-        '{"evidence_basis": "class_level", "strength": "moderate", '
-        '"direction": "supports", "is_observational": false}'
+        '{"verdicts": {"111": "contaminated"}, "evidence_basis": "class_level", '
+        '"strength": "moderate", "direction": "supports", "is_observational": false}',
+        input_pmids=_PMIDS,
     )
     assert s.evidence_basis == "class_level"
     assert s.strength == "none"
@@ -89,8 +151,9 @@ def test_parse_strength_class_level_forces_none_strength_and_direction():
 
 def test_parse_strength_basis_none_forces_none_strength_and_direction():
     s = _parse_strength(
-        '{"evidence_basis": "none", "strength": "weak", '
-        '"direction": "mixed", "is_observational": null}'
+        '{"verdicts": {"111": "contaminated"}, "evidence_basis": "none", '
+        '"strength": "weak", "direction": "mixed", "is_observational": null}',
+        input_pmids=_PMIDS,
     )
     assert s.evidence_basis == "none"
     assert s.strength == "none"

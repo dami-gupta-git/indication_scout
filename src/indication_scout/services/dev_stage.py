@@ -68,8 +68,12 @@ Apply the clinical-trial conventions you already know. In particular:
 - BUT Phase 4 is POST-APPROVAL / off-label activity — it is NOT progression beyond Phase 3.
   A trial that is only Phase 4 (with no Phase 2 or Phase 3 on record) is exploratory, NOT a
   completed pivotal program.
-- A "Phase 2/Phase 3" or "Phase 3/Phase 4" trial HAS a Phase 3 arm — a completed one counts \
-as a completed Phase 3.
+- A "Phase 3/Phase 4" trial HAS a true Phase 3 arm — a completed one counts as a completed Phase 3.
+- A "Phase 2/Phase 3" trial is a COMBINED designation that often resolves at the Phase 2 stage. A \
+completed Phase 2/Phase 3 counts as a completed Phase 3 ONLY when there is NO active/ongoing pure \
+Phase 3 (or Phase 3/Phase 4) trial. When an ACTIVE pure Phase 3 trial also exists, the program's \
+real pivotal stage is still ONGOING — classify as active_phase3, not completed_phase3 (a completed \
+Phase 2/3 must not read as "Phase 3 completed" while the actual Phase 3 is still recruiting).
 - A Phase 3 whose status is UNKNOWN is "on record, status unknown" — not completed, not active.
 - A WITHDRAWN / no-longer-available Phase 3 never produced a program.
 - Recruiting / Active, not recruiting / Not yet recruiting / Enrolling by invitation / \
@@ -80,9 +84,13 @@ Tiers (choose ONE, highest applicable wins, in this priority order):
 1. phase3_terminated_for_cause — a Phase 3-band trial was TERMINATED for a safety or \
 efficacy/benefit-risk reason (a closure signal), and no completed Phase 3 exists. Operational \
 stops (low enrollment, funding, sponsor decision) do NOT count here.
-2. completed_phase3 — a COMPLETED Phase 3 / Phase 2/Phase 3 / Phase 3/Phase 4 trial exists. \
-(This wins even when active Phase 3 trials are ALSO present — they are additional.)
-3. active_phase3 — an ACTIVE/ongoing Phase 3-band trial exists, but none completed.
+2. completed_phase3 — a COMPLETED pure Phase 3 (or Phase 3/Phase 4) trial exists; OR a completed \
+Phase 2/Phase 3 exists AND there is NO active pure Phase 3. (When the only completed Phase-3-band \
+trial is a Phase 2/Phase 3 and an active pure Phase 3 is ALSO present, use active_phase3 instead — \
+see the Phase 2/Phase 3 rule above.) A completed pure Phase 3 wins even when active Phase 3 trials \
+are also present.
+3. active_phase3 — an ACTIVE/ongoing Phase 3-band trial exists and no qualifying completed Phase 3 \
+(per tier 2).
 4. phase3_unknown_status — a Phase 3-band trial on record with UNKNOWN status (not completed, \
 not active, not withdrawn).
 5. completed_phase2 — a completed Phase 2 (or Phase 1/Phase 2) exists, and no Phase 3 at all.

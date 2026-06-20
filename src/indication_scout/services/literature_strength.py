@@ -48,12 +48,19 @@ CRITICAL — strength and direction grade evidence for THIS EXACT DRUG only:
   that the drug TREATS this disease. It does not support the repurposing hypothesis. Set
   evidence_basis="none" in that case (there is no relevant evidence for treating this disease),
   even though the abstracts are about this drug and mention this disease.
-- APPROVED-INDICATION EXCLUSION: the candidate disease may be a BROAD term that includes one of
-  the drug's APPROVED indications listed above (e.g. candidate "mood disorder" includes approved
-  "major depressive disorder"). An abstract studying THIS DRUG for an APPROVED sub-indication is
-  ALREADY-APPROVED evidence, NOT evidence for repurposing the drug to the broader candidate — do
-  NOT count it toward strength/direction. Only abstracts about the candidate's NON-approved scope
-  (e.g. bipolar disorder, dysthymia for "mood disorder") count as repurposing evidence.
+- APPROVED-INDICATION EXCLUSION (direction matters): this fires ONLY when the CANDIDATE is a BROAD
+  term that CONTAINS an approved indication as a narrower part (e.g. candidate "mood disorder"
+  contains approved "major depressive disorder"; candidate "NAFLD" contains approved "MASH"). In
+  that case an abstract studying THIS DRUG for the APPROVED sub-indication (the narrower part) is
+  ALREADY-APPROVED evidence — do NOT count it; only abstracts about the candidate's NON-approved
+  scope count. DO NOT fire it in the OPPOSITE direction: if the candidate is NARROWER than (a child
+  of) an approved indication — i.e. the candidate itself is NOT approved but its broader PARENT is
+  (e.g. candidate "diabetic nephropathy"/"diabetic kidney disease" when only the broad parent
+  "chronic kidney disease" is approved) — then abstracts about the broad approved PARENT ARE the
+  candidate's own evidence (the candidate's patients are studied within the parent's trials), so
+  COUNT them normally. Test: exclude an abstract only when its subject is the approved indication
+  itself or NARROWER than it AND narrower-than-or-equal-to the candidate; never exclude an abstract
+  about a disease BROADER than the candidate.
   SEVERITY/STAGE QUALIFIER: ignore a severity/stage/biomarker QUALIFIER on the approved indication
   when matching — it does NOT create a separable disease. If the approval is "X with
   <severity/stage>" (e.g. "MASH with moderate-to-advanced fibrosis"), an abstract about the bare
@@ -89,11 +96,26 @@ CRITICAL — strength and direction grade evidence for THIS EXACT DRUG only:
   observational; false if at least one drug-specific RCT/controlled trial; null if no relevant
   drug-specific clinical evidence.
 
+PER-ABSTRACT RELEVANCE (do this FIRST, then grade): classify EACH abstract by PMID as
+"relevant" or "contaminated", applying the rules above PER ABSTRACT:
+- this drug, treating this disease in the candidate's NON-approved scope -> relevant
+- this drug for an APPROVED sub-indication of a BROAD candidate (the narrower part) -> contaminated
+- this drug for the broad approved PARENT of a NARROWER candidate (CKD abstract under a DKD
+  candidate) -> relevant (the candidate's own evidence — the parent-direction rule above)
+- a DIFFERENT drug (same class or not) -> contaminated for the per-PMID split, but note class
+  context: if the ONLY disease-relevant abstracts are other-drug, set evidence_basis="class_level"
+- therapeutic-intent mismatch (this drug in these patients but FOR another condition) -> contaminated
+Then grade strength / direction / is_observational / evidence_basis over the RELEVANT abstracts
+ONLY. If NO abstract is relevant, evidence_basis is "approved" (only approved sub-indication
+evidence), "class_level" (only other-drug evidence), or "none"; strength/direction are "none".
+
 Abstracts:
 {abstracts}
 
-Respond with ONLY a JSON object:
-{{"evidence_basis": "drug_specific"|"approved"|"class_level"|"none", \
+Respond with ONLY a JSON object. "verdicts" maps EVERY PMID above to its per-abstract verdict;
+the strength fields describe the RELEVANT set only:
+{{"verdicts": {{"<pmid>": "relevant"|"contaminated", ...}}, \
+"evidence_basis": "drug_specific"|"approved"|"class_level"|"none", \
 "strength": "strong"|"moderate"|"weak"|"none", \
 "direction": "supports"|"contradicts"|"mixed"|"none", \
 "is_observational": true|false|null, "reason": "<one short sentence>"}}"""
@@ -114,12 +136,19 @@ def _format_abstracts(abstracts: list[dict]) -> str:
 @dataclass(frozen=True)
 class LiteratureStrength:
     """The isolated drug-specific read of an abstract set: how strong the evidence is FOR THIS
-    DRUG, which way it points, and whether it is drug-specific or only class-level."""
+    DRUG, which way it points, and whether it is drug-specific or only class-level.
+
+    relevant_pmids / contaminated_pmids are the per-abstract split (mirrors the trial gate's
+    relevant_ncts / contaminated_ncts). strength/direction/basis are graded over the RELEVANT
+    set only. Stored as tuples so the dataclass stays frozen/hashable.
+    """
 
     strength: Literal["strong", "moderate", "weak", "none"]
     direction: Literal["supports", "contradicts", "mixed", "none"]
     evidence_basis: Literal["drug_specific", "approved", "class_level", "none"]
     is_observational: bool | None
+    relevant_pmids: tuple[str, ...] = ()
+    contaminated_pmids: tuple[str, ...] = ()
 
 
 def _extract_json_object(text: str) -> dict | None:
@@ -167,9 +196,16 @@ def _extract_json_object(text: str) -> dict | None:
     return None
 
 
-def _parse_strength(text: str) -> LiteratureStrength | None:
+def _parse_strength(
+    text: str, input_pmids: list[str] | None = None
+) -> LiteratureStrength | None:
     """Extract the judgment from the LLM JSON. None on parse failure or an out-of-enum value
     (caller keeps the synthesize values as fallback — never fabricates a stronger grade).
+
+    `input_pmids` is the set of PMIDs that were sent to the model. The per-abstract `verdicts`
+    map is parsed into relevant_pmids / contaminated_pmids over exactly that set: any input PMID
+    the model OMITS is treated as contaminated (conservative — an unclassified abstract never
+    counts as evidence), and any verdict for a PMID that was not sent is ignored.
     """
     data = _extract_json_object(text)
     if data is None:
@@ -179,6 +215,7 @@ def _parse_strength(text: str) -> LiteratureStrength | None:
         strength = data.get("strength")
         direction = data.get("direction")
         is_obs = data.get("is_observational")
+        verdicts = data.get("verdicts")
     except AttributeError:
         return None
     if (
@@ -189,6 +226,28 @@ def _parse_strength(text: str) -> LiteratureStrength | None:
         return None
     if not isinstance(is_obs, bool) and is_obs is not None:
         return None
+    if not isinstance(verdicts, dict):
+        return None
+
+    # Build the per-PMID split over the INPUT set only. Omitted PMID -> contaminated.
+    pmids = [str(p) for p in (input_pmids or [])]
+    relevant: list[str] = []
+    contaminated: list[str] = []
+    for pmid in pmids:
+        v = verdicts.get(pmid)
+        if v not in ("relevant", "contaminated"):
+            # missing or invalid verdict for a shown abstract -> conservative: contaminated
+            contaminated.append(pmid)
+        elif v == "relevant":
+            relevant.append(pmid)
+        else:
+            contaminated.append(pmid)
+
+    # An empty relevant set cannot be drug_specific (nothing this-drug-this-disease survived).
+    # Reject so the caller keeps the synthesize values rather than rendering an inconsistent card.
+    if not relevant and basis == "drug_specific":
+        return None
+
     # ENFORCE the invariant the prompt states: only drug_specific evidence carries a
     # strength/direction. The model is told to set strength="none"/direction="none" whenever
     # basis != "drug_specific", but don't trust it — every consumer (the supervisor ranking path
@@ -202,6 +261,8 @@ def _parse_strength(text: str) -> LiteratureStrength | None:
         direction=direction,
         evidence_basis=basis,
         is_observational=is_obs,
+        relevant_pmids=tuple(relevant),
+        contaminated_pmids=tuple(contaminated),
     )
 
 
@@ -242,6 +303,8 @@ async def judge_literature_strength(
             direction=cached.get("direction", "none"),
             evidence_basis=cached["evidence_basis"],
             is_observational=cached.get("is_observational"),
+            relevant_pmids=tuple(cached.get("relevant_pmids", [])),
+            contaminated_pmids=tuple(cached.get("contaminated_pmids", [])),
         )
 
     prompt = _LITERATURE_STRENGTH_PROMPT.format(
@@ -251,7 +314,7 @@ async def judge_literature_strength(
         abstracts=_format_abstracts(abstracts),
     )
     response = await query_llm(prompt)
-    judgment = _parse_strength(response)
+    judgment = _parse_strength(response, input_pmids=pmids)
     if judgment is None:
         logger.warning(
             "judge_literature_strength: could not parse a valid judgment for %s x %s; "
@@ -270,6 +333,8 @@ async def judge_literature_strength(
             "direction": judgment.direction,
             "evidence_basis": judgment.evidence_basis,
             "is_observational": judgment.is_observational,
+            "relevant_pmids": list(judgment.relevant_pmids),
+            "contaminated_pmids": list(judgment.contaminated_pmids),
         },
         cache_dir,
         ttl=JUDGMENT_CACHE_TTL,

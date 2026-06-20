@@ -255,6 +255,37 @@ def test_fmt_clinical_trials_completed_skips_contaminated_examples():
     )
 
 
+def test_fmt_clinical_trials_renders_why_excluded_note():
+    # When trials are excluded, the gate's relevance_reasoning is surfaced as a "Why:" note so a
+    # thin/"no usable" signal is explained (approved-indication evidence set aside, not absent).
+    out = ClinicalTrialsOutput(
+        completed=CompletedTrialsResult(
+            total_count=10,
+            trials=[Trial(nct_id="NCT00055874", title="Imatinib in CML", phase="Phase 3")],
+        ),
+        contaminated_nct_ids=["NCT00055874"],
+        relevance_reasoning="Imatinib is approved for CML, so CML trials are the approved "
+        "sub-indication, not repurposing of the broader leukemia candidate.",
+    )
+    rendered = _fmt_clinical_trials(out)
+    assert "1 trial(s) excluded as a different indication: NCT00055874" in rendered
+    assert "_Why: Imatinib is approved for CML" in rendered
+
+
+def test_fmt_clinical_trials_no_why_note_when_nothing_excluded():
+    # No exclusions → no "Why:" note, even if the agent wrote a relevance_reasoning string.
+    out = ClinicalTrialsOutput(
+        completed=CompletedTrialsResult(
+            total_count=1,
+            trials=[Trial(nct_id="NCT04567890", title="Drug in X", phase="Phase 3")],
+        ),
+        contaminated_nct_ids=[],
+        relevance_reasoning="All trials are relevant.",
+    )
+    rendered = _fmt_clinical_trials(out)
+    assert "_Why:" not in rendered
+
+
 def test_fmt_clinical_trials_terminated_skips_contaminated_examples():
     pah = Trial(
         nct_id="NCT02060487",

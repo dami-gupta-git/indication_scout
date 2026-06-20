@@ -76,6 +76,17 @@ def _is_pivotal_phase3(trial: Trial) -> bool:
     return _PHASE_RANK["Phase 2/Phase 3"] <= rank <= _PHASE_RANK["Phase 3"]
 
 
+def _is_pure_completed_phase3(trial: Trial) -> bool:
+    """True for a true completed pivotal Phase 3: "Phase 3" or "Phase 3/Phase 4".
+
+    EXCLUDES "Phase 2/Phase 3" — a completed combined Phase 2/3 trial is not, on its own, a
+    completed pivotal Phase 3 readout (it often resolves at the Phase 2 stage). Used to keep the
+    dev-stage judge from calling a candidate "Phase 3 completed" off a Phase 2/3 trial alone.
+    """
+    rank = _PHASE_RANK.get(trial.phase or "", -1)
+    return _PHASE_RANK["Phase 3"] <= rank <= _PHASE_RANK["Phase 3/Phase 4"]
+
+
 def _is_active_pivotal_phase3(trial: Trial) -> bool:
     """True for the active-program band: "Phase 2/Phase 3", "Phase 3", or "Phase 3/Phase 4".
 
@@ -175,6 +186,14 @@ def derive_trial_signals(
     completed_phase3 = [t for t in completed_trials if _is_active_pivotal_phase3(t)]
     completed_phase3_nct_ids = [t.nct_id for t in completed_phase3 if t.nct_id]
 
+    # A completed "Phase 2/Phase 3" trial is NOT a completed pivotal Phase 3 readout — the
+    # combined designation often resolves at the Phase 2 stage. Track the PURE-Phase-3 completions
+    # ("Phase 3" / "Phase 3/Phase 4", excluding "Phase 2/Phase 3") separately so the dev-stage
+    # judge does not read a completed Phase 2/3 as "Phase 3 completed" — especially when the only
+    # real Phase 3 trials are still recruiting (active_phase3). See _is_pure_completed_phase3.
+    completed_pure_phase3 = [t for t in completed_phase3 if _is_pure_completed_phase3(t)]
+    completed_pure_phase3_nct_ids = [t.nct_id for t in completed_pure_phase3 if t.nct_id]
+
     terminated_phase3_for_cause = [
         t
         for t in terminated_trials
@@ -197,6 +216,8 @@ def derive_trial_signals(
         highest_completed_phase=highest,
         has_completed_phase3=bool(completed_phase3),
         completed_phase3_nct_ids=completed_phase3_nct_ids,
+        has_completed_pure_phase3=bool(completed_pure_phase3),
+        completed_pure_phase3_nct_ids=completed_pure_phase3_nct_ids,
         has_active_phase3=bool(active_phase3),
         active_phase3_nct_ids=active_phase3_nct_ids,
         phase3_terminated_for_cause=bool(terminated_phase3_for_cause),

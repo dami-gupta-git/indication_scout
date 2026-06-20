@@ -49,7 +49,7 @@ _CASES = [
         {"exploratory_phase4_only"},
     ),
     (
-        "large_mixed_t1dm_portfolio",  # completed P2/3 + active P3s + P4
+        "large_mixed_t1dm_portfolio",  # completed P2/3 + active pure P3s + P4 (the T1DM bug)
         [
             _t("NCT_1", "Phase 2", "COMPLETED"),
             _t("NCT_2", "Phase 4", "COMPLETED"),
@@ -58,7 +58,19 @@ _CASES = [
             _t("NCT_5", "Phase 3", "Recruiting"),
             _t("NCT_6", "Phase 3", "Not yet recruiting"),
         ],
-        {"completed_phase3"},  # completed wins over the additional active P3s
+        # The ONLY completed Phase-3-band trial is a Phase 2/Phase 3, and active PURE Phase 3 trials
+        # exist → the real pivotal stage is still ONGOING, so active_phase3 (NOT completed_phase3).
+        # A completed Phase 2/3 must not read as "Phase 3 completed" while the actual Phase 3 is
+        # still recruiting.
+        {"active_phase3"},
+    ),
+    (
+        "completed_pure_phase3_plus_active",  # a real completed pure P3 DOES win over active P3s
+        [
+            _t("NCT_1", "Phase 3", "COMPLETED"),
+            _t("NCT_2", "Phase 3", "Recruiting"),
+        ],
+        {"completed_phase3"},
     ),
     (
         "withdrawn_phase3_never_ran",

@@ -135,6 +135,13 @@ def _fmt_clinical_trials(
             f"\n_{n} trial(s) excluded as a different indication: "
             f"{', '.join(ct.contaminated_nct_ids)}._"
         )
+        # Surface WHY they were excluded (the gate's 1-2 sentence justification — e.g. "the drug is
+        # approved for CML, so CML trials are the approved sub-indication, not repurposing of the
+        # broader leukemia candidate"). Only shown when something was actually excluded, so the
+        # reader understands a thin/"no usable" signal is because approved-indication evidence was
+        # set aside, not because none exists.
+        if ct.relevance_reasoning.strip():
+            lines.append(f"\n_Why: {ct.relevance_reasoning.strip()}_")
 
     if ct.approval:
         a = ct.approval

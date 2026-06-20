@@ -79,6 +79,30 @@ def test_completed_phase3_no_termination_has_no_cause_signal():
     assert sig.terminated_phase3_nct_ids == []
 
 
+def test_completed_pure_phase3_excludes_combined_phase2_3():
+    """has_completed_pure_phase3 is True only for a completed PURE Phase 3 (or Phase 3/Phase 4),
+    NOT a completed combined 'Phase 2/Phase 3'. has_completed_phase3 stays True for both — the
+    distinction lets the dev-stage judge avoid reading a completed Phase 2/3 as a pivotal Phase 3
+    when the real Phase 3 is still recruiting (T1DM/semaglutide shape)."""
+    # Only a completed Phase 2/Phase 3 → has_completed_phase3 True, but pure is False.
+    ct_combined = _ct(completed=[Trial(nct_id="NCT05205928", phase="Phase 2/Phase 3")])
+    sig_c = derive_trial_signals(ct_combined)
+    assert sig_c.has_completed_phase3 is True
+    assert sig_c.has_completed_pure_phase3 is False
+    assert sig_c.completed_pure_phase3_nct_ids == []
+
+    # A completed pure Phase 3 (and Phase 3/Phase 4) → pure True.
+    ct_pure = _ct(
+        completed=[
+            Trial(nct_id="NCT00048360", phase="Phase 3"),
+            Trial(nct_id="NCT00061087", phase="Phase 3/Phase 4"),
+        ]
+    )
+    sig_p = derive_trial_signals(ct_pure)
+    assert sig_p.has_completed_pure_phase3 is True
+    assert sig_p.completed_pure_phase3_nct_ids == ["NCT00048360", "NCT00061087"]
+
+
 def test_subphase_terminated_is_not_cause():
     """A terminated trial BELOW the pivotal band (e.g. Phase 2) must NOT trip the cause
     signal — only the pivotal 'Phase 2/Phase 3'..'Phase 3' band counts."""

@@ -852,6 +852,17 @@ class RetrievalService:
                 summary.direction = ls.direction
                 summary.is_observational = ls.is_observational
                 summary.evidence_basis = ls.evidence_basis
+                # Per-PMID split: drop contaminated abstracts from the rendered evidence so the
+                # card's PMIDs match the grade (the grade was computed over the relevant set only).
+                # Mirrors the trial gate keeping only relevant NCTs.
+                relevant = set(ls.relevant_pmids)
+                summary.supporting_pmids = [
+                    p for p in summary.supporting_pmids if p in relevant
+                ]
+                summary.contradicting_pmids = [
+                    p for p in summary.contradicting_pmids if p in relevant
+                ]
+                summary.study_count = len(relevant)
             else:
                 # Judge returned None (parse failure / no abstracts) — its strength cap never ran.
                 # synthesize already graded THIS drug's evidence, so keep its strength/direction but
