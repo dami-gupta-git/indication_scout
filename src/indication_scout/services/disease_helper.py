@@ -156,6 +156,17 @@ async def merge_duplicate_diseases(
     drug_indications: list[str],
     max_tokens: int | None = None,
 ) -> MergeResult:
+    """
+    Ask the small LLM to collapse synonymous/duplicate disease terms.
+
+    Returns a MergeResult with a `merge` map (canonical → list of aliases) and a
+    `remove` list (terms to drop, e.g. already-approved indications). Cached by the
+    sorted input sets so identical disease/indication lists reuse the prior result.
+
+    On an unparseable LLM response, logs the error and returns an empty result
+    (no merges, no removals) rather than failing the pipeline.
+    """
+    # Cache key is order-independent: sort both lists so equivalent inputs collide.
     cache_params = {
         "diseases": sorted(diseases),
         "drug_indications": sorted(drug_indications),
@@ -182,6 +193,7 @@ async def merge_duplicate_diseases(
         )
         return {"merge": {}, "remove": []}
 
+    # Only cache successfully-parsed results; parse failures are not persisted.
     cache_set("disease_merge", cache_params, result, DEFAULT_CACHE_DIR)
     return result
 
