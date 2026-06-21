@@ -293,7 +293,7 @@ async def test_get_fda_approved_disease_mapping_uses_cache(tmp_path, monkeypatch
 
     drug_name = "ozempic"
     candidates = ["type 2 diabetes mellitus", "hypertension"]
-    expected = {"type 2 diabetes mellitus": True, "hypertension": False}
+    expected = {"type 2 diabetes mellitus": "approved", "hypertension": "none"}
 
     first = await get_fda_approved_disease_mapping(
         drug_name=drug_name,

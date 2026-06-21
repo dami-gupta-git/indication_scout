@@ -10,6 +10,7 @@ correct tier; cases with a defensible second answer accept either.
 """
 
 import logging
+import re
 
 import pytest
 
@@ -134,6 +135,36 @@ async def test_judge_dev_stage_live(label, trials, accepted, test_cache_dir):
         j.tier in accepted
     ), f"{label}: model judged {j.tier!r}, expected one of {sorted(accepted)}"
     assert isinstance(j.active_programs, str) and j.active_programs
+
+
+@pytest.mark.approval_aware
+async def test_semaglutide_t1d_active_phase3_count_matches_listed_ids(test_cache_dir):
+    """semaglutide × T1D regression: the active-programs count must equal the listed NCT ids
+    (the '5 Phase 3' / 4-listed miscount), and a not-yet-recruiting Phase 3 (CT.gov underscored
+    status) must be counted, not dropped. Tier must be active_phase3. The relevant set mirrors
+    the live T1D run: 4 active pure Phase 3 + 2 active Phase 2/3 + a completed Phase 2."""
+    trials = [
+        _t("NCT06082063", "Phase 3", "RECRUITING"),
+        _t("NCT06909006", "Phase 3", "NOT_YET_RECRUITING"),
+        _t("NCT05819138", "Phase 3", "RECRUITING"),
+        _t("NCT06894784", "Phase 3", "RECRUITING"),
+        _t("NCT03899402", "Phase 2/Phase 3", "ACTIVE_NOT_RECRUITING"),
+        _t("NCT06387199", "Phase 2/Phase 3", "RECRUITING"),
+        _t("NCT05537233", "Phase 2", "COMPLETED"),
+    ]
+    j = await judge_dev_stage(
+        trials, test_cache_dir, drug="semaglutide", indication="type 1 diabetes"
+    )
+    assert j.tier == "active_phase3"
+    # Each "<N> Phase 3 ... (ids)" group's count must equal the number of ids it lists.
+    for count, ids in re.findall(r"(\d+) Phase[^(]*\(([^)]*)\)", j.active_programs):
+        assert int(count) == len(
+            [x for x in ids.split(",") if x.strip()]
+        ), f"count != listed ids in {j.active_programs!r}"
+    # The 4 pure Phase 3 (incl. the not-yet-recruiting one) are all counted.
+    for nct in ("NCT06082063", "NCT06909006", "NCT05819138", "NCT06894784"):
+        assert nct in j.active_programs
+    assert "NCT05537233" not in j.active_programs  # completed → not an active program
 
 
 async def test_judge_active_programs_never_lists_a_completed_trial(test_cache_dir):

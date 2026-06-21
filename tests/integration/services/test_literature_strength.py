@@ -166,9 +166,11 @@ def _assert_self_consistent(s):
     assert set(s.relevant_pmids).isdisjoint(
         s.contaminated_pmids
     ), "relevant∩contaminated"
-    # The metformin-CVD regression: each `key_findings` bullet must NOT cite a PMID that was
-    # dropped (not in the relevant set). This is the invariant the merge owns by construction
-    # (one author) — assert it directly, since the deterministic orphan-trim was removed.
+    # Orphan-PMID invariant (the class of bug the metformin-CVD regression exposed: prose cited
+    # PMIDs the rollup dropped): each `key_findings` bullet must NOT cite a PMID outside the
+    # relevant set. The merge owns this by construction (one author); assert it directly since the
+    # deterministic orphan-trim was removed. Exercised on the drug-disease cases below (not
+    # metformin specifically — the invariant is drug-agnostic).
     # NOTE: the `summary` prose is deliberately exempt — the prompt permits it to cite a
     # CONTAMINATED PMID solely to explain WHY it was excluded (e.g. "the RCTs were for sibling
     # drug X, not this drug"), which is exactly the class-level/approved disclaimer case.

@@ -147,6 +147,45 @@ _RANK_CASES = [
         and _before(o, "Epsilitis", "Zetawasting")
         and _before(o, "Epsilitis", "Etacline"),
     ),
+    (
+        # Real semaglutide candidates: T1DM (drug-specific supports, active Phase 3) must rank #1,
+        # above NAFLD (approved-subtype literature, higher nothing) and Parkinson (class-level).
+        "semaglutide_t1dm_first_nafld_parkinson_below",
+        [
+            {
+                "disease": "Type 1 Diabetes Mellitus",
+                "dev_stage": "active_phase3",
+                "active_phase_3": "yes",
+                "highest_completed_phase": "Phase 2",
+                "strength": "moderate",
+                "direction": "supports",
+                "design": "rct_or_controlled",
+                "basis": "drug_specific",
+            },
+            {
+                "disease": "Non-alcoholic Fatty Liver Disease",
+                "dev_stage": "completed_phase2",
+                "highest_completed_phase": "Phase 2",
+                "strength": "none",
+                "direction": "none",
+                "design": "undetermined",
+                "basis": "approved",
+            },
+            {
+                "disease": "Parkinson Disease",
+                "dev_stage": "early_phase",
+                "highest_completed_phase": "none",
+                "strength": "none",
+                "direction": "none",
+                "design": "undetermined",
+                "basis": "class_level",
+            },
+        ],
+        lambda o: o
+        and o[0] == "Type 1 Diabetes Mellitus"
+        and _before(o, "Type 1 Diabetes Mellitus", "Non-alcoholic Fatty Liver Disease")
+        and _before(o, "Type 1 Diabetes Mellitus", "Parkinson Disease"),
+    ),
 ]
 
 
