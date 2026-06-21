@@ -144,6 +144,16 @@ async def test_single_drug(test_cache_dir):
             "semaglutide",
             ["ozempic", "rybelsus", "wegovy", "nn9535"],
         ),
+        # sildenafil — trade names (Revatio/Viagra) live on SALT FORMS, fetched via
+        # molecule_hierarchy. If that ChEMBL call fails, aliases lack the trade names → openFDA
+        # label fetch returns nothing → approved indications empty → the approval labeler can't
+        # mark systemic hypertension contaminated (it falls to none). This case pins that path;
+        # a red here means ChEMBL salt-form discovery is down, not a logic regression.
+        (
+            "CHEMBL192",
+            "sildenafil",
+            ["revatio", "viagra"],
+        ),
     ],
 )
 async def test_get_all_drug_names(
@@ -165,6 +175,18 @@ async def test_get_all_drug_names(
     # all names are lowercase
     for name in result:
         assert name == name.lower(), f"Expected lowercase, got '{name}'"
+
+
+async def test_get_all_drug_names_sildenafil(test_cache_dir):
+    """Standalone sildenafil alias check: Revatio/Viagra live on salt forms (molecule_hierarchy).
+    A red here means ChEMBL salt-form discovery is down — which makes the approval labeler return
+    'none' for systemic hypertension (no PAH/ED approvals to contaminate against)."""
+    from indication_scout.data_sources.chembl import get_all_drug_names
+
+    result = await get_all_drug_names("CHEMBL192", cache_dir=test_cache_dir)
+    assert result[0] == "sildenafil"
+    for name in ("revatio", "viagra"):
+        assert name in result, f"Expected '{name}' in sildenafil names, got {result}"
 
     # "component of" entries should be filtered out
     for name in result:

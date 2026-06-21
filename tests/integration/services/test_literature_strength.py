@@ -212,12 +212,18 @@ def _assert_self_consistent(s):
     assert (
         set(s.contradicting_pmids) <= relevant
     ), "contradicting cites a contaminated PMID"
-    assert not (
-        set(s.supporting_pmids) & set(s.contradicting_pmids)
-    ), "supporting∩contradicting"
+    # supporting∩contradicting is ALLOWED now: a PMID with verdict "mixed" appears in BOTH lists by
+    # design (it carries evidence in each direction). The only invariant is that any such overlap
+    # is the mixed set — i.e. still within relevant (checked above) and never in contaminated.
     assert set(s.relevant_pmids).isdisjoint(
         s.contaminated_pmids
     ), "relevant∩contaminated"
+    # neutral PMIDs are relevant but in NEITHER directional list.
+    assert set(s.neutral_pmids) <= relevant, "neutral cites a contaminated PMID"
+    assert not (set(s.neutral_pmids) & set(s.supporting_pmids)), "neutral∩supporting"
+    assert not (
+        set(s.neutral_pmids) & set(s.contradicting_pmids)
+    ), "neutral∩contradicting"
     # Orphan-PMID invariant (the class of bug the metformin-CVD regression exposed: prose cited
     # PMIDs the rollup dropped): each `key_findings` bullet must NOT cite a PMID outside the
     # relevant set. The merge owns this by construction (one author); assert it directly since the

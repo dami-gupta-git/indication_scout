@@ -41,6 +41,9 @@ _BUP_CUTOFF = date(2025, 1, 1)
 # A PAH trial that the systemic-hypertension query over-recalls for sildenafil. PAH is an approved
 # sildenafil indication, so under approved={PAH} it must be classified contaminated (TEST 1).
 _SILD_PAH_NCT = "NCT01181284"
+# Therapeutic-intent mismatch (TEST 2): sildenafil studied FOR erectile dysfunction (approved) in a
+# HYPERTENSIVE population — hypertension is only the population, not the target => contaminated.
+_SILD_ED_IN_HTN_NCT = "NCT02620995"
 # The approved-SAD bupropion trial — the motivating CURATED_CONTAMINATED_NCTS case.
 _BUP_SAD_NCT = "NCT00046241"
 # semaglutide × NAFLD: a trial whose condition is "type 2 diabetes with NASH". NASH is the approved
@@ -81,6 +84,31 @@ async def test_sildenafil_pah_excluded_only_when_approved_list_supplied():
     # TEST 1: approved PAH sub-indication => contaminated, NOT relevant
     assert _SILD_PAH_NCT in contaminated
     assert _SILD_PAH_NCT not in relevant
+
+
+async def test_sildenafil_ed_in_hypertensives_contaminated_therapeutic_intent():
+    """Therapeutic-intent mismatch (TEST 2): a sildenafil-for-ED trial run in a HYPERTENSIVE
+    population (NCT02620995) must be contaminated for systemic hypertension — hypertension is only
+    the population, the target is the approved ED indication."""
+    llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
+    agent = build_clinical_trials_agent(llm, date_before=_SILD_CUTOFF)
+
+    output = await run_clinical_trials_agent(
+        agent,
+        "sildenafil",
+        "hypertension",
+        approved_indications=["pulmonary arterial hypertension", "erectile dysfunction"],
+    )
+
+    shown = _shown(output)
+    contaminated = set(output.contaminated_nct_ids)
+    relevant = set(output.relevant_nct_ids)
+    assert relevant | contaminated >= shown
+    assert not (relevant & contaminated)
+    if _SILD_ED_IN_HTN_NCT not in shown:
+        pytest.skip(f"{_SILD_ED_IN_HTN_NCT} not recalled this run — cannot assert TEST 2")
+    assert _SILD_ED_IN_HTN_NCT in contaminated
+    assert _SILD_ED_IN_HTN_NCT not in relevant
 
 
 async def test_bupropion_approved_sad_trial_contaminated_via_rule():

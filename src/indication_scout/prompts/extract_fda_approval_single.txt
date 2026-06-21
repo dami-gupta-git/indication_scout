@@ -19,11 +19,14 @@ You are a clinical pharmacology expert. Given FDA label text for ONE drug and a 
 "combination_only" — approved for this disease ONLY inside a named combination product, never as monotherapy for this single drug.
   e.g. drug approved as monotherapy elsewhere but only via a fixed-dose combo for homozygous FH -> "homozygous familial hypercholesterolemia": combination_only.
 
-"contaminated" — a real repurposing target that is a BROADER disease category containing the approval plus other distinct diseases; kept and ranked, but its trial counts are untrustworthy because a registry search pulls in the approval's trials. This includes a bare disease whose approved form is only a MINORITY biomarker subset.
-  e.g. approved "rheumatoid arthritis" -> "arthritis": contaminated (also covers osteoarthritis, gout). Approved "EGFR-mutated NSCLC" (~10-15% of NSCLC) -> "non-small cell lung cancer": contaminated.
+"contaminated" — a real repurposing target (kept and ranked) whose trial counts are untrustworthy because a registry search for the candidate would pull in the drug's APPROVED trials. Two ways this happens:
+  (a) the candidate is a BROADER disease category containing the approval plus other distinct diseases (incl. a bare disease whose approved form is only a MINORITY biomarker subset).
+    e.g. approved "rheumatoid arthritis" -> "arthritis": contaminated (also covers osteoarthritis, gout). Approved "EGFR-mutated NSCLC" (~10-15% of NSCLC) -> "non-small cell lung cancer": contaminated.
+  (b) the candidate is a DISTINCT SIBLING of an approved indication, but a registry/literature search for the candidate would still recall the approved sibling's trials (they co-mingle under a shared disease term). The candidate is genuinely separate (kept), but its counts are polluted. ASK: would a trial search for the candidate return the drug's approved-sibling trials? If yes -> contaminated.
+    e.g. approved "pulmonary arterial hypertension" -> "hypertension" (systemic): contaminated — distinct disease, but a "hypertension" search recalls the approved PAH trials.
 
-"none" — any other real candidate (sibling subtype, related, or unrelated) with no contamination.
-  e.g. approved "rheumatoid arthritis" -> "juvenile idiopathic arthritis": none (distinct disease); approved "Ph+ CML" -> "acute myeloid leukemia": none (sibling subtype).
+"none" — any other real candidate (sibling subtype, related, or unrelated) with no contamination — a search for it would NOT recall the drug's approved trials.
+  e.g. approved "type 2 diabetes" -> "type 1 diabetes": none (distinct sibling; a type-1-diabetes search does not return the type-2 trials). approved "rheumatoid arthritis" -> "juvenile idiopathic arthritis": none. approved "Ph+ CML" -> "acute myeloid leukemia": none.
 
 Risk-reduction: for "reduce the risk of X in patients with Y", X is the indication (-> approved); Y only names the population (-> none unless separately labeled).
   e.g. "reduce risk of stroke in patients with atrial fibrillation" -> "stroke": approved; "atrial fibrillation": none.

@@ -66,6 +66,7 @@ async def run_clinical_trials_agent(
     disease_name: str,
     first_approval: int | None = None,
     approved_indications: list[str] | None = None,
+    cache_dir: Path = DEFAULT_CACHE_DIR,
 ) -> ClinicalTrialsOutput:
     """Invoke the agent and assemble a ClinicalTrialsOutput from the run.
 
@@ -247,7 +248,7 @@ async def run_clinical_trials_agent(
         if relevant_trials:
             judgment = await judge_dev_stage(
                 relevant_trials,
-                DEFAULT_CACHE_DIR,
+                cache_dir,
                 drug=drug_name,
                 indication=disease_name,
             )
@@ -264,7 +265,7 @@ async def run_clinical_trials_agent(
                     stage=stage_phrase,
                     active_programs=judgment.active_programs,
                     first_approval=first_approval,
-                    cache_dir=DEFAULT_CACHE_DIR,
+                    cache_dir=cache_dir,
                     drug=drug_name,
                     indication=disease_name,
                 )
