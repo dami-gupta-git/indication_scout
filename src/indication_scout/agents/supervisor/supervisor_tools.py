@@ -113,44 +113,32 @@ _PROGRAM_STAGES = {
 }
 
 
-# Fresh-context FACT critic for the supervisor's blurbs. Ranking ORDER is now the supervisor's
-# own LLM judgment (see RANKING in supervisor.txt) — this critic no longer audits order. It only
-# repairs factual contradictions between a blurb's fields and the machine-derived per-candidate
-# FACT block (Phase-3 existence), so no blurb claims "no Phase 3" when a relevant Phase 3 is on
-# record. Kept terse so it repairs facts, not prose.
+# Fresh-context critic for the supervisor's ranked blurbs. Two jobs, both by REASONING (not a
+# rule list): (1) sanity-check the ORDER — think about what each candidate's evidence actually
+# means for whether it is a live repurposing opportunity, and if the order is not defensible,
+# reorder it; (2) repair blurb fields that contradict the machine-derived per-candidate FACT.
 _RANKING_CRITIC_SYSTEM = """\
-You repair factual contradictions in a list of drug-repurposing candidate blurbs. You are given \
-the candidates each with a verdict tag, a few one-line fields, and a per-candidate FACT block \
-(machine-derived, authoritative). Do NOT reorder the list and do NOT re-rank — order is decided \
-upstream. Your ONLY job is to rewrite blurb fields that contradict the FACT.
+You are a skeptical reviewer of a drug-repurposing candidate ranking. You are given the candidates \
+in their current rank order, each with a verdict tag, a few one-line fields, and a per-candidate \
+FACT block (machine-derived, authoritative).
 
-The FACT states one of: a relevant COMPLETED Phase 3 is on record; an ACTIVE/RECRUITING Phase 3 \
-is on record; or no relevant Phase 3. NO field may contradict the FACT.
+FIRST, audit the ORDER. For each candidate, think about what its evidence actually MEANS for \
+whether it is a live repurposing opportunity worth surfacing first — not merely how much or how \
+impressive the evidence is. A candidate that has been tested and shown to FAIL, or whose program \
+is closed, is a weaker opportunity than one that is still live, however thin. If the current order \
+is not defensible on that basis, reorder the candidates so the strongest live opportunities come \
+first. If it is already defensible, keep it.
 
-CASE 1 — FACT says a COMPLETED Phase 3 IS on record. Rewrite any field that asserts \
-there are no Phase 3 TRIALS — e.g. "no Phase 3 on record", "Phase 3 never initiated", \
-"all activity is Phase 4", "Phase 4 exploratory only" — to reflect the completed Phase 3.
-CRITICAL DISTINCTION (case 1 only): a claim about no dedicated REGULATORY / NDA / pivotal \
-*program* (commercial development) is SEPARATE and usually TRUE for a generic drug — \
-do NOT rewrite "no dedicated regulatory program", "no NDA filed", "no commercial \
-development". Only the TRIAL-existence claim is wrong.
-
-CASE 2 — FACT says an ACTIVE/RECRUITING Phase 3 IS on record. An active Phase 3 trial \
-IS a development program. Rewrite ANY field claiming there is no development program or \
-only off-label/Phase 4 activity — e.g. "no development program", "no formal development \
-program", "no dedicated pivotal program", "Phase 4 activity reflects off-label use, not \
-a dedicated development program", "Multiple Phase 4 studies" used to mean nothing higher \
-exists — to reflect the active Phase 3 program (name the NCT ids from the FACT). Here the \
-"no dedicated program" wording IS false and MUST be corrected (unlike case 1). You MAY \
-still note the absence of a COMPLETED pivotal READOUT — that is true and different from \
-"no program".
-
-Change nothing else.
+SECOND, repair any blurb field that CONTRADICTS the candidate's FACT (the FACT is authoritative; \
+it states whether a relevant COMPLETED or ACTIVE Phase 3 is on record, or none). Do not let a \
+field claim there are no Phase 3 trials when the FACT says one exists. Leave true statements about \
+the absence of a commercial/NDA/regulatory PROGRAM alone (a generic drug files no new NDA — that \
+is not the same as "no trial"). Change nothing else.
 
 Output a JSON object ONLY (no prose, no fences):
-{"blurbs": [ <every input blurb, in the SAME order, each a full dict with the same \
-keys; fields you repaired are rewritten, all others verbatim> ]}
-Return every blurb even if unchanged. Preserve every key."""
+{"blurbs": [ <every input blurb, in your final rank order, each a full dict with the same keys; \
+fields you repaired are rewritten, all others verbatim> ]}
+Return every blurb. Preserve every key."""
 
 
 def _log_disease_banner(title: str, diseases: list[str]) -> None:
@@ -1434,14 +1422,15 @@ def build_supervisor_tools(
         return "\n".join(lines)
 
     async def _run_fact_critic(items: list[dict]) -> list[dict]:
-        """Run the fact critic over `items`; return repaired_blurbs (order preserved).
+        """Run the critic over `items`; return the audited blurbs (possibly REORDERED).
 
-        Feeds each blurb its authoritative per-disease Phase-3 FACT so the critic can repair a
-        false "no Phase 3 trials" claim while preserving true "no regulatory program"
-        claims. Does NOT reorder — ranking order is the supervisor's judgment. On ANY parse
-        failure or disease-set mismatch, returns the ORIGINAL items (data-loss guard). Used by
-        both critique_ranking and finalize_supervisor so the repair always runs on the finalized
-        blurbs, not only when the LLM pre-called critique_ranking.
+        The critic does two things by reasoning: (1) sanity-checks the rank ORDER — a
+        tested-and-failed / closed candidate is a weaker opportunity than a live one and should
+        not lead — and reorders if the order is not defensible; (2) repairs a blurb field that
+        contradicts the authoritative per-disease Phase-3 FACT while preserving true "no
+        regulatory program" claims. Returns the critic's blurb list (same disease SET, order may
+        differ). On ANY parse failure or disease-set mismatch, returns the ORIGINAL items
+        (data-loss guard). Used by both critique_ranking and finalize_supervisor.
         """
         lines: list[str] = []
         for i, item in enumerate(items, start=1):
@@ -1503,15 +1492,15 @@ def build_supervisor_tools(
 
     @tool
     async def critique_ranking(blurbs: list[dict] | None = None) -> str:
-        """Fact-check your candidate blurbs before finalizing.
+        """Have a fresh reviewer audit your ranking before finalizing.
 
         Call this AFTER you have drafted your ranked blurbs but BEFORE
         finalize_supervisor. Pass the same `blurbs` list (in your intended rank
-        order) you plan to finalize with. A separate reviewer repairs factual
-        contradictions against each candidate's authoritative Phase-3 FACT (so no
-        blurb claims "no Phase 3" when a relevant Phase 3 is on record). It does
-        NOT reorder or re-rank — ranking ORDER is your own judgment. Finalize with
-        the repaired blurbs it returns.
+        order) you plan to finalize with. A separate reviewer sanity-checks the
+        ORDER (a tested-and-failed or closed candidate should not lead over a live
+        one) and may REORDER, and repairs any field that contradicts the
+        candidate's authoritative Phase-3 FACT. FINALIZE WITH THE BLURBS IT
+        RETURNS, IN THE ORDER IT RETURNS THEM — they are the reviewed ranking.
 
         Arguments:
         - blurbs: your draft ranked blurbs, same shape as finalize_supervisor.

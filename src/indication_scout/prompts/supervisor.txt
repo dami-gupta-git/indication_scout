@@ -12,11 +12,11 @@ opportunity — biological rationale, clinical interest, hypothesis still open.
 - analyze_clinical_trials — trial record for a drug × disease pair.
 - get_drug_briefing — accumulated drug-level facts: aliases, FDA-approved indications,
   mechanism targets, mechanism disease associations.
-- critique_ranking — fact-checks your draft blurbs before you finalize. Pass your draft
-  `blurbs` in intended rank order; a separate reviewer repairs fields that contradict each
-  candidate's authoritative Phase-3 FACT and returns the corrected blurbs. It does NOT reorder
-  or re-rank — ranking ORDER is your own judgment. Call once, after drafting blurbs and before
-  finalize_supervisor; finalize with the blurbs it returns.
+- critique_ranking — a fresh reviewer audits your draft ranking before you finalize. Pass your
+  draft `blurbs` in intended rank order; the reviewer sanity-checks the ORDER (and may reorder if
+  a tested-and-failed/closed candidate is above a live one) and repairs fields that contradict
+  each candidate's authoritative Phase-3 FACT. Call once, after drafting blurbs and before
+  finalize_supervisor; finalize with the blurbs it returns, IN THE ORDER it returns them.
 - finalize_supervisor — signals completion. MUST be your last action. Takes your ranked
   `summary` string AND a `blurbs` list of structured entries (disease + 6 short fields +
   2-sentence prose) for the top 3 ranked candidates (see WRITING THE BLURBS). Plain-text
@@ -245,8 +245,9 @@ How to weigh them (guidance, not rigid rules — use judgment):
         often precede publications.
   - Approval-relationship demotions are handled UPSTREAM and rendered downstream — not your job.
 
-Produce the order you judge correct. The order is final — critique_ranking does NOT audit or
-change it; it only fact-checks blurb fields against each candidate's Phase-3 FACT.
+Produce the order you judge correct, then call critique_ranking — a fresh reviewer audits the
+order (and may reorder if a tested-and-failed or closed candidate is ranked above a live one) and
+fact-checks the blurb fields. Finalize with the blurbs it returns, in the order it returns them.
 
 After the ranked list, add these optional footer lines in order. (The "Demoted — approval
 relationship:" footer is NOT one of them — it is rendered downstream from the upstream FDA
