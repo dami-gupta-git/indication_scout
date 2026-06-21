@@ -9,6 +9,7 @@ from pathlib import Path
 from indication_scout.constants import (
     CACHE_TTL,
     CHEMBL_BASE_URL,
+    CHEMBL_RETRY_BACKOFF_SCHEDULE,
     DEFAULT_CACHE_DIR,
     OPEN_TARGETS_BASE_URL,
 )
@@ -109,6 +110,9 @@ def _lookup_chembl_id_by_name(name: str, cache_dir: Path) -> str | None:
 
 class ChEMBLClient(BaseClient):
     """Client for querying ChEMBL database."""
+
+    # EBI/ChEMBL is slower and times out more often, so back off harder.
+    retry_backoff_schedule = CHEMBL_RETRY_BACKOFF_SCHEDULE
 
     def __init__(self, cache_dir: Path = DEFAULT_CACHE_DIR) -> None:
         super().__init__()

@@ -16,7 +16,7 @@ from typing import Any
 import aiohttp
 
 from indication_scout.config import get_settings
-from indication_scout.constants import DEFAULT_CACHE_DIR
+from indication_scout.constants import DEFAULT_CACHE_DIR, RETRY_BACKOFF_SCHEDULE
 
 logger = logging.getLogger("indication_scout.data_sources")
 
@@ -150,6 +150,11 @@ class BaseClient(ABC):
 
     exit_on_retry_exhausted: bool = False
 
+    # Per-attempt backoff (seconds) for timeout / connection-error retries.
+    # Subclasses may override (e.g. ChEMBL backs off harder). Attempts beyond
+    # the list reuse the last (largest) value.
+    retry_backoff_schedule: list[int] = RETRY_BACKOFF_SCHEDULE
+
     def __init__(self):
         self.timeout = _settings.default_timeout
         self.max_retries = _settings.default_max_retries
@@ -271,7 +276,9 @@ class BaseClient(ABC):
                 )
 
             if attempt < self.max_retries:
-                delay = min(2**attempt, 90)
+                delay = self.retry_backoff_schedule[
+                    min(attempt, len(self.retry_backoff_schedule) - 1)
+                ]
                 ctx_suffix = f" ({context})" if context else ""
                 # WARNING, not debug — a swallowed timeout/connection error that
                 # silently sleeps and retries otherwise reads as an unexplained stall.

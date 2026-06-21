@@ -70,7 +70,7 @@ CLI/API → Supervisor → specialist agents → data source clients → externa
 ### Key patterns
 
 - **BaseClient** (`data_sources/base_client.py`): All clients use `async with Client() as c:` for session lifecycle. Provides `_rest_get()`, `_graphql()`, `_rest_get_xml()` with retry. Subclasses set `_source_name` property.
-- **Open Targets** uses file-based caching (`cache/` dir, config-driven TTL via `CACHE_TTL`, currently 60 days) to avoid redundant GraphQL calls.
+- **File-based caching** (`cache/` dir, config-driven TTL via `CACHE_TTL`, currently 60 days) is used by all data source clients via the shared `utils.cache` helper (`cache_get`/`cache_set`) to avoid redundant API calls: Open Targets (GraphQL), ClinicalTrials (`ct_search`/`ct_landscape`/`ct_completed`/`ct_terminated`), PubMed, ChEMBL, and FDA. Open Targets additionally keeps a bespoke per-target evidences cache.
 - **pytest-asyncio** is set to `asyncio_mode = "auto"` — async test functions run automatically without `@pytest.mark.asyncio`.
 
 ## Test Layout

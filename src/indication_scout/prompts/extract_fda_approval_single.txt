@@ -30,6 +30,9 @@ You are a clinical pharmacology expert. Given FDA label text for ONE drug and a 
 
 Risk-reduction: for "reduce the risk of X in patients with Y", X is the indication (-> approved); Y only names the population (-> none unless separately labeled).
   e.g. "reduce risk of stroke in patients with atrial fibrillation" -> "stroke": approved; "atrial fibrillation": none.
+  CARVE-OUT — when Y is the disease whose own events/complications X are (X is an OUTCOME OF Y, not of a separate disease axis), then reducing X is ~treating Y, so candidate Y is on-label: -> "approved" if Y is the same disease (or a synonym/severity-qualified form), or -> "contaminated" if Y is a BROAD UMBRELLA whose uncovered scope is a DISTINCT subtype. Do NOT apply this when X is a complication on a DIFFERENT disease axis and Y is merely a risk factor for X — then Y stays "none".
+  e.g. "reduce major adverse cardiovascular events (MACE) in patients with established cardiovascular disease" -> "cardiovascular disease": approved (MACE ARE events of CVD; reducing MACE is treating CVD — its uncovered scope, e.g. primary prevention / non-comorbid, is the SAME disease minus a comorbidity, so approved/dropped, NOT contaminated). Contrast: candidate "NAFLD" against approved "MASH" stays contaminated because NAFLD's uncovered scope (simple steatosis) is a DISTINCT subtype, not the same disease minus a comorbidity.
+  e.g. "reduce risk of stroke in patients with atrial fibrillation" -> "atrial fibrillation": none (stroke is cerebrovascular — a DIFFERENT disease axis; AF is only a risk factor for stroke, the drug does not treat AF). The carve-out must NOT flip AF to approved.
 
 Judge synonymy and parent/child/sibling from medical knowledge. Do NOT use knowledge of whether the drug works — only how the candidate relates to the label.
 

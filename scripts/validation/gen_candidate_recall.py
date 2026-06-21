@@ -38,7 +38,8 @@ The Notes column is emitted empty; any prose in a committed table was added by h
 
 Args: <runbook.txt> [output.md] [--lines 3-7,12]. Runbook columns: drug,indication,date.
 `--lines` selects 1-based data rows (header excluded; ranges and lists allowed); default
-runs every row.
+runs every row. With no output.md given, writes to the next free
+results/holdout_validation/validation_results_N.md (never overwrites).
 
 Run (per-target read widened to 30 to test deeper recall):
     MECHANISM_ASSOCIATIONS_PER_TARGET=30 CONSTANTS_FILE=.env.constants \\
@@ -49,6 +50,7 @@ Run (per-target read widened to 30 to test deeper recall):
 import asyncio
 import csv
 import logging
+import os
 import sys
 from datetime import date
 from pathlib import Path
@@ -69,7 +71,18 @@ logger = logging.getLogger("gen_candidate_recall")
 
 VALIDATION_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = VALIDATION_DIR.parent.parent
-OUT_MD = PROJECT_ROOT / "results" / "holdout_validation" / "validation_results.md"
+RESULTS_DIR = PROJECT_ROOT / "results" / "holdout_validation"
+
+
+def _next_out_md() -> Path:
+    """First unused validation_results_N.md (N starts at 11)."""
+    n = 11
+    while (RESULTS_DIR / f"validation_results_{n}.md").exists():
+        n += 1
+    return RESULTS_DIR / f"validation_results_{n}.md"
+
+
+OUT_MD = _next_out_md()
 
 
 def _tool_call(tool, drug: str) -> dict:
@@ -151,11 +164,25 @@ def _parse_lines(spec: str) -> set[int]:
 
 def _ensure_header(cap: int) -> None:
     OUT_MD.parent.mkdir(parents=True, exist_ok=True)
+    s = get_settings()
+    # Reflect the effective per-target value (a CLI env override beats the constants file).
+    per_target = int(
+        os.environ.get(
+            "MECHANISM_ASSOCIATIONS_PER_TARGET", s.mechanism_associations_per_target
+        )
+    )
+    env_line = (
+        f"### env constants : SUPERVISOR_CANDIDATE_CAP={s.supervisor_candidate_cap} "
+        f"SUPERVISOR_INVESTIGATION_CAP={s.supervisor_investigation_cap}, "
+        f"MECHANISM_ASSOCIATIONS_PER_TARGET={per_target}"
+    )
     lines = [
         "# Holdout Validation — leak-free candidate recall (seed phase only)",
         "",
+        env_line,
+        "",
         "Mechanism ranking uses the leak-free recomputed OT score (clinical_precedence excluded) in "
-        f"holdout mode; `MECHANISM_ASSOCIATIONS_PER_TARGET=30`; investigation cap={cap}.",
+        f"holdout mode; `MECHANISM_ASSOCIATIONS_PER_TARGET={per_target}`; investigation cap={cap}.",
         "",
         "`present`: in = target indication is in the merged candidate list. `rank`/`source` = its "
         "position and origin (competitor/mechanism/both). `investigated` = rank <= cap (reaches the "

@@ -490,3 +490,9 @@ BOT_USER_AGENT_MARKERS: list[str] = [
 # ip-api.com response fields requested for visitor geolocation. `hosting` and `proxy`
 # flag data-center / VPN IPs, which mark automated (non-human) traffic.
 GEO_API_FIELDS: str = "status,city,regionName,country,proxy,hosting"
+
+# Per-attempt backoff (seconds) for timeout / connection-error retries in BaseClient.
+# Attempts beyond the list reuse the last (largest) value.
+RETRY_BACKOFF_SCHEDULE: list[int] = [1, 2, 4]
+# ChEMBL (EBI) is slower and times out more often, so it backs off harder.
+CHEMBL_RETRY_BACKOFF_SCHEDULE: list[int] = [2, 8, 16]

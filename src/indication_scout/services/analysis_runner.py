@@ -38,7 +38,7 @@ def build_agent(
     llm = ChatAnthropic(
         model=settings.llm_model,
         temperature=0,
-        max_tokens=4096,
+        max_tokens=settings.llm_max_tokens,
         anthropic_api_key=settings.anthropic_api_key,
     )
     svc = RetrievalService(cache_dir)

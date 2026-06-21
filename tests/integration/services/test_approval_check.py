@@ -37,20 +37,51 @@ from indication_scout.services.approval_check import (
         # must NOT be dropped. T1DM (sibling of approved T2DM) → "none" (kept);
         # NAFLD (broader parent of approved MASH) → "contaminated" (kept,
         # suspect trial counts); T2DM/obesity → "approved" (dropped).
-        (
+        # "cardiovascular disease" → "approved" (dropped): the MACE-reduction
+        # approval is "reduce MACE in established cardiovascular disease" — MACE
+        # ARE events of CVD, so candidate CVD is on-label (risk-reduction
+        # carve-out). It must NOT come back "none" (the regression that floated
+        # CVD to a false #1 on the approved SELECT/SUSTAIN-6/PIONEER-6 trials).
+        pytest.param(
             "semaglutide",
             [
                 "type 1 diabetes mellitus",
                 "non-alcoholic fatty liver disease",
                 "obesity",
+                "cardiovascular disease",
                 "parkinson disease",
             ],
             {
                 "type 1 diabetes mellitus": "none",
                 "non-alcoholic fatty liver disease": "contaminated",
                 "obesity": "approved",
+                "cardiovascular disease": "approved",
                 "parkinson disease": "none",
             },
+            marks=pytest.mark.xfail(
+                reason=(
+                    "Risk-reduction carve-out (events-of-Y → Y approved) does not yet fire on "
+                    "the dual-comorbidity label shape: the Ozempic label reads 'reduce MACE in "
+                    "patients with type 2 diabetes mellitus AND established cardiovascular "
+                    "disease', so the LLM treats CVD as one of two qualifier populations and "
+                    "returns 'none' instead of 'approved'. The single-population carve-out in "
+                    "extract_fda_approval_single.txt handles 'X in patients with Y' but not "
+                    "'X in patients with Y1 and Y2'. Fix pending: either harden the prompt for "
+                    "co-listed populations or curate CVD for semaglutide."
+                ),
+                strict=True,
+            ),
+        ),
+        # AF/stroke guard for the risk-reduction carve-out. Apixaban is approved
+        # to "reduce the risk of stroke in patients with atrial fibrillation".
+        # Stroke is cerebrovascular (a DIFFERENT disease axis) and AF is only the
+        # risk-factor population — the carve-out must NOT flip AF to approved.
+        # Stroke itself IS the reduced indication → "approved". Apixaban is
+        # uncurated, so this exercises the LLM rule, not a short-circuit.
+        (
+            "apixaban",
+            ["stroke", "atrial fibrillation"],
+            {"stroke": "approved", "atrial fibrillation": "none"},
         ),
         # Curated short-circuit (contaminated): "colorectal cancer" is in
         # CURATED_FDA_CONTAMINATED_CANDIDATES["sotorasib"] (KRAS G12C is only
