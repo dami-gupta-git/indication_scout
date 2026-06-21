@@ -124,6 +124,7 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
 def _fmt_clinical_trials(
     ct: ClinicalTrialsOutput,
     indication: str = "",
+    approval_relationship: str = "none",
 ) -> str:
     lines: list[str] = []
 
@@ -157,6 +158,16 @@ def _fmt_clinical_trials(
             if a.is_approved:
                 target = a.matched_indication or "this indication"
                 lines.append(f"**FDA approval:** Approved ({target})")
+            elif approval_relationship == "contaminated":
+                # The verbatim candidate term isn't itself on the label, but an approved
+                # sub-indication sits inside this broader candidate (e.g. NAFLD candidate
+                # contains the approved MASH child). A bare "Not found" here reads as a
+                # self-contradiction against the literature block's "already-approved
+                # sub-indication" verdict, so we surface the parent/child relationship.
+                lines.append(
+                    "**FDA approval:** Parent indication not directly on FDA label; "
+                    "an approved sub-indication is contained within this broader candidate"
+                )
             else:
                 lines.append(
                     "**FDA approval:** Not found on FDA label for this indication"
@@ -489,7 +500,11 @@ def format_report(output: SupervisorOutput) -> str:
                 lines += [
                     "#### Clinical Trials",
                     "",
-                    _fmt_clinical_trials(finding.clinical_trials, finding.disease),
+                    _fmt_clinical_trials(
+                        finding.clinical_trials,
+                        finding.disease,
+                        finding.approval_relationship,
+                    ),
                     "",
                 ]
 

@@ -31,6 +31,11 @@ search scope, so they MUST be classified too or a contaminated active trial leak
 The task message gives the drug's FDA-approved indications. Apply these tests to EACH shown trial
 IN ORDER; the FIRST one that matches decides the verdict.
 
+TEST 0 — WRONG DRUG (do this FIRST, before any disease reasoning). Is THIS drug an actual studied
+intervention of the trial? If not — the intervention is a different drug or modality (e.g. stem-cell
+transplant, chemotherapy, another TKI), or this drug appears only as a comparator/background — =>
+CONTAMINATION, regardless of how relevant the disease is. Only if this drug IS studied, go to TEST 1.
+
 TEST 1 — APPROVED-SUBTYPE (=> CONTAMINATION). Is ANY condition the trial studies one of the drug's
 APPROVED indications, or a narrower form of one? If YES => CONTAMINATION — it is already-approved
 evidence, not repurposing of the broad candidate. This holds even when the drug IS this drug.
@@ -53,13 +58,12 @@ evidence, not repurposing of the broad candidate. This holds even when the drug 
     biomarker — "NASH" is the approved disease, not a broad parent of it.)
   - anything, when the approved-indications list is "(none)" — TEST 1 never matches then.
 
-TEST 2 — DISTINCT DISEASE or WRONG DRUG (=> CONTAMINATION). Is the trial's condition a DISTINCT
-disease that merely shares a parent term (e.g. a systemic "Hypertension" query pulling in
-"Pulmonary Arterial Hypertension" / PAH trials — PAH is a SEPARATE disease)? Or is the studied drug
-NOT this drug (this drug appears only as a comparator or PK probe)? Or is the candidate only the
-trial's POPULATION while the drug is given FOR a different condition (e.g. "sildenafil for erectile
-dysfunction in hypertensive men" — target is ED, hypertension just names the patients)? If YES =>
-CONTAMINATION.
+TEST 2 — DISTINCT DISEASE or WRONG THERAPEUTIC INTENT (=> CONTAMINATION). (This drug IS a studied
+intervention — TEST 0 passed.) Is the trial's condition a DISTINCT disease that merely shares a
+parent term (e.g. a systemic "Hypertension" query pulling in "Pulmonary Arterial Hypertension" /
+PAH trials — PAH is a SEPARATE disease)? Or is the candidate only the trial's POPULATION while the
+drug is given FOR a different condition (e.g. "sildenafil for erectile dysfunction in hypertensive
+men" — target is ED, hypertension just names the patients)? If YES => CONTAMINATION.
 
 TEST 3 — otherwise (=> RELEVANT). It studies THIS drug for THIS indication or a narrower
 NON-APPROVED subtype of it (which rolls up as real evidence for the parent).
