@@ -149,6 +149,33 @@ _T1DM_ABSTRACTS = [
 ]
 
 
+# Real abstracts — the paired baricitinib SLE phase-3 program: BRAVE-I met its primary endpoint,
+# BRAVE-II failed its primary endpoint. The per-PMID directional verdict must split them by their
+# OWN result, not lump the program as all-contradicting (the BRAVE-I bug).
+_SLE_BRAVE_ABSTRACTS = [
+    {
+        "pmid": "36848918",
+        "title": "Baricitinib for systemic lupus erythematosus (SLE-BRAVE-I): a phase 3 trial.",
+        "abstract": (
+            "In this phase 3, double-blind, randomised, placebo-controlled trial, baricitinib "
+            "4 mg met the primary endpoint: SRI-4 response at week 52 was achieved by 57% of "
+            "patients vs 46% on placebo (odds ratio 1.57, 95% CI 1.09-2.27; p=0.016). No key "
+            "secondary endpoints were met."
+        ),
+    },
+    {
+        "pmid": "36848919",
+        "title": "Baricitinib for systemic lupus erythematosus (SLE-BRAVE-II): a phase 3 trial.",
+        "abstract": (
+            "In this phase 3, double-blind, randomised, placebo-controlled trial, baricitinib "
+            "did not meet the primary endpoint: SRI-4 response at week 52 with baricitinib 4 mg "
+            "was 47% vs 46% on placebo (odds ratio 1.07, 95% CI 0.75-1.53). No secondary "
+            "endpoints were met."
+        ),
+    },
+]
+
+
 def _assert_self_consistent(s):
     """The NEW consistency invariants the merge guarantees by construction: prose/key_findings
     cite only relevant PMIDs; supporting/contradicting are a subset of relevant with no overlap;
@@ -216,6 +243,34 @@ async def test_drug_specific_t1dm_is_not_none(test_cache_dir):
     ), f"expected drug_specific, got {s.evidence_basis!r}"
     assert s.strength != "none", f"genuine semaglutide RCTs graded none: {s!r}"
     assert s.direction in {"supports", "mixed", "contradicts"}
+    _assert_self_consistent(s)
+
+
+@pytest.mark.approval_aware
+async def test_paired_program_splits_positive_and_negative_trials(test_cache_dir):
+    """The BRAVE-I/II bug: a positive trial (endpoint met) must land in supporting even when its
+    sibling failed; the negative trial stays contradicting-only. Per-PMID directional verdict +
+    the positive-finding guard own this split (built in code from the verdict map)."""
+    s = await _synthesize(
+        _SLE_BRAVE_ABSTRACTS,
+        drug="baricitinib",
+        indication="Systemic Lupus Erythematosus",
+        cache_dir=test_cache_dir,
+    )
+    # BRAVE-I met its primary endpoint -> must appear in supporting (it may also be in
+    # contradicting if graded mixed for missing secondaries — that is acceptable).
+    assert "36848918" in s.supporting_pmids, (
+        f"BRAVE-I (positive) not in supporting: {s.supporting_pmids}"
+    )
+    # BRAVE-II is a clean primary-endpoint failure -> contradicting, and must NOT be in supporting.
+    assert "36848919" in s.contradicting_pmids, (
+        f"BRAVE-II (negative) not in contradicting: {s.contradicting_pmids}"
+    )
+    assert "36848919" not in s.supporting_pmids, (
+        f"BRAVE-II (clean failure) leaked into supporting: {s.supporting_pmids}"
+    )
+    # Both are this-drug-this-disease evidence with one positive and one negative -> mixed overall.
+    assert s.direction == "mixed", f"expected mixed, got {s.direction!r}"
     _assert_self_consistent(s)
 
 

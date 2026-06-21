@@ -13,7 +13,12 @@ GROUNDING RULES — these are non-negotiable:
 3. If the abstracts do not contain enough relevant information to assess the drug-disease pair, say so. Set strength to "none" AND direction to "none", and explain that the retrieved literature is insufficient. Do not invent supporting evidence. Note: a body of trials that DISPROVES the hypothesis is NOT "none" — it is strong/moderate evidence (per its trial quantity/quality) with direction "contradicts". "strength none" means genuinely little/no relevant evidence, NOT "no efficacy".
 4. Do not use generic template phrases like "moderate evidence", "needs further validation", "promising candidate", or "early-stage exploration" unless you can immediately cite the specific PMID(s) that justify them.
 
-STEP 1 — PER-ABSTRACT RELEVANCE (do this FIRST). Classify EACH abstract by PMID as "relevant" or "contaminated". strength and direction grade evidence for THIS EXACT DRUG treating THIS EXACT DISEASE only:
+STEP 1 — PER-ABSTRACT VERDICT (do this FIRST). Classify EACH abstract by PMID into exactly ONE of: "contaminated", "supporting", "contradicting", "mixed". A "relevant" abstract is one that is NOT contaminated — i.e. supporting, contradicting, or mixed. First decide relevant-vs-contaminated using the rules below; for every RELEVANT abstract, then decide its DIRECTION from THAT abstract's OWN result:
+- "supporting": this abstract's result favors the drug for this disease (e.g. met its primary endpoint, significant benefit).
+- "contradicting": this abstract's result shows the drug fails or harms for this disease (e.g. missed its primary endpoint, no benefit, harm).
+- "mixed": this single abstract reports both directions with no clear net.
+Judge each abstract by ITS OWN result, NOT the program's overall direction: in a paired/sibling program where one trial met its endpoint and another did not, the positive trial is "supporting" and the negative one is "contradicting" — never label a trial that met its endpoint "contradicting" because a sibling failed.
+The relevant-vs-contaminated rules (strength and direction grade evidence for THIS EXACT DRUG treating THIS EXACT DISEASE only):
 - This drug, treating this disease in the candidate's NON-approved scope -> relevant.
 - A DIFFERENT drug — even one in the same mechanistic class (e.g. another GLP-1 receptor agonist) -> contaminated. It is class-level context, NOT direct evidence for this drug. (But note it: if the ONLY disease-relevant abstracts are other-drug, evidence_basis is "class_level".)
 - This drug but a DIFFERENT disease -> contaminated.
@@ -29,7 +34,7 @@ STEP 1 — PER-ABSTRACT RELEVANCE (do this FIRST). Classify EACH abstract by PMI
 
 STEP 2 — GRADE over the RELEVANT abstracts ONLY. Return a JSON object with these fields:
 
-- "verdicts": object mapping EVERY PMID above to "relevant" or "contaminated", per Step 1.
+- "verdicts": object mapping EVERY PMID above to one of "contaminated", "supporting", "contradicting", "mixed", per Step 1. (supporting/contradicting/mixed all mean RELEVANT; the supporting_pmids / contradicting_pmids lists are built from this map — do NOT emit those lists yourself.)
 - "evidence_basis": one of
   - "drug_specific": at least one relevant abstract reports clinical/preclinical evidence for THIS drug treating THIS disease in the candidate's NON-approved scope.
   - "approved": the only relevant this-drug evidence studies an APPROVED sub-indication of the broad candidate; no repurposing evidence for the uncovered scope.
@@ -48,8 +53,6 @@ STEP 2 — GRADE over the RELEVANT abstracts ONLY. Return a JSON object with the
   - "none": insufficient/no relevant drug-specific evidence (pair with strength "none").
 - "is_observational": true if the relevant drug-specific clinical evidence is exclusively observational (cohort, case-control, case series/reports) with NO RCT/controlled trial; false if at least one relevant drug-specific RCT/controlled trial; null if no relevant drug-specific clinical evidence (e.g. preclinical-only, or strength "none"). This MUST agree with your own summary/key_findings: if any describe a randomized, double-blind, placebo-controlled, controlled, or crossover trial, set this to false — null is NOT allowed then. Reserve null for genuinely indeterminate designs, not as a default.
 - "summary": a 2-3 sentence summary of the overall evidence, citing ONLY PMIDs marked "relevant". State clearly whether the evidence supports, contradicts, or is irrelevant to using this drug for this disease; note a contraindication if present. Every claim must include a PMID reference, e.g. "Drug X reduced tumor growth in mouse models (PMID: 12345678)." Do NOT grade the AMOUNT of evidence in this prose — no "strongly"/"moderately"/"weakly"/"robustly" qualifying the verb (write "the evidence supports", not "strongly supports"); strength is the separate field. The direction your prose conveys MUST match the "direction" field. If you want to mention class-level or approved-indication context, do so explicitly as context, citing those PMIDs is allowed in the summary prose ONLY to explain why they were excluded — never as support.
-- "key_findings": list of specific findings, each tied to a PMID that is marked "relevant". Format: ["Finding text (PMID: 12345678)", ...]. Each must be a verifiable claim from the abstract text, not a generalization. Do NOT include findings whose only PMID is a contaminated abstract.
-- "supporting_pmids": PMIDs marked "relevant" that SUPPORT the repurposing hypothesis.
-- "contradicting_pmids": PMIDs marked "relevant" that CONTRADICT the hypothesis (the drug failed/harmed for this indication). Every relevant PMID cited in "summary" or "key_findings" must appear in supporting_pmids OR contradicting_pmids (a mixed paper may appear in both); no relevant cited PMID may be absent from both. A contaminated PMID must NOT appear in either list.
+- "key_findings": list of specific findings, each tied to a RELEVANT PMID (verdict supporting/contradicting/mixed). Format: ["Finding text (PMID: 12345678)", ...]. Each must be a verifiable claim from the abstract text, not a generalization. Do NOT include findings whose only PMID is a contaminated abstract. A finding describing a positive result (endpoint met, significant benefit) MUST come from a PMID you labeled "supporting" or "mixed" in verdicts — never "contradicting".
 
 Return JSON only, no explanation.

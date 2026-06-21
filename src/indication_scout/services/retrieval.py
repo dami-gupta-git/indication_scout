@@ -4,6 +4,7 @@ import asyncio
 import calendar
 import json
 import logging
+import re
 import time
 from datetime import date
 from pathlib import Path
@@ -68,6 +69,90 @@ PUBTYPE_BOOSTS: dict[str, float] = {
     "Letter": 0.3,
 }
 PUBTYPE_BOOST_DEFAULT: float = 1.0
+
+
+# Phrases in a key_finding that indicate a POSITIVE result. Used by the synthesize guard to
+# upgrade a "contradicting" PMID to "mixed" when its own finding describes a benefit (a per-PMID
+# label must not contradict its own finding — the BRAVE-I case). Deliberately conservative: only a
+# clear endpoint-MET or significant-benefit signal counts. Bare "achieved X% response" is NOT here
+# — a trial that "achieved 47% vs 46% but failed to meet the primary endpoint" reads surface-
+# positive while being a true negative (BRAVE-II); requiring an explicit met/significant cue plus
+# the no-failure-cue check below avoids that over-fire.
+# NOTE: phrase-matching is inherently leaky for direction (see the GBM "primary endpoint ... was
+# NOT met" case, where [^.]* spanned the negation). The endpoint patterns below therefore forbid an
+# intervening "not"/"never" between "endpoint" and "met" via a tempered-dot, and the negation list
+# is checked FIRST. This guard only nudges an obviously-wrong LLM verdict; the verdict itself is the
+# LLM's per-PMID call.
+_POSITIVE_FINDING_PATTERNS = [
+    r"\bmet\b(?:(?!\bnot\b|\bnever\b)[^.])*\bprimary endpoint\b",
+    r"\bprimary endpoint\b(?:(?!\bnot\b|\bnever\b)[^.])*\bmet\b",
+    r"\bsignificant(?:ly)?\b[^.]*\b(benefit|improv|reduc|increas|higher|greater|superior)",
+    r"\bsuperior to placebo\b",
+]
+# Failure / negation cues — if ANY appears in the finding, it is NOT a clean positive (even if a
+# positive pattern also matches). Covers fail(ed|ing|s) to, did not / didn't, not/no(n) significant,
+# missed, (primary) endpoint not met / not reached.
+_NEGATION_NEAR_POSITIVE = re.compile(
+    r"\b(fail(?:ed|ing|s)?\s+to|did\s*n[o']t\s+(meet|reach)|"
+    r"no(?:n|t)?[- ]?significant|no\s+significant\s+difference|missed|"
+    r"(?:was\s+)?not\s+(met|reached|achieved))\b",
+    re.IGNORECASE,
+)
+
+
+def _key_finding_is_positive(pmid: str, key_findings: list) -> bool:
+    """True if any key_finding for this PMID describes a clearly POSITIVE result with NO failure
+    cue in the same finding. Conservative: used only to upgrade a contradicting label to mixed,
+    never to flip to supporting. Requires a positive cue AND the absence of any failure/negation
+    cue in the SAME finding (so "achieved X% ... failing to meet the primary endpoint" does not
+    count — BRAVE-II)."""
+    for kf in key_findings:
+        if not isinstance(kf, str):
+            continue
+        if pmid not in kf:
+            continue
+        if _NEGATION_NEAR_POSITIVE.search(kf):
+            continue
+        low = kf.lower()
+        if any(re.search(pat, low) for pat in _POSITIVE_FINDING_PATTERNS):
+            return True
+    return False
+
+
+# Phrases in a key_finding that indicate a clear NEGATIVE / failure result. Used by the symmetric
+# guard to DOWNGRADE a "supporting"/"mixed" PMID to "contradicting" when its own finding describes
+# a failure and carries NO positive cue — catches an LLM that over-labels a clean negative as
+# "mixed" (imatinib × GBM: a Phase 3 whose "primary endpoint ... was not met, median PFS 6 weeks in
+# both arms" was labeled mixed and leaked into supporting, flipping the pair from disproven->mixed).
+_FAILURE_FINDING_PATTERNS = [
+    r"\b(primary )?endpoint[^.]*\bnot met\b",
+    r"\bnot met\b[^.]*\b(primary )?endpoint\b",
+    r"\bfail(?:ed|ing|s)?\s+to\s+(meet|demonstrate|show)\b",
+    r"\bdid\s*n[o']t\s+(meet|differ|improve|reduce|show)\b",
+    r"\bno\s+(significant|measurable|meaningful|clinically meaningful|clinical)\s+"
+    r"(difference|activity|benefit|effect|improvement|response)\b",
+    r"\bno\s+evidence\s+of\b[^.]*\b(benefit|effect|activity|response)\b",
+    r"\blimited\s+(antitumor|anti-tumour|antitumour|clinical)\s+activity\b",
+    r"\bnot\s+superior\s+to\s+placebo\b",
+]
+
+
+def _key_finding_is_negative(pmid: str, key_findings: list) -> bool:
+    """True if any key_finding for this PMID describes a clear FAILURE and carries NO positive cue
+    in the SAME finding. Used only to downgrade a supporting/mixed label to contradicting (the
+    symmetric counterpart of _key_finding_is_positive). Conservative: a finding that has BOTH a
+    failure cue and a positive cue (genuinely within-trial mixed) is left alone."""
+    for kf in key_findings:
+        if not isinstance(kf, str):
+            continue
+        if pmid not in kf:
+            continue
+        low = kf.lower()
+        if any(re.search(pat, low) for pat in _POSITIVE_FINDING_PATTERNS):
+            continue  # has a real positive signal too -> genuinely mixed, don't downgrade
+        if any(re.search(pat, low) for pat in _FAILURE_FINDING_PATTERNS):
+            return True
+    return False
 
 
 class AbstractResult(BaseModel):
@@ -853,19 +938,18 @@ class RetrievalService:
                 "verdicts": {},
             }
 
-        # Per-abstract relevance split over the INPUT PMID set. The prompt classifies every
-        # abstract in "verdicts"; any input PMID the model OMITS is treated as contaminated
-        # (conservative — an unclassified abstract never counts as evidence). A verdict for a
-        # PMID that was not sent is ignored. This is the single source of the relevant set;
-        # the combined prompt already restricted summary/key_findings/pmids to it.
+        # Per-PMID DIRECTIONAL verdict over the INPUT PMID set. The prompt labels every abstract
+        # one of "contaminated"/"supporting"/"contradicting"/"mixed"; any input PMID the model
+        # OMITS (or labels unrecognizably) is treated as contaminated (conservative — an
+        # unclassified abstract never counts as evidence). The supporting/contradicting/relevant
+        # lists are BUILT HERE from this map, NOT emitted by the LLM — this removes the loose
+        # second-pass bucketing that mis-placed a positive trial as contradicting (BRAVE-I).
         verdicts = data.get("verdicts")
         input_pmids = [r.pmid for r in top_abstracts]
+        _RELEVANT_VERDICTS = {"supporting", "contradicting", "mixed"}
         if isinstance(verdicts, dict):
-            relevant_pmids = [p for p in input_pmids if verdicts.get(p) == "relevant"]
-            contaminated_pmids = [p for p in input_pmids if p not in relevant_pmids]
+            verdict_of = {p: str(verdicts.get(p, "")).strip().lower() for p in input_pmids}
         else:
-            # No usable verdicts — conservative: nothing is confirmed relevant. The strength
-            # cap below then forces a non-drug_specific basis to strength/direction none.
             logger.warning(
                 "synthesize: no usable 'verdicts' for %s / %s; treating all abstracts as "
                 "contaminated. Response was: %s",
@@ -873,22 +957,74 @@ class RetrievalService:
                 disease,
                 response,
             )
-            relevant_pmids = []
-            contaminated_pmids = list(input_pmids)
+            verdict_of = {p: "contaminated" for p in input_pmids}
+
+        # GUARD (symmetric): a per-PMID label can't contradict its own finding.
+        # - "contradicting" but the finding describes a POSITIVE result (endpoint met / significant
+        #   benefit) -> upgrade to "mixed" (BRAVE-I, a positive trial wrongly grouped with a failed
+        #   sibling).
+        # - "supporting"/"mixed" but the finding describes a clear FAILURE with no positive cue
+        #   -> downgrade to "contradicting" (imatinib × GBM, a Phase 3 "primary endpoint not met"
+        #   over-labeled mixed and leaking into supporting, which flipped the pair to #1).
+        # A finding with BOTH cues is genuinely within-trial mixed and is left as the LLM labeled it.
+        key_findings_raw = data.get("key_findings") or []
+        for p in input_pmids:
+            if verdict_of[p] == "contradicting" and _key_finding_is_positive(
+                p, key_findings_raw
+            ):
+                logger.warning(
+                    "synthesize: upgrading PMID %s contradicting->mixed for %s / %s "
+                    "(its key_finding describes a positive result)",
+                    p,
+                    chembl_id,
+                    disease,
+                )
+                verdict_of[p] = "mixed"
+            elif verdict_of[p] in ("supporting", "mixed") and _key_finding_is_negative(
+                p, key_findings_raw
+            ):
+                logger.warning(
+                    "synthesize: downgrading PMID %s %s->contradicting for %s / %s "
+                    "(its key_finding describes a clear failure with no positive cue)",
+                    p,
+                    verdict_of[p],
+                    chembl_id,
+                    disease,
+                )
+                verdict_of[p] = "contradicting"
+
+        relevant_pmids = [p for p in input_pmids if verdict_of[p] in _RELEVANT_VERDICTS]
+        contaminated_pmids = [p for p in input_pmids if verdict_of[p] not in _RELEVANT_VERDICTS]
+        # supporting = supporting + mixed; contradicting = contradicting + mixed (a mixed abstract
+        # appears in both — it carries evidence in each direction).
+        supporting_pmids = [
+            p for p in input_pmids if verdict_of[p] in ("supporting", "mixed")
+        ]
+        contradicting_pmids = [
+            p for p in input_pmids if verdict_of[p] in ("contradicting", "mixed")
+        ]
 
         data["relevant_pmids"] = relevant_pmids
         data["contaminated_pmids"] = contaminated_pmids
+        data["supporting_pmids"] = supporting_pmids
+        data["contradicting_pmids"] = contradicting_pmids
+        data["study_count"] = len(relevant_pmids)
         summary = EvidenceSummary(**data)
 
-        # Dedup a PMID the model put in BOTH supporting and contradicting (it cannot be both).
-        # Keep it as CONTRADICTING only — a paper seen as both is, at best, mixed/null, and the
-        # conservative read is that it does NOT cleanly support the hypothesis. (Observed:
-        # metformin × hepatic steatosis, PMID 18640473 listed in both for a null pediatric result.)
-        _both = set(summary.supporting_pmids) & set(summary.contradicting_pmids)
-        if _both:
-            summary.supporting_pmids = [
-                p for p in summary.supporting_pmids if p not in _both
-            ]
+        # DETERMINISTIC overall direction from the per-PMID spread (guardrail): cannot read
+        # "supports" when any contradicting/mixed abstract exists (-> "mixed"); "none" when there
+        # is no relevant evidence. The strength cap below still forces direction "none" for a
+        # non-drug_specific basis.
+        has_support = bool(supporting_pmids)
+        has_against = any(verdict_of[p] in ("contradicting", "mixed") for p in input_pmids)
+        if not relevant_pmids:
+            summary.direction = "none"
+        elif has_support and has_against:
+            summary.direction = "mixed"
+        elif has_support:
+            summary.direction = "supports"
+        elif has_against:
+            summary.direction = "contradicts"
 
         # DETERMINISTIC strength cap — the one clinical-accuracy invariant NOT trusted to the
         # prompt. strength/direction grade DRUG-SPECIFIC evidence only; whenever evidence_basis is

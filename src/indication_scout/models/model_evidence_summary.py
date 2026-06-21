@@ -26,12 +26,15 @@ class EvidenceSummary(BaseModel):
     # calling RCT-backed evidence "observational". None stays None (no default coercion).
     is_observational: bool | None = None
     key_findings: list[str] = []
+    # supporting/contradicting/relevant/contaminated_pmids are BUILT IN CODE (services/retrieval.py)
+    # from the per-PMID `verdicts` map the synthesize call emits (each PMID labeled contaminated /
+    # supporting / contradicting / mixed). They are NOT emitted directly by the LLM — this removed
+    # the loose second-pass bucketing that mis-placed a positive trial as contradicting (BRAVE-I).
+    # supporting = supporting+mixed; contradicting = contradicting+mixed; relevant = non-contaminated.
     supporting_pmids: list[str] = []
     contradicting_pmids: list[str] = []
-    # Per-abstract relevance split from the combined synthesize+judge call. relevant_pmids are the
-    # abstracts graded as this-drug-this-disease evidence (the set strength/direction grade over);
-    # contaminated_pmids are the excluded ones (other-drug, off-disease, approved sub-indication,
-    # therapeutic-intent mismatch). Lets renderers show an "N excluded" note like the trial gate.
+    # relevant_pmids = the abstracts graded as this-drug-this-disease evidence (strength/direction
+    # grade over these); contaminated_pmids = the excluded ones. Renderers show an "N excluded" note.
     relevant_pmids: list[str] = []
     contaminated_pmids: list[str] = []
 

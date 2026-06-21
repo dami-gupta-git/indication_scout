@@ -16,7 +16,12 @@ from indication_scout.models.model_open_targets import (
     TargetData,
 )
 from indication_scout.models.model_evidence_summary import EvidenceSummary
-from indication_scout.services.retrieval import AbstractResult, RetrievalService
+from indication_scout.services.retrieval import (
+    AbstractResult,
+    RetrievalService,
+    _key_finding_is_negative,
+    _key_finding_is_positive,
+)
 
 # --- Fixtures ---
 
@@ -1157,20 +1162,19 @@ _SAMPLE_ABSTRACTS = [
     ),
 ]
 
+# Directional per-PMID verdicts (the new schema): supporting/contradicting/mixed/contaminated.
+# supporting/contradicting/relevant lists + study_count + direction are DERIVED in code from this.
 _SAMPLE_LLM_RESPONSE = json.dumps(
     {
-        "verdicts": {"11111111": "relevant", "22222222": "relevant"},
+        "verdicts": {"11111111": "supporting", "22222222": "supporting"},
         "evidence_basis": "drug_specific",
         "summary": "Two studies support metformin for colorectal cancer.",
-        "study_count": 2,
         "strength": "moderate",
-        "direction": "supports",
         "is_observational": False,
         "key_findings": [
-            "Significant CRC risk reduction in RCT (PMID: 11111111)",
+            "CRC risk reduction in RCT (PMID: 11111111)",
             "AMPK-mediated apoptosis in colon cancer cells (PMID: 22222222)",
         ],
-        "supporting_pmids": ["11111111", "22222222"],
     }
 )
 
@@ -1274,7 +1278,7 @@ async def test_synthesize_parses_llm_response(svc):
     assert result.evidence_basis == "drug_specific"
     assert result.is_observational is False
     assert result.key_findings == [
-        "Significant CRC risk reduction in RCT (PMID: 11111111)",
+        "CRC risk reduction in RCT (PMID: 11111111)",
         "AMPK-mediated apoptosis in colon cancer cells (PMID: 22222222)",
     ]
     assert result.supporting_pmids == ["11111111", "22222222"]
@@ -1282,8 +1286,9 @@ async def test_synthesize_parses_llm_response(svc):
     assert result.contaminated_pmids == []
 
 
-async def test_synthesize_raises_on_invalid_json(svc):
-    """synthesize raises json.JSONDecodeError when the LLM returns unparseable JSON."""
+async def test_synthesize_degrades_to_safe_floor_on_invalid_json(svc):
+    """Unparseable LLM JSON degrades to a safe untested floor (no raise): basis none, strength
+    none, all abstracts contaminated. The tolerant parse + floor keeps the pipeline alive."""
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -1294,8 +1299,15 @@ async def test_synthesize_raises_on_invalid_json(svc):
             new=AsyncMock(return_value="not valid json at all"),
         ),
     ):
-        with pytest.raises(json.JSONDecodeError):
-            await svc.synthesize("CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS)
+        result = await svc.synthesize(
+            "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
+        )
+    assert result.evidence_basis == "none"
+    assert result.strength == "none"
+    assert result.direction == "none"
+    assert result.relevant_pmids == []
+    assert result.study_count == 0
+    assert set(result.contaminated_pmids) == {"11111111", "22222222"}
 
 
 async def test_synthesize_strength_cap_forces_none_for_class_level(svc):
@@ -1345,14 +1357,11 @@ async def test_synthesize_holdout_skips_strength_cap(svc):
     """
     holdout_response = json.dumps(
         {
-            "verdicts": {"11111111": "relevant", "22222222": "contaminated"},
+            "verdicts": {"11111111": "supporting", "22222222": "contaminated"},
             "evidence_basis": "class_level",
             "summary": "Class-level evidence (PMID: 11111111).",
-            "study_count": 1,
             "strength": "moderate",
-            "direction": "supports",
             "is_observational": None,
-            "supporting_pmids": ["11111111"],
         }
     )
     with (
@@ -1375,6 +1384,97 @@ async def test_synthesize_holdout_skips_strength_cap(svc):
     assert result.evidence_basis == "class_level"
     assert result.relevant_pmids == ["11111111"]
     assert result.contaminated_pmids == ["22222222"]
+
+
+# --- _key_finding_is_positive guard (BRAVE-I/II regression) ---
+
+
+def test_key_finding_positive_brave_i_endpoint_met():
+    """BRAVE-I met its primary endpoint (missed secondaries) → positive → upgrades the per-PMID
+    verdict contradicting→mixed so it appears in supporting too."""
+    kf = [
+        "baricitinib 4 mg achieved SRI-4 in 57% vs 46% (OR 1.57, p=0.016), meeting the "
+        "primary endpoint, but no major secondary endpoints were met (PMID: 36848918)"
+    ]
+    assert _key_finding_is_positive("36848918", kf) is True
+
+
+def test_key_finding_positive_brave_ii_failure_not_positive():
+    """BRAVE-II 'achieved 47% vs 46% ... failing to meet the primary endpoint' is a clean
+    NEGATIVE — the guard must NOT read it as positive (the 'failing to' negation gap)."""
+    kf = [
+        "baricitinib 4 mg achieved SRI-4 in 47% vs 46% (OR 1.07, 95% CI 0.75-1.53), "
+        "failing to meet the primary endpoint (PMID: 36848919)"
+    ]
+    assert _key_finding_is_positive("36848919", kf) is False
+
+
+def test_key_finding_positive_significant_benefit():
+    assert _key_finding_is_positive(
+        "1", ["significantly reduced disease activity vs placebo (PMID: 1)"]
+    ) is True
+
+
+def test_key_finding_negation_variants_not_positive():
+    for text in (
+        "achieved 30% response but did not meet the primary endpoint (PMID: 2)",
+        "no significant difference vs placebo (PMID: 2)",
+        "nonsignificant improvement (PMID: 2)",
+        "did not meet the primary endpoint (PMID: 2)",
+    ):
+        assert _key_finding_is_positive("2", [text]) is False, text
+
+
+def test_key_finding_only_matches_own_pmid():
+    assert _key_finding_is_positive(
+        "999", ["met its primary endpoint (PMID: 111)"]
+    ) is False
+
+
+# --- _key_finding_is_negative guard (imatinib × GBM regression) ---
+
+
+def test_key_finding_negative_gbm_primary_endpoint_not_met():
+    """The GBM bug: a flat-negative Phase 3 'primary endpoint ... was not met' was over-labeled
+    mixed and leaked into supporting. The negative guard must flag it (and the positive guard must
+    NOT — [^.]* must not span the negation between 'endpoint' and 'met')."""
+    kf = [
+        "In a randomized phase III trial of recurrent GBM, the primary endpoint of "
+        "progression-free survival was not met; median PFS was 6 weeks in both arms "
+        "(PMID: 19688297)"
+    ]
+    assert _key_finding_is_negative("19688297", kf) is True
+    assert _key_finding_is_positive("19688297", kf) is False
+
+
+def test_key_finding_negative_no_meaningful_activity():
+    for text in (
+        "the combination did not show clinically meaningful anti-tumour activity (PMID: 1)",
+        "imatinib showed no measurable activity (PMID: 1)",
+        "no significant difference vs placebo (PMID: 1)",
+        "limited antitumor activity was observed (PMID: 1)",
+    ):
+        assert _key_finding_is_negative("1", [text]) is True, text
+
+
+def test_key_finding_negative_leaves_genuine_positive_alone():
+    """A clear positive must NOT be flagged negative (no spurious downgrade)."""
+    assert _key_finding_is_negative(
+        "1", ["significantly reduced disease activity vs placebo (PMID: 1)"]
+    ) is False
+    assert _key_finding_is_negative(
+        "1", ["met its primary endpoint (PMID: 1)"]
+    ) is False
+
+
+def test_key_finding_negative_within_trial_mixed_not_downgraded():
+    """A finding with BOTH a positive cue and a failure cue (genuinely within-trial mixed, e.g.
+    BRAVE-I: met primary, missed secondaries) must NOT be flagged for downgrade."""
+    kf = [
+        "baricitinib met the primary endpoint (57% vs 46%, p=0.016) but no major secondary "
+        "endpoints were met (PMID: 36848918)"
+    ]
+    assert _key_finding_is_negative("36848918", kf) is False
 
 
 async def test_synthesize_missing_verdicts_treats_all_contaminated(svc):

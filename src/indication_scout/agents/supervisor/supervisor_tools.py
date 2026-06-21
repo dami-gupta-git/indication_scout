@@ -11,7 +11,7 @@ import logging
 import re
 import time
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session, sessionmaker
@@ -1139,24 +1139,43 @@ def build_supervisor_tools(
         async def _invest(disease: str) -> tuple[str, dict]:
             disease_slug = disease.lower().replace(" ", "_")
             logger.warning("[INVEST] starting %s", disease)
-            lit_call = analyze_literature.ainvoke(
-                {
-                    "name": "analyze_literature",
-                    "args": {"drug_name": drug_name, "disease_name": disease},
-                    "id": f"auto_lit_{disease_slug}",
-                    "type": "tool_call",
-                }
-            )
-            ct_call = analyze_clinical_trials.ainvoke(
-                {
-                    "name": "analyze_clinical_trials",
-                    "args": {"drug_name": drug_name, "disease_name": disease},
-                    "id": f"auto_ct_{disease_slug}",
-                    "type": "tool_call",
-                }
-            )
             _t0 = time.perf_counter()
-            lit_msg, ct_msg = await asyncio.gather(lit_call, ct_call)
+
+            async def _timed_lit() -> Any:
+                _lt0 = time.perf_counter()
+                msg = await analyze_literature.ainvoke(
+                    {
+                        "name": "analyze_literature",
+                        "args": {"drug_name": drug_name, "disease_name": disease},
+                        "id": f"auto_lit_{disease_slug}",
+                        "type": "tool_call",
+                    }
+                )
+                logger.warning(
+                    "[TIMING] investigate %s: lit leg took %.1fs",
+                    disease,
+                    time.perf_counter() - _lt0,
+                )
+                return msg
+
+            async def _timed_ct() -> Any:
+                _ct0 = time.perf_counter()
+                msg = await analyze_clinical_trials.ainvoke(
+                    {
+                        "name": "analyze_clinical_trials",
+                        "args": {"drug_name": drug_name, "disease_name": disease},
+                        "id": f"auto_ct_{disease_slug}",
+                        "type": "tool_call",
+                    }
+                )
+                logger.warning(
+                    "[TIMING] investigate %s: trials leg took %.1fs",
+                    disease,
+                    time.perf_counter() - _ct0,
+                )
+                return msg
+
+            lit_msg, ct_msg = await asyncio.gather(_timed_lit(), _timed_ct())
             logger.warning(
                 "[TIMING] investigate %s: lit+trials took %.1fs",
                 disease,
