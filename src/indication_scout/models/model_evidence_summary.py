@@ -37,12 +37,18 @@ class EvidenceSummary(BaseModel):
     # grade over these); contaminated_pmids = the excluded ones. Renderers show an "N excluded" note.
     relevant_pmids: list[str] = []
     contaminated_pmids: list[str] = []
+    # neutral_pmids = relevant abstracts with NO efficacy result (PK / safety-only / mechanism),
+    # labeled "neutral" by the direction sub-call. They count toward study_count and may be cited in
+    # the narrative as context, but are in NEITHER supporting nor contradicting. Surfaced so a reader
+    # can see why a cited PMID is in neither list (rather than appearing dropped).
+    neutral_pmids: list[str] = []
 
     @field_validator(
         "supporting_pmids",
         "contradicting_pmids",
         "relevant_pmids",
         "contaminated_pmids",
+        "neutral_pmids",
         mode="before",
     )
     @classmethod

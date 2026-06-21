@@ -101,6 +101,9 @@ export interface EvidenceSummary {
   strength: EvidenceStrength;
   key_findings: string[];
   supporting_pmids: string[];
+  contradicting_pmids: string[];
+  // Relevant non-efficacy (PK/safety/mechanism) studies — cited as context, no direction.
+  neutral_pmids: string[];
 }
 
 export interface LiteratureOutput {

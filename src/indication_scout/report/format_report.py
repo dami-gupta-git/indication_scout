@@ -107,6 +107,14 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
                 for pmid in es.contradicting_pmids
             )
             lines.append(f"\n**Contradicting PMIDs:** {pmid_links}")
+        # Context (non-efficacy) PMIDs: relevant PK/safety/mechanism studies that are cited as
+        # context but carry no efficacy direction — shown so a reader does not see them as dropped.
+        if es.neutral_pmids:
+            pmid_links = ", ".join(
+                f"[{pmid}](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)"
+                for pmid in es.neutral_pmids
+            )
+            lines.append(f"\n**Context (non-efficacy) PMIDs:** {pmid_links}")
     else:
         lines.append("_No evidence summary available._")
 

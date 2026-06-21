@@ -78,6 +78,34 @@ export function LiteratureTab({
               </p>
             </>
           )}
+
+          {lit.contradicting_pmids.length > 0 && (
+            <>
+              <h4>Contradicting PMIDs ({lit.contradicting_pmids.length})</h4>
+              <p className="pmid-list">
+                {lit.contradicting_pmids.map((p, i) => (
+                  <span key={p}>
+                    {i > 0 && " · "}
+                    <PmidLink pmid={p} />
+                  </span>
+                ))}
+              </p>
+            </>
+          )}
+
+          {lit.neutral_pmids.length > 0 && (
+            <>
+              <h4>Context (non-efficacy) PMIDs ({lit.neutral_pmids.length})</h4>
+              <p className="pmid-list">
+                {lit.neutral_pmids.map((p, i) => (
+                  <span key={p}>
+                    {i > 0 && " · "}
+                    <PmidLink pmid={p} />
+                  </span>
+                ))}
+              </p>
+            </>
+          )}
         </>
       )}
     </div>

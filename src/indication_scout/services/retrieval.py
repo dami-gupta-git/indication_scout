@@ -960,11 +960,15 @@ class RetrievalService:
         contradicting_pmids = [
             p for p in input_pmids if verdict_of[p] in ("contradicting", "mixed")
         ]
+        # neutral = relevant but non-efficacy (PK/safety/mechanism): in neither directional list,
+        # surfaced separately so a cited-as-context PMID does not look dropped.
+        neutral_pmids = [p for p in input_pmids if verdict_of[p] == "neutral"]
 
         data["relevant_pmids"] = relevant_pmids
         data["contaminated_pmids"] = contaminated_pmids
         data["supporting_pmids"] = supporting_pmids
         data["contradicting_pmids"] = contradicting_pmids
+        data["neutral_pmids"] = neutral_pmids
         data["study_count"] = len(relevant_pmids)
         summary = EvidenceSummary(**data)
 

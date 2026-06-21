@@ -1449,6 +1449,7 @@ async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
     assert result.supporting_pmids == ["11111111"]
     assert "22222222" not in result.contradicting_pmids
     assert "22222222" in result.relevant_pmids  # neutral still counts as relevant
+    assert result.neutral_pmids == ["22222222"]  # surfaced as context, not dropped
     assert result.study_count == 2
     assert result.direction == "supports"  # the PK paper did not make it "mixed"
 
