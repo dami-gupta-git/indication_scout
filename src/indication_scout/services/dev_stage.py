@@ -16,6 +16,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from indication_scout.agents._trial_signals import _is_active
 from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
 from indication_scout.services.llm import query_llm
@@ -95,31 +96,132 @@ are also present.
 not active, not withdrawn).
 5. completed_phase2 — a completed Phase 2 (or Phase 1/Phase 2) exists, and no Phase 3 at all.
 6. exploratory_phase4_only — ONLY Phase 4 trials, no Phase 2 or Phase 3.
-7. early_phase — only Phase 1 / Early Phase 1 / unclassifiable phase, or trials with no \
-completed phase.
-8. untested — no trials.
-
-Also summarize ACTIVE PROGRAMS — what clinical activity is still MOVING (recruiting, active,
-not-yet-recruiting, enrolling, suspended). A COMPLETED or TERMINATED trial is NOT an active
-program — never list one here. One short line, following these rules EXACTLY:
-- If an active PIVOTAL trial exists (Phase 2/3 or Phase 3), name those with their NCT ids, e.g.
-  "2 Phase 3 recruiting (NCT…, NCT…)". Prefer pivotal; you may append a brief note of any
-  non-pivotal activity.
-- If NO pivotal trial is active but EARLIER-phase or POST-APPROVAL trials ARE moving (Phase 1,
-  Phase 1/2, Phase 2, Phase 4, Early Phase 1), do NOT write "None active" — that would be false.
-  Write exactly: "No pivotal program active; <phase>-only activity (NCT…)", e.g. "No pivotal
-  program active; Phase 1/Phase 4-only activity (NCT06959784)". Phase 4 is POST-APPROVAL
-  off-label activity, NOT pivotal development — so it is correctly "no pivotal program active",
-  but it IS still activity and must be disclosed, never hidden behind "None active".
-- ONLY when NOTHING is recruiting/active at any phase, return exactly "None active".
-Never write "None active" in the same line as a list of active trials — that is self-contradictory.
+7. early_phase — trials exist but none reach a completed Phase 2 or higher: only Phase 1 / \
+Early Phase 1, or trials whose phase is "Not Applicable" / blank / observational / otherwise \
+unclassifiable. ANY trial on record that does not fit a higher tier lands here — a "Not \
+Applicable" or no-phase trial is still a registered trial, NOT untested.
+8. untested — NO trials at all on record (the list above is empty). Never choose this tier when \
+any trial is listed, regardless of its phase.
 
 Trials:
 {trials}
 
 Respond with ONLY a JSON object:
-{{"tier": "<one_tier>", "active_programs": "<one short line or 'None active'>", \
-"reason": "<one short sentence>"}}"""
+{{"tier": "<one_tier>", "reason": "<one short sentence>"}}"""
+
+
+def _has_completed_phase3_band(trials: list[Trial]) -> bool:
+    """A COMPLETED pure Phase 3 (or Phase 3/Phase 4) trial is on record.
+
+    Excludes the combined "Phase 2/Phase 3" designation — that resolves to completed_phase3 only
+    under the active-pure-Phase-3 rule, which stays the LLM's call. This guard only fires on the
+    unambiguous case: a completed trial whose phase band IS Phase 3.
+    """
+    for t in trials:
+        phase = (t.phase or "").strip().lower()
+        status = (t.overall_status or "").strip().lower()
+        if status != "completed":
+            continue
+        if phase in ("phase 3", "phase 3/phase 4", "phase3", "phase 3/phase4"):
+            return True
+    return False
+
+
+def _has_active_phase3_band(trials: list[Trial]) -> bool:
+    """An ACTIVE/ongoing pure Phase 3 (or Phase 3/Phase 4) trial is on record.
+
+    Active-status matching reuses _trial_signals._is_active (handles CT.gov's underscored forms
+    NOT_YET_RECRUITING / ACTIVE_NOT_RECRUITING etc). Excludes the combined "Phase 2/Phase 3"
+    designation (same reasoning as the completed guard). Only fires on an unambiguous active Phase 3.
+    """
+    for t in trials:
+        if not _is_active(t):
+            continue
+        if (t.phase or "").strip().lower() in ("phase 3", "phase 3/phase 4", "phase3", "phase 3/phase4"):
+            return True
+    return False
+
+
+def _enforce_tier_floor(tier: str, trials: list[Trial]) -> str:
+    """Deterministic floor over the LLM tier — code owns the clinical-accuracy invariants the
+    prompt must not be trusted to honor at scale:
+
+    1. trials exist -> the tier can NEVER be 'untested' (that means zero trials on record).
+    2. a completed pure Phase-3-band trial exists -> the tier is at least 'completed_phase3'.
+    3. an active pure Phase-3-band trial exists -> the tier is at least 'active_phase3'
+       (unless a completed Phase 3 already raised it higher — completed outranks active).
+
+    Each rule only RAISES the tier toward the trial evidence; a higher LLM tier is left alone.
+    Mirrors the strength-cap pattern: the prompt emits the nuanced read; code enforces the floor.
+    """
+    if not trials:
+        return tier
+    # terminated-for-cause is a deliberate LLM closure judgment we never override.
+    if tier == "phase3_terminated_for_cause":
+        return tier
+    if _has_completed_phase3_band(trials):
+        # completed_phase3 outranks active_phase3, so it wins when both are present.
+        return "completed_phase3"
+    if _has_active_phase3_band(trials):
+        # Raise to active_phase3 only when the LLM tier is BELOW it (active is below completed/
+        # unknown in the ladder, above completed_phase2/exploratory/early/untested).
+        if tier not in ("completed_phase3", "active_phase3", "phase3_unknown_status"):
+            return "active_phase3"
+    if tier == "untested":
+        return "early_phase"
+    return tier
+
+
+_PURE_PHASE3 = ("phase 3", "phase 3/phase 4", "phase3", "phase 3/phase4")
+_PHASE2_PHASE3 = ("phase 2/phase 3", "phase2/phase3", "phase 2/phase3")
+
+
+def _active_trials(trials: list[Trial]) -> list[Trial]:
+    """Trials with an active/ongoing status (reuses _is_active for CT.gov status forms)."""
+    return [t for t in trials if _is_active(t)]
+
+
+def _render_active_programs(trials: list[Trial]) -> str:
+    """Deterministically render the 'active programs' line — what is still MOVING — from the
+    relevant trial set. NO LLM: counting and listing NCTs is mechanical, and letting the model do
+    it produced miscounts (count != listed ids) and false "None active". Rules mirror the former
+    prompt:
+      - active PIVOTAL trials (pure Phase 3 band, else Phase 2/3) → name them with NCT ids and a
+        count that equals the listed ids.
+      - else if earlier-phase / post-approval trials are active → "No pivotal program active;
+        <N> non-pivotal active (NCT...)".
+      - else → "None active".
+    Completed/terminated trials are never listed (only active statuses qualify).
+    """
+    active = _active_trials(trials)
+    if not active:
+        return "None active"
+
+    def _ids(predicate) -> list[str]:
+        return [t.nct_id for t in active if t.nct_id and predicate(t)]
+
+    def _phase(t: Trial) -> str:
+        return (t.phase or "").strip().lower()
+
+    pure3 = _ids(lambda t: _phase(t) in _PURE_PHASE3)
+    p2p3 = _ids(lambda t: _phase(t) in _PHASE2_PHASE3)
+    pivotal = pure3 + p2p3
+    if pivotal:
+        parts = []
+        if pure3:
+            parts.append(f"{len(pure3)} Phase 3 active/recruiting ({', '.join(pure3)})")
+        if p2p3:
+            parts.append(f"{len(p2p3)} Phase 2/Phase 3 active ({', '.join(p2p3)})")
+        return "; ".join(parts)
+
+    # No pivotal trial active, but something earlier-phase / post-approval is moving.
+    non_pivotal = [t.nct_id for t in active if t.nct_id]
+    if non_pivotal:
+        return (
+            f"No pivotal program active; {len(non_pivotal)} non-pivotal active "
+            f"({', '.join(non_pivotal)})"
+        )
+    return "None active"
 
 
 def _format_trials(trials: list[Trial]) -> str:
@@ -139,9 +241,10 @@ class StageJudgment:
     active_programs: str
 
 
-def _parse_judgment(text: str) -> StageJudgment | None:
-    """Extract {tier, active_programs} from the LLM JSON response. None on parse failure or
-    an unknown tier (so the caller can fall back to the safe floor)."""
+def _parse_tier(text: str) -> str | None:
+    """Extract the `tier` from the LLM JSON response. None on parse failure or an unknown tier
+    (so the caller can fall back to the safe floor). active_programs is NOT read from the LLM —
+    it is rendered deterministically in judge_dev_stage (_render_active_programs)."""
     stripped = text.strip()
     if stripped.startswith("```"):
         # Strip a ```json ... ``` fence.
@@ -154,18 +257,11 @@ def _parse_judgment(text: str) -> StageJudgment | None:
     try:
         data = json.loads(stripped)
         tier = data.get("tier")
-        active = data.get("active_programs")
     except (json.JSONDecodeError, AttributeError):
         return None
     if tier not in DEV_STAGE_TIERS:
         return None
-    # active_programs is free text; default to "None active" when missing/blank.
-    active_programs = (
-        active.strip()
-        if isinstance(active, str) and active.strip()
-        else ("None active")
-    )
-    return StageJudgment(tier=tier, active_programs=active_programs)
+    return tier
 
 
 async def judge_dev_stage(
@@ -183,6 +279,8 @@ async def judge_dev_stage(
     active_programs="None active" when there are no trials. On a parse failure the raw output
     is logged and the same safe floor is returned (never fabricates a higher tier).
     """
+    # active_programs is ALWAYS deterministic (counting/listing NCTs is mechanical, not judgment).
+    active_programs = _render_active_programs(relevant_trials)
     floor = StageJudgment(tier="untested", active_programs="None active")
     if not relevant_trials:
         return floor
@@ -195,29 +293,42 @@ async def judge_dev_stage(
     cache_params = {"drug": drug, "indication": indication, "trials": facts}
     cached = cache_get("dev_stage", cache_params, cache_dir)
     if isinstance(cached, dict):  # ignore stale str-format entries from the old schema
+        # Tier is cached (the LLM call); active_programs is re-rendered deterministically so a
+        # prompt/logic change to the line takes effect without a cache bust.
         return StageJudgment(
             tier=cached.get("tier", "untested"),
-            active_programs=cached.get("active_programs", "None active"),
+            active_programs=active_programs,
         )
 
     prompt = _STAGE_PROMPT.format(trials=_format_trials(relevant_trials))
     response = await query_llm(prompt)
-    judgment = _parse_judgment(response)
-    if judgment is None:
+    tier = _parse_tier(response)
+    if tier is None:
         logger.warning(
-            "judge_dev_stage: could not parse a valid judgment for %s x %s; defaulting to "
+            "judge_dev_stage: could not parse a valid tier for %s x %s; defaulting to "
             "the safe floor. Response was: %s",
             drug,
             indication,
             response,
         )
-        judgment = floor
+        tier = "untested"
 
+    floored_tier = _enforce_tier_floor(tier, relevant_trials)
+    if floored_tier != tier:
+        logger.warning(
+            "judge_dev_stage: floored tier %r -> %r for %s x %s (deterministic invariant)",
+            tier,
+            floored_tier,
+            drug,
+            indication,
+        )
+
+    # Cache only the tier (the LLM judgment); active_programs is always re-rendered.
     cache_set(
         "dev_stage",
         cache_params,
-        {"tier": judgment.tier, "active_programs": judgment.active_programs},
+        {"tier": floored_tier},
         cache_dir,
         ttl=JUDGMENT_CACHE_TTL,
     )
-    return judgment
+    return StageJudgment(tier=floored_tier, active_programs=active_programs)

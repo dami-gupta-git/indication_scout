@@ -394,7 +394,7 @@ async def test_synthesize_reads_abstracts_from_store_and_returns_evidence():
         )
 
     svc.synthesize.assert_awaited_once_with(
-        CHEMBL_ID, "colorectal cancer", SEMANTIC_RESULTS
+        CHEMBL_ID, "colorectal cancer", SEMANTIC_RESULTS, approved_indications=None
     )
     assert isinstance(msg.artifact, EvidenceSummary)
     assert msg.artifact.strength == "moderate"

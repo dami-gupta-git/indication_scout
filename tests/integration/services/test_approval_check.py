@@ -12,6 +12,7 @@ from indication_scout.services.approval_check import (
 )
 
 
+@pytest.mark.approval_aware
 @pytest.mark.parametrize(
     "drug_name, candidates, expected",
     [
@@ -59,6 +60,24 @@ from indication_scout.services.approval_check import (
             ["colorectal cancer"],
             {"colorectal cancer": "contaminated"},
         ),
+        # ON-LABEL cause-subtype of a broad approval (the DKD regression). Empagliflozin is
+        # approved for broad CKD: "diabetic nephropathy"/"diabetic kidney disease" are the same CKD
+        # by cause → "approved" (on-label, dropped) — NOT "none" (the bug). A DISTINCT disease that
+        # merely causes CKD ("polycystic kidney disease") is kept ("none"). T2DM is the qualifier
+        # population, not a labeled indication for the kidney pairs → "none".
+        (
+            "empagliflozin",
+            [
+                "chronic kidney disease",
+                "diabetic nephropathy",
+                "polycystic kidney disease",
+            ],
+            {
+                "chronic kidney disease": "approved",
+                "diabetic nephropathy": "approved",
+                "polycystic kidney disease": "none",
+            },
+        ),
     ],
 )
 async def test_get_fda_approved_disease_mapping(
@@ -73,6 +92,7 @@ async def test_get_fda_approved_disease_mapping(
     assert result == expected
 
 
+@pytest.mark.approval_aware
 @pytest.mark.parametrize(
     "drug_name, candidates, expected",
     [
@@ -254,6 +274,7 @@ async def test_extract_approved_from_labels_empty_input(test_cache_dir):
     )
 
 
+@pytest.mark.approval_aware
 async def test_get_fda_approved_disease_mapping_uses_cache(tmp_path, monkeypatch):
     """Second call with same (drug, candidates) hits the fda_drug_disease_approval cache.
 

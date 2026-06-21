@@ -249,8 +249,8 @@ async def test_synthesize(db_session_truncating, test_cache_dir):
 
     evidence: EvidenceSummary = msg.artifact
     assert isinstance(evidence, EvidenceSummary)
-    # Raw synthesize grade (no judge_literature_strength override on this tool path); the
-    # quantity grade drifts strong<->moderate run-to-run over the same NASH RCT body.
+    # Combined synthesize grade over a drug_specific NASH RCT body (the strength cap does not fire
+    # for a drug_specific basis); the quantity grade drifts strong<->moderate run-to-run.
     assert evidence.strength in _EXPECTED_STRENGTHS
     assert evidence.study_count >= _EXPECTED_MIN_STUDY_COUNT
     # The core NASH RCTs must be CITED — supporting OR contradicting; which list a given trial

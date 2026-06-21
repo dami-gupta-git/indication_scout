@@ -65,9 +65,10 @@ def _literature_oneliner(es) -> str:
     if es is None:
         return "None"
     # class_level = the disease-relevant RCTs are for OTHER drugs in the class, not this one
-    # (judge_literature_strength). The card must NOT read "strong, RCT-backed" — there is no
+    # (the combined synthesize call). The card must NOT read "strong, RCT-backed" — there is no
     # drug-specific body. State the basis plainly; strength/direction are forced to "none" for
-    # class_level in the parser, so the ranking path also sees no drug strength here.
+    # class_level by the deterministic strength cap in synthesize, so the ranking path also sees
+    # no drug strength here.
     if getattr(es, "evidence_basis", "none") == "class_level":
         return "class-level signal (no direct evidence for this drug)"
     # approved = the only relevant this-drug evidence studies an APPROVED sub-indication of this
@@ -112,40 +113,19 @@ _PROGRAM_STAGES = {
 }
 
 
-# Fresh-context critic for the supervisor's candidate ranking. Given only the
-# blurbs (verdict + evidence + one-line fields), it checks ranking-order
-# integrity against the same signals the supervisor prompt defines and returns
-# advisory findings — it does not re-rank. Kept terse so it judges the ranking,
-# not the prose.
+# Fresh-context FACT critic for the supervisor's blurbs. Ranking ORDER is now the supervisor's
+# own LLM judgment (see RANKING in supervisor.txt) — this critic no longer audits order. It only
+# repairs factual contradictions between a blurb's fields and the machine-derived per-candidate
+# FACT block (Phase-3 existence), so no blurb claims "no Phase 3" when a relevant Phase 3 is on
+# record. Kept terse so it repairs facts, not prose.
 _RANKING_CRITIC_SYSTEM = """\
-You audit the ORDER of a ranked list of drug-repurposing candidates. You are given \
-the candidates in their current rank order, each with a verdict tag and a few \
-one-line fields. Apply these rules:
+You repair factual contradictions in a list of drug-repurposing candidate blurbs. You are given \
+the candidates each with a verdict tag, a few one-line fields, and a per-candidate FACT block \
+(machine-derived, authoritative). Do NOT reorder the list and do NOT re-rank — order is decided \
+upstream. Your ONLY job is to rewrite blurb fields that contradict the FACT.
 
-CLOSED candidates MUST appear AFTER every non-closed candidate. The clinical_trials \
-sub-agent judges closure per pair and states it in its verdict — trust that verdict, \
-do not re-derive closure. A candidate is CLOSED when ANY of these hold:
-- its verdict or literature indicates multiple negative randomized trials, or \
-authors recommend against further development;
-- a safety/efficacy termination of this drug x indication.
-A completed Phase 3 with no approval is NOT closure on its own (a generic/off-patent \
-drug files no new NDA regardless of efficacy).
-
-ADVERSE-SIGNAL candidates (verdict names an adverse/safety signal, or harm reports \
-outnumber benefit) rank below clean live candidates but above fully CLOSED ones.
-
-POSITIVE signals (a completed trial with a quantified efficacy readout; strong \
-mechanism + active trials + supportive literature with no closing signal) should \
-rank ABOVE neutral candidates (active/recruiting trials alone, absence of negative \
-signals).
-
-Report ordering violations — cases where a lower-ranked candidate should \
-clearly outrank a higher-ranked one under these rules.
-
-You ALSO repair factual contradictions against the per-candidate FACT block \
-(machine-derived, authoritative). The FACT states one of: a relevant COMPLETED Phase 3 \
-is on record; an ACTIVE/RECRUITING Phase 3 is on record; or no relevant Phase 3. NO \
-field may contradict the FACT.
+The FACT states one of: a relevant COMPLETED Phase 3 is on record; an ACTIVE/RECRUITING Phase 3 \
+is on record; or no relevant Phase 3. NO field may contradict the FACT.
 
 CASE 1 — FACT says a COMPLETED Phase 3 IS on record. Rewrite any field that asserts \
 there are no Phase 3 TRIALS — e.g. "no Phase 3 on record", "Phase 3 never initiated", \
@@ -168,8 +148,7 @@ still note the absence of a COMPLETED pivotal READOUT — that is true and diffe
 Change nothing else.
 
 Output a JSON object ONLY (no prose, no fences):
-{"ordering": "<short violation list, or 'consistent'>",
- "blurbs": [ <every input blurb, in the SAME order, each a full dict with the same \
+{"blurbs": [ <every input blurb, in the SAME order, each a full dict with the same \
 keys; fields you repaired are rewritten, all others verbatim> ]}
 Return every blurb even if unchanged. Preserve every key."""
 
@@ -757,8 +736,8 @@ def build_supervisor_tools(
         # checks out its own Session and closes it here.
         # Read the drug's approved-indication list as a LITERAL here (not a deferred closure):
         # find_candidates has already seeded it before any fan-out, so it is complete. Threaded
-        # into the literature agent so judge_literature_strength excludes papers about an approved
-        # sub-indication of this (possibly broad) candidate.
+        # into the literature agent so the combined synthesize call excludes papers about an
+        # approved sub-indication of this (possibly broad) candidate.
         approved_indications = list(_ensure_drug_entry(drug_name)["approved_indications"])
         _t0 = time.perf_counter()
         with session_factory() as call_db:
@@ -793,10 +772,17 @@ def build_supervisor_tools(
             if is_observational is True
             else "rct_or_controlled" if is_observational is False else "undetermined"
         )
+        # evidence_basis tells the supervisor WHY a candidate may have strength=none: drug_specific
+        # (real repurposing evidence), class_level (other drugs in the class), approved (an approved
+        # sub-indication), or none (no relevant abstracts retrieved). The ranking judgment weighs
+        # class_level/approved differently from a genuine no-abstracts-yet pair, so surface it.
+        basis = (
+            output.evidence_summary.evidence_basis if output.evidence_summary else "none"
+        )
         header = (
             f"Literature for {drug_name} × {disease_name}: "
             f"{len(output.pmids)} PMIDs, strength={strength}, direction={direction}, "
-            f"study_design={design}."
+            f"study_design={design}, evidence_basis={basis}."
         )
         # Build supervisor-facing summary deterministically from EvidenceSummary so adverse-signal
         # language reaches the supervisor verbatim with no LLM rewrite in between.
@@ -1428,14 +1414,15 @@ def build_supervisor_tools(
             lines.append("Evidence gate exclusions: " + ", ".join(excluded) + ".")
         return "\n".join(lines)
 
-    async def _run_fact_critic(items: list[dict]) -> tuple[str, list[dict]]:
-        """Run the ranking/fact critic over `items`; return (ordering_text, repaired_blurbs).
+    async def _run_fact_critic(items: list[dict]) -> list[dict]:
+        """Run the fact critic over `items`; return repaired_blurbs (order preserved).
 
         Feeds each blurb its authoritative per-disease Phase-3 FACT so the critic can repair a
         false "no Phase 3 trials" claim while preserving true "no regulatory program"
-        claims. On ANY parse failure or disease-set mismatch, returns the ORIGINAL items
-        (data-loss guard). Used by both critique_ranking and finalize_supervisor so the repair
-        always runs on the finalized blurbs, not only when the LLM pre-called critique_ranking.
+        claims. Does NOT reorder — ranking order is the supervisor's judgment. On ANY parse
+        failure or disease-set mismatch, returns the ORIGINAL items (data-loss guard). Used by
+        both critique_ranking and finalize_supervisor so the repair always runs on the finalized
+        blurbs, not only when the LLM pre-called critique_ranking.
         """
         lines: list[str] = []
         for i, item in enumerate(items, start=1):
@@ -1472,12 +1459,10 @@ def build_supervisor_tools(
         logger.info(
             "[TOOL] fact_critic IN (%d candidates):\n%s", len(items), "\n".join(lines)
         )
-        ordering = ""
         repaired = items
         try:
             data = json.loads(strip_markdown_fences(critique.strip()))
             cand = data.get("blurbs")
-            ordering = (data.get("ordering") or "").strip()
             if (
                 isinstance(cand, list)
                 and len(cand) == len(items)
@@ -1495,20 +1480,19 @@ def build_supervisor_tools(
                 "[TOOL] fact_critic: unparseable critic output (%s) — keeping originals",
                 e,
             )
-        return ordering, repaired
+        return repaired
 
     @tool
     async def critique_ranking(blurbs: list[dict] | None = None) -> str:
-        """Audit your candidate ranking ORDER before finalizing.
+        """Fact-check your candidate blurbs before finalizing.
 
         Call this AFTER you have drafted your ranked blurbs but BEFORE
         finalize_supervisor. Pass the same `blurbs` list (in your intended rank
-        order) you plan to finalize with. A separate reviewer checks the order
-        against the RANKING SIGNALS — specifically that CLOSED and adverse-signal
-        candidates do not outrank live ones — and returns any ordering
-        violations it finds. It does NOT re-rank for you; reorder the blurbs
-        yourself to address the findings, then finalize. If it reports the
-        ranking is consistent, finalize as-is.
+        order) you plan to finalize with. A separate reviewer repairs factual
+        contradictions against each candidate's authoritative Phase-3 FACT (so no
+        blurb claims "no Phase 3" when a relevant Phase 3 is on record). It does
+        NOT reorder or re-rank — ranking ORDER is your own judgment. Finalize with
+        the repaired blurbs it returns.
 
         Arguments:
         - blurbs: your draft ranked blurbs, same shape as finalize_supervisor.
@@ -1518,12 +1502,10 @@ def build_supervisor_tools(
         items = blurbs or []
         if not items:
             return "No blurbs provided — nothing to critique."
-        ordering, repaired = await _run_fact_critic(items)
+        repaired = await _run_fact_critic(items)
         critique_state["last_blurbs"] = repaired
         result = (
-            (ordering or "Ranking is consistent.")
-            + "\n\nRepaired blurbs (finalize with THESE):\n"
-            + json.dumps(repaired)
+            "Blurbs fact-checked. Finalize with THESE:\n" + json.dumps(repaired)
         )
         logger.info("[TOOL] critique_ranking OUT:\n%s", result)
         return result
@@ -1563,7 +1545,7 @@ def build_supervisor_tools(
           with empty disease, or empty in BOTH prose AND every structured
           field, is dropped.
         """
-        # Ordering gate: refuse to finalize until the ranking has been audited by
+        # Fact-check gate: refuse to finalize until the blurbs have been fact-checked by
         # critique_ranking this run. Returns a non-terminal instruction so the agent
         # loop calls critique_ranking and then retries finalize. (Reject path returns
         # an empty artifact dict so the content_and_artifact contract holds.)
@@ -1574,8 +1556,8 @@ def build_supervisor_tools(
             return (
                 "Cannot finalize yet: you must call critique_ranking exactly once with "
                 "your draft blurbs (in rank order) BEFORE finalize_supervisor. Call "
-                "critique_ranking now, address any ordering violations it reports, then "
-                "call finalize_supervisor again.",
+                "critique_ranking now, then finalize_supervisor again with the repaired "
+                "blurbs it returns.",
                 {},
             )
         logger.info(
@@ -1585,8 +1567,8 @@ def build_supervisor_tools(
         # no development program" claims in the LLM-written verdict/blocker/prose) has been
         # removed. Those interpretive fields are now authored ONLY by the isolated
         # judge_interpretive call (in the enrich pass below), fed the resolved stage —  it cannot
-        # produce that false claim, so there is nothing to repair. critique_ranking (ordering
-        # audit) is unaffected and still runs as the pre-finalize gate above.
+        # produce that false claim, so there is nothing to repair. critique_ranking (fact
+        # check) is unaffected and still runs as the pre-finalize gate above.
         validated: list[dict] = []
         structured_keys = (
             "stage",

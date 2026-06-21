@@ -21,6 +21,8 @@ Run: pytest tests/integration/agents/clinical_trials/test_approval_aware_relevan
 import logging
 from datetime import date
 
+import pytest
+
 from langchain_anthropic import ChatAnthropic
 
 from indication_scout.agents.clinical_trials.clinical_trials_agent import (
@@ -29,6 +31,8 @@ from indication_scout.agents.clinical_trials.clinical_trials_agent import (
 )
 
 logger = logging.getLogger(__name__)
+
+pytestmark = pytest.mark.approval_aware
 
 # Holdout cutoffs pinned so the shown set is stable (matches the harness snapshots / known NCTs).
 _SILD_CUTOFF = date(2025, 1, 1)
@@ -39,6 +43,11 @@ _BUP_CUTOFF = date(2025, 1, 1)
 _SILD_PAH_NCT = "NCT01181284"
 # The approved-SAD bupropion trial — the motivating CURATED_CONTAMINATED_NCTS case.
 _BUP_SAD_NCT = "NCT00046241"
+# semaglutide × NAFLD: a trial whose condition is "type 2 diabetes with NASH". NASH is the approved
+# subtype; the T2DM co-listed condition must NOT rescue it (TEST 1 multi-condition rule). This
+# trial flipped relevant<->contaminated across runs before the rule was added.
+_SEMA_T2DM_NASH_NCT = "NCT04639414"
+_SEMA_CUTOFF = date(2025, 1, 1)
 
 
 def _shown(output) -> set[str]:
@@ -100,3 +109,32 @@ async def test_bupropion_approved_sad_trial_contaminated_via_rule():
     assert not (relevant & contaminated)
     assert _BUP_SAD_NCT in contaminated
     assert _BUP_SAD_NCT not in relevant
+
+
+async def test_semaglutide_multi_condition_nash_trial_contaminated():
+    """Multi-condition TEST 1: a "type 2 diabetes with NASH" trial contaminates because NASH is
+    the approved subtype — the co-listed T2DM must not rescue it (the NCT04639414 flip bug)."""
+    llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
+    agent = build_clinical_trials_agent(llm, date_before=_SEMA_CUTOFF)
+
+    output = await run_clinical_trials_agent(
+        agent,
+        "semaglutide",
+        "non-alcoholic fatty liver disease",
+        approved_indications=[
+            "MASH (NASH) with moderate-to-advanced fibrosis",
+            "type 2 diabetes mellitus",
+            "obesity",
+        ],
+    )
+
+    shown = _shown(output)
+    assert _SEMA_T2DM_NASH_NCT in shown, (
+        f"{_SEMA_T2DM_NASH_NCT} not in shown set — CT.gov drift; cannot assert TEST 1"
+    )
+    contaminated = set(output.contaminated_nct_ids)
+    relevant = set(output.relevant_nct_ids)
+    assert relevant | contaminated >= shown
+    assert not (relevant & contaminated)
+    assert _SEMA_T2DM_NASH_NCT in contaminated
+    assert _SEMA_T2DM_NASH_NCT not in relevant

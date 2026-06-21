@@ -1,5 +1,7 @@
-"""Integration test for services/literature_strength.judge_literature_strength — the LIVE LLM
-drug-specific strength judgment.
+"""Integration test for the combined RetrievalService.synthesize call — the LIVE LLM that reads
+the abstracts once and emits a single EvidenceSummary (per-PMID verdicts + drug-specific
+strength/direction/basis + prose). Replaces the retired judge_literature_strength judgment; the
+merged synthesize prompt must carry every rule the judge used.
 
 Hits real Anthropic. Abstracts are REAL PubMed text (embedded inline so the test is
 self-contained — no DB dependency), the same evidence that produced the Parkinson card-vs-prose
@@ -8,14 +10,52 @@ bug. Crux shapes mirror scratch/literature_strength_harness.py:
   (depression) abstract → evidence_basis="class_level", strength NOT "strong".
 - T1DM: two genuine semaglutide RCTs → drug_specific, strength NOT "none".
 
-Uses test_cache_dir so the real cache is untouched.
+get_all_drug_names is patched to the known drug name so the test isolates the merged-prompt
+behavior (no OT/ChEMBL network); the ChEMBL ID is a sentinel. Uses test_cache_dir so the real
+cache is untouched.
 """
 
 import logging
+from unittest.mock import AsyncMock, patch
 
-from indication_scout.services.literature_strength import judge_literature_strength
+import pytest
+
+from indication_scout.services.retrieval import AbstractResult, RetrievalService
 
 logger = logging.getLogger(__name__)
+
+
+def _to_abstracts(dicts: list[dict]) -> list[AbstractResult]:
+    """Wrap the inline {pmid,title,abstract} dicts as AbstractResults synthesize accepts."""
+    return [
+        AbstractResult(
+            pmid=d["pmid"], title=d["title"], abstract=d["abstract"], similarity=0.9
+        )
+        for d in dicts
+    ]
+
+
+async def _synthesize(
+    abstracts: list[dict],
+    *,
+    drug: str,
+    indication: str,
+    cache_dir,
+    approved_indications: list[str] | None = None,
+):
+    """Run the live combined synthesize over inline abstracts, patching name resolution to `drug`."""
+    svc = RetrievalService(cache_dir)
+    with patch(
+        "indication_scout.services.retrieval.get_all_drug_names",
+        new=AsyncMock(return_value=[drug]),
+    ):
+        return await svc.synthesize(
+            "CHEMBL_SENTINEL",
+            indication,
+            _to_abstracts(abstracts),
+            approved_indications=approved_indications,
+        )
+
 
 # Real abstracts — class-level GLP-1 RCTs for Parkinson's (NOT semaglutide) + one off-topic
 # semaglutide abstract (depression). This is the exact shape that inflated the card to "strong".
@@ -109,49 +149,72 @@ _T1DM_ABSTRACTS = [
 ]
 
 
+def _assert_self_consistent(s):
+    """The NEW consistency invariants the merge guarantees by construction: prose/key_findings
+    cite only relevant PMIDs; supporting/contradicting are a subset of relevant with no overlap;
+    study_count agrees with the relevant set size."""
+    import re as _re
+
+    relevant = set(s.relevant_pmids)
+    assert set(s.supporting_pmids) <= relevant, "supporting cites a contaminated PMID"
+    assert (
+        set(s.contradicting_pmids) <= relevant
+    ), "contradicting cites a contaminated PMID"
+    assert not (
+        set(s.supporting_pmids) & set(s.contradicting_pmids)
+    ), "supporting∩contradicting"
+    assert set(s.relevant_pmids).isdisjoint(
+        s.contaminated_pmids
+    ), "relevant∩contaminated"
+    # The metformin-CVD regression: each `key_findings` bullet must NOT cite a PMID that was
+    # dropped (not in the relevant set). This is the invariant the merge owns by construction
+    # (one author) — assert it directly, since the deterministic orphan-trim was removed.
+    # NOTE: the `summary` prose is deliberately exempt — the prompt permits it to cite a
+    # CONTAMINATED PMID solely to explain WHY it was excluded (e.g. "the RCTs were for sibling
+    # drug X, not this drug"), which is exactly the class-level/approved disclaimer case.
+    for kf in s.key_findings:
+        cited = set(_re.findall(r"PMID:\s*(\d+)", kf))
+        assert cited <= relevant, (
+            f"key_finding cites non-relevant PMID(s) {cited - relevant}: {kf}"
+        )
+
+
+@pytest.mark.approval_aware
 async def test_class_level_parkinson_is_not_strong(test_cache_dir):
     """The Parkinson bug: GLP-1 class RCTs (other drugs) + an off-topic semaglutide abstract →
     evidence_basis='class_level' and strength NOT 'strong' (no direct semaglutide evidence).
     """
-    s = await judge_literature_strength(
+    s = await _synthesize(
         _PARKINSON_ABSTRACTS,
         drug="semaglutide",
         indication="Parkinson Disease",
         cache_dir=test_cache_dir,
     )
-    assert s is not None
     assert (
         s.evidence_basis == "class_level"
     ), f"expected class_level, got {s.evidence_basis!r}"
-    assert s.strength != "strong", f"class-level evidence graded strong: {s!r}"
-    # the parser enforces none for class_level
-    assert s.strength == "none"
+    # the deterministic strength cap forces none for a non-drug_specific basis
+    assert s.strength == "none", f"class-level evidence graded {s.strength!r}"
     assert s.direction == "none"
+    _assert_self_consistent(s)
 
 
+@pytest.mark.approval_aware
 async def test_drug_specific_t1dm_is_not_none(test_cache_dir):
     """Two genuine semaglutide RCTs in T1DM → evidence_basis='drug_specific' with real
     drug-specific strength (not 'none')."""
-    s = await judge_literature_strength(
+    s = await _synthesize(
         _T1DM_ABSTRACTS,
         drug="semaglutide",
         indication="Type 1 Diabetes Mellitus",
         cache_dir=test_cache_dir,
     )
-    assert s is not None
     assert (
         s.evidence_basis == "drug_specific"
     ), f"expected drug_specific, got {s.evidence_basis!r}"
     assert s.strength != "none", f"genuine semaglutide RCTs graded none: {s!r}"
     assert s.direction in {"supports", "mixed", "contradicts"}
-
-
-async def test_empty_abstracts_returns_none(test_cache_dir):
-    """No abstracts → None (the caller keeps the synthesize values)."""
-    s = await judge_literature_strength(
-        [], drug="semaglutide", indication="Parkinson Disease", cache_dir=test_cache_dir
-    )
-    assert s is None
+    _assert_self_consistent(s)
 
 
 # ---- Approval-aware exclusion (PLAN_approval_aware_relevance §C) ----
@@ -221,44 +284,50 @@ _BUPROPION_MOOD_APPROVED = [
 ]
 
 
+@pytest.mark.approval_aware
 async def test_bupropion_mdd_papers_under_mood_disorder_are_approved_not_strong(
     test_cache_dir,
 ):
     """Bupropion-in-MDD RCTs under the broad 'mood disorder' candidate, with MDD in the approved
     list → evidence_basis='approved' (already-approved evidence), strength capped (not
     strong/moderate). This is the leak the plan fixes."""
-    s = await judge_literature_strength(
+    s = await _synthesize(
         _BUPROPION_MDD_ABSTRACTS,
         drug="bupropion",
         indication="Mood Disorder",
         cache_dir=test_cache_dir,
         approved_indications=_BUPROPION_MOOD_APPROVED,
     )
-    assert s is not None
-    assert s.evidence_basis == "approved", f"expected approved, got {s.evidence_basis!r}"
-    # the parser forces strength/direction to none for the approved basis
-    assert s.strength == "none", f"approved-sub-indication evidence graded {s.strength!r}"
+    assert (
+        s.evidence_basis == "approved"
+    ), f"expected approved, got {s.evidence_basis!r}"
+    # the strength cap forces strength/direction to none for the approved basis
+    assert (
+        s.strength == "none"
+    ), f"approved-sub-indication evidence graded {s.strength!r}"
     assert s.direction == "none"
+    _assert_self_consistent(s)
 
 
+@pytest.mark.approval_aware
 async def test_bupropion_bipolar_paper_under_mood_disorder_stays_drug_specific(
     test_cache_dir,
 ):
     """CONTROL: with the SAME approved list, a bupropion-in-bipolar paper (bipolar is NOT approved)
     is the candidate's non-approved scope → drug_specific. Proves the exclusion targets the
     approved sub-indication, not the whole 'mood disorder' candidate."""
-    s = await judge_literature_strength(
+    s = await _synthesize(
         _BUPROPION_BIPOLAR_ABSTRACTS,
         drug="bupropion",
         indication="Mood Disorder",
         cache_dir=test_cache_dir,
         approved_indications=_BUPROPION_MOOD_APPROVED,
     )
-    assert s is not None
     assert (
         s.evidence_basis == "drug_specific"
     ), f"expected drug_specific, got {s.evidence_basis!r}"
     assert s.strength != "none", f"genuine bipolar evidence graded none: {s!r}"
+    _assert_self_consistent(s)
 
 
 # Empagliflozin-in-CKD RCTs. "Kidney disease" is the broad candidate; chronic kidney disease (CKD)
@@ -295,27 +364,29 @@ _EMPAGLIFLOZIN_CKD_ABSTRACTS = [
 ]
 
 
-async def test_empagliflozin_ckd_excluded_only_when_approved_list_supplied(test_cache_dir):
+@pytest.mark.approval_aware
+async def test_empagliflozin_ckd_excluded_only_when_approved_list_supplied(
+    test_cache_dir,
+):
     """DECISIVE list-driven control. The SAME empagliflozin-in-CKD RCTs under the broad 'kidney
     disease' candidate flip basis purely on whether CKD is in the approved list:
       - approved=[CKD] → 'approved' (already-approved evidence), strength capped to none.
       - approved=[]    → 'drug_specific' (CKD is the candidate scope), real strength.
     Proves the approved-exclusion is driven by the list, not the model."""
-    with_list = await judge_literature_strength(
+    with_list = await _synthesize(
         _EMPAGLIFLOZIN_CKD_ABSTRACTS,
         drug="empagliflozin",
         indication="Kidney Disease",
         cache_dir=test_cache_dir,
         approved_indications=["chronic kidney disease", "type 2 diabetes mellitus"],
     )
-    without_list = await judge_literature_strength(
+    without_list = await _synthesize(
         _EMPAGLIFLOZIN_CKD_ABSTRACTS,
         drug="empagliflozin",
         indication="Kidney Disease",
         cache_dir=test_cache_dir,
         approved_indications=[],
     )
-    assert with_list is not None and without_list is not None
     assert (
         with_list.evidence_basis == "approved"
     ), f"with CKD approved, expected approved, got {with_list.evidence_basis!r}"
@@ -323,4 +394,8 @@ async def test_empagliflozin_ckd_excluded_only_when_approved_list_supplied(test_
     assert (
         without_list.evidence_basis == "drug_specific"
     ), f"with no approved list, expected drug_specific, got {without_list.evidence_basis!r}"
-    assert without_list.strength != "none", f"CKD RCTs graded none without list: {without_list!r}"
+    assert (
+        without_list.strength != "none"
+    ), f"CKD RCTs graded none without list: {without_list!r}"
+    _assert_self_consistent(with_list)
+    _assert_self_consistent(without_list)

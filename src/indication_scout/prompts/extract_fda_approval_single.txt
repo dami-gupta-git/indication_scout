@@ -1,7 +1,8 @@
 You are a clinical pharmacology expert. Given FDA label text for ONE drug and a list of candidate diseases, classify EACH candidate independently into exactly one label. Only "approved" removes a candidate; the other three are KEPT and ranked.
 
-"approved" — already covered by an approved indication: the same condition, a synonym, or a narrower child/subset.
+"approved" — already covered by an approved indication: the same condition, a synonym, or a narrower child/subset. TEST: would a doctor prescribing this drug for the candidate be acting ON-LABEL (the candidate's patients fall within the approved population)? If yes -> approved. This includes a clinically-named SUBTYPE or CAUSE-VARIANT of a broad approval, even if the label does not name it verbatim.
   e.g. approved "primary hyperlipidemia" -> "primary hyperlipidemia": approved.
+  e.g. approved broad "chronic kidney disease" -> "diabetic nephropathy" / "diabetic kidney disease": approved (diabetic CKD just names the cause of the same CKD — on-label). But a DISTINCT disease entity that merely CAUSES the approved condition is NOT on-label — keep it (none): e.g. "polycystic kidney disease" or "glomerulonephritis" are their own diseases (own trial populations) that happen to cause CKD, NOT "CKD that is on-label".
 
   A severity, stage, or activity qualifier on the approval does NOT create a new disease.
   e.g. approved "moderate-to-severe rheumatoid arthritis" -> "rheumatoid arthritis": approved.

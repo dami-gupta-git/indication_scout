@@ -1159,9 +1159,13 @@ _SAMPLE_ABSTRACTS = [
 
 _SAMPLE_LLM_RESPONSE = json.dumps(
     {
+        "verdicts": {"11111111": "relevant", "22222222": "relevant"},
+        "evidence_basis": "drug_specific",
         "summary": "Two studies support metformin for colorectal cancer.",
         "study_count": 2,
         "strength": "moderate",
+        "direction": "supports",
+        "is_observational": False,
         "key_findings": [
             "Significant CRC risk reduction in RCT (PMID: 11111111)",
             "AMPK-mediated apoptosis in colon cancer cells (PMID: 22222222)",
@@ -1246,7 +1250,8 @@ async def test_synthesize_strips_markdown_fences(svc):
 
 
 async def test_synthesize_parses_llm_response(svc):
-    """synthesize returns an EvidenceSummary with all fields matching the LLM JSON output."""
+    """synthesize returns an EvidenceSummary with all fields matching the LLM JSON output,
+    including the per-abstract relevance split derived from `verdicts`."""
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -1265,11 +1270,16 @@ async def test_synthesize_parses_llm_response(svc):
     assert result.summary == "Two studies support metformin for colorectal cancer."
     assert result.study_count == 2
     assert result.strength == "moderate"
+    assert result.direction == "supports"
+    assert result.evidence_basis == "drug_specific"
+    assert result.is_observational is False
     assert result.key_findings == [
         "Significant CRC risk reduction in RCT (PMID: 11111111)",
         "AMPK-mediated apoptosis in colon cancer cells (PMID: 22222222)",
     ]
     assert result.supporting_pmids == ["11111111", "22222222"]
+    assert result.relevant_pmids == ["11111111", "22222222"]
+    assert result.contaminated_pmids == []
 
 
 async def test_synthesize_raises_on_invalid_json(svc):
@@ -1288,15 +1298,14 @@ async def test_synthesize_raises_on_invalid_json(svc):
             await svc.synthesize("CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS)
 
 
-async def test_synthesize_overwrites_strength_with_drug_specific_judgment(svc):
-    """The isolated judge_literature_strength verdict OVERWRITES synthesize's strength/
-    direction/is_observational and sets evidence_basis — the Parkinson class-level fix. The LLM
-    response grades 'strong', but the drug-specific judgment downgrades it to class_level/none.
-    """
-    from indication_scout.services.literature_strength import LiteratureStrength
-
-    strong_response = json.dumps(
+async def test_synthesize_strength_cap_forces_none_for_class_level(svc):
+    """The deterministic strength cap: when evidence_basis != drug_specific, strength/direction
+    are forced to none even if the LLM emitted a non-none grade — the Parkinson class-level fix.
+    The contaminated PMIDs (verdicts) are split out of the relevant set."""
+    leaky_response = json.dumps(
         {
+            "verdicts": {"11111111": "contaminated", "22222222": "contaminated"},
+            "evidence_basis": "class_level",
             "summary": "Class-level GLP-1 RCTs; no direct drug evidence (PMID: 11111111).",
             "study_count": 2,
             "strength": "strong",
@@ -1305,12 +1314,6 @@ async def test_synthesize_overwrites_strength_with_drug_specific_judgment(svc):
             "supporting_pmids": ["11111111", "22222222"],
         }
     )
-    class_level = LiteratureStrength(
-        strength="none",
-        direction="none",
-        evidence_basis="class_level",
-        is_observational=None,
-    )
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -1318,40 +1321,40 @@ async def test_synthesize_overwrites_strength_with_drug_specific_judgment(svc):
         ),
         patch(
             "indication_scout.services.retrieval.query_llm",
-            new=AsyncMock(return_value=strong_response),
-        ),
-        patch(
-            "indication_scout.services.retrieval.judge_literature_strength",
-            new=AsyncMock(return_value=class_level),
+            new=AsyncMock(return_value=leaky_response),
         ),
     ):
         result = await svc.synthesize(
             "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
         )
 
-    # overwritten by the drug-specific judgment
+    # strength cap forces these to none for a non-drug_specific basis
     assert result.strength == "none"
     assert result.direction == "none"
     assert result.evidence_basis == "class_level"
-    assert result.is_observational is None
     # prose untouched
     assert result.summary.startswith("Class-level GLP-1 RCTs")
-    assert result.supporting_pmids == ["11111111", "22222222"]
+    # per-abstract split from verdicts
+    assert result.relevant_pmids == []
+    assert result.contaminated_pmids == ["11111111", "22222222"]
 
 
-async def test_synthesize_holdout_skips_drug_specific_judgment(svc):
+async def test_synthesize_holdout_skips_strength_cap(svc):
     """In holdout_mode the relaxed rubric intentionally scores class-level evidence, so the
-    drug-specific override must NOT run — strength stays as synthesize set it."""
-    strong_response = json.dumps(
+    deterministic strength cap must NOT run — a class_level basis keeps its non-none strength.
+    """
+    holdout_response = json.dumps(
         {
+            "verdicts": {"11111111": "relevant", "22222222": "contaminated"},
+            "evidence_basis": "class_level",
             "summary": "Class-level evidence (PMID: 11111111).",
-            "study_count": 2,
+            "study_count": 1,
             "strength": "moderate",
             "direction": "supports",
+            "is_observational": None,
             "supporting_pmids": ["11111111"],
         }
     )
-    judge = AsyncMock()
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -1359,19 +1362,50 @@ async def test_synthesize_holdout_skips_drug_specific_judgment(svc):
         ),
         patch(
             "indication_scout.services.retrieval.query_llm",
-            new=AsyncMock(return_value=strong_response),
-        ),
-        patch(
-            "indication_scout.services.retrieval.judge_literature_strength", new=judge
+            new=AsyncMock(return_value=holdout_response),
         ),
     ):
         result = await svc.synthesize(
             "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS, holdout_mode=True
         )
 
-    judge.assert_not_awaited()
+    # cap skipped: class_level keeps its moderate strength in holdout
     assert result.strength == "moderate"
-    assert result.evidence_basis == "none"  # default, never set in holdout
+    assert result.direction == "supports"
+    assert result.evidence_basis == "class_level"
+    assert result.relevant_pmids == ["11111111"]
+    assert result.contaminated_pmids == ["22222222"]
+
+
+async def test_synthesize_missing_verdicts_treats_all_contaminated(svc):
+    """No usable `verdicts` in the response → all abstracts contaminated (conservative), and the
+    strength cap then forces a non-drug_specific basis to none."""
+    no_verdicts = json.dumps(
+        {
+            "evidence_basis": "drug_specific",
+            "summary": "Some evidence (PMID: 11111111).",
+            "study_count": 2,
+            "strength": "strong",
+            "direction": "supports",
+            "supporting_pmids": ["11111111"],
+        }
+    )
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=no_verdicts),
+        ),
+    ):
+        result = await svc.synthesize(
+            "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
+        )
+
+    assert result.relevant_pmids == []
+    assert result.contaminated_pmids == ["11111111", "22222222"]
 
 
 # --- get_drug_competitors ---

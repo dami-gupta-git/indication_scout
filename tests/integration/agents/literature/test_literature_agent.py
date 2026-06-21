@@ -118,8 +118,8 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
     # --- evidence_summary ---
     assert isinstance(output.evidence_summary, EvidenceSummary)
     # Drug-specific semaglutide NASH RCTs → drug_specific basis, strong evidence (multiple
-    # phase 2/3 RCTs). strength/direction/evidence_basis now come from the authoritative
-    # judge_literature_strength override (services/literature_strength), not raw synthesize.
+    # phase 2/3 RCTs). strength/direction/evidence_basis come from the combined synthesize call
+    # (the single author over the abstracts).
     assert output.evidence_summary.evidence_basis == "drug_specific"
     assert output.evidence_summary.strength in {"strong", "moderate"}
     assert output.evidence_summary.study_count >= 2

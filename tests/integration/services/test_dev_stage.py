@@ -90,9 +90,41 @@ _CASES = [
         ],
         {"active_phase3", "completed_phase2"},
     ),
+    (
+        # bupropion x Mood Disorder regression: relevant set is only "Not Applicable" trials.
+        # These ARE registered trials, so the tier must be early_phase, NEVER untested.
+        "only_not_applicable_completed",
+        [
+            _t("NCT00012558", "Not Applicable", "COMPLETED"),
+            _t("NCT00001478", "Not Applicable", "COMPLETED"),
+        ],
+        {"early_phase"},
+    ),
+    (
+        # imatinib x Leukemia regression: a large, noisy relevant set with completed pure Phase 3
+        # trials buried among terminated/operational ones. The live LLM judged this 'untested';
+        # the deterministic tier-floor lifts it to completed_phase3 (judge_dev_stage end-to-end).
+        "noisy_set_with_completed_phase3",
+        [
+            _t("NCT00002514", "Phase 3", "COMPLETED"),
+            _t("NCT00327678", "Phase 3", "COMPLETED"),
+            _t("NCT00137111", "Phase 3", "COMPLETED"),
+            _t("NCT00022737", "Phase 3", "COMPLETED"),
+            _t("NCT00458848", "Phase 2", "COMPLETED"),
+            _t("NCT00061945", "Phase 1/Phase 2", "COMPLETED"),
+            _t("NCT00167180", "Phase 2", "Terminated"),
+            _t("NCT00852709", "Phase 1", "Terminated"),
+            _t("NCT00882206", "Phase 2", "Terminated"),
+            _t("NCT00558961", "Phase 1/Phase 2", "Terminated"),
+            _t("NCT01148134", "Not Applicable", "Terminated"),
+            _t("NCT04307576", "Phase 3", "Recruiting"),
+        ],
+        {"completed_phase3"},
+    ),
 ]
 
 
+@pytest.mark.approval_aware
 @pytest.mark.parametrize("label,trials,accepted", _CASES, ids=[c[0] for c in _CASES])
 async def test_judge_dev_stage_live(label, trials, accepted, test_cache_dir):
     """The live model must return one of the accepted tiers for each crux case."""

@@ -110,6 +110,57 @@ def svc(test_cache_dir):
 #     assert "pmid" in str(result) or hasattr(result, "pmids")
 
 
+async def test_synthesize_evidence_summary_is_self_consistent(svc, db_session_truncating):
+    """synthesize's deterministic post-processing invariants on a REAL run (hits the LLM).
+
+    The combined synthesize+judge call authors verdicts/strength/basis; the service then applies
+    a handful of deterministic fixes. Asserted here (metformin × hepatic steatosis is the case
+    that exposed them — real abstracts pulled through the full fetch → semantic_search path):
+      - No PMID appears in BOTH supporting_pmids and contradicting_pmids (dedup → contradicting).
+      - relevant_pmids and contaminated_pmids partition the INPUT PMID set exactly (disjoint, and
+        their union equals the input set — every input PMID is classified).
+      - The strength cap holds: when evidence_basis != "drug_specific", strength and direction
+        are both forced to "none".
+    """
+    # CHEMBL1431 = metformin.
+    queries = ["metformin AND hepatic steatosis", "metformin AND NAFLD"]
+    pmids = await svc.fetch_and_cache(queries, db_session_truncating)
+    abstracts = await svc.semantic_search(
+        "hepatic steatosis", "CHEMBL1431", pmids, db_session_truncating
+    )
+    if len(abstracts) < 2:
+        pytest.skip(f"need >=2 abstracts from semantic_search; got {len(abstracts)}")
+
+    input_pmids = {a.pmid for a in abstracts}
+    summary = await svc.synthesize(
+        chembl_id="CHEMBL1431",
+        disease="hepatic steatosis",
+        top_abstracts=abstracts,
+    )
+
+    assert isinstance(summary, EvidenceSummary)
+    sup = set(summary.supporting_pmids)
+    con = set(summary.contradicting_pmids)
+    # 1. No PMID in both lists (dedup keeps it as contradicting only).
+    assert not (sup & con), f"PMID(s) in both supporting and contradicting: {sup & con}"
+    # 2. relevant/contaminated partition the input set exactly.
+    rel = set(summary.relevant_pmids)
+    cont = set(summary.contaminated_pmids)
+    assert not (rel & cont), f"PMID(s) in both relevant and contaminated: {rel & cont}"
+    assert rel | cont == input_pmids, (
+        f"relevant ∪ contaminated != input set; "
+        f"missing={input_pmids - (rel | cont)}, extra={(rel | cont) - input_pmids}"
+    )
+    # 3. Deterministic strength cap: non-drug_specific basis forces strength/direction to none.
+    if summary.evidence_basis != "drug_specific":
+        assert summary.strength == "none", (
+            f"basis={summary.evidence_basis} but strength={summary.strength}"
+        )
+        assert summary.direction == "none", (
+            f"basis={summary.evidence_basis} but direction={summary.direction}"
+        )
+
+
 async def test_extract_organ_term_returns_string(svc):
     """extract_organ_term should return the primary organ for a known disease."""
     result = await svc.extract_organ_term("colorectal cancer")

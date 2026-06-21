@@ -70,9 +70,9 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
     if lit.evidence_summary:
         es = lit.evidence_summary
         # class_level = the disease-relevant RCTs are for OTHER drugs in the class, not this
-        # one (judge_literature_strength). Make the line honest so the section never reads as
-        # direct drug evidence — strength/direction are forced to "none" for class_level in the
-        # parser, so this line is the only meaningful rendering.
+        # one (the combined synthesize call). Make the line honest so the section never reads as
+        # direct drug evidence — strength/direction are forced to "none" for class_level by the
+        # deterministic cap in synthesize, so this line is the only meaningful rendering.
         if es.evidence_basis == "class_level":
             strength_line = (
                 "**Evidence strength:** class-level signal "

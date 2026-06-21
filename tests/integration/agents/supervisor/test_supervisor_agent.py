@@ -195,6 +195,7 @@ def _find_finding(output: SupervisorOutput, substr: str) -> CandidateFindings | 
     return None
 
 
+@pytest.mark.approval_aware
 async def test_semaglutide_sibling_kept_and_contaminated_labels(supervisor_agent):
     """Semaglutide: T1DM sibling kept (label 'none'); NAFLD broader-parent kept ('contaminated').
 
@@ -242,6 +243,7 @@ async def test_semaglutide_sibling_kept_and_contaminated_labels(supervisor_agent
     assert _find_finding(output, "obesity") is None
 
 
+@pytest.mark.approval_aware
 async def test_sildenafil_hypertension_contaminated_and_pah_trials_tagged(supervisor_agent):
     """Sildenafil: systemic hypertension kept ('contaminated'); PAH search trials tagged contaminated.
 

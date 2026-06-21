@@ -34,8 +34,8 @@ from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
 from indication_scout.services.embeddings import embed_async
 from indication_scout.services.progress import PHASE_LITERATURE, emit_progress
 from indication_scout.models.model_evidence_summary import EvidenceSummary
-from indication_scout.services.literature_strength import judge_literature_strength
 from indication_scout.services.llm import (
+    parse_last_json_object,
     parse_llm_response,
     query_llm,
     query_small_llm,
@@ -296,9 +296,7 @@ class RetrievalService:
         if not abstracts:
             return []
 
-        emit_progress(
-            PHASE_LITERATURE, f"Embedding {len(abstracts)} new abstracts"
-        )
+        emit_progress(PHASE_LITERATURE, f"Embedding {len(abstracts)} new abstracts")
         texts = [f"{a.title}. {a.abstract or ''}" for a in abstracts]
         vectors = await embed_async(texts)
         return list(zip(abstracts, vectors))
@@ -539,9 +537,7 @@ class RetrievalService:
             # Per-query attribution: how many PMIDs each query returned (PMIDs themselves
             # omitted to keep logs readable).
             for _q, _pmids in zip(queries, search_results):
-                logger.warning(
-                    "[QUERYMAP] query=%r returned %d pmids", _q, len(_pmids)
-                )
+                logger.warning("[QUERYMAP] query=%r returned %d pmids", _q, len(_pmids))
 
             # 1.5 Cutoff post-guard. PubMed's eutils maxdate filter is not
             # strictly respected, so we re-verify each PMID's publication
@@ -652,9 +648,7 @@ class RetrievalService:
         # LIMIT below. Compares against len(pmids) to expose over-fetch — abstracts
         # fetched + embedded but never surfaced in the top-k. Read-only COUNT.
         _embedded_count = db.execute(
-            text(
-                "SELECT count(*) FROM pubmed_abstracts WHERE pmid = ANY(:pmids)"
-            ),
+            text("SELECT count(*) FROM pubmed_abstracts WHERE pmid = ANY(:pmids)"),
             {"pmids": pmids},
         ).scalar()
         logger.warning(
@@ -786,12 +780,18 @@ class RetrievalService:
         """
         # Cache key uses sorted PMIDs so two abstract orderings that contain the
         # same evidence collapse to one cache entry. Holdout mode uses a different
-        # prompt template, so it must be part of the key.
+        # prompt template, so it must be part of the key. The combined prompt now
+        # owns the approved-indication exclusion, so the sorted approved set MUST be
+        # in the key — the same PMIDs grade differently under different approved lists.
+        approved = sorted(
+            {i.strip() for i in (approved_indications or []) if i.strip()}
+        )
         cache_params = {
             "chembl_id": chembl_id,
             "disease": disease,
             "pmids": sorted(r.pmid for r in top_abstracts),
             "holdout_mode": holdout_mode,
+            "approved_indications": approved,
             "llm_model": _settings.llm_model,
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
@@ -811,66 +811,95 @@ class RetrievalService:
         prompt_file = "synthesize_holdout.txt" if holdout_mode else "synthesize.txt"
         logger.debug("synthesize prompt: %s", prompt_file)
         template = (_PROMPTS_DIR / prompt_file).read_text()
-        prompt = template.format(
-            drug_name=pref_name, disease_name=disease, abstracts=formatted
-        )
+        # The holdout prompt has no {approved_indications} slot (it scores class-level
+        # signal by design and does not run the exclusion); only the production prompt does.
+        if holdout_mode:
+            prompt = template.format(
+                drug_name=pref_name, disease_name=disease, abstracts=formatted
+            )
+        else:
+            prompt = template.format(
+                drug_name=pref_name,
+                disease_name=disease,
+                abstracts=formatted,
+                approved_indications=", ".join(approved) if approved else "(none)",
+            )
 
         response = await query_llm(prompt)
-        stripped = strip_markdown_fences(response)
-        try:
-            data = json.loads(stripped)
-        except json.JSONDecodeError as e:
+        # Tolerant parse: the merged prompt is long, so the model sometimes emits prose before the
+        # JSON or an empty/overflowed response. parse_last_json_object scans for the last balanced
+        # {...} block (same tolerance the retired judge had). On a genuine parse failure, DEGRADE
+        # to a safe floor (basis=none, strength none, all abstracts contaminated) rather than
+        # `raise` — one bad LLM response must not crash the whole analysis pipeline.
+        data = parse_last_json_object(response)
+        if data is None:
             logger.error(
-                "synthesize: failed to parse LLM response: %s\nResponse was: %s",
-                e,
+                "synthesize: could not parse a JSON object for %s / %s; returning a safe "
+                "untested floor. Response was: %s",
+                chembl_id,
+                disease,
                 response,
             )
-            raise
+            data = {
+                "summary": "",
+                "study_count": 0,
+                "strength": "none",
+                "direction": "none",
+                "evidence_basis": "none",
+                "is_observational": None,
+                "key_findings": [],
+                "supporting_pmids": [],
+                "contradicting_pmids": [],
+                "verdicts": {},
+            }
+
+        # Per-abstract relevance split over the INPUT PMID set. The prompt classifies every
+        # abstract in "verdicts"; any input PMID the model OMITS is treated as contaminated
+        # (conservative — an unclassified abstract never counts as evidence). A verdict for a
+        # PMID that was not sent is ignored. This is the single source of the relevant set;
+        # the combined prompt already restricted summary/key_findings/pmids to it.
+        verdicts = data.get("verdicts")
+        input_pmids = [r.pmid for r in top_abstracts]
+        if isinstance(verdicts, dict):
+            relevant_pmids = [p for p in input_pmids if verdicts.get(p) == "relevant"]
+            contaminated_pmids = [p for p in input_pmids if p not in relevant_pmids]
+        else:
+            # No usable verdicts — conservative: nothing is confirmed relevant. The strength
+            # cap below then forces a non-drug_specific basis to strength/direction none.
+            logger.warning(
+                "synthesize: no usable 'verdicts' for %s / %s; treating all abstracts as "
+                "contaminated. Response was: %s",
+                chembl_id,
+                disease,
+                response,
+            )
+            relevant_pmids = []
+            contaminated_pmids = list(input_pmids)
+
+        data["relevant_pmids"] = relevant_pmids
+        data["contaminated_pmids"] = contaminated_pmids
         summary = EvidenceSummary(**data)
 
-        # Authoritative drug-specific strength: an isolated call grades the SAME abstracts for
-        # THIS drug only, so a class-level (other-drug) RCT body cannot inflate strength to
-        # "strong" while the prose says "no direct evidence for <drug>" (the Parkinson bug).
-        # One source of truth — its verdict OVERWRITES synthesize's strength/direction/
-        # is_observational and sets evidence_basis. The summary/key_findings/pmids prose stays
-        # (it already wrote the honest disclaimer). Skipped in holdout_mode, whose relaxed
-        # rubric intentionally scores class-level evidence. On None (parse failure / no
-        # abstracts) the synthesize values are kept — never fabricated.
-        if not holdout_mode:
-            ls = await judge_literature_strength(
-                [
-                    {"pmid": r.pmid, "title": r.title, "abstract": r.abstract}
-                    for r in top_abstracts
-                ],
-                drug=pref_name,
-                indication=disease,
-                cache_dir=self.cache_dir,
-                approved_indications=approved_indications,
-            )
-            if ls is not None:
-                summary.strength = ls.strength
-                summary.direction = ls.direction
-                summary.is_observational = ls.is_observational
-                summary.evidence_basis = ls.evidence_basis
-                # Per-PMID split: drop contaminated abstracts from the rendered evidence so the
-                # card's PMIDs match the grade (the grade was computed over the relevant set only).
-                # Mirrors the trial gate keeping only relevant NCTs.
-                relevant = set(ls.relevant_pmids)
-                summary.supporting_pmids = [
-                    p for p in summary.supporting_pmids if p in relevant
-                ]
-                summary.contradicting_pmids = [
-                    p for p in summary.contradicting_pmids if p in relevant
-                ]
-                summary.study_count = len(relevant)
-            else:
-                # Judge returned None (parse failure / no abstracts) — its strength cap never ran.
-                # synthesize already graded THIS drug's evidence, so keep its strength/direction but
-                # force evidence_basis to agree so the rendered card can't show the contradictory
-                # state basis="none" + strength="strong" (which surfaced when the judge's JSON had
-                # reasoning before it and failed to parse). The renderer keys the headline off
-                # evidence_basis, so this keeps the two halves consistent without fabricating.
-                summary.evidence_basis = "drug_specific"
+        # Dedup a PMID the model put in BOTH supporting and contradicting (it cannot be both).
+        # Keep it as CONTRADICTING only — a paper seen as both is, at best, mixed/null, and the
+        # conservative read is that it does NOT cleanly support the hypothesis. (Observed:
+        # metformin × hepatic steatosis, PMID 18640473 listed in both for a null pediatric result.)
+        _both = set(summary.supporting_pmids) & set(summary.contradicting_pmids)
+        if _both:
+            summary.supporting_pmids = [
+                p for p in summary.supporting_pmids if p not in _both
+            ]
+
+        # DETERMINISTIC strength cap — the one clinical-accuracy invariant NOT trusted to the
+        # prompt. strength/direction grade DRUG-SPECIFIC evidence only; whenever evidence_basis is
+        # not "drug_specific" (class_level / approved / none) they MUST be "none", else a
+        # class-level RCT body could inflate the card to "strong" while the prose says "no direct
+        # evidence for <drug>" (the Parkinson bug). Every consumer (the supervisor ranking path
+        # reads es.strength directly) depends on this. Skipped in holdout_mode, whose relaxed
+        # rubric intentionally scores class-level evidence with a non-none strength.
+        if not holdout_mode and summary.evidence_basis != "drug_specific":
+            summary.strength = "none"
+            summary.direction = "none"
 
         cache_set(
             "synthesize",

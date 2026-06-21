@@ -31,26 +31,27 @@ search scope, so they MUST be classified too or a contaminated active trial leak
 The task message gives the drug's FDA-approved indications. Apply these tests to EACH shown trial
 IN ORDER; the FIRST one that matches decides the verdict.
 
-TEST 1 — APPROVED-SUBTYPE (=> CONTAMINATION). Is the trial's condition one of the drug's APPROVED
-indications, OR a narrower form of one of them? If YES, the trial is ALREADY-APPROVED evidence and
-is CONTAMINATION — even though the drug IS this drug and the condition is a clinical subtype of the
-candidate. The candidate is a BROAD term, and a trial for the APPROVED part of it does NOT support
-repurposing the drug to the broader candidate (e.g. candidate "mood disorder", approved includes
-"seasonal affective disorder" -> a SAD trial is CONTAMINATION).
-  SEVERITY/STAGE QUALIFIER: ignore a severity, stage, or biomarker QUALIFIER on the approved
-  indication when matching — it does NOT create a separable disease. If the approval is "X with
-  <severity/stage>" (e.g. "MASH with moderate-to-advanced fibrosis"), then a trial whose condition
-  is the bare disease X or its near-synonyms (e.g. "NASH", "steatohepatitis") IS the approved
-  sub-indication => CONTAMINATION. Example: approved "MASH (NASH) with fibrosis"; candidate "NAFLD"
-  (the broad umbrella) -> a "NASH" / "MASH" / "steatohepatitis" trial is CONTAMINATION (the approved
-  inflammatory subtype), while a trial of the broad NAFLD/simple-steatosis spectrum is RELEVANT.
-  IMPORTANT: a SIBLING of an approved indication is NOT a subtype of it and does NOT match (e.g.
-"type 1 diabetes" is a sibling of approved "type 2 diabetes", not a narrower form) — fall through. A
-trial for the BARE broad disease is NOT the approved subset of a MINORITY-BIOMARKER approval (e.g.
-all-comers NSCLC vs approved EGFR-mutated NSCLC, where the biomarker covers only ~10-15%) and does
-NOT match — fall through. (Distinguish this from a SEVERITY qualifier above: a severity grade is NOT
-a minority biomarker — "NASH" is the approved disease, not a broad parent of it.) If the
-approved-indications list is "(none)", TEST 1 never matches.
+TEST 1 — APPROVED-SUBTYPE (=> CONTAMINATION). Is ANY condition the trial studies one of the drug's
+APPROVED indications, or a narrower form of one? If YES => CONTAMINATION — it is already-approved
+evidence, not repurposing of the broad candidate. This holds even when the drug IS this drug.
+  - A trial listing MULTIPLE conditions contaminates if ANY of them is the approved subtype — a
+    co-listed sibling/other disease does NOT rescue it (e.g. "type 2 diabetes with NASH", where
+    NASH is the approved subtype => CONTAMINATION, the T2DM framing is irrelevant).
+  - Ignore a SEVERITY/STAGE/biomarker QUALIFIER on the approval when matching. If approved is "X
+    with <severity>" (e.g. "MASH with fibrosis"), a trial of bare X or a near-synonym (e.g. "NASH",
+    "steatohepatitis") IS the approved sub-indication => CONTAMINATION.
+  Example: candidate "mood disorder", approved "seasonal affective disorder" -> a SAD trial =>
+  CONTAMINATION. Example: candidate "NAFLD" (umbrella), approved "MASH (NASH) with fibrosis" -> a
+  "NASH"/"MASH"/"steatohepatitis" trial => CONTAMINATION; a broad NAFLD/simple-steatosis trial =>
+  RELEVANT.
+
+  Does NOT contaminate under TEST 1 (fall through to TEST 2/3):
+  - a SIBLING of an approved indication (not a narrower form) — e.g. "type 1 diabetes" vs approved
+    "type 2 diabetes".
+  - a BARE broad disease vs a MINORITY-BIOMARKER approval covering only a small subset — e.g.
+    all-comers NSCLC vs approved EGFR-mutated NSCLC (~10-15%). (A severity grade is NOT a minority
+    biomarker — "NASH" is the approved disease, not a broad parent of it.)
+  - anything, when the approved-indications list is "(none)" — TEST 1 never matches then.
 
 TEST 2 — DISTINCT DISEASE or WRONG DRUG (=> CONTAMINATION). Is the trial's condition a DISTINCT
 disease that merely shares a parent term (e.g. a systemic "Hypertension" query pulling in

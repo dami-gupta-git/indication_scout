@@ -1,7 +1,8 @@
-You are a biomedical evidence analyst. Given a drug, a candidate disease, and 5 PubMed abstracts, assess the evidence for repurposing this drug to treat this disease.
+You are a biomedical evidence analyst. Given a drug, a candidate disease, the drug's FDA-approved indications, and PubMed abstracts, assess the evidence for repurposing this drug to treat this disease. Read every abstract ONCE and emit a single internally-consistent judgment.
 
 Drug: {drug_name}
 Candidate Disease: {disease_name}
+Drug's FDA-approved indications: {approved_indications}
 
 Abstracts:
 {abstracts}
@@ -9,26 +10,46 @@ Abstracts:
 GROUNDING RULES — these are non-negotiable:
 1. Use ONLY information from the abstracts provided above. Do not introduce facts, trial names, mechanisms, or findings from your training that are not explicitly in these abstracts.
 2. Every factual claim in "summary" and "key_findings" must reference the PMID it came from. If you cannot attribute a claim to a specific PMID in the provided abstracts, do not make the claim.
-3. If the abstracts do not contain enough information to assess the drug-disease pair, say so. Set strength to "none" AND direction to "none", and explain that the retrieved literature is insufficient. Do not invent supporting evidence. Note: a body of trials that DISPROVES the hypothesis is NOT "none" — it is strong/moderate evidence (per its trial quantity/quality) with direction "contradicts". "strength none" means genuinely little/no relevant evidence, NOT "no efficacy".
+3. If the abstracts do not contain enough relevant information to assess the drug-disease pair, say so. Set strength to "none" AND direction to "none", and explain that the retrieved literature is insufficient. Do not invent supporting evidence. Note: a body of trials that DISPROVES the hypothesis is NOT "none" — it is strong/moderate evidence (per its trial quantity/quality) with direction "contradicts". "strength none" means genuinely little/no relevant evidence, NOT "no efficacy".
 4. Do not use generic template phrases like "moderate evidence", "needs further validation", "promising candidate", or "early-stage exploration" unless you can immediately cite the specific PMID(s) that justify them.
 
-Analyze these abstracts and return a JSON object with the following fields:
+STEP 1 — PER-ABSTRACT RELEVANCE (do this FIRST). Classify EACH abstract by PMID as "relevant" or "contaminated". strength and direction grade evidence for THIS EXACT DRUG treating THIS EXACT DISEASE only:
+- This drug, treating this disease in the candidate's NON-approved scope -> relevant.
+- A DIFFERENT drug — even one in the same mechanistic class (e.g. another GLP-1 receptor agonist) -> contaminated. It is class-level context, NOT direct evidence for this drug. (But note it: if the ONLY disease-relevant abstracts are other-drug, evidence_basis is "class_level".)
+- This drug but a DIFFERENT disease -> contaminated.
+- THERAPEUTIC-INTENT MISMATCH: this drug studied IN patients who HAVE this disease but FOR a different condition (a comorbidity, smoking cessation, weight loss, etc.) -> contaminated. It is not evidence that the drug TREATS this disease.
+- APPROVED-INDICATION EXCLUSION (direction matters):
+  - This fires ONLY when the CANDIDATE is a BROAD term that CONTAINS an approved indication as a narrower part (e.g. candidate "mood disorder" contains approved "major depressive disorder"; candidate "NAFLD" contains approved "MASH"). An abstract studying THIS DRUG for the APPROVED sub-indication (the narrower part) -> contaminated (already-approved evidence, not repurposing). Only abstracts about the candidate's NON-approved scope count.
+  - DO NOT fire it in the OPPOSITE direction: if the candidate is NARROWER than (a child of) an approved indication — the candidate itself is NOT approved but its broader PARENT is (e.g. candidate "diabetic nephropathy"/"diabetic kidney disease" when only the broad parent "chronic kidney disease" is approved) — then abstracts about the broad approved PARENT ARE the candidate's own evidence -> relevant (the candidate's patients are studied within the parent's trials).
+  - Test: mark an abstract contaminated only when its subject is the approved indication itself or NARROWER than it AND narrower-than-or-equal-to the candidate; never mark contaminated an abstract about a disease BROADER than the candidate.
+  - If the CANDIDATE ITSELF IS an approved indication (or a near-synonym / same disease as one — e.g. candidate "kidney disease" when "chronic kidney disease" is approved), then this-drug abstracts for it -> contaminated (the whole candidate is already approved; not repurposing). If EVERY abstract falls here, evidence_basis="approved".
+  - SEVERITY/STAGE QUALIFIER: ignore a severity/stage/biomarker QUALIFIER on the approved indication when matching — it does NOT create a separable disease. If the approval is "X with <severity/stage>" (e.g. "MASH with moderate-to-advanced fibrosis"), an abstract about the bare disease X or its near-synonyms (e.g. "NASH"/"steatohepatitis") IS the approved sub-indication -> contaminated. Example: approved "MASH (NASH) with fibrosis"; candidate "NAFLD" -> abstracts on "NASH"/"MASH"/"steatohepatitis" are contaminated (approved); only abstracts on the broad NAFLD/simple-steatosis spectrum count.
+  - SIBLINGS of an approved indication (e.g. type 1 diabetes vs approved type 2 diabetes), and evidence BROADER than a MINORITY-BIOMARKER approval (e.g. all-comers NSCLC vs approved EGFR-mutated NSCLC, biomarker ~10-15%) are NOT approved sub-indications -> relevant. (A severity grade is NOT a minority biomarker: "NASH" is the approved disease, not a broad parent of it.)
+- Any input PMID you do not classify is treated as contaminated, so classify EVERY PMID.
 
-- "summary": A 2-3 sentence summary of the overall evidence. State clearly whether the evidence supports, contradicts, or is irrelevant to using this drug for this disease. Note if the papers describe a contraindication rather than a therapeutic benefit. Every claim must include a PMID reference, e.g. "Drug X reduced tumor growth in mouse models (PMID: 12345678)." Do NOT grade the AMOUNT of evidence in this prose — no "strongly", "moderately", "weakly", or "robustly" qualifying the verb (write "the evidence supports", not "strongly supports"). The strength grade is the separate "strength" field and is set authoritatively elsewhere; a strength adjective here can contradict it.
-- "study_count": Number of abstracts that provide relevant evidence FOR THIS EXACT DRUG (exclude irrelevant papers AND papers about other drugs — even ones in the same mechanistic class)
-- "strength": Grades EVIDENCE QUANTITY/QUALITY ONLY — how much evidence and how good, INDEPENDENT of whether it shows efficacy or failure. Grade THIS EXACT DRUG's evidence only: an abstract about a DIFFERENT drug — even one in the same class (e.g. another GLP-1 receptor agonist) — is NOT direct evidence for this drug and does NOT count toward strength (note it as class/mechanistic context in the prose instead). One of "strong", "moderate", "weak", or "none"
-  - "strong": Multiple clinical studies (RCTs, large cohorts) in the provided abstracts — whether they show efficacy OR failure
-  - "moderate": Small clinical studies, case series, or strong preclinical data in the provided abstracts
-  - "weak": Case reports only, or exclusively in vitro/animal data in the provided abstracts
-  - "none": No/insufficient relevant evidence in the provided abstracts to assess. Do NOT use "none" to mean "the drug failed" — a trial body that disproves the hypothesis is strong/moderate with direction "contradicts".
-- "direction": Which way the relevant evidence points. One of "supports", "contradicts", "mixed", or "none"
-  - "supports": evidence favors repurposing this drug for this disease
-  - "contradicts": evidence shows the drug fails or harms for this indication (a robustly-evidenced negative)
-  - "mixed": both directions present in the relevant abstracts, no clear net
-  - "none": insufficient/no relevant evidence (the only genuinely "untested" case; pair with strength "none")
-- "is_observational": Whether the relevant clinical evidence is purely observational. true = the relevant studies are exclusively observational (cohort, case-control, case series/reports) with NO randomized/controlled trial; false = at least one RCT or controlled trial is among the relevant abstracts; null = cannot tell or no relevant clinical evidence (e.g. preclinical-only, or strength "none"). This field MUST agree with your own summary/key_findings: if any of them describe a randomized, double-blind, placebo-controlled, controlled, or crossover trial (an "RCT"), you MUST set this to false — null is NOT allowed in that case. Reserve null for genuinely indeterminate designs (e.g. preclinical-only or no relevant clinical evidence), not as a default when you simply did not classify. Do NOT guess true/false when the design is truly unclear.
-- "key_findings": List of specific findings, each tied to a PMID. Format: ["Finding text (PMID: 12345678)", ...]. Each finding must be a verifiable claim from the abstract text, not a generalization.
-- "supporting_pmids": List of PMIDs from the provided abstracts that SUPPORT the repurposing hypothesis (exclude irrelevant or contradicting papers)
-- "contradicting_pmids": List of PMIDs from the provided abstracts that CONTRADICT the repurposing hypothesis (the drug failed/harmed for this indication; exclude irrelevant papers). Every relevant PMID cited in "summary" or "key_findings" must appear in supporting_pmids OR contradicting_pmids (a mixed paper may appear in both). No relevant cited PMID may be absent from both.
+STEP 2 — GRADE over the RELEVANT abstracts ONLY. Return a JSON object with these fields:
+
+- "verdicts": object mapping EVERY PMID above to "relevant" or "contaminated", per Step 1.
+- "evidence_basis": one of
+  - "drug_specific": at least one relevant abstract reports clinical/preclinical evidence for THIS drug treating THIS disease in the candidate's NON-approved scope.
+  - "approved": the only relevant this-drug evidence studies an APPROVED sub-indication of the broad candidate; no repurposing evidence for the uncovered scope.
+  - "class_level": the disease-relevant evidence is for OTHER drugs in the class; no direct evidence for this drug in this disease.
+  - "none": no relevant evidence — neither drug-specific nor class-level — OR the only this-drug evidence is for a different condition in this population (the therapeutic-intent case).
+- "study_count": number of RELEVANT abstracts (the count of PMIDs marked "relevant" in verdicts).
+- "strength": grades DRUG-SPECIFIC evidence QUANTITY/QUALITY ONLY — how much and how good, INDEPENDENT of whether it shows efficacy or failure. One of:
+  - "strong": multiple drug-specific clinical studies (RCTs, large cohorts) for THIS drug in THIS disease — whether they show efficacy OR failure. NEVER "strong" when evidence_basis is "approved", "class_level", or "none".
+  - "moderate": small drug-specific clinical studies, case series, or strong drug-specific preclinical data.
+  - "weak": drug-specific case reports only, or drug-specific in-vitro/animal data only.
+  - "none": no drug-specific evidence. Set "none" WHENEVER evidence_basis != "drug_specific". Do NOT use "none" to mean "the drug failed" — a trial body that disproves the hypothesis is strong/moderate with direction "contradicts".
+- "direction": which way the drug-specific evidence points. One of "supports", "contradicts", "mixed", or "none". When evidence_basis != "drug_specific", direction MUST be "none".
+  - "supports": evidence favors repurposing this drug for this disease.
+  - "contradicts": evidence shows the drug fails or harms for this indication (a robustly-evidenced negative).
+  - "mixed": both directions present in the relevant abstracts, no clear net.
+  - "none": insufficient/no relevant drug-specific evidence (pair with strength "none").
+- "is_observational": true if the relevant drug-specific clinical evidence is exclusively observational (cohort, case-control, case series/reports) with NO RCT/controlled trial; false if at least one relevant drug-specific RCT/controlled trial; null if no relevant drug-specific clinical evidence (e.g. preclinical-only, or strength "none"). This MUST agree with your own summary/key_findings: if any describe a randomized, double-blind, placebo-controlled, controlled, or crossover trial, set this to false — null is NOT allowed then. Reserve null for genuinely indeterminate designs, not as a default.
+- "summary": a 2-3 sentence summary of the overall evidence, citing ONLY PMIDs marked "relevant". State clearly whether the evidence supports, contradicts, or is irrelevant to using this drug for this disease; note a contraindication if present. Every claim must include a PMID reference, e.g. "Drug X reduced tumor growth in mouse models (PMID: 12345678)." Do NOT grade the AMOUNT of evidence in this prose — no "strongly"/"moderately"/"weakly"/"robustly" qualifying the verb (write "the evidence supports", not "strongly supports"); strength is the separate field. The direction your prose conveys MUST match the "direction" field. If you want to mention class-level or approved-indication context, do so explicitly as context, citing those PMIDs is allowed in the summary prose ONLY to explain why they were excluded — never as support.
+- "key_findings": list of specific findings, each tied to a PMID that is marked "relevant". Format: ["Finding text (PMID: 12345678)", ...]. Each must be a verifiable claim from the abstract text, not a generalization. Do NOT include findings whose only PMID is a contaminated abstract.
+- "supporting_pmids": PMIDs marked "relevant" that SUPPORT the repurposing hypothesis.
+- "contradicting_pmids": PMIDs marked "relevant" that CONTRADICT the hypothesis (the drug failed/harmed for this indication). Every relevant PMID cited in "summary" or "key_findings" must appear in supporting_pmids OR contradicting_pmids (a mixed paper may appear in both); no relevant cited PMID may be absent from both. A contaminated PMID must NOT appear in either list.
 
 Return JSON only, no explanation.

@@ -120,8 +120,15 @@ async def run_clinical_trials_agent(
         total_out += out_tok
         # Include args so repeated search_trials/get_* calls across turns show WHAT each
         # retry is querying (e.g. a reworded disease term), not just that a tool re-ran.
+        # Args are rendered compactly and truncated — finalize_analysis carries a per-NCT
+        # verdict list (hundreds of entries) that would otherwise flood the log on every turn.
+        def _fmt_args(args: dict) -> str:
+            rendered = ", ".join(f"{k}={v!r}" for k, v in args.items())
+            return rendered if len(rendered) <= 200 else rendered[:200] + "…"
+
         called = (
-            ", ".join(f"{tc['name']}({tc['args']})" for tc in msg.tool_calls) or "(final)"
+            ", ".join(f"{tc['name']}({_fmt_args(tc['args'])})" for tc in msg.tool_calls)
+            or "(final)"
         )
         logger.info(
             "[LLMTURN] clinical_trials %s turn %d/%d: in=%d out=%d cache_read=%d "

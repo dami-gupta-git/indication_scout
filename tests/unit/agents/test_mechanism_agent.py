@@ -164,7 +164,9 @@ def _patch_assemble_deps():
     Yields (live_mock, table_mock) so each test can assert which path ran.
     select_top_candidates is stubbed to echo the approved set back for assertion.
     """
-    live = AsyncMock(return_value={"systemic mastocytosis": True, "glioblastoma": False})
+    live = AsyncMock(
+        return_value={"systemic mastocytosis": "approved", "glioblastoma": "not_approved"}
+    )
     table = AsyncMock(return_value={"systemic mastocytosis"})
     captured: dict = {}
 

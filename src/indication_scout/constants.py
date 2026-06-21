@@ -40,10 +40,10 @@ DEFAULT_CACHE_DIR: Path = (
 TEST_CACHE_DIR: Path = _PROJECT_ROOT / "cache_test"
 CACHE_TTL: int = 30 * 86400  # 30 days (relaxed: portfolio project, save time/tokens)
 
-# Isolated LLM JUDGMENT calls (dev_stage, ct_summary, judge_interpretive, literature_strength).
-# Equal to CACHE_TTL — a separate name is kept for call-site clarity at the judgment services,
-# and because synthesize bakes a judgment override into its own cache entry, the two must share
-# a TTL so a stale synthesize entry can't out-live a judgment refresh. The purpose-tuned source
+# Isolated LLM JUDGMENT calls (dev_stage, ct_summary, judge_interpretive).
+# Equal to CACHE_TTL — a separate name is kept for call-site clarity at the judgment services.
+# (Literature strength is no longer a separate judgment call — synthesize now grades it inline in
+# its own cache entry.) The purpose-tuned source
 # caches (CLINICAL_TRIALS_CACHE_TTL, PUBMED_PUBDATE_TTL, the approval-absence TTL) keep their own
 # deliberately-set values below.
 JUDGMENT_CACHE_TTL: int = CACHE_TTL
