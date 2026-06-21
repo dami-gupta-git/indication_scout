@@ -24,6 +24,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -53,7 +54,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 logger = logging.getLogger("validation")
 RUNBOOK = VALIDATION_DIR / "runbook.txt"
 REPORTS_DIR = PROJECT_ROOT / "results" / "holdout_validation"
-RESULTS = REPORTS_DIR / "validation_results.md"
+RESULTS = REPORTS_DIR / "validate_pipeline.md"
 HOLDOUTS_DIR = PROJECT_ROOT / "snapshots" / "holdouts"
 LOGS_DIR = REPORTS_DIR / "logs"  # per-row scout stdout+stderr (TIMING/429 internals)
 
@@ -131,36 +132,44 @@ def run_scout(drug: str, date: str, force: bool = False) -> Path | None:
     logger.info("Running: %s", " ".join(cmd))
     LOGS_DIR.mkdir(parents=True, exist_ok=True)
     log_path = LOGS_DIR / f"{drug}_{date}.log"
-    try:
-        result = subprocess.run(
-            cmd,
-            cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
-            timeout=SCOUT_TIMEOUT_SECONDS,
-        )
-    except subprocess.TimeoutExpired as e:
-        # Persist whatever the child emitted before the kill so a hang is inspectable.
-        # Despite text=True, TimeoutExpired.stdout/stderr can come back as bytes (CPython
-        # does not always decode on the timeout path), so decode defensively before joining.
-        def _as_text(x: str | bytes | None) -> str:
-            if x is None:
-                return ""
-            return x.decode("utf-8", "replace") if isinstance(x, bytes) else x
 
-        partial = _as_text(e.stdout) + _as_text(e.stderr)
-        log_path.write_text(partial, encoding="utf-8")
+    # Stream scout's output live to the terminal while teeing it to the per-row log.
+    # stderr is merged into stdout so TIMING / 429 retries / model-load lines interleave
+    # in order. On timeout the child is killed and whatever it emitted so far is kept.
+    proc = subprocess.Popen(
+        cmd,
+        cwd=PROJECT_ROOT,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+        bufsize=1,
+    )
+    captured: list[str] = []
+    deadline = time.monotonic() + SCOUT_TIMEOUT_SECONDS
+    try:
+        assert proc.stdout is not None
+        for line in proc.stdout:
+            captured.append(line)
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            if time.monotonic() > deadline:
+                raise subprocess.TimeoutExpired(cmd, SCOUT_TIMEOUT_SECONDS)
+        returncode = proc.wait()
+    except subprocess.TimeoutExpired:
+        proc.kill()
+        proc.wait()
+        log_path.write_text("".join(captured), encoding="utf-8")
         logger.error(
             "scout TIMED OUT after %ds for %s/%s — killed (log: %s)",
             SCOUT_TIMEOUT_SECONDS, drug, date, log_path,
         )
         return None
-    # Tee the full scout stdout+stderr (TIMING / 429 retries / model load) per row.
-    log_path.write_text((result.stdout or "") + (result.stderr or ""), encoding="utf-8")
-    if result.returncode != 0:
+
+    log_path.write_text("".join(captured), encoding="utf-8")
+    if returncode != 0:
         logger.error(
             "scout failed for %s/%s (log: %s):\n%s",
-            drug, date, log_path, result.stderr[-2000:],
+            drug, date, log_path, "".join(captured)[-2000:],
         )
         return None
     return newest_holdout(drug, date)
@@ -288,7 +297,7 @@ def ensure_header() -> None:
 
 
 def append_result(result: dict[str, str]) -> None:
-    """Append a single result row to validation_results.md (header ensured first)."""
+    """Append a single result row to validate_pipeline.md (header ensured first)."""
     ensure_header()
     matched = result["matched"].replace("|", "\\|")
     note = result.get("note", "").replace("|", "\\|")
@@ -300,13 +309,13 @@ def append_result(result: dict[str, str]) -> None:
 
 
 async def main() -> None:
-    # Usage: run_validation.py [count] [start] [--force]
-    #   count   : number of rows to process (default: all)
-    #   start   : 0-based index of first row (default: 0)
-    #   --force : regenerate reports even if a saved one exists (default: reuse)
+    # Usage: run_validation.py [count] [start] [--no-force]
+    #   count      : number of rows to process (default: all)
+    #   start      : 0-based index of first row (default: 0)
+    #   --no-force : reuse a saved report if one exists (default: regenerate)
     argv = sys.argv[1:]
-    force = "--force" in argv
-    positional = [a for a in argv if a != "--force"]
+    force = "--no-force" not in argv
+    positional = [a for a in argv if a not in ("--force", "--no-force")]
     count = int(positional[0]) if len(positional) > 0 else None
     start = int(positional[1]) if len(positional) > 1 else 0
     rows = read_runbook(start=start, count=count)
