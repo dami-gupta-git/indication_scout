@@ -175,6 +175,31 @@ _SLE_BRAVE_ABSTRACTS = [
     },
 ]
 
+# Real abstracts — metformin × hepatic steatosis, the ARM-ATTRIBUTION case the regex guard could
+# not handle: the benefit belongs to a COMPARATOR (ipragliflozin), not metformin, so the abstract
+# is CONTRADICTING for metformin even though it contains "significantly improved". Only the
+# per-PMID direction sub-call attributes the benefit to the right drug.
+_STEATOSIS_ARM_ATTRIBUTION_ABSTRACTS = [
+    {
+        "pmid": "39806556",
+        "title": "Ipragliflozin versus metformin on hepatic steatosis indices (sub-analysis).",
+        "abstract": (
+            "In a sub-analysis of a randomized controlled study, ipragliflozin significantly "
+            "improved hepatic steatosis indices (FLI, HSI, NAFLD-LFS) and the liver fibrosis "
+            "index (APRI) compared with metformin, which showed minimal change from baseline."
+        ),
+    },
+    {
+        "pmid": "19811343",
+        "title": "Metformin in NAFLD: a double-blind placebo-controlled trial.",
+        "abstract": (
+            "In a randomized, double-blind, placebo-controlled trial of 48 NAFLD patients, "
+            "metformin for 6 months showed no significant difference from placebo in "
+            "histologically or CT-assessed liver steatosis, NAS score, or liver transaminases."
+        ),
+    },
+]
+
 
 def _assert_self_consistent(s):
     """The NEW consistency invariants the merge guarantees by construction: prose/key_findings
@@ -271,6 +296,30 @@ async def test_paired_program_splits_positive_and_negative_trials(test_cache_dir
     )
     # Both are this-drug-this-disease evidence with one positive and one negative -> mixed overall.
     assert s.direction == "mixed", f"expected mixed, got {s.direction!r}"
+    _assert_self_consistent(s)
+
+
+@pytest.mark.approval_aware
+async def test_comparator_benefit_not_credited_to_drug(test_cache_dir):
+    """Arm-attribution (the regex guard could not do this): an abstract where a COMPARATOR
+    (ipragliflozin) 'significantly improved' steatosis while metformin 'showed minimal change' must
+    be CONTRADICTING for metformin — the benefit belongs to the other drug. The flat-negative
+    metformin RCT is also contradicting. So neither lands in supporting and the pair is contradicts."""
+    s = await _synthesize(
+        _STEATOSIS_ARM_ATTRIBUTION_ABSTRACTS,
+        drug="metformin",
+        indication="Hepatic Steatosis",
+        cache_dir=test_cache_dir,
+    )
+    # The comparator-benefit abstract must NOT be credited to metformin.
+    assert "39806556" not in s.supporting_pmids, (
+        f"comparator's benefit credited to metformin: {s.supporting_pmids}"
+    )
+    assert "39806556" in s.contradicting_pmids
+    # The flat-negative metformin RCT is contradicting too.
+    assert "19811343" in s.contradicting_pmids
+    assert "19811343" not in s.supporting_pmids
+    assert s.direction == "contradicts", f"expected contradicts, got {s.direction!r}"
     _assert_self_consistent(s)
 
 

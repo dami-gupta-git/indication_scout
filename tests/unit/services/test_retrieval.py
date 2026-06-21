@@ -19,8 +19,6 @@ from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.retrieval import (
     AbstractResult,
     RetrievalService,
-    _key_finding_is_negative,
-    _key_finding_is_positive,
 )
 
 # --- Fixtures ---
@@ -1244,6 +1242,10 @@ async def test_synthesize_strips_markdown_fences(svc):
             "indication_scout.services.retrieval.query_llm",
             new=AsyncMock(return_value=fenced),
         ),
+        patch(
+            "indication_scout.services.retrieval.query_small_llm",
+            new=AsyncMock(return_value="{}"),
+        ),
     ):
         result = await svc.synthesize(
             "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
@@ -1264,6 +1266,10 @@ async def test_synthesize_parses_llm_response(svc):
         patch(
             "indication_scout.services.retrieval.query_llm",
             new=AsyncMock(return_value=_SAMPLE_LLM_RESPONSE),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_small_llm",
+            new=AsyncMock(return_value="{}"),
         ),
     ):
         result = await svc.synthesize(
@@ -1386,95 +1392,125 @@ async def test_synthesize_holdout_skips_strength_cap(svc):
     assert result.contaminated_pmids == ["22222222"]
 
 
-# --- _key_finding_is_positive guard (BRAVE-I/II regression) ---
+# --- _judge_pmid_directions sub-call (the per-PMID direction authority) ---
 
 
-def test_key_finding_positive_brave_i_endpoint_met():
-    """BRAVE-I met its primary endpoint (missed secondaries) → positive → upgrades the per-PMID
-    verdict contradicting→mixed so it appears in supporting too."""
-    kf = [
-        "baricitinib 4 mg achieved SRI-4 in 57% vs 46% (OR 1.57, p=0.016), meeting the "
-        "primary endpoint, but no major secondary endpoints were met (PMID: 36848918)"
+async def test_judge_pmid_directions_parses_and_validates():
+    """The sub-call returns a {pmid: direction} map, keeping only valid directions for PMIDs that
+    were actually sent (an out-of-set or unrecognized verdict is dropped, not trusted)."""
+    from indication_scout.services.retrieval import _judge_pmid_directions
+
+    abstracts = [
+        AbstractResult(pmid="1", title="t1", abstract="a1", similarity=0.9),
+        AbstractResult(pmid="2", title="t2", abstract="a2", similarity=0.9),
     ]
-    assert _key_finding_is_positive("36848918", kf) is True
-
-
-def test_key_finding_positive_brave_ii_failure_not_positive():
-    """BRAVE-II 'achieved 47% vs 46% ... failing to meet the primary endpoint' is a clean
-    NEGATIVE — the guard must NOT read it as positive (the 'failing to' negation gap)."""
-    kf = [
-        "baricitinib 4 mg achieved SRI-4 in 47% vs 46% (OR 1.07, 95% CI 0.75-1.53), "
-        "failing to meet the primary endpoint (PMID: 36848919)"
-    ]
-    assert _key_finding_is_positive("36848919", kf) is False
-
-
-def test_key_finding_positive_significant_benefit():
-    assert _key_finding_is_positive(
-        "1", ["significantly reduced disease activity vs placebo (PMID: 1)"]
-    ) is True
-
-
-def test_key_finding_negation_variants_not_positive():
-    for text in (
-        "achieved 30% response but did not meet the primary endpoint (PMID: 2)",
-        "no significant difference vs placebo (PMID: 2)",
-        "nonsignificant improvement (PMID: 2)",
-        "did not meet the primary endpoint (PMID: 2)",
+    resp = json.dumps(
+        {"1": "supporting", "2": "neutral", "999": "supporting", "3": "bogus"}
+    )
+    with patch(
+        "indication_scout.services.retrieval.query_small_llm",
+        new=AsyncMock(return_value=resp),
     ):
-        assert _key_finding_is_positive("2", [text]) is False, text
+        out = await _judge_pmid_directions("metformin", "colorectal cancer", abstracts)
+    # neutral is a valid verdict and kept; out-of-set (999) and unrecognized (bogus) dropped.
+    assert out == {"1": "supporting", "2": "neutral"}
 
 
-def test_key_finding_only_matches_own_pmid():
-    assert _key_finding_is_positive(
-        "999", ["met its primary endpoint (PMID: 111)"]
-    ) is False
-
-
-# --- _key_finding_is_negative guard (imatinib × GBM regression) ---
-
-
-def test_key_finding_negative_gbm_primary_endpoint_not_met():
-    """The GBM bug: a flat-negative Phase 3 'primary endpoint ... was not met' was over-labeled
-    mixed and leaked into supporting. The negative guard must flag it (and the positive guard must
-    NOT — [^.]* must not span the negation between 'endpoint' and 'met')."""
-    kf = [
-        "In a randomized phase III trial of recurrent GBM, the primary endpoint of "
-        "progression-free survival was not met; median PFS was 6 weeks in both arms "
-        "(PMID: 19688297)"
-    ]
-    assert _key_finding_is_negative("19688297", kf) is True
-    assert _key_finding_is_positive("19688297", kf) is False
-
-
-def test_key_finding_negative_no_meaningful_activity():
-    for text in (
-        "the combination did not show clinically meaningful anti-tumour activity (PMID: 1)",
-        "imatinib showed no measurable activity (PMID: 1)",
-        "no significant difference vs placebo (PMID: 1)",
-        "limited antitumor activity was observed (PMID: 1)",
+async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
+    """A relevant-but-non-efficacy abstract (PK/safety) labeled 'neutral' by the direction sub-call
+    stays relevant (counts in study_count) but is in NEITHER supporting nor contradicting, so it
+    can't flip a clean 'supports' to 'mixed' (thalidomide × prostate PK study)."""
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting", "22222222": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Efficacy plus a PK study (PMID: 11111111; PMID: 22222222).",
+            "strength": "moderate",
+            "is_observational": False,
+            "key_findings": [],
+        }
+    )
+    sub = json.dumps({"11111111": "supporting", "22222222": "neutral"})
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=main),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_small_llm",
+            new=AsyncMock(return_value=sub),
+        ),
     ):
-        assert _key_finding_is_negative("1", [text]) is True, text
+        result = await svc.synthesize("CHEMBL1431", "prostate cancer", _SAMPLE_ABSTRACTS)
+    assert result.supporting_pmids == ["11111111"]
+    assert "22222222" not in result.contradicting_pmids
+    assert "22222222" in result.relevant_pmids  # neutral still counts as relevant
+    assert result.study_count == 2
+    assert result.direction == "supports"  # the PK paper did not make it "mixed"
 
 
-def test_key_finding_negative_leaves_genuine_positive_alone():
-    """A clear positive must NOT be flagged negative (no spurious downgrade)."""
-    assert _key_finding_is_negative(
-        "1", ["significantly reduced disease activity vs placebo (PMID: 1)"]
-    ) is False
-    assert _key_finding_is_negative(
-        "1", ["met its primary endpoint (PMID: 1)"]
-    ) is False
+async def test_judge_pmid_directions_empty_on_unparseable():
+    from indication_scout.services.retrieval import _judge_pmid_directions
+
+    abstracts = [AbstractResult(pmid="1", title="t", abstract="a", similarity=0.9)]
+    with patch(
+        "indication_scout.services.retrieval.query_small_llm",
+        new=AsyncMock(return_value="not json"),
+    ):
+        out = await _judge_pmid_directions("metformin", "x", abstracts)
+    assert out == {}
 
 
-def test_key_finding_negative_within_trial_mixed_not_downgraded():
-    """A finding with BOTH a positive cue and a failure cue (genuinely within-trial mixed, e.g.
-    BRAVE-I: met primary, missed secondaries) must NOT be flagged for downgrade."""
-    kf = [
-        "baricitinib met the primary endpoint (57% vs 46%, p=0.016) but no major secondary "
-        "endpoints were met (PMID: 36848918)"
-    ]
-    assert _key_finding_is_negative("36848918", kf) is False
+async def test_judge_pmid_directions_no_relevant_skips_call():
+    """No relevant abstracts → no sub-call made (empty map)."""
+    from indication_scout.services.retrieval import _judge_pmid_directions
+
+    mock = AsyncMock(return_value="{}")
+    with patch("indication_scout.services.retrieval.query_small_llm", new=mock):
+        out = await _judge_pmid_directions("metformin", "x", [])
+    assert out == {}
+    mock.assert_not_awaited()
+
+
+async def test_synthesize_pmid_direction_overrides_verdict(svc):
+    """The sub-call is authoritative: a PMID synthesize labeled 'supporting' is moved to
+    contradicting when the direction sub-call says so (metformin × steatosis: a comparator's
+    benefit must not read as supporting for metformin)."""
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting", "22222222": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Evidence (PMID: 11111111; PMID: 22222222).",
+            "strength": "moderate",
+            "is_observational": False,
+            "key_findings": [],
+        }
+    )
+    sub = json.dumps({"11111111": "contradicting", "22222222": "contradicting"})
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=main),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_small_llm",
+            new=AsyncMock(return_value=sub),
+        ),
+    ):
+        result = await svc.synthesize(
+            "CHEMBL1431", "hepatic steatosis", _SAMPLE_ABSTRACTS
+        )
+    assert result.supporting_pmids == []
+    assert set(result.contradicting_pmids) == {"11111111", "22222222"}
+    assert result.direction == "contradicts"
 
 
 async def test_synthesize_missing_verdicts_treats_all_contaminated(svc):

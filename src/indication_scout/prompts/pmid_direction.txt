@@ -1,0 +1,30 @@
+You are a clinical evidence analyst. For the drug {drug} and the disease {disease}, decide for EACH
+abstract below whether THAT abstract's result shows the drug HELPING this disease, FAILING, or both.
+
+Answer the ONE narrow question per abstract: did {drug} (the drug named here, not a comparator or a
+different drug in the abstract) show benefit for {disease} in THIS abstract?
+
+- "supporting": {drug} showed a benefit for {disease} (met its primary endpoint, significant
+  improvement in the disease's own outcome, favorable result attributable to {drug}).
+- "contradicting": {drug} did NOT help / failed / harmed for {disease} (missed the primary endpoint,
+  no significant difference, no measurable/meaningful activity, worsened the outcome).
+- "mixed": this single abstract reports BOTH a benefit and a failure for {drug} in {disease}
+  (e.g. met the primary endpoint but missed all key secondary endpoints).
+- "neutral": the abstract has NO efficacy result for {disease} — e.g. a pharmacokinetics /
+  dose-finding / safety-only / mechanism / pharmacology study. It neither supports nor contradicts.
+  Use this whenever there is no outcome showing the drug helped or failed for the disease. Do NOT
+  force such an abstract into supporting or contradicting.
+
+Rules:
+- Judge by {drug}'s effect on {disease}'s OWN outcome. A benefit on a side metabolic marker (weight,
+  glucose, lipids) is NOT benefit for {disease} unless the disease's defined endpoint improved.
+- If the benefit in the abstract belongs to a DIFFERENT drug (a comparator that outperformed {drug}),
+  that is "contradicting" for {drug}.
+- Judge each abstract by its OWN result, never by the overall program or a sibling trial.
+
+Abstracts:
+{abstracts}
+
+Respond with ONLY a JSON object mapping each PMID to its verdict:
+{{"<pmid>": "supporting"|"contradicting"|"mixed"|"neutral", ...}}
+Include every PMID listed above. No prose, no fences.

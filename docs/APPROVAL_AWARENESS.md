@@ -186,10 +186,13 @@ Two outputs from the relevant trial set:
 ### 4c. Literature (`services/retrieval.py :: synthesize`)
 
 A SINGLE LLM call reads the abstracts once and emits one internally-consistent EvidenceSummary:
-per-PMID `verdicts` (relevant|contaminated), `evidence_basis`, `strength`, `direction`,
-`is_observational`, `summary`, `key_findings`, `supporting_pmids`, `contradicting_pmids`. (This
-merged the former two-pass `synthesize` + `judge_literature_strength`, which let prose drift from
-the typed fields. `literature_strength.py` is deleted.)
+per-PMID `verdicts`, `evidence_basis`, `strength`, `is_observational`, `summary`, `key_findings`.
+(This merged the former two-pass `synthesize` + `judge_literature_strength`, which let prose drift
+from the typed fields. `literature_strength.py` is deleted.) The `verdicts` map labels each PMID
+contaminated | supporting | contradicting | mixed; `supporting_pmids` / `contradicting_pmids` /
+`relevant_pmids` / `study_count` / overall `direction` are then built DETERMINISTICALLY in code
+from that map (supporting = supporting+mixed; contradicting = contradicting+mixed; relevant =
+non-contaminated) — the literature analogue of the per-trial gate.
 
 `evidence_basis` is the key field:
 
@@ -197,6 +200,16 @@ the typed fields. `literature_strength.py` is deleted.)
 - `class_level` — the disease-relevant RCTs are for OTHER drugs in the class.
 - `approved` — the only relevant evidence is for an approved sub-indication.
 - `none` — no relevant abstracts retrieved.
+
+**Per-PMID direction sub-call (`_judge_pmid_directions`, the authority for direction).** A small
+isolated `query_small_llm` call over the RELEVANT abstracts asks ONE narrow question per abstract:
+"did THIS drug benefit THIS disease in THIS abstract? (supporting | contradicting | mixed)". Its
+verdict OVERRIDES synthesize's direction for any relevant PMID. This replaced earlier
+phrase-matching guards, which could not attribute a benefit to the right drug-arm — e.g. metformin
+× hepatic steatosis, where a *comparator's* benefit ("ipragliflozin significantly improved …
+metformin showed minimal change") or a side metabolic-marker improvement read as "supporting" for
+metformin. Direction is a semantic judgment; the narrow framing handles attribution that regex
+cannot. (See `docs/future.md` history — the regex guard was retired in favor of this.)
 
 **The strength cap (the one clinical-safety invariant kept in deterministic code):**
 `evidence_basis != "drug_specific" → strength = none, direction = none`. This prevents the

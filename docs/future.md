@@ -25,26 +25,6 @@ The MVP uses a fixed call sequence with no retry logic. Once time allows, add:
 
 ---
 
-## Literature — per-PMID direction via a structured sub-call (replace the regex guard)
-
-`synthesize` now emits a per-PMID directional verdict (contaminated | supporting | contradicting |
-mixed), and `services/retrieval.py` backstops it with phrase-matching guards
-(`_key_finding_is_positive` / `_key_finding_is_negative`) that upgrade/downgrade an obviously-wrong
-LLM label by scanning the key_finding text. This is inherently leaky — direction is a semantic
-judgment, not a regex. We have already had to patch it repeatedly (BRAVE-I positive-but-grouped-
-with-failed-sibling; BRAVE-II "failing to" negation gap; imatinib × GBM where `[^.]*` spanned the
-negation in "primary endpoint ... was not met" so a flat-negative read as positive and flipped the
-indication to #1).
-
-The robust fix: a small, isolated structured sub-call per RELEVANT abstract — "for THIS abstract,
-did the drug help / not help / mixed for THIS disease? (supporting | contradicting | mixed)" —
-returning a single enum. Build supporting/contradicting/relevant deterministically from those, as
-today. This replaces both the in-prompt verdict-direction AND the regex guards with a narrow,
-well-scoped LLM question (far more reliable than the holistic verdict or the phrase matcher).
-Trade-off: ~N extra small LLM calls per pair (one per relevant abstract, typically ≤5) and a little
-LLM nondeterminism, but on a much narrower question. Keep a thin deterministic floor only for the
-egregious cases. This is the "LLM judges, code backstops" pattern applied at the right granularity.
-
 ## WhitespaceResult Schema Gap
 
 `is_whitespace` is binary, but that misses a third state: "early stage, unproven."
