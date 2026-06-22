@@ -159,14 +159,17 @@ def _fmt_clinical_trials(
                 target = a.matched_indication or "this indication"
                 lines.append(f"**FDA approval:** Approved ({target})")
             elif approval_relationship == "contaminated":
-                # The verbatim candidate term isn't itself on the label, but an approved
-                # sub-indication sits inside this broader candidate (e.g. NAFLD candidate
-                # contains the approved MASH child). A bare "Not found" here reads as a
-                # self-contradiction against the literature block's "already-approved
-                # sub-indication" verdict, so we surface the parent/child relationship.
+                # The verbatim candidate term isn't itself on the label, but the candidate
+                # OVERLAPS the drug's approved indications — either an approved sub-indication
+                # sits inside this broader candidate (umbrella, e.g. NAFLD contains approved
+                # MASH) or the candidate is a sibling that shares a search term with an
+                # approval (e.g. systemic hypertension vs approved PAH). A bare "Not found"
+                # reads as a self-contradiction against the literature block's "already-
+                # approved" verdict, so we surface the overlap without asserting a specific
+                # parent/child relationship (the label alone does not tell us which it is).
                 lines.append(
-                    "**FDA approval:** Parent indication not directly on FDA label; "
-                    "an approved sub-indication is contained within this broader candidate"
+                    "**FDA approval:** This exact term is not itself on the FDA label, but "
+                    "the candidate overlaps the drug's approved indications"
                 )
             else:
                 lines.append(
