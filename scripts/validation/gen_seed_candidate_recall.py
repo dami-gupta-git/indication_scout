@@ -27,12 +27,12 @@ cached result. Rows are written as they complete so a mid-run crash never loses 
 
 Output mirrors results/holdout_validation/validation_results_bak_9.md exactly:
 
-  | Drug | Indication | Cutoff | Score | Rank | Notes | Source | Matched |
+  | Drug | Indication | Cutoff | Score | List position | Notes | Source | Matched |
 
-Score is candidate-presence (NOT the 1/0/-1 of validation_results.md):
-  1  = present and investigated (rank <= cap)
-  0  = present but rank > cap
-  -1 = not in the merged list (or ERROR)
+Score is binary candidate-presence (holdout does not rank, so cap/rank are irrelevant):
+  1     = target indication is present in the merged candidate list
+  0     = absent from the merged list
+  ERROR = the seed-phase run failed for that row
 
 The Notes column is emitted empty; any prose in a committed table was added by hand.
 
@@ -43,7 +43,7 @@ results/holdout_validation/validation_results_N.md (never overwrites).
 
 Run (per-target read widened to 30 to test deeper recall):
     MECHANISM_ASSOCIATIONS_PER_TARGET=30 CONSTANTS_FILE=.env.constants \\
-        .venv/bin/python scripts/validation/gen_candidate_recall.py \\
+        .venv/bin/python scripts/validation/gen_seed_candidate_recall.py \\
         scripts/validation/runbook.txt --lines 1-5,48
 """
 
@@ -67,7 +67,7 @@ from indication_scout.services.llm import query_small_llm
 from indication_scout.services.retrieval import RetrievalService
 
 logging.basicConfig(level=logging.ERROR, format="%(message)s")
-logger = logging.getLogger("gen_candidate_recall")
+logger = logging.getLogger("gen_seed_candidate_recall")
 
 VALIDATION_DIR = Path(__file__).resolve().parent
 PROJECT_ROOT = VALIDATION_DIR.parent.parent
@@ -184,22 +184,24 @@ def _ensure_header(cap: int) -> None:
         "Mechanism ranking uses the leak-free recomputed OT score (clinical_precedence excluded) in "
         f"holdout mode; `MECHANISM_ASSOCIATIONS_PER_TARGET={per_target}`; investigation cap={cap}.",
         "",
-        "`present`: in = target indication is in the merged candidate list. `rank`/`source` = its "
-        "position and origin (competitor/mechanism/both). `investigated` = rank <= cap (reaches the "
-        "deep dive). This is candidate-presence, NOT the 1/0/-1 of validation_results.md.",
+        "`Score`: 1 = target indication is present in the merged candidate list, 0 = absent. "
+        "Holdout measures presence only (no ranking), so position does not affect the score. "
+        "`List position`/`Source` = the target's 1-based spot in the merged list and its origin "
+        "(competitor/mechanism/both), for context only.",
         "",
-        "| Drug | Indication | Cutoff | Score | Rank | Notes | Source | Matched |",
+        "| Drug | Indication | Cutoff | Score | List position | Notes | Source | Matched |",
         "| --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     OUT_MD.write_text("\n".join(lines) + "\n")
 
 
 def _append_row(r: dict) -> None:
-    # 1 = investigated, 0 = present but rank > cap, -1 = out/ERROR.
-    if r["present"] == "in":
-        score = "1" if r["investigated"] == "yes" else "0"
+    # Binary presence: 1 = target in the merged candidate list, 0 = absent. Holdout does not
+    # rank, so cap/rank no longer affect the score. ERROR rows are recorded verbatim.
+    if r["present"] == "ERROR":
+        score = "ERROR"
     else:
-        score = "-1"
+        score = "1" if r["present"] == "in" else "0"
     with OUT_MD.open("a") as f:
         f.write(
             f"| {r['drug']} | {r['indication']} | {r['cutoff']} | {score} "
@@ -261,19 +263,19 @@ async def main() -> None:
         except Exception as e:  # noqa: BLE001 - record ERROR, keep going
             logger.error("%s / %s -> ERROR: %s", drug, indication, e)
             _append_row({"drug": drug, "indication": indication, "cutoff": cutoff,
-                         "present": "ERROR", "rank": "", "source": "", "investigated": ""})
+                         "present": "ERROR", "rank": "", "source": ""})
             continue
         merged = cache[key]
         names = [n for n, _ in merged]
         idx = await _match(indication, names)
         if idx is None:
             row = {"drug": drug, "indication": indication, "cutoff": cutoff,
-                   "present": "out", "rank": "", "source": "", "investigated": ""}
+                   "present": "out", "rank": "", "source": ""}
         else:
             name, source = merged[idx]
             row = {"drug": drug, "indication": indication, "cutoff": cutoff,
                    "present": "in", "rank": str(idx + 1), "source": source,
-                   "investigated": "yes" if idx < cap else "no", "matched": name}
+                   "matched": name}
         _append_row(row)  # write as we go
         logger.error("%s / %s -> %s", drug, indication, row.get("rank") or row["present"])
     print(f"wrote {OUT_MD}")
