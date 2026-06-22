@@ -16,6 +16,7 @@ indication_scout/
 │   ├── agents/                    # Sub-agents and supervisor (custom gated ReAct loop, _react_loop.py)
 │   │   ├── base.py                # BaseAgent ABC (legacy, unused by ReAct agents)
 │   │   ├── _trial_formatting.py   # Shared trial table / phase distribution helpers
+│   │   ├── _trial_signals.py      # Deterministic trial FACTS (highest_completed_phase, phase3_terminated_for_cause)
 │   │   ├── supervisor/            # Top-level supervisor agent
 │   │   ├── literature/            # PubMed retrieval + synthesis sub-agent
 │   │   ├── clinical_trials/       # ClinicalTrials.gov sub-agent
@@ -40,7 +41,8 @@ indication_scout/
 │   │   ├── model_chembl.py
 │   │   ├── model_drug_profile.py
 │   │   └── model_evidence_summary.py
-│   ├── prompts/                   # LLM prompt templates (.txt files)
+│   ├── prompts/                   # LLM prompt templates (.txt files; incl. pmid_direction, extract_fda_approval_single, synthesize_holdout)
+│   ├── regression/                # Snapshot regression harness (diff.py, harness.py) — backs `scout diff-report`
 │   ├── report/                    # `format_report` — SupervisorOutput → markdown
 │   ├── runners/                   # Standalone runner scripts (pubmed_runner, rag_runner)
 │   ├── services/                  # Business logic
@@ -49,7 +51,12 @@ indication_scout/
 │   │   ├── disease_helper.py      # LLM disease normalization + MeSH descriptor resolver
 │   │   ├── pubmed_query.py        # Query building
 │   │   ├── retrieval.py           # RAG: drug profile, semantic search, synthesis
-│   │   └── approval_check.py      # openFDA label + LLM approval extraction
+│   │   ├── approval_check.py      # openFDA label + LLM approval extraction
+│   │   ├── dev_stage.py           # LLM-judged development-stage tier from trial facts
+│   │   ├── judge_interpretive.py  # LLM interpretation of resolved facts (keeps blurbs consistent with dev_stage)
+│   │   ├── analysis_runner.py     # `run_analysis` — shared CLI/API entry point (owns DB session, drug-name normalization)
+│   │   ├── job_store.py           # In-memory async-job model + polling (backs POST/GET /api/analyses)
+│   │   └── progress.py            # Pipeline phase definitions + `emit_progress`
 │   ├── sqlalchemy/                # ORM models (pubmed_abstracts with pgvector)
 │   └── utils/                     # cache.py (shared file cache), wandb_utils.py
 ├── tests/                         # Test suite
@@ -163,6 +170,14 @@ agents/<name>/
 The mechanism agent additionally has `mechanism_candidates.py` (`select_top_candidates`) and
 `mechanism_row_builder.py` (`build_candidate_rows`) for post-LLM candidate scoring,
 filtered against an FDA-approved disease set and trimmed to `MECHANISM_TOP_CANDIDATES`.
+
+`mechanism/ot_score.py` (`recompute_overall`) is a pure-function local reproduction of Open
+Targets' overall association score (a weighted harmonic sum over per-datasource scores,
+normalized by `OT_PLATFORM_DATASOURCE_COUNT`; weights from `OT_DATASOURCE_WEIGHTS`, default
+`OT_DEFAULT_DATASOURCE_WEIGHT`). It exists so the leaky `clinical_precedence` datasource can be
+dropped in **holdout** mode — that channel encodes current trials/approvals and would leak
+post-cutoff signal. Holdout ranks by the recomputed `ranking_score` (leak-free); production
+ranks by OT's published `overall_score`. Reproduces the published score to ~0.01 MAE.
 
 After each sub-agent run, `run_<name>_agent` walks the message history and pulls each
 tool's typed artifact off `ToolMessage.artifact`, assembling them into the typed output.
@@ -316,7 +331,8 @@ TargetData
  |        |-- disease_name: str = ""
  |        |-- disease_description: str = ""
  |        |-- overall_score: float | None = None
- |        |-- datatype_scores: dict[str, float] = {}
+ |        |-- datatype_scores: dict[str, float] = {}     # e.g. {"genetic_association": 0.8}
+ |        |-- datasource_scores: dict[str, float] = {}   # per-datasource, e.g. {"clinical_precedence": 0.99}; consumed by ot_score.recompute_overall
  |        +-- therapeutic_areas: list[str] = []
  |-- pathways: list[Pathway] = []
  |        |-- pathway_id: str = ""
@@ -674,35 +690,31 @@ LLM parse) defaults a candidate to `none` so a failure can never *drop* a candid
   `CandidateFindings.approval_relationship` from this map (matching on both the canonical and the
   finding's own disease string) — **not** from any LLM-authored field. The approval relationship was
   removed from `CandidateBlurb` entirely; the model never decides it.
-- **Trial level (current).** A `contaminated` candidate has its trial tables suppressed in
+- **Trial level.** A `contaminated` candidate has its trial tables suppressed in
   `format_report.py` (the verbatim total counts stay, but the example trial list is replaced with
-  "overlaps an approved related indication and cannot be cleanly separated"). This suppression is
-  report-rendering only — the underlying per-trial relevance gate does **not** yet know which
-  subtypes are approved (see Planned, below).
+  "overlaps an approved related indication and cannot be cleanly separated").
 
-### Planned: approval-aware relevance at the trial & literature level
+### Approval-aware relevance at the trial & literature level
 
-The contamination fact is currently known at the drug-disease level but does **not** yet reach the
-per-trial / per-paper relevance checks — so an approved sub-indication's trial or paper can still
-count as repurposing evidence for the broader candidate. The root mechanism is that CT.gov's
-`AREA[ConditionMeshTerm]` filter matches via MeSH **ancestors**, so a broad umbrella query (e.g.
-"mood disorder") pulls in trials whose direct condition is an approved child (e.g. Seasonal
-Affective Disorder, a child of Mood Disorders).
-
-`PLAN_approval_aware_relevance.md` threads the drug's **approved-indication list** (already
-collected in the supervisor store as `entry["approved_indications"]`, fully seeded before fan-out)
-into both relevance checks. Both prompt rules are harness-validated (11/11 each on the trials and
-literature harnesses in `scratch/`, including a list-on/list-off control proving the exclusion is
-list-driven, not model-invented):
+The drug's **approved-indication list** (collected in the supervisor store as
+`entry["approved_indications"]`, fully seeded before fan-out) is threaded into both per-trial and
+per-paper relevance checks so an approved sub-indication's evidence can no longer count toward the
+broader repurposing candidate. This is necessary because CT.gov's `AREA[ConditionMeshTerm]` filter
+matches via MeSH **ancestors**, so a broad umbrella query (e.g. "mood disorder") pulls in trials
+whose direct condition is an approved child (e.g. Seasonal Affective Disorder, a child of Mood
+Disorders).
 
 - the **clinical-trials relevance gate** (`prompts/clinical_trials.txt`) — an ordered first-match
   test: TEST 1 a trial whose condition IS an approved indication (or a narrower form of one) →
   CONTAMINATION, overriding the "narrower subtype rolls up" rule; TEST 2 distinct-disease /
-  wrong-drug → CONTAMINATION; TEST 3 otherwise → RELEVANT. Replaces the removed
-  `CURATED_CONTAMINATED_NCTS` hardcode with a general rule.
-- the **literature strength judge** (`judge_literature_strength`) — a paper studying the drug for an
-  approved sub-indication is `evidence_basis="approved"` (strength capped at weak/none, direction
-  none), excluded from the broader candidate's signal.
+  wrong-drug → CONTAMINATION; TEST 3 otherwise → RELEVANT. Replaced the former
+  `CURATED_CONTAMINATED_NCTS` hardcode with a general rule. `approved_indications` is threaded down
+  via `analyze_clinical_trials` → `run_clinical_trials_agent`.
+- the **literature strength judge** — merged into `RetrievalService.synthesize`, which now takes an
+  `approved_indications` argument. A paper studying the drug for an approved sub-indication is
+  marked `evidence_basis="approved"` (strength capped at weak/none, direction none) on the
+  `EvidenceSummary` and excluded from the broader candidate's signal. (There is no standalone
+  `literature_strength.py` / `judge_literature_strength`.)
 
 Deliberately **not** excluded (these roll up as relevant): *siblings* of an approved indication
 (T1DM vs approved T2DM) and trials/papers *broader* than a minority-biomarker approval (all-comers
@@ -742,6 +754,32 @@ PMIDs are persisted to Postgres (`sqlalchemy.pubmed_abstracts.PubmedAbstracts`, 
 pgvector embeddings) by `RetrievalService.fetch_and_cache` so the literature agent can run
 semantic search against stored abstracts.
 
+### EvidenceSummary
+
+The synthesized literature output produced by `RetrievalService.synthesize` (in
+`models/model_evidence_summary.py`). `strength` grades evidence quantity/quality;
+`direction` grades which way it points — the two are independent. The PMID buckets are built
+**in code** (`retrieval.py`) from the per-PMID verdict map the synthesize call emits, not by the
+LLM directly.
+
+```
+EvidenceSummary
+ |-- summary: str = ""
+ |-- study_count: int = 0
+ |-- strength: "strong" | "moderate" | "weak" | "none" = "none"
+ |-- direction: "supports" | "contradicts" | "mixed" | "none" = "none"
+ |-- evidence_basis: "drug_specific" | "approved" | "class_level" | "none" = "none"
+ |        # "class_level" → relevant RCTs are sibling-drug only (strength forced off "strong")
+ |        # "approved"    → only this-drug evidence studies an APPROVED sub-indication (strength forced none)
+ |-- is_observational: bool | None = None   # True if ≥1 RCT; False if purely observational; None = undetermined
+ |-- key_findings: list[str] = []
+ |-- supporting_pmids: list[str] = []        # supporting + mixed
+ |-- contradicting_pmids: list[str] = []     # contradicting + mixed
+ |-- relevant_pmids: list[str] = []          # graded this-drug-this-disease evidence
+ |-- contaminated_pmids: list[str] = []      # excluded (wrong drug/disease or approved sub-indication)
+ +-- neutral_pmids: list[str] = []           # relevant but no efficacy result (PK/safety/mechanism)
+```
+
 ---
 
 ## ChEMBL & FDA
@@ -765,8 +803,13 @@ ChEMBL IDs and drug-name lists are persisted in dedicated per-drug JSON files un
 | `embeddings.py` | `embed`, `embed_async` (BioLORD-2023 via SentenceTransformer) |
 | `disease_helper.py` | `llm_normalize_disease`, `llm_normalize_disease_batch`, `merge_duplicate_diseases`, `pubmed_count`, `normalize_for_pubmed`, `normalize_batch`, `resolve_mesh_id` |
 | `pubmed_query.py` | `get_pubmed_query(drug_name, disease_name)` |
-| `retrieval.py` | `RetrievalService` — `build_drug_profile`, `get_drug_competitors`, `fetch_new_abstracts`, `embed_abstracts`, `fetch_and_cache`, `semantic_search`, `synthesize`, `extract_organ_term`, `expand_search_terms` |
+| `retrieval.py` | `RetrievalService` — `build_drug_profile`, `get_drug_competitors`, `fetch_new_abstracts`, `embed_abstracts`, `fetch_and_cache`, `semantic_search`, `synthesize` (takes `approved_indications`; per-PMID directions via `_judge_pmid_directions`), `extract_organ_term`, `expand_search_terms` |
 | `approval_check.py` | `get_approved_indications`, `list_approved_indications_at`, `list_approved_indications_from_labels`, `extract_approved_from_labels`, `get_all_fda_approved_diseases`, `get_fda_approved_disease_mapping` |
+| `dev_stage.py` | `judge_dev_stage`, `dev_stage_phrase` (`DEV_STAGE_PHRASE` / `DEV_STAGE_TIERS`) — LLM-judged development-stage tier with a deterministic phase-band floor |
+| `judge_interpretive.py` | `judge_interpretive` — isolated LLM call interpreting already-resolved facts so blurb fields don't contradict the authoritative dev_stage |
+| `analysis_runner.py` | `run_analysis`, `build_agent` — shared CLI/API entry point; normalizes drug name, owns DB session lifecycle, threads `date_before` |
+| `job_store.py` | `Job`, `JobStore` — in-memory async-job model backing the polling `analyses` API |
+| `progress.py` | `emit_progress` + phase constants (`PHASE_CANDIDATES`, `PHASE_MECHANISM`, `PHASE_TRIALS`, `PHASE_LITERATURE`, `PHASE_SUMMARY`) |
 
 ---
 
@@ -816,6 +859,13 @@ Settings:
     # App
     debug: bool = False
     log_level: str = "INFO"
+    seed_reports_enabled: bool = True   # serve a committed seed report instead of running agents
+
+    # Tracing (OpenTelemetry -> Langfuse; opt-in, all optional)
+    tracing_enabled: bool = False
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_base_url: str = "https://us.cloud.langfuse.com"
 
     # Tunable limits (no defaults — must be present in .env.constants)
     default_timeout: float
@@ -831,8 +881,13 @@ Settings:
     rag_disease_concurrency: int
     clinical_trials_landscape_max_trials: int
     clinical_trials_cap: int
+    supervisor_candidate_cap: int          # trims the final ranked candidate list
+    supervisor_investigation_cap: int      # how many top candidates the deep-dive fan-out investigates
+    supervisor_fanout: bool                # expose investigate_top_candidates in non-holdout runs
     mechanism_signal_threshold: float
     mechanism_associations_cap: int
+    mechanism_associations_per_target: int # top OT associations pulled per target before filtering
+    mechanism_top_candidates: int          # final count of positive candidates surfaced
     disease_pubmed_min_results: int
     open_targets_page_size: int
     open_targets_competitor_prefetch_max: int
@@ -857,7 +912,7 @@ LLM and supervisor agent and runs them). It writes the markdown report under `sn
 (or `snapshots/holdouts/` when `--date-before` is set) and, for non-holdout runs, a
 structured `SupervisorOutput` JSON dump under `test_reports/`. `render` re-renders a saved
 JSON payload to markdown without re-running the pipeline; `diff-report` diffs two JSON
-snapshots (the regression-harness comparison).
+snapshots via `regression.harness.compare_reports` (the regression-harness comparison).
 
 ---
 
