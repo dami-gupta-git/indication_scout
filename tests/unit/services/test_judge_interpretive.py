@@ -22,6 +22,7 @@ _FACTS = dict(
     literature="Moderate, supports, RCT-backed",
     relationship="related_family",
     approved_indication="Type 2 Diabetes",
+    trials_on_record=4,
 )
 
 
@@ -102,6 +103,16 @@ async def test_judge_cache_key_varies_by_facts(tmp_path):
             **_FACTS,
             "stage": "Active Phase 3 development on record for this indication",
         }
+        await judge_interpretive(**other, cache_dir=tmp_path, drug="d", indication="i")
+    assert mock.await_count == 2
+
+
+async def test_judge_cache_key_varies_by_trials_on_record(tmp_path):
+    """A different registry trial count is a different cache entry — the LLM is called again."""
+    mock = AsyncMock(return_value=_OK)
+    with patch("indication_scout.services.judge_interpretive.query_llm", new=mock):
+        await judge_interpretive(**_FACTS, cache_dir=tmp_path, drug="d", indication="i")
+        other = {**_FACTS, "trials_on_record": 0}
         await judge_interpretive(**other, cache_dir=tmp_path, drug="d", indication="i")
     assert mock.await_count == 2
 

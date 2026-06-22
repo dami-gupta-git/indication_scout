@@ -54,17 +54,22 @@ AUTHORITATIVE FACTS (ground truth):
 - Drug's approved indication that this relates to: {approved_indication}
 
 A nonzero trial count means the hypothesis WAS studied — do not call it untested or abandoned.
+"None active" means no trial is currently recruiting — state that as the status; do not infer a \
+cause (sponsor disengagement, commercial failure, abandonment) you were not given.
 
 The drug is NOT approved for THIS candidate indication unless the approved indication above \
 exactly names it. If the approved indication is "none", do not claim any approval for this use.
 
 Write four fields:
-- constraint: what holds this back (regulatory / commercial / evidence gap). One short line. If \
-a Phase 3 is completed or active, do NOT write "no Phase 3" or "no dedicated development program".
+- constraint: what (if anything) holds this back (regulatory / commercial / evidence gap), or the \
+current status if nothing clearly does. One short line. Do not invent a blocker; if the stage is \
+"status unknown", say the status is unconfirmed rather than asserting a gap. If a Phase 3 is \
+completed or active, do NOT write "no Phase 3" or "no dedicated development program".
 - key_risk: the single biggest risk to the hypothesis. One short line. Phase-free.
-- assessment: a short interpretive verdict tag (e.g. "Live but bottlenecked", "Maturing, \
-awaiting readout", "Stalled, regulatory gap", "Untested at scale", "Closed signal"). Do NOT name \
-a phase tier.
+- assessment: a short interpretive verdict tag. Choose one that fits the facts — e.g. "Live but \
+bottlenecked", "Maturing, awaiting readout", "Tested, status unconfirmed", "Stalled, regulatory \
+gap", "Untested at scale", "Closed signal". When trials exist but their status is unknown, prefer \
+a neutral tag (e.g. "Tested, status unconfirmed") over a decline tag. Do NOT name a phase tier.
 - prose: EXACTLY 2 sentences interpreting the state of the hypothesis, consistent with the stage \
 and active programs above. If the literature direction is "contradicts", surface that the drug \
 failed / was disproven. Do NOT name a phase tier that disagrees with the stage.
@@ -184,6 +189,7 @@ async def judge_interpretive(
         literature=literature,
         relationship=relationship_phrase,
         approved_indication=approved,
+        trials_on_record=trials_on_record,
     )
     response = await query_llm(prompt)
     judgment = _parse_interpretive(response)

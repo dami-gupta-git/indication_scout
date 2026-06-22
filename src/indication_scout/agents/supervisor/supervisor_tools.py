@@ -1584,6 +1584,9 @@ def build_supervisor_tools(
                         disease.lower().strip(), "none"
                     ),
                     "approved_indication": approved_ind,
+                    # Registry trial count so the judge doesn't call a multi-trial candidate
+                    # untested/abandoned when its literature came back empty.
+                    "trials_on_record": n_trials,
                 }
                 if stage_phrase is not None
                 else None
