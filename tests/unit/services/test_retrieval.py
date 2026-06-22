@@ -1357,41 +1357,6 @@ async def test_synthesize_strength_cap_forces_none_for_class_level(svc):
     assert result.contaminated_pmids == ["11111111", "22222222"]
 
 
-async def test_synthesize_holdout_skips_strength_cap(svc):
-    """In holdout_mode the relaxed rubric intentionally scores class-level evidence, so the
-    deterministic strength cap must NOT run — a class_level basis keeps its non-none strength.
-    """
-    holdout_response = json.dumps(
-        {
-            "verdicts": {"11111111": "supporting", "22222222": "contaminated"},
-            "evidence_basis": "class_level",
-            "summary": "Class-level evidence (PMID: 11111111).",
-            "strength": "moderate",
-            "is_observational": None,
-        }
-    )
-    with (
-        patch(
-            "indication_scout.services.retrieval.get_all_drug_names",
-            new=AsyncMock(return_value=["metformin"]),
-        ),
-        patch(
-            "indication_scout.services.retrieval.query_llm",
-            new=AsyncMock(return_value=holdout_response),
-        ),
-    ):
-        result = await svc.synthesize(
-            "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS, holdout_mode=True
-        )
-
-    # cap skipped: class_level keeps its moderate strength in holdout
-    assert result.strength == "moderate"
-    assert result.direction == "supports"
-    assert result.evidence_basis == "class_level"
-    assert result.relevant_pmids == ["11111111"]
-    assert result.contaminated_pmids == ["22222222"]
-
-
 # --- _judge_pmid_directions sub-call (the per-PMID direction authority) ---
 
 

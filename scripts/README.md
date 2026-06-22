@@ -61,11 +61,12 @@ tracing/eval utilities. None are part of the installed package; run them directl
 Holdout-validation harnesses for checking the pipeline against known approvals;
 read against `runbook.txt`. Outputs go to `results/holdout_validation/`.
 
-- **run_validation.py** — Holdout harness. Runs `scout find` per runbook row and
-  uses an LLM equivalence judge to score whether each known indication surfaced
-  (1 = in Summary, 0 = Diseases Considered only, -1 = not found). Writes
-  `results/holdout_validation/validation_results.md`; per-row scout logs go to
-  `results/holdout_validation/logs/`.
+- **gen_seed_candidate_recall.py** — Holdout recall harness. Runs only the seed
+  phase (mechanism + competitor surfacing + merge) per runbook row and emits a
+  binary presence score (1 = known indication in the merged candidate list,
+  0 = absent) by LLM-matching against the leak-free merged allowlist. Writes
+  `results/holdout_validation/validation_results_N.md`. (Replaced the former
+  `run_validation.py`, which drove the full `scout find` pipeline.)
 - **probe_rank.py** — Probes whether the CT.gov candidate sweep catches each
   approval and at what rank, across several ranking strategies. Writes
   `results/holdout_validation/probe/probe_rank_results.md`.
@@ -80,5 +81,5 @@ read against `runbook.txt`. Outputs go to `results/holdout_validation/`.
 ### validation/ data files
 
 - **runbook.txt** — CSV (`drug,indication,date`) of known approvals; input for
-  `run_validation.py` and `probe_rank.py`.
+  `gen_seed_candidate_recall.py` and `probe_rank.py`.
 - **drug_approvals.json** — Per-drug `{disease, approved}` approval records.

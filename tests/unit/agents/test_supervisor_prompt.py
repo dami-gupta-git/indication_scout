@@ -13,15 +13,15 @@ def test_registry_not_trial_universe_rule_present():
     assert "REGISTRY ≠ TRIAL UNIVERSE" in SYSTEM_PROMPT
     # Gated on moderate/strong only — weak/none with 0 trials stays untested.
     assert "MODERATE or STRONG" in SYSTEM_PROMPT
-    assert "Clinical evidence in literature only" in SYSTEM_PROMPT
+    assert "off-registry clinical evidence" in SYSTEM_PROMPT
 
 
 def test_zero_evidence_rule_is_direction_gated():
     """The Untested/Rationale-only trigger must require literature direction "none", not fire
     on 0 registry trials alone — a contradicts body is a disproven negative, not untested."""
     assert 'direction is "none"' in SYSTEM_PROMPT
-    # The Tier-5 label still keys off strength none/weak.
-    assert 'literature strength "none"/"weak"' in SYSTEM_PROMPT
+    # The no-trials label still keys off strength none/weak.
+    assert 'strength is "none"/"weak"' in SYSTEM_PROMPT
 
 
 def test_evidence_direction_rule_present():

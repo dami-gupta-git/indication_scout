@@ -333,9 +333,7 @@ async def test_analyze_mechanism_merges_by_efo_id(
     assert allowed_efo_ids == expected_efo_ids
 
 
-# --- holdout summary reconstruction: byte-equal output against the format ------
-# --- documented in supervisor_holdout.txt. Verifies the deterministic path -----
-# --- replaces whatever string the LLM returns when date_before is set. ---------
+# --- finalize_supervisor closure helpers (shared by the blurb-repair tests below) --
 
 
 def _make_lit(
@@ -372,10 +370,10 @@ def _make_ct(
     )
 
 
-def _holdout_tools_and_closure(cutoff: date | None):
+def _finalize_tools_and_closure(cutoff: date | None = None):
     """Build supervisor tools (date_before=cutoff), return (tools_by_name,
-    findings_local, allowed_diseases) seeded for direct closure manipulation.
-    Pass cutoff=None to exercise the non-holdout path that returns validated blurbs."""
+    findings_local, allowed_diseases) seeded for direct closure manipulation of the
+    finalize_supervisor blurb path."""
     llm = MagicMock()
     svc = MagicMock()
     db = MagicMock()
@@ -405,109 +403,10 @@ def _holdout_tools_and_closure(cutoff: date | None):
     return by_name, findings_local, allowed_diseases
 
 
-async def test_holdout_summary_reconstructed_imatinib():
-    """imatinib"""
-    pass
-
-
-async def test_holdout_summary_reconstructed_for_sildenafil_2005():
-    """Sildenafil holdout at 2005-06-01: deterministic reconstruction must produce
-    the structured fact list documented in supervisor_holdout.txt, regardless of
-    what string the LLM passes in. Reproduces the per-disease artifact values
-    visible in snapshots/holdouts/sildenafil_holdout_2005-06-01_2026-05-11_21-58-29.md
-    and asserts byte-equality with the expected ranked block."""
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(
-        date(2005, 6, 1)
-    )
-
-    # Disease → (strength, direction, n_pmids, study_count, total, completed, terminated).
-    # Values pulled from the per-disease sections of the May-11 broken snapshot.
-    # PMID counts taken from the bulleted exclusions block (Coronary Artery
-    # Disease=72, Covid-19=32) and from a synthetic spread for the ranked
-    # candidates; PMID ranking only matters for tiebreaks and doesn't affect
-    # this case because primary keys (strength, total trials) already separate
-    # every candidate. direction is the gate key: "supports"/"contradicts"/"mixed"
-    # is real evidence (kept); "none" with 0 trials is excluded. The two
-    # zero-study_count pairs (coronary, covid) are excluded via study_count==0.
-    cases = {
-        "pulmonary hypertension": ("moderate", "supports", 300, 3, 9, 5, 0),
-        "pulmonary arterial hypertension": ("moderate", "supports", 381, 3, 4, 0, 0),
-        "benign prostatic hyperplasia": ("moderate", "supports", 101, 3, 1, 1, 0),
-        "raynaud disease": ("weak", "supports", 552, 2, 0, 0, 0),
-        "cardiovascular disease": ("weak", "supports", 200, 3, 0, 0, 0),
-        "hypertension": ("none", "supports", 518, 1, 15, 7, 0),
-        "coronary artery disease": ("none", "none", 72, 0, 0, 0, 0),
-        "covid-19": ("none", "none", 32, 0, 0, 0, 0),
-    }
-    canonical_case = {
-        "pulmonary hypertension": "pulmonary hypertension",
-        "pulmonary arterial hypertension": "pulmonary arterial hypertension",
-        "benign prostatic hyperplasia": "benign prostatic hyperplasia",
-        "raynaud disease": "raynaud disease",
-        "cardiovascular disease": "cardiovascular disease",
-        "hypertension": "hypertension",
-        "coronary artery disease": "coronary artery disease",
-        "covid-19": "covid-19",
-    }
-    for lower, (
-        strength,
-        direction,
-        n_pmids,
-        study_count,
-        total,
-        comp,
-        term,
-    ) in cases.items():
-        allowed_diseases[lower] = (canonical_case[lower], "competitor")
-        findings_local[lower] = {
-            "literature": _make_lit(strength, n_pmids, study_count, direction),
-            "clinical_trials": _make_ct(total, comp, term),
-        }
-
-    # Ordering gate: finalize_supervisor is rejected until critique_ranking has
-    # run this session. Empty blurbs short-circuits before any LLM call.
-    await by_name["critique_ranking"].ainvoke(
-        {
-            "name": "critique_ranking",
-            "args": {"blurbs": []},
-            "id": "test_critique",
-            "type": "tool_call",
-        }
-    )
-
-    msg = await by_name["finalize_supervisor"].ainvoke(
-        {
-            "name": "finalize_supervisor",
-            "args": {"summary": "LLM PROSE THAT SHOULD BE DISCARDED", "blurbs": []},
-            "id": "test_call",
-            "type": "tool_call",
-        }
-    )
-
-    expected = (
-        "1. pulmonary hypertension — literature: moderate, 300 PMIDs; "
-        "trials: 9 total, 5 completed, 0 terminated.\n"
-        "2. pulmonary arterial hypertension — literature: moderate, 381 PMIDs; "
-        "trials: 4 total, 0 completed, 0 terminated.\n"
-        "3. benign prostatic hyperplasia — literature: moderate, 101 PMIDs; "
-        "trials: 1 total, 1 completed, 0 terminated.\n"
-        "4. raynaud disease — literature: weak, 552 PMIDs; "
-        "trials: 0 total, 0 completed, 0 terminated.\n"
-        "5. cardiovascular disease — literature: weak, 200 PMIDs; "
-        "trials: 0 total, 0 completed, 0 terminated.\n"
-        "6. hypertension — literature: none, 518 PMIDs; "
-        "trials: 15 total, 7 completed, 0 terminated.\n"
-        "\n"
-        "Evidence gate exclusions: coronary artery disease, covid-19."
-    )
-    assert msg.artifact["summary"] == expected
-    assert msg.artifact["blurbs"] == []
-
-
 async def test_finalize_keeps_observational_when_fact_is_true():
     """The repair is one-directional: when is_observational is True, a legitimate
     'observational' claim must be left untouched (never add/alter design wording)."""
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
 
     allowed_diseases["disease x"] = ("disease x", "competitor")
     findings_local["disease x"] = {
@@ -552,7 +451,7 @@ async def test_finalize_keeps_observational_when_fact_is_true():
 async def test_finalize_repairs_false_no_phase3_stage():
     """Deterministic dev_stage override: when dev_stage=completed_phase3, finalize must rewrite a
     `stage` that falsely claims 'Phase 4 exploratory only / Phase 3 never initiated'."""
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
 
     allowed_diseases["pcos"] = ("pcos", "competitor")
     findings_local["pcos"] = {
@@ -624,7 +523,7 @@ async def test_finalize_keeps_stage_when_no_completed_phase3():
     """dev_stage=exploratory_phase4_only renders the authoritative Phase 4 phrase — a
     legitimate 'exploratory only' stage is preserved (the override never invents a phase).
     """
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
 
     allowed_diseases["disease y"] = ("disease y", "competitor")
     findings_local["disease y"] = {
@@ -674,70 +573,12 @@ async def test_finalize_keeps_stage_when_no_completed_phase3():
     )
 
 
-async def test_holdout_summary_contradicts_ranks_bottom_and_not_excluded():
-    """A robustly-disproven pair (strong evidence, direction=contradicts, 0 trials) must
-    survive the evidence gate AND rank below every supporting pair, with a "contradicts"
-    note. This locks in the direction/strength split: strong contradiction is not erased.
-    """
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(
-        date(2005, 6, 1)
-    )
-
-    # (strength, direction, n_pmids, study_count, total, completed, terminated).
-    cases = {
-        "disease a": ("weak", "supports", 50, 2, 0, 0, 0),
-        "disease b": ("strong", "contradicts", 80, 5, 0, 0, 0),
-    }
-    for lower, (
-        strength,
-        direction,
-        n_pmids,
-        study_count,
-        total,
-        comp,
-        term,
-    ) in cases.items():
-        allowed_diseases[lower] = (lower, "competitor")
-        findings_local[lower] = {
-            "literature": _make_lit(strength, n_pmids, study_count, direction),
-            "clinical_trials": _make_ct(total, comp, term),
-        }
-
-    await by_name["critique_ranking"].ainvoke(
-        {
-            "name": "critique_ranking",
-            "args": {"blurbs": []},
-            "id": "test_critique",
-            "type": "tool_call",
-        }
-    )
-    msg = await by_name["finalize_supervisor"].ainvoke(
-        {
-            "name": "finalize_supervisor",
-            "args": {"summary": "DISCARDED", "blurbs": []},
-            "id": "test_call",
-            "type": "tool_call",
-        }
-    )
-
-    expected = (
-        "1. disease a — literature: weak, 50 PMIDs; "
-        "trials: 0 total, 0 completed, 0 terminated.\n"
-        "2. disease b — literature: strong, contradicts, 80 PMIDs; "
-        "trials: 0 total, 0 completed, 0 terminated."
-    )
-    # disease b has stronger evidence but ranks LAST (contradicts), and is NOT in
-    # any "Evidence gate exclusions" footer — it is surfaced as a negative.
-    assert msg.artifact["summary"] == expected
-    assert "Evidence gate exclusions" not in msg.artifact["summary"]
-
-
 async def test_finalize_repairs_false_stage_in_demotion_footer():
     """The T1DM bug: a demoted candidate's footer line falsely says 'Phase 4 exploratory only,
     no dedicated development program' while dev_stage=active_phase3. finalize must overwrite the
     false stage clause with the authoritative dev_stage phrase (incl. the active NCTs).
     """
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
 
     allowed_diseases["type 1 diabetes mellitus"] = (
         "type 1 diabetes mellitus",
@@ -795,7 +636,7 @@ async def test_finalize_leaves_footer_when_dev_stage_agrees():
     """A demoted candidate whose dev_stage is genuinely exploratory_phase4_only keeps its
     'Phase 4 exploratory only' footer text — the repair only fires on a program-stage.
     """
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
 
     allowed_diseases["disease z"] = ("disease z", "competitor")
     findings_local["disease z"] = {
@@ -835,7 +676,7 @@ async def test_finalize_repairs_false_stage_in_ranked_summary_line():
     """The ranked-line analog of the footer leak: a ranked summary line falsely says 'no formal
     development program' while dev_stage=active_phase3. finalize must overwrite the false clause
     with the authoritative dev_stage phrase, keeping the rest of the line intact."""
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
 
     allowed_diseases["type 1 diabetes mellitus"] = (
         "type 1 diabetes mellitus",
@@ -896,7 +737,7 @@ async def test_finalize_enrich_overwrites_interpretive_fields():
     overridden here)."""
     from indication_scout.services.judge_interpretive import InterpretiveJudgment
 
-    by_name, findings_local, allowed_diseases = _holdout_tools_and_closure(None)
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
     allowed_diseases["pcos"] = ("pcos", "competitor")
     findings_local["pcos"] = {
         "literature": _make_lit("strong", 10, 5, direction="supports"),

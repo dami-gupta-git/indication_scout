@@ -48,9 +48,12 @@ do NOT restate, re-derive, or contradict them.
 AUTHORITATIVE FACTS (ground truth):
 - Development stage: {stage}
 - Active programs (what is still moving): {active_programs}
+- Registry trials on record (any status): {trials_on_record}
 - Literature: {literature}
 - Approval relationship (how this candidate relates to an approved use): {relationship}
 - Drug's approved indication that this relates to: {approved_indication}
+
+A nonzero trial count means the hypothesis WAS studied — do not call it untested or abandoned.
 
 The drug is NOT approved for THIS candidate indication unless the approved indication above \
 exactly names it. If the approved indication is "none", do not claim any approval for this use.
@@ -136,6 +139,7 @@ async def judge_interpretive(
     literature: str,
     relationship: str,
     approved_indication: str | None,
+    trials_on_record: int,
     cache_dir: Path,
     drug: str = "",
     indication: str = "",
@@ -144,8 +148,10 @@ async def judge_interpretive(
     parse failure (the caller then leaves the fields empty — one source of truth, no fabrication).
 
     Cached per the fact-tuple (stage, active_programs, literature, relationship,
-    approved_indication) so a candidate is judged once within the TTL window. `relationship` is
-    the upstream FDA label (e.g. "contaminated" / "combination_only" / "none") — not prose.
+    approved_indication, trials_on_record) so a candidate is judged once within the TTL window.
+    `relationship` is the upstream FDA label (e.g. "contaminated" / "combination_only" / "none")
+    — not prose. `trials_on_record` is the registry trial count for the pair (any status) so the
+    judge does not call a multi-trial candidate untested when its literature is empty.
     """
     approved = approved_indication or "none"
     cache_params = {
@@ -156,6 +162,7 @@ async def judge_interpretive(
         "literature": literature,
         "relationship": relationship or "none",
         "approved_indication": approved,
+        "trials_on_record": trials_on_record,
     }
     cached = cache_get("interpretive", cache_params, cache_dir)
     if isinstance(cached, dict):

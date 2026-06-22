@@ -651,9 +651,9 @@ class RetrievalService:
             disease: e.g. "colorectal cancer"
             chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
             pmids: e.g. ["29734553", "31245678", "30198432"]
-            date_before: Optional temporal holdout cutoff. pgvector is a
+            date_before: Optional temporal leak-free cutoff. pgvector is a
                 shared cache that may hold abstracts fetched in a prior
-                non-holdout run, so re-apply the same date post-guard here
+                run with no cutoff, so re-apply the same date post-guard here
                 before re-ranking.
 
         Returns:
@@ -803,7 +803,6 @@ class RetrievalService:
         chembl_id: str,
         disease: str,
         top_abstracts: list[AbstractResult],
-        holdout_mode: bool = False,
         approved_indications: list[str] | None = None,
     ) -> EvidenceSummary:
         """Summarize PubMed evidence for a drug-disease pair using an LLM.
@@ -816,18 +815,12 @@ class RetrievalService:
             disease: Candidate disease (e.g. "colorectal cancer").
             top_abstracts: Output of semantic_search — list of dicts with keys
                 "pmid", "title", "abstract", "similarity".
-            holdout_mode: When True, swap to synthesize_holdout.txt — a relaxed
-                rubric that allows class-level evidence (other drugs in the
-                same mechanism class) to score weak/moderate when the cutoff
-                predates drug-specific publications. Used during temporal
-                holdout runs only.
 
         Returns:
             EvidenceSummary with all fields populated from the LLM response.
         """
         # Cache key uses sorted PMIDs so two abstract orderings that contain the
-        # same evidence collapse to one cache entry. Holdout mode uses a different
-        # prompt template, so it must be part of the key. The combined prompt now
+        # same evidence collapse to one cache entry. The combined prompt now
         # owns the approved-indication exclusion, so the sorted approved set MUST be
         # in the key — the same PMIDs grade differently under different approved lists.
         approved = sorted(
@@ -837,7 +830,6 @@ class RetrievalService:
             "chembl_id": chembl_id,
             "disease": disease,
             "pmids": sorted(r.pmid for r in top_abstracts),
-            "holdout_mode": holdout_mode,
             "approved_indications": approved,
             "llm_model": _settings.llm_model,
         }
@@ -855,22 +847,13 @@ class RetrievalService:
             for r in top_abstracts
         )
 
-        prompt_file = "synthesize_holdout.txt" if holdout_mode else "synthesize.txt"
-        logger.debug("synthesize prompt: %s", prompt_file)
-        template = (_PROMPTS_DIR / prompt_file).read_text()
-        # The holdout prompt has no {approved_indications} slot (it scores class-level
-        # signal by design and does not run the exclusion); only the production prompt does.
-        if holdout_mode:
-            prompt = template.format(
-                drug_name=pref_name, disease_name=disease, abstracts=formatted
-            )
-        else:
-            prompt = template.format(
-                drug_name=pref_name,
-                disease_name=disease,
-                abstracts=formatted,
-                approved_indications=", ".join(approved) if approved else "(none)",
-            )
+        template = (_PROMPTS_DIR / "synthesize.txt").read_text()
+        prompt = template.format(
+            drug_name=pref_name,
+            disease_name=disease,
+            abstracts=formatted,
+            approved_indications=", ".join(approved) if approved else "(none)",
+        )
 
         response = await query_llm(prompt)
         # Tolerant parse: the merged prompt is long, so the model sometimes emits prose before the
@@ -992,9 +975,8 @@ class RetrievalService:
         # not "drug_specific" (class_level / approved / none) they MUST be "none", else a
         # class-level RCT body could inflate the card to "strong" while the prose says "no direct
         # evidence for <drug>" (the Parkinson bug). Every consumer (the supervisor ranking path
-        # reads es.strength directly) depends on this. Skipped in holdout_mode, whose relaxed
-        # rubric intentionally scores class-level evidence with a non-none strength.
-        if not holdout_mode and summary.evidence_basis != "drug_specific":
+        # reads es.strength directly) depends on this.
+        if summary.evidence_basis != "drug_specific":
             summary.strength = "none"
             summary.direction = "none"
 

@@ -264,7 +264,7 @@ def build_supervisor_tools(
     # get_drug_briefing. Keyed by normalized drug name. See supervisor_ideas.md for rationale.
     drug_facts: dict[str, dict] = {}
 
-    # Holdout-only: artifacts produced by investigate_top_candidates. The tool invokes
+    # Fan-out only: artifacts produced by investigate_top_candidates. The tool invokes
     # analyze_literature/analyze_clinical_trials directly (not through the LangGraph ReAct loop),
     # so their tool messages don't reach result["messages"]. We stash them here and
     # run_supervisor_agent reads them via get_auto_findings() after the run completes. Keyed by
@@ -396,8 +396,8 @@ def build_supervisor_tools(
         # about subset/superset relationships against it.
         #
         # When date_before is set, swap the live openFDA path for the hardcoded approvals table —
-        # the live path leaks today's approvals into a holdout. Drugs not in the table return []
-        # and approval reasoning is silently disabled for that holdout run (see PLAN_date_before.md).
+        # the live path leaks today's approvals past the cutoff. Drugs not in the table return []
+        # and approval reasoning is silently disabled for that cutoff run.
         seed_aliases = entry["drug_aliases"] or [drug_name]
         try:
             if date_before is not None:
@@ -1075,15 +1075,12 @@ def build_supervisor_tools(
         drug_name = normalize_drug_name(drug_name)
         return _render_briefing(drug_name)
 
-    # Holdout-only tool: bulk-investigate the top-N candidates with no LLM discretion. The probe
+    # Fan-out tool: bulk-investigate the top-N candidates with no LLM discretion. The probe
     # (scripts/probe_supervisor_t2dm.py) showed the supervisor LLM systematically skips "obvious"
-    # candidates like T2DM for semaglutide regardless of prompt instructions — exactly the
-    # candidate the holdout is testing, so we remove the LLM's ability to skip by auto-investigating
-    # the top-N (settings.supervisor_investigation_cap).
-    # Single cap shared by holdout and non-holdout runs: holdout must mirror production exactly,
-    # so it investigates the same number of candidates the live application would. A separate,
-    # wider holdout cap would make the holdout comparison invalid. Env-tunable via
-    # .env.constants (SUPERVISOR_INVESTIGATION_CAP) so a validation run can widen coverage.
+    # candidates like T2DM for semaglutide regardless of prompt instructions, so we remove the
+    # LLM's ability to skip by auto-investigating the top-N
+    # (settings.supervisor_investigation_cap). Env-tunable via .env.constants
+    # (SUPERVISOR_INVESTIGATION_CAP) so a validation run can widen coverage.
     investigation_cap = get_settings().supervisor_investigation_cap
 
     @tool(response_format="content_and_artifact")
@@ -1107,9 +1104,8 @@ def build_supervisor_tools(
         drug_name = normalize_drug_name(drug_name)
 
         # Top-N from the merged allowlist. Insertion order preserves find_candidates's competitor
-        # ranking, with mechanism-promoted entries appended in analyze_mechanism's order. Holdout
-        # and non-holdout use the same cap so the holdout mirrors what the live application would
-        # investigate. supervisor_candidate_cap is NOT used here — it only trims the final ranked
+        # ranking, with mechanism-promoted entries appended in analyze_mechanism's order.
+        # supervisor_candidate_cap is NOT used here — it only trims the final ranked
         # list, not how many diseases get investigated.
         top_n = list(allowed_diseases.items())[:investigation_cap]
         if not top_n:
@@ -1297,129 +1293,6 @@ def build_supervisor_tools(
                 f"relevant highest phase {phase}{term_note}{stage_note}"
             )
         return "\n".join(lines), artifacts
-
-    def _reconstruct_holdout_summary() -> str:
-        """Build the holdout summary deterministically from findings_local.
-
-        Holdout mode renders a structured fact list — no LLM prose. Each investigated candidate
-        becomes one ranked line with literature strength, PMID count, and trial counts pulled
-        from the typed sub-agent artifacts. Candidates with zero trials and no usable literature
-        signal (same gate finalize_supervisor applies to blurbs) drop into a single
-        "Evidence gate exclusions:" footer line.
-        """
-        strength_rank = {"strong": 3, "moderate": 2, "weak": 1, "none": 0}
-
-        ranked: list[tuple] = []
-        excluded: list[str] = []
-        for disease_lower, slot in findings_local.items():
-            allow = allowed_diseases.get(disease_lower)
-            if allow is None:
-                continue
-            canonical = allow[0]
-            lit = slot.get("literature")
-            ct = slot.get("clinical_trials")
-            n_pmids = len(lit.pmids) if lit else 0
-            lit_strength = (
-                lit.evidence_summary.strength
-                if lit and lit.evidence_summary
-                else "none"
-            )
-            lit_direction = (
-                lit.evidence_summary.direction
-                if lit and lit.evidence_summary
-                else "none"
-            )
-            lit_study_count = (
-                lit.evidence_summary.study_count
-                if lit and lit.evidence_summary
-                else None
-            )
-            total_trials = (
-                ct.search.total_count
-                if (ct is not None and ct.search is not None)
-                else 0
-            )
-            completed_trials = (
-                ct.completed.total_count
-                if (ct is not None and ct.completed is not None)
-                else 0
-            )
-            terminated_trials = (
-                ct.terminated.total_count
-                if (ct is not None and ct.terminated is not None)
-                else 0
-            )
-
-            # Zero-evidence gate keys off DIRECTION, not strength: a contradicting (or
-            # supporting/mixed) body is real evidence and must survive — strength "none" now
-            # means only "little/no evidence", which direction "none" captures.
-            no_lit_signal = (
-                lit_direction == "none"
-                or lit_study_count == 0
-                or (
-                    lit_direction is None
-                    and lit_study_count is None
-                    and n_pmids < SUPERVISOR_MIN_PMIDS_NO_TRIALS
-                )
-            )
-            if total_trials == 0 and no_lit_signal:
-                excluded.append(canonical)
-                continue
-
-            # contradicts → bottom tier regardless of strength (robustly disproven is a
-            # low-priority negative signal, surfaced but ranked last).
-            direction_rank = 0 if lit_direction == "contradicts" else 1
-            ranked.append(
-                (
-                    direction_rank,
-                    strength_rank.get(lit_strength or "none", 0),
-                    total_trials,
-                    n_pmids,
-                    canonical.lower(),
-                    canonical,
-                    lit_strength or "none",
-                    n_pmids,
-                    total_trials,
-                    completed_trials,
-                    terminated_trials,
-                    lit_direction or "none",
-                )
-            )
-
-        # Sort: contradicts last (direction_rank asc), then strength desc, trials desc,
-        # PMIDs desc, name asc.
-        ranked.sort(
-            key=lambda r: (-r[0], -r[1], -r[2], -r[3], r[4]),
-        )
-
-        lines: list[str] = []
-        for i, row in enumerate(ranked, start=1):
-            (
-                _,
-                _,
-                _,
-                _,
-                _,
-                canonical,
-                strength,
-                n_pmids,
-                total,
-                completed,
-                terminated,
-                direction,
-            ) = row
-            direction_note = ", contradicts" if direction == "contradicts" else ""
-            lines.append(
-                f"{i}. {canonical} — literature: {strength}{direction_note}, "
-                f"{n_pmids} PMIDs; "
-                f"trials: {total} total, {completed} completed, "
-                f"{terminated} terminated."
-            )
-        if excluded:
-            excluded.sort(key=lambda s: s.lower())
-            lines.append("")
-            lines.append("Evidence gate exclusions: " + ", ".join(excluded) + ".")
-        return "\n".join(lines)
 
     async def _run_fact_critic(items: list[dict]) -> list[dict]:
         """Run the critic over `items`; return the audited blurbs (possibly REORDERED).
@@ -1629,8 +1502,8 @@ def build_supervisor_tools(
                 if lit and lit.evidence_summary
                 else None
             )
-            # Zero-evidence gate keys off DIRECTION, not strength (see _reconstruct_holdout_summary):
-            # a contradicting body is real evidence and must survive the gate, ranked as a negative.
+            # Zero-evidence gate keys off DIRECTION, not strength: a contradicting body is real
+            # evidence and must survive the gate, ranked as a negative.
             no_lit_signal = (
                 lit_direction == "none"
                 or lit_study_count == 0
@@ -1752,15 +1625,6 @@ def build_supervisor_tools(
                     e["prose"] = j.prose
         for e in validated:
             e.pop("_interp_facts", None)
-
-        if date_before is not None:
-            # Holdout mode: ignore the LLM's summary string and rebuild it deterministically from
-            # the typed artifacts in findings_local. The LLM drifts to narrative prose under the
-            # # APPROVAL RELATIONSHIPS instructions; reconstruction enforces the structured
-            # fact-list contract documented in supervisor_holdout.txt.
-            filtered_summary = _reconstruct_holdout_summary()
-            artifact = {"summary": filtered_summary, "blurbs": []}
-            return "Supervisor analysis complete.", artifact
 
         # Filter the LLM-written summary to drop ranked lines whose disease didn't pass the
         # evidence gate (not in validated). Non-ranked lines (e.g. trailing "Closed signals:")
@@ -1891,10 +1755,10 @@ def build_supervisor_tools(
         return dict(allowed_diseases)
 
     def get_auto_findings() -> dict[str, dict]:
-        """Snapshot artifacts produced by investigate_top_candidates (holdout-only).
+        """Snapshot artifacts produced by investigate_top_candidates (fan-out only).
 
         Returns {lowercase_canonical_disease: {"literature": LiteratureOutput,
-        "clinical_trials": ClinicalTrialsOutput}}. Empty in non-holdout runs.
+        "clinical_trials": ClinicalTrialsOutput}}. Empty when fan-out is off.
         """
         return dict(auto_findings)
 
@@ -1907,8 +1771,12 @@ def build_supervisor_tools(
         """
         return dict(approval_labels)
 
+    # supervisor_fanout has no default in Settings, so a missing SUPERVISOR_FANOUT fails loudly at
+    # startup (ValidationError) — it can never silently default to False. A holdout (date_before)
+    # run uses this same flag as a production run: when False the supervisor investigates per
+    # candidate via the ReAct loop, when True it fans out via investigate_top_candidates. Both
+    # mirror production; holdout is no longer special-cased here.
     fanout = get_settings().supervisor_fanout
-    holdout = date_before is not None
     tools = [
         find_candidates,
         analyze_mechanism,
@@ -1918,17 +1786,14 @@ def build_supervisor_tools(
         critique_ranking,
         finalize_supervisor,
     ]
-    if holdout or fanout:
+    if fanout:
         # Insert investigate_top_candidates before finalize so the LLM can see it
-        # after seed-phase tools but before terminating. Enabled in holdout mode
-        # (recover "obvious" candidates) and when supervisor_fanout is set (parallel
-        # fan-out for speed; see config.Settings.supervisor_fanout).
+        # after seed-phase tools but before terminating. Enabled when supervisor_fanout
+        # is set (parallel fan-out for speed; see config.Settings.supervisor_fanout).
         tools.insert(-1, investigate_top_candidates)
-    if fanout and not holdout:
         # Force the parallel path: with the per-candidate tools removed, the LLM cannot
         # investigate serially (it ignores the prompt-level fan-out directive on its own),
-        # so it must call investigate_top_candidates once. Holdout keeps the per-candidate
-        # tools because its flow calls them directly.
+        # so it must call investigate_top_candidates once.
         tools = [
             t for t in tools if t not in (analyze_literature, analyze_clinical_trials)
         ]

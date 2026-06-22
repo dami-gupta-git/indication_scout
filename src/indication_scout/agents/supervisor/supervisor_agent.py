@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 _PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 
 
-# Appended to the non-holdout prompt when supervisor_fanout is on. Overrides WORKFLOW step 2's
+# Appended to the prompt when supervisor_fanout is on. Overrides WORKFLOW step 2's
 # serial per-candidate investigation with a single parallel fan-out call. Kept out of
 # supervisor.txt so the default prompt is byte-identical when the flag is off.
 _FANOUT_DIRECTIVE = """
@@ -47,22 +47,21 @@ run this turn), then finalize_supervisor (step 5).
 """
 
 
-def _load_system_prompt(holdout_mode: bool, fanout: bool = False) -> str:
-    """Return the supervisor system prompt for production or holdout mode.
+def _load_system_prompt(fanout: bool = False) -> str:
+    """Return the supervisor system prompt.
 
-    When `fanout` is set (non-holdout only), append the fan-out directive so the LLM calls
+    When `fanout` is set, append the fan-out directive so the LLM calls
     investigate_top_candidates once instead of investigating each candidate serially.
     """
-    name = "supervisor_holdout.txt" if holdout_mode else "supervisor.txt"
-    prompt = (_PROMPTS_DIR / name).read_text()
-    if fanout and not holdout_mode:
+    prompt = (_PROMPTS_DIR / "supervisor.txt").read_text()
+    if fanout:
         prompt = prompt + _FANOUT_DIRECTIVE
     return prompt
 
 
 # Production prompt loaded at import time. Importers (e.g. scripts/probe_supervisor_t2dm.py)
 # reference this binding directly.
-SYSTEM_PROMPT = _load_system_prompt(holdout_mode=False)
+SYSTEM_PROMPT = _load_system_prompt()
 
 
 def _finalize_done(messages: list) -> bool:
@@ -88,16 +87,16 @@ def build_supervisor_agent(
     """Return (agent, get_merged_allowlist, get_auto_findings, get_approval_labels).
 
     - get_merged_allowlist: snapshots the competitor + mechanism disease allowlist after the run.
-    - get_auto_findings: snapshots artifacts from the holdout-only investigate_top_candidates tool
-      (empty in non-holdout runs). run_supervisor_agent merges these into findings_by_disease
+    - get_auto_findings: snapshots artifacts from the fan-out-only investigate_top_candidates tool
+      (empty when fan-out is off). run_supervisor_agent merges these into findings_by_disease
       because those tool calls bypass the LangGraph ReAct loop.
     - get_approval_labels: snapshots upstream FDA approval-relationship labels (contaminated /
       combination_only) for kept candidates, used to set CandidateFindings.approval_relationship.
 
     `date_before` is forwarded to the literature and clinical trials sub-agents so PubMed and
-    ClinicalTrials.gov queries share the same temporal cutoff. When set, the supervisor loads a
-    holdout-specific prompt telling the LLM to treat all candidates as open hypotheses (even
-    "obvious" ones) rather than skipping based on training knowledge of the drug's eventual use.
+    ClinicalTrials.gov queries share the same temporal cutoff. It is a pure leak-free cutoff —
+    the pipeline runs identically to a production (no-cutoff) run; only the upstream data is
+    restricted to evidence available on or before the cutoff date.
     """
     tools, get_merged_allowlist, get_auto_findings, get_approval_labels = (
         build_supervisor_tools(
@@ -108,17 +107,13 @@ def build_supervisor_agent(
             date_before=date_before,
         )
     )
-    fanout = date_before is None and get_settings().supervisor_fanout
-    prompt_file = (
-        "supervisor_holdout.txt" if date_before is not None else "supervisor.txt"
-    )
+    fanout = get_settings().supervisor_fanout
     logger.info(
-        "supervisor prompt: %s (date_before=%s, fanout=%s)",
-        prompt_file,
+        "supervisor prompt: supervisor.txt (date_before=%s, fanout=%s)",
         date_before,
         fanout,
     )
-    prompt = _load_system_prompt(holdout_mode=date_before is not None, fanout=fanout)
+    prompt = _load_system_prompt(fanout=fanout)
     agent = build_gated_react_loop(llm, tools, prompt, _finalize_done)
     return agent, get_merged_allowlist, get_auto_findings, get_approval_labels
 
@@ -136,10 +131,10 @@ async def run_supervisor_agent(
     the merged allowlist so casing variants (e.g. "Parkinson disease" vs "parkinson disease") don't
     produce duplicate findings and mechanism-promoted diseases land with their correct source tag.
 
-    `get_auto_findings` (holdout-only): zero-arg callable returning investigate_top_candidates
+    `get_auto_findings` (fan-out only): zero-arg callable returning investigate_top_candidates
     artifacts. Those tool calls bypass the ReAct loop, so their artifacts don't reach
     result["messages"]; we pull them via the closure and merge into findings_by_disease so the
-    renderer sees them like any other investigation. None in non-holdout runs.
+    renderer sees them like any other investigation. None when fan-out is off.
     """
     _agent_t0 = time.perf_counter()
     result = await agent.ainvoke(
@@ -267,7 +262,7 @@ async def run_supervisor_agent(
         else:  # analyze_clinical_trials
             findings.clinical_trials = msg.artifact
 
-    # Holdout merge: investigate_top_candidates calls the analyze_* tools directly (not via the
+    # Fan-out merge: investigate_top_candidates calls the analyze_* tools directly (not via the
     # ReAct loop), so their artifacts don't reach result["messages"]. Pull them from the closure
     # and merge in. LLM-driven calls take precedence (they may be re-runs with refined names); we
     # only fill slots the LLM didn't already populate.
@@ -303,7 +298,7 @@ async def run_supervisor_agent(
 
     # Attach supervisor-written blurbs to the matching CandidateFindings. Blurbs only attach to
     # diseases investigated this run (already in findings_by_disease). Names are canonicalised
-    # through the allowlist so casing / synonym variants land right. Holdout runs send no blurbs.
+    # through the allowlist so casing / synonym variants land right.
     structured_keys = (
         "stage",
         "literature",

@@ -98,10 +98,10 @@ class Settings(BaseSettings):
     # evidence for (the deep-dive fan-out). Independent of supervisor_candidate_cap, which only
     # trims the final ranked list. Raise to investigate more diseases per run (more cost/time).
     supervisor_investigation_cap: int
-    # When true, the supervisor exposes investigate_top_candidates in non-holdout
-    # runs and the prompt directs the LLM to call it once instead of investigating
-    # each candidate serially. Trades the per-candidate ReAct loop for a single
-    # parallel fan-out. Intended for smoke testing.
+    # When true, the supervisor exposes investigate_top_candidates and the prompt
+    # directs the LLM to call it once instead of investigating each candidate
+    # serially. Trades the per-candidate ReAct loop for a single parallel fan-out.
+    # Intended for smoke testing.
     supervisor_fanout: bool
 
     # Mechanism
