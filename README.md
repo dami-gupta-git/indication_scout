@@ -222,10 +222,11 @@ src/indication_scout/
 ├── agents/          # AI agents
 │   ├── base.py             # BaseAgent abstract class (currently unused by ReAct agents)
 │   ├── _trial_formatting.py # Shared trial formatting helpers
+│   ├── _trial_signals.py   # Deterministic trial FACTS (highest completed phase, Phase-3-terminated-for-cause)
 │   ├── supervisor/         # Supervisor agent (orchestrates sub-agents) — supervisor_agent.py, supervisor_tools.py, supervisor_output.py
 │   ├── literature/         # Literature agent (PubMed RAG) — literature_agent.py, literature_tools.py, literature_output.py
 │   ├── clinical_trials/    # Clinical Trials agent (ClinicalTrials.gov + MeSH descriptor filter) — clinical_trials_agent.py, clinical_trials_tools.py, clinical_trials_output.py
-│   └── mechanism/          # Mechanism agent (Open Targets targets) — mechanism_agent.py, mechanism_tools.py, mechanism_output.py, mechanism_candidates.py, mechanism_row_builder.py
+│   └── mechanism/          # Mechanism agent (Open Targets targets) — mechanism_agent.py, mechanism_tools.py, mechanism_output.py, mechanism_candidates.py, mechanism_row_builder.py, ot_score.py
 ├── api/             # FastAPI application (main.py, routes/, schemas/) — /health + async analyses routes (POST/GET/report.md/DELETE), drill-down routes, and example-cache routes; serves the built React frontend in prod
 ├── cli/             # Click-based CLI (cli.py) — exposes the `scout` command
 ├── data_sources/    # Async API clients (OpenTargets, ClinicalTrials.gov, PubMed, ChEMBL, FDA, DrugBank stub)
@@ -236,10 +237,11 @@ src/indication_scout/
 │   ├── trial_risk/         # Trial-risk model (data.py, features.py, literature.py, score.py, train.py, inspect.py)
 │   └── success_classifier/ # Trial-success classifier (features.py, labels.py)
 ├── models/          # Pydantic data contracts (model_open_targets, model_clinical_trials, model_pubmed_abstract, model_chembl, model_drug_profile, model_evidence_summary)
-├── prompts/         # LLM prompt templates (supervisor, literature, clinical_trials, synthesize, expand_search_terms, extract_fda_approvals, extract_fda_approval_single, list_label_indications, extract_organ_term, merge_diseases, normalize_disease, normalize_disease_batch)
+├── prompts/         # LLM prompt templates (supervisor, literature, clinical_trials, synthesize, synthesize_holdout, pmid_direction, expand_search_terms, extract_fda_approvals, extract_fda_approval_single, list_label_indications, extract_organ_term, merge_diseases, normalize_disease, normalize_disease_batch)
+├── regression/      # Snapshot regression harness (diff.py, harness.py) — backs `scout diff-report`
 ├── report/          # Report formatting (format_report.py) — turns SupervisorOutput into the final markdown report
 ├── runners/         # Pipeline runners (rag_runner.py) and exploration scripts (pubmed_runner.py); wandb/ logs
-├── services/        # Business logic -- LLM calls (llm.py, including parse_llm_response), embeddings (embeddings.py), disease normalization + MeSH resolver (disease_helper.py: llm_normalize_disease, normalize_for_pubmed, resolve_mesh_id), PubMed query building (pubmed_query.py), FDA approval extraction (approval_check.py), RAG pipeline (retrieval.py -- fetch_and_cache, semantic_search, synthesize)
+├── services/        # Business logic -- LLM calls (llm.py, including parse_llm_response), embeddings (embeddings.py), disease normalization + MeSH resolver (disease_helper.py: llm_normalize_disease, normalize_for_pubmed, resolve_mesh_id), PubMed query building (pubmed_query.py), FDA approval extraction (approval_check.py), RAG pipeline (retrieval.py -- fetch_and_cache, semantic_search, synthesize), dev-stage judge (dev_stage.py), interpretive judge (judge_interpretive.py), shared CLI/API entry point (analysis_runner.py), async job store (job_store.py), progress events (progress.py)
 ├── sqlalchemy/      # SQLAlchemy ORM models (pubmed_abstracts with pgvector embedding)
 ├── utils/           # Shared file-based cache utility (cache_key, cache_get, cache_set)
 ├── config.py        # Settings via pydantic-settings, loaded from .env

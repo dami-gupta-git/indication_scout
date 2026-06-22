@@ -195,7 +195,7 @@ SupervisorOutput
  |        |-- approval_relationship: "contaminated" | "combination_only" | "none"  # label-grounded, set upstream
  |        |-- literature: LiteratureOutput | None
  |        |-- clinical_trials: ClinicalTrialsOutput | None
- |        +-- blurb: CandidateBlurb | None        # structured per-candidate synthesis (top 5 only)
+ |        +-- blurb: CandidateBlurb | None        # structured per-candidate synthesis (top 3 only)
  |-- top_diseases: list[str]                # Ranked top diseases (max 5); subset of disease_findings
  +-- summary: str                           # Supervisor's narrative
 ```
