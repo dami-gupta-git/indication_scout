@@ -193,17 +193,88 @@ def test_floor_completed_phase3_band_lifts_early_phase():
     assert _enforce_tier_floor("early_phase", trials) == "completed_phase3"
 
 
-def test_floor_does_not_override_terminated_for_cause():
-    """The terminated-for-cause closure signal is a deliberate LLM judgment — not overridden
-    even when a completed Phase 3 also exists."""
+def test_floor_honors_terminated_for_cause_with_safety_stop():
+    """terminated_for_cause is honored when a Phase-3 trial actually has a safety/efficacy
+    why_stopped — the genuine closure signal the tier is meant to encode."""
     trials = [
-        Trial(nct_id="N1", phase="Phase 3", overall_status="COMPLETED"),
-        Trial(nct_id="N2", phase="Phase 3", overall_status="Terminated"),
+        Trial(
+            nct_id="N1",
+            phase="Phase 3",
+            overall_status="Terminated",
+            why_stopped="Terminated due to safety concern: hepatotoxicity.",
+        ),
     ]
     assert (
         _enforce_tier_floor("phase3_terminated_for_cause", trials)
         == "phase3_terminated_for_cause"
     )
+
+
+def test_floor_demotes_unsupported_terminated_for_cause_to_completed_phase3():
+    """The dev-stage judge is reason-blind (phase+status only). An operational (COVID) Phase 3
+    termination must NOT read as a safety/efficacy stop when a completed pure Phase 3 also
+    exists — the floor demotes the unsupported guess to completed_phase3."""
+    trials = [
+        Trial(
+            nct_id="N1",
+            phase="Phase 3",
+            overall_status="Terminated",
+            why_stopped="Study terminated owing to challenges posed by the COVID-19 situation.",
+        ),
+        Trial(nct_id="N2", phase="Phase 3", overall_status="COMPLETED"),
+    ]
+    assert _enforce_tier_floor("phase3_terminated_for_cause", trials) == "completed_phase3"
+
+
+def test_floor_demotes_terminated_for_cause_to_unknown_only_via_real_unknown_status():
+    """The diabetic-nephropathy case: an operationally-terminated (COVID) Phase 3 + a withdrawn
+    Phase 3 + a genuinely UNKNOWN-status Phase 2/3. The unsupported for-cause guess demotes to
+    phase3_unknown_status — justified by the real unknown-status trial, NOT by routing the
+    terminated/withdrawn ones (whose statuses are KNOWN) into the 'status unknown' bucket."""
+    trials = [
+        Trial(nct_id="N1", phase="Phase 2", overall_status="COMPLETED"),
+        Trial(nct_id="N2", phase="Phase 4", overall_status="COMPLETED"),
+        Trial(
+            nct_id="N3",
+            phase="Phase 3",
+            overall_status="Terminated",
+            why_stopped="Study terminated owing to challenges posed by the COVID-19 situation.",
+        ),
+        Trial(nct_id="N4", phase="Phase 3", overall_status="WITHDRAWN"),
+        Trial(nct_id="N5", phase="Phase 2/Phase 3", overall_status="UNKNOWN"),
+    ]
+    assert _enforce_tier_floor("phase3_terminated_for_cause", trials) == "phase3_unknown_status"
+
+
+def test_floor_demotes_operational_terminated_phase3_to_completed_phase2_not_unknown():
+    """An operational/withdrawn Phase 3 with NO genuinely-unknown Phase 3 and no completed pure
+    Phase 3 must NOT be labeled 'status unknown' (those statuses are known). It falls to
+    completed_phase2 when a completed Phase 2 exists."""
+    trials = [
+        Trial(
+            nct_id="N1",
+            phase="Phase 3",
+            overall_status="Terminated",
+            why_stopped="Study terminated owing to challenges posed by the COVID-19 situation.",
+        ),
+        Trial(nct_id="N2", phase="Phase 3", overall_status="WITHDRAWN"),
+        Trial(nct_id="N3", phase="Phase 2", overall_status="COMPLETED"),
+    ]
+    assert _enforce_tier_floor("phase3_terminated_for_cause", trials) == "completed_phase2"
+
+
+def test_floor_demotes_lone_operational_terminated_phase3_to_early_phase():
+    """A lone operationally-terminated Phase 3 with nothing else to stand on falls to
+    early_phase — not phase3_unknown_status, not completed_phase2."""
+    trials = [
+        Trial(
+            nct_id="N1",
+            phase="Phase 3",
+            overall_status="Terminated",
+            why_stopped="Funding withdrawn.",
+        ),
+    ]
+    assert _enforce_tier_floor("phase3_terminated_for_cause", trials) == "early_phase"
 
 
 def test_floor_does_not_lower_a_higher_tier():

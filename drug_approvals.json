@@ -87,5 +87,14 @@
     {"disease": "advanced HR+, HER2- breast cancer", "approved": "2012-07-20"},
     {"disease": "prevention of organ rejection in liver transplant", "approved": "2013-02-15"},
     {"disease": "TSC-associated partial-onset seizures", "approved": "2018-04-10"}
+  ],
+  "metformin": [
+    {"disease": "type 2 diabetes mellitus", "approved": "1994-12-29"}
+  ],
+  "empagliflozin": [
+    {"disease": "type 2 diabetes mellitus", "approved": "2014-08-01"},
+    {"disease": "cardiovascular death reduction in type 2 diabetes", "approved": "2016-12-02"},
+    {"disease": "heart failure", "approved": "2021-08-18"},
+    {"disease": "chronic kidney disease", "approved": "2023-09-28"}
   ]
 }

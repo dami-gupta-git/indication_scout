@@ -16,6 +16,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+from indication_scout.agents._trial_formatting import _classify_stop_reason
 from indication_scout.agents._trial_signals import _is_active
 from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
@@ -142,6 +143,74 @@ def _has_active_phase3_band(trials: list[Trial]) -> bool:
     return False
 
 
+def _has_unknown_phase3_band(trials: list[Trial]) -> bool:
+    """A Phase-3-band trial with genuinely UNKNOWN status is on record.
+
+    Phase band here is the wider {Phase 2/Phase 3, Phase 3, Phase 3/Phase 4} set: an
+    unknown-status Phase 2/3 legitimately supports "Phase 3 on record, status unknown".
+    UNKNOWN means CT.gov's "Unknown status" — NOT terminated, withdrawn, completed, or active
+    (those are KNOWN statuses and must not route into the "status unknown" tier).
+    """
+    for t in trials:
+        if (t.overall_status or "").strip().lower() not in ("unknown", "unknown status"):
+            continue
+        if (t.phase or "").strip().lower() in (
+            "phase 2/phase 3",
+            "phase2/phase3",
+            "phase 2/phase3",
+            "phase 3",
+            "phase3",
+            "phase 3/phase 4",
+            "phase 3/phase4",
+        ):
+            return True
+    return False
+
+
+def _has_completed_phase2_band(trials: list[Trial]) -> bool:
+    """A COMPLETED Phase 2 (or Phase 1/Phase 2, Phase 2/Phase 3) trial is on record."""
+    for t in trials:
+        if (t.overall_status or "").strip().lower() != "completed":
+            continue
+        if (t.phase or "").strip().lower() in (
+            "phase 2",
+            "phase2",
+            "phase 1/phase 2",
+            "phase 1/phase2",
+            "phase 2/phase 3",
+            "phase2/phase3",
+            "phase 2/phase3",
+        ):
+            return True
+    return False
+
+
+def _terminated_for_cause_supported(trials: list[Trial]) -> bool:
+    """True when a Phase-3-band trial in the set was terminated for a SAFETY or EFFICACY
+    reason — the only evidence that justifies the phase3_terminated_for_cause tier.
+
+    The dev-stage judge is fed only nct_id + phase + status (no why_stopped), so it cannot
+    itself know whether a TERMINATED Phase 3 was a cause-stop or an operational one (COVID,
+    enrollment, funding, sponsor/withdrawal). This deterministic check — reusing the same
+    keyword classifier as the _trial_signals fact — gates the tier so a reason-blind guess
+    cannot brand an operational termination as a safety/efficacy closure.
+    """
+    for t in trials:
+        if (t.overall_status or "").strip().lower() != "terminated":
+            continue
+        if (t.phase or "").strip().lower() not in (
+            "phase 2/phase 3",
+            "phase2/phase3",
+            "phase 2/phase3",
+            "phase 3",
+            "phase3",
+        ):
+            continue
+        if _classify_stop_reason(t.why_stopped) in ("safety", "efficacy"):
+            return True
+    return False
+
+
 def _enforce_tier_floor(tier: str, trials: list[Trial]) -> str:
     """Deterministic floor over the LLM tier — code owns the clinical-accuracy invariants the
     prompt must not be trusted to honor at scale:
@@ -150,15 +219,32 @@ def _enforce_tier_floor(tier: str, trials: list[Trial]) -> str:
     2. a completed pure Phase-3-band trial exists -> the tier is at least 'completed_phase3'.
     3. an active pure Phase-3-band trial exists -> the tier is at least 'active_phase3'
        (unless a completed Phase 3 already raised it higher — completed outranks active).
+    4. phase3_terminated_for_cause is honored ONLY when a Phase-3-band trial actually has a
+       safety/efficacy why_stopped. The judge is reason-blind (it sees only phase+status), so an
+       unsupported guess is demoted to the highest applicable tier from the remaining evidence
+       (completed P3 -> active P3 -> genuinely-unknown-status P3 -> completed P2 -> early).
+       Operational/withdrawn Phase 3s do NOT route into phase3_unknown_status — "status unknown"
+       must not be asserted about a trial whose status is actually known.
 
     Each rule only RAISES the tier toward the trial evidence; a higher LLM tier is left alone.
     Mirrors the strength-cap pattern: the prompt emits the nuanced read; code enforces the floor.
     """
     if not trials:
         return tier
-    # terminated-for-cause is a deliberate LLM closure judgment we never override.
+    # terminated-for-cause is honored ONLY when a real safety/efficacy stop backs it; otherwise
+    # the reason-blind judge guessed it, so demote to the highest tier the evidence supports.
     if tier == "phase3_terminated_for_cause":
-        return tier
+        if _terminated_for_cause_supported(trials):
+            return tier
+        if _has_completed_phase3_band(trials):
+            return "completed_phase3"
+        if _has_active_phase3_band(trials):
+            return "active_phase3"
+        if _has_unknown_phase3_band(trials):
+            return "phase3_unknown_status"
+        if _has_completed_phase2_band(trials):
+            return "completed_phase2"
+        return "early_phase"
     if _has_completed_phase3_band(trials):
         # completed_phase3 outranks active_phase3, so it wins when both are present.
         return "completed_phase3"
