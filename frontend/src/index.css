@@ -896,6 +896,11 @@ body {
   color: #b23a48;
 }
 
+.scope-note-main {
+  color: #b23a48;
+  font-weight: 500;
+}
+
 @media (max-width: 768px) {
   .hero-steps {
     grid-template-columns: 1fr;

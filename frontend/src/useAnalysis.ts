@@ -79,22 +79,25 @@ export function useAnalysis() {
 
   // Dev-only: inject a SupervisorOutput payload directly as a finished job,
   // bypassing the POST/poll cycle. Lets the UI render without the pipeline.
-  const loadSample = useCallback((result: SupervisorOutput) => {
-    clearTimer();
-    setState({
-      jobId: "sample",
-      status: "done",
-      data: {
-        job_id: "sample",
-        drug_name: result.drug_name,
+  const loadSample = useCallback(
+    (result: SupervisorOutput, jobId: string = "sample") => {
+      clearTimer();
+      setState({
+        jobId,
         status: "done",
-        result,
+        data: {
+          job_id: jobId,
+          drug_name: result.drug_name,
+          status: "done",
+          result,
+          error: null,
+          progress: [],
+        },
         error: null,
-        progress: [],
-      },
-      error: null,
-    });
-  }, []);
+      });
+    },
+    [],
+  );
 
   return { state, run, stop, reset, loadSample };
 }

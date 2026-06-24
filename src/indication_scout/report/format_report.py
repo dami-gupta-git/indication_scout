@@ -423,6 +423,9 @@ def format_report(output: SupervisorOutput) -> str:
         "",
         "_Not for clinical use; for research purposes only_",
         "",
+        "_Candidates come from OpenTargets target–disease associations only; "
+        "off-target indications (e.g. duloxetine for pain) won't appear._",
+        "",
         "---",
         "",
     ]
@@ -487,7 +490,7 @@ def format_report(output: SupervisorOutput) -> str:
             # Literature/Clinical Trials subsections are H4 — keeps the heading hierarchy
             # nested for document navigation/TOC rather than flat at H2/H3.
             lines += [
-                f"### {_title_case_disease(finding.disease)} _(source: {finding.source})_",
+                f"### {_title_case_disease(finding.disease)}",
                 "",
             ]
 

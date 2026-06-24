@@ -48,3 +48,9 @@ export async function getReportMarkdown(jobId: string): Promise<string> {
   if (!resp.ok) throw new Error(`Report unavailable: ${resp.status}`);
   return resp.text();
 }
+
+export async function getExampleReportMarkdown(drug: string): Promise<string> {
+  const resp = await fetch(`/api/examples/${encodeURIComponent(drug)}/report.md`);
+  if (!resp.ok) throw new Error(`Report unavailable: ${resp.status}`);
+  return resp.text();
+}

@@ -52,8 +52,12 @@ def _load_system_prompt(fanout: bool = False) -> str:
 
     When `fanout` is set, append the fan-out directive so the LLM calls
     investigate_top_candidates once instead of investigating each candidate serially.
+
+    The summary/blurbs count is rendered from supervisor_investigation_cap so the number
+    of candidates written up always tracks how many were investigated.
     """
-    prompt = (_PROMPTS_DIR / "supervisor.txt").read_text()
+    summary_count = get_settings().supervisor_investigation_cap
+    prompt = (_PROMPTS_DIR / "supervisor.txt").read_text().format(summary_count=summary_count)
     if fanout:
         prompt = prompt + _FANOUT_DIRECTIVE
     return prompt

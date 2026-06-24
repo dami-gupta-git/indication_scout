@@ -13,8 +13,10 @@ import os
 import time
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import PlainTextResponse
 
 from indication_scout.api.schemas.analyses import AnalysisStatusResponse
+from indication_scout.report.format_report import format_report
 from indication_scout.constants import (
     EXAMPLE_CACHE_DIR,
     EXAMPLE_CACHE_TTL_SECONDS,
@@ -108,3 +110,23 @@ async def get_example(drug: str) -> AnalysisStatusResponse:
         result=cached,
         error=None,
     )
+
+
+@router.get("/{drug}/report.md", response_class=PlainTextResponse)
+async def get_example_report(drug: str) -> str:
+    """Return the formatted Markdown report for a cached example, running it once if stale."""
+    drug = drug.strip().lower()
+    if drug not in _locks:
+        raise HTTPException(status_code=404, detail=f"Not an example drug: {drug}")
+
+    cached = _load_fresh(drug)
+    if cached is None:
+        async with _locks[drug]:
+            cached = _load_fresh(drug)
+            if cached is None:
+                logger.info("Example cache miss/stale for %s; running analysis", drug)
+                output, _ = await run_analysis(drug)
+                _save(drug, output)
+                cached = output
+
+    return format_report(cached)

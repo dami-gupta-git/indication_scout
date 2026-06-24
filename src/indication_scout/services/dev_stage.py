@@ -295,7 +295,7 @@ def _render_active_programs(trials: list[Trial]) -> str:
     if pivotal:
         parts = []
         if pure3:
-            parts.append(f"{len(pure3)} Phase 3 active/recruiting ({', '.join(pure3)})")
+            parts.append(f"{len(pure3)} Phase 3 active ({', '.join(pure3)})")
         if p2p3:
             parts.append(f"{len(p2p3)} Phase 2/Phase 3 active ({', '.join(p2p3)})")
         return "; ".join(parts)

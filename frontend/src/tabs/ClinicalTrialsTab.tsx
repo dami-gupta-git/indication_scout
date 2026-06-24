@@ -53,7 +53,6 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
   return (
     <div className="trials">
       <h3>Clinical trials — {finding.disease}</h3>
-      <p className="caption">Source: {finding.source}</p>
 
       {ct === null ? (
         <p className="muted">No clinical trials data available.</p>

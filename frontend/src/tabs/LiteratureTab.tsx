@@ -28,7 +28,6 @@ export function LiteratureTab({
   return (
     <div className="literature">
       <h3>Literature — {focusDisease}</h3>
-      <p className="caption">Source: {finding.source}</p>
 
       {lit === null ? (
         <p className="muted">No evidence summary available.</p>

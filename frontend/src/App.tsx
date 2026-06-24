@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useAnalysis } from "./useAnalysis";
-import { getReportMarkdown, getExample } from "./api";
+import { getReportMarkdown, getExampleReportMarkdown, getExample } from "./api";
 import type { SupervisorOutput } from "./types";
 import { OverviewTab } from "./tabs/OverviewTab";
 import { MechanismTab } from "./tabs/MechanismTab";
@@ -29,8 +29,9 @@ export function App() {
 
   const busy = state.status === "pending" || state.status === "running";
   const result = state.data?.result ?? null;
-  // The .md report is formatted backend-side; the dev "sample" job has no
-  // server-side job, so the download is only available for real finished runs.
+  // The .md report is formatted backend-side. Real runs serve it from their job;
+  // chip examples serve it from the example cache. Only the dev "sample" job has
+  // no server-side source, so it alone can't download.
   const canDownload =
     state.status === "done" && state.jobId !== null && state.jobId !== "sample";
 
@@ -54,7 +55,7 @@ export function App() {
     try {
       const status = await getExample(name);
       if (status.result) {
-        loadSample(status.result);
+        loadSample(status.result, `example:${name}`);
         return;
       }
     } catch {
@@ -65,7 +66,9 @@ export function App() {
 
   const downloadReport = async () => {
     if (!state.jobId) return;
-    const md = await getReportMarkdown(state.jobId);
+    const md = state.jobId.startsWith("example:")
+      ? await getExampleReportMarkdown(state.jobId.slice("example:".length))
+      : await getReportMarkdown(state.jobId);
     const drugName = state.data?.drug_name ?? "report";
     const url = URL.createObjectURL(new Blob([md], { type: "text/markdown" }));
     const a = document.createElement("a");

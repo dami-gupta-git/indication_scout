@@ -3,18 +3,18 @@ baricitinib,rheumatoid arthritis,2018-05-31
 baricitinib,alopecia areata,2021-09-01
 baricitinib,severe covid-19 hospitalization,2022-05-10
 baricitinib,alopecia areata,2022-06-13
-botox_onabotulinumtoxinA,strabismus and blepharospasm,1989-03-29
-botox_onabotulinumtoxinA,cervical dystonia,1999-04-01
-botox_onabotulinumtoxinA,glabellar lines,2001-07-12
-botox_onabotulinumtoxinA,severe axillary hyperhidrosis,2003-04-01
-botox_onabotulinumtoxinA,chronic migraine,2009-04-01
-botox_onabotulinumtoxinA,upper limb spasticity,2009-04-01
-botox_onabotulinumtoxinA,urinary incontinence due to detrusor overactivity,2010-04-01
-botox_onabotulinumtoxinA,forehead lines and crow's feet,2012-04-01
-botox_onabotulinumtoxinA,overactive bladder,2012-04-01
-botox_onabotulinumtoxinA,lower limb spasticity,2014-04-01
-botox_onabotulinumtoxinA,pediatric upper/lower limb spasticity,2018-04-01
-botox_onabotulinumtoxinA,pediatric detrusor overactivity,2020-04-01
+botox,strabismus and blepharospasm,1989-03-29
+botox,cervical dystonia,1999-04-01
+botox,glabellar lines,2001-07-12
+botox,severe axillary hyperhidrosis,2003-04-01
+botox,chronic migraine,2009-04-01
+botox,upper limb spasticity,2009-04-01
+botox,urinary incontinence due to detrusor overactivity,2010-04-01
+botox,forehead lines and crow's feet,2012-04-01
+botox,overactive bladder,2012-04-01
+botox,lower limb spasticity,2014-04-01
+botox,pediatric upper/lower limb spasticity,2018-04-01
+botox,pediatric detrusor overactivity,2020-04-01
 bupropion,major depressive disorder,1985-01-01
 bupropion,smoking cessation,1996-08-14
 bupropion,seasonal affective disorder,2006-03-31
