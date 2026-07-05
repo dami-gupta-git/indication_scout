@@ -31,10 +31,17 @@ search scope, so they MUST be classified too or a contaminated active trial leak
 The task message gives the drug's FDA-approved indications. Apply these tests to EACH shown trial
 IN ORDER; the FIRST one that matches decides the verdict.
 
-TEST 0 — WRONG DRUG (do this FIRST, before any disease reasoning). Is THIS drug an actual studied
-intervention of the trial? If not — the intervention is a different drug or modality (e.g. stem-cell
-transplant, chemotherapy, another TKI), or this drug appears only as a comparator/background — =>
-CONTAMINATION, regardless of how relevant the disease is. Only if this drug IS studied, go to TEST 1.
+TEST 0 — WRONG DRUG (do this FIRST, before any disease reasoning). Is THIS drug the trial's
+STUDIED/EXPERIMENTAL intervention — the agent whose effect the trial is designed to evaluate? If
+not — the intervention is a different drug or modality (e.g. stem-cell transplant, chemotherapy,
+another TKI), or this drug appears only as a comparator/background/active-control — => CONTAMINATION,
+regardless of how relevant the disease is. Only if this drug IS the studied agent, go to TEST 1.
+  - This drug merely APPEARING in the intervention list is NOT enough — that includes comparator
+    arms. When the trial TITLE names a DIFFERENT drug as the subject (e.g. "A Study of
+    Efinopegdutide in NAFLD") and this drug is present only as a second/reference arm, the studied
+    agent is the other drug => TEST 0 CONTAMINATION, even though this drug is a listed intervention.
+  - The rule is about which drug the trial is ABOUT, not which drugs it administers. Do not rescue a
+    trial to "relevant" just because this drug's name is in the interventions.
 
 TEST 1 — APPROVED-SUBTYPE (=> CONTAMINATION). Is ANY condition the trial studies one of the drug's
 APPROVED indications, or a narrower form of one? If YES => CONTAMINATION — it is already-approved

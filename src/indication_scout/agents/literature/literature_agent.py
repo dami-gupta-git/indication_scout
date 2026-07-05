@@ -84,23 +84,23 @@ async def run_literature_agent(
         ) or details.get("cache_creation", 0)
         total_out += out_tok
         called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
-        logger.info(
-            "[LLMTURN] %s turn %d/%d: in=%d out=%d cache_read=%d cache_write=%d -> %s",
-            disease_name,
-            i + 1,
-            len(ai_turns),
-            in_tok,
-            out_tok,
-            cache_read,
-            cache_write,
-            called,
-        )
-    logger.info(
-        "[LLMTURN] %s: %d turns, %d total output tokens",
-        disease_name,
-        len(ai_turns),
-        total_out,
-    )
+    #     logger.info(
+    #         "[LLMTURN] %s turn %d/%d: in=%d out=%d cache_read=%d cache_write=%d -> %s",
+    #         disease_name,
+    #         i + 1,
+    #         len(ai_turns),
+    #         in_tok,
+    #         out_tok,
+    #         cache_read,
+    #         cache_write,
+    #         called,
+    #     )
+    # logger.info(
+    #     "[LLMTURN] %s: %d turns, %d total output tokens",
+    #     disease_name,
+    #     len(ai_turns),
+    #     total_out,
+    # )
 
     # Pull each tool's typed artifact off msg.artifact
     artifacts: dict = {

@@ -17,7 +17,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from indication_scout.agents._trial_formatting import _classify_stop_reason
-from indication_scout.agents._trial_signals import _is_active
+from indication_scout.agents._trial_signals import _is_active, _normalize_status
 from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
 from indication_scout.services.llm import query_llm
@@ -57,6 +57,15 @@ def dev_stage_phrase(sig) -> str | None:
     phrase = DEV_STAGE_PHRASE.get(sig.dev_stage)
     if phrase is None:
         return None
+    # A completed_phase3 tier backed ONLY by a combined Phase 2/Phase 3 trial (no completed pure
+    # Phase 3) is not a standalone Phase 3 readout — label it "Phase 2/Phase 3 completed" so the
+    # headline does not overstate the evidence. The tier itself is unchanged (see the Phase 2/3 rule).
+    if (
+        sig.dev_stage == "completed_phase3"
+        and getattr(sig, "has_completed_phase3", False)
+        and not getattr(sig, "has_completed_pure_phase3", False)
+    ):
+        return "Phase 2/Phase 3 completed for this indication (no standalone Phase 3)"
     if sig.dev_stage == "active_phase3" and sig.active_phase3_nct_ids:
         phrase = f"{phrase} ({', '.join(sig.active_phase3_nct_ids)})"
     return phrase
@@ -138,7 +147,12 @@ def _has_active_phase3_band(trials: list[Trial]) -> bool:
     for t in trials:
         if not _is_active(t):
             continue
-        if (t.phase or "").strip().lower() in ("phase 3", "phase 3/phase 4", "phase3", "phase 3/phase4"):
+        if (t.phase or "").strip().lower() in (
+            "phase 3",
+            "phase 3/phase 4",
+            "phase3",
+            "phase 3/phase4",
+        ):
             return True
     return False
 
@@ -152,7 +166,10 @@ def _has_unknown_phase3_band(trials: list[Trial]) -> bool:
     (those are KNOWN statuses and must not route into the "status unknown" tier).
     """
     for t in trials:
-        if (t.overall_status or "").strip().lower() not in ("unknown", "unknown status"):
+        if (t.overall_status or "").strip().lower() not in (
+            "unknown",
+            "unknown status",
+        ):
             continue
         if (t.phase or "").strip().lower() in (
             "phase 2/phase 3",
@@ -281,7 +298,7 @@ def _render_active_programs(trials: list[Trial]) -> str:
     """
     active = _active_trials(trials)
     if not active:
-        return "None active"
+        return _none_active_line(trials)
 
     def _ids(predicate) -> list[str]:
         return [t.nct_id for t in active if t.nct_id and predicate(t)]
@@ -289,15 +306,32 @@ def _render_active_programs(trials: list[Trial]) -> str:
     def _phase(t: Trial) -> str:
         return (t.phase or "").strip().lower()
 
-    pure3 = _ids(lambda t: _phase(t) in _PURE_PHASE3)
-    p2p3 = _ids(lambda t: _phase(t) in _PHASE2_PHASE3)
-    pivotal = pure3 + p2p3
+    # "Not yet recruiting" is counted as an active/planned program (see _is_active) but it has NOT
+    # started — labeling it "active" reads as ongoing/recruiting. Split each band so the label states
+    # the real status: recruiting/ongoing trials say "active", planned trials say "not yet recruiting".
+    def _not_yet(t: Trial) -> bool:
+        return _normalize_status(t.overall_status) == "NOT_YET_RECRUITING"
+
+    pure3_active = _ids(lambda t: _phase(t) in _PURE_PHASE3 and not _not_yet(t))
+    pure3_planned = _ids(lambda t: _phase(t) in _PURE_PHASE3 and _not_yet(t))
+    p2p3_active = _ids(lambda t: _phase(t) in _PHASE2_PHASE3 and not _not_yet(t))
+    p2p3_planned = _ids(lambda t: _phase(t) in _PHASE2_PHASE3 and _not_yet(t))
+    pivotal = pure3_active + pure3_planned + p2p3_active + p2p3_planned
     if pivotal:
         parts = []
-        if pure3:
-            parts.append(f"{len(pure3)} Phase 3 active ({', '.join(pure3)})")
-        if p2p3:
-            parts.append(f"{len(p2p3)} Phase 2/Phase 3 active ({', '.join(p2p3)})")
+        if pure3_active:
+            parts.append(f"{len(pure3_active)} Phase 3 active ({', '.join(pure3_active)})")
+        if pure3_planned:
+            parts.append(
+                f"{len(pure3_planned)} Phase 3 not yet recruiting ({', '.join(pure3_planned)})"
+            )
+        if p2p3_active:
+            parts.append(f"{len(p2p3_active)} Phase 2/Phase 3 active ({', '.join(p2p3_active)})")
+        if p2p3_planned:
+            parts.append(
+                f"{len(p2p3_planned)} Phase 2/Phase 3 not yet recruiting "
+                f"({', '.join(p2p3_planned)})"
+            )
         return "; ".join(parts)
 
     # No pivotal trial active, but something earlier-phase / post-approval is moving.
@@ -307,6 +341,22 @@ def _render_active_programs(trials: list[Trial]) -> str:
             f"No pivotal program active; {len(non_pivotal)} non-pivotal active "
             f"({', '.join(non_pivotal)})"
         )
+    return _none_active_line(trials)
+
+
+def _none_active_line(trials: list[Trial]) -> str:
+    """The 'nothing active' line. An UNKNOWN-status trial is NOT confirmed inactive — asserting a
+    bare 'None active' over it overstates. Surface it as status-unknown so the summary does not
+    claim an inactivity we cannot confirm. (KNOWN-inactive: completed/terminated/withdrawn stay
+    silent — they never appear here.)"""
+    unknown = [
+        t.nct_id
+        for t in trials
+        if t.nct_id
+        and _normalize_status(t.overall_status) in ("UNKNOWN", "UNKNOWN_STATUS")
+    ]
+    if unknown:
+        return f"None active; {len(unknown)} on record with unknown status ({', '.join(unknown)})"
     return "None active"
 
 

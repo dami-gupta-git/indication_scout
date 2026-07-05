@@ -85,9 +85,8 @@ async def run_clinical_trials_agent(
         if first_approval is not None
         else "first_approval (year first approved anywhere): unknown"
     )
-    approved_line = (
-        "FDA-approved indications of this drug: "
-        + (", ".join(approved_indications) if approved_indications else "(none)")
+    approved_line = "FDA-approved indications of this drug: " + (
+        ", ".join(approved_indications) if approved_indications else "(none)"
     )
     task = (
         f"Analyze {drug_name} in {disease_name}\n"
@@ -119,6 +118,7 @@ async def run_clinical_trials_agent(
             + details.get("ephemeral_1h_input_tokens", 0)
         ) or details.get("cache_creation", 0)
         total_out += out_tok
+
         # Include args so repeated search_trials/get_* calls across turns show WHAT each
         # retry is querying (e.g. a reworded disease term), not just that a tool re-ran.
         # Args are rendered compactly and truncated — finalize_analysis carries a per-NCT
@@ -131,26 +131,26 @@ async def run_clinical_trials_agent(
             ", ".join(f"{tc['name']}({_fmt_args(tc['args'])})" for tc in msg.tool_calls)
             or "(final)"
         )
-        logger.info(
-            "[LLMTURN] clinical_trials %s turn %d/%d: in=%d out=%d cache_read=%d "
-            "cache_write=%d -> %s",
-            disease_name,
-            i + 1,
-            len(ai_turns),
-            in_tok,
-            out_tok,
-            cache_read,
-            cache_write,
-            called,
-        )
-    logger.info(
-        "[LLMTURN] clinical_trials %s: %d turns, %d total output tokens, "
-        "agent loop %.1fs",
-        disease_name,
-        len(ai_turns),
-        total_out,
-        _agent_elapsed,
-    )
+    #     logger.info(
+    #         "[LLMTURN] clinical_trials %s turn %d/%d: in=%d out=%d cache_read=%d "
+    #         "cache_write=%d -> %s",
+    #         disease_name,
+    #         i + 1,
+    #         len(ai_turns),
+    #         in_tok,
+    #         out_tok,
+    #         cache_read,
+    #         cache_write,
+    #         called,
+    #     )
+    # logger.info(
+    #     "[LLMTURN] clinical_trials %s: %d turns, %d total output tokens, "
+    #     "agent loop %.1fs",
+    #     disease_name,
+    #     len(ai_turns),
+    #     total_out,
+    #     _agent_elapsed,
+    # )
 
     artifacts: dict = {
         "search": None,
@@ -239,9 +239,11 @@ async def run_clinical_trials_agent(
         relevant_set = set(output.relevant_nct_ids)
         seen: set[str] = set()
         relevant_trials = []
-        for t in (output.completed.trials if output.completed else []) + (
-            output.terminated.trials if output.terminated else []
-        ) + (output.search.trials if output.search else []):
+        for t in (
+            (output.completed.trials if output.completed else [])
+            + (output.terminated.trials if output.terminated else [])
+            + (output.search.trials if output.search else [])
+        ):
             if t.nct_id and t.nct_id in relevant_set and t.nct_id not in seen:
                 seen.add(t.nct_id)
                 relevant_trials.append(t)
