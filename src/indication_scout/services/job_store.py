@@ -42,7 +42,8 @@ class Job:
 
     def emit(self, phase: str, message: str) -> None:
         """Append a progress milestone. Latest event per phase wins on the frontend; we keep
-        the full append-only list so the UI can render counts as each phase completes."""
+        the full append-only list so the UI can render counts as each phase completes.
+        """
         self.progress.append(ProgressEvent(phase=phase, message=message))
 
 

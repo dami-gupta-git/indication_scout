@@ -98,7 +98,7 @@ tests/
 - If you see potential bugs or improvements, list them separately rather than fixing automatically.
 - When asked to make changes, only make those changes, do not introduce new functionality without getting approval.
 - Do not delete commented code.
-- Wrap docstrings and comments at a maximum of 105 characters per line. Preserve exact wording when reflowing — only adjust line breaks, never change words.
+- Wrap docstrings and comments at a maximum of 130 characters per line. Preserve exact wording when reflowing — only adjust line breaks, never change words.
 
 ## Planning & Implementation Rules
 

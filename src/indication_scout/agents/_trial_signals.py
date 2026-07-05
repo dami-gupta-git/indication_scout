@@ -49,6 +49,7 @@ _ACTIVE_STATUSES = {
     "SUSPENDED",
 }
 
+
 def _normalize_status(status: str) -> str:
     """Uppercase; collapse each run of non-alphanumerics to a single underscore."""
     out: list[str] = []
@@ -191,8 +192,12 @@ def derive_trial_signals(
     # ("Phase 3" / "Phase 3/Phase 4", excluding "Phase 2/Phase 3") separately so the dev-stage
     # judge does not read a completed Phase 2/3 as "Phase 3 completed" — especially when the only
     # real Phase 3 trials are still recruiting (active_phase3). See _is_pure_completed_phase3.
-    completed_pure_phase3 = [t for t in completed_phase3 if _is_pure_completed_phase3(t)]
-    completed_pure_phase3_nct_ids = [t.nct_id for t in completed_pure_phase3 if t.nct_id]
+    completed_pure_phase3 = [
+        t for t in completed_phase3 if _is_pure_completed_phase3(t)
+    ]
+    completed_pure_phase3_nct_ids = [
+        t.nct_id for t in completed_pure_phase3 if t.nct_id
+    ]
 
     terminated_phase3_for_cause = [
         t

@@ -1,12 +1,11 @@
 """Hierarchical LLM dedup pass for candidate diseases.
 
-`merge_and_dedup()` calls `run_hierarchical_dedup` after the deterministic exact-match passes (ID,
-name, OT name-resolve). The LLM sees the full merged candidate list and identifies super/subtype
-pairs the exact-match passes can't catch (e.g. "ulcerative colitis" ⊂ "inflammatory bowel
-disease"; "type 2 diabetes mellitus" ⊂ "diabetes mellitus"), picking ONE survivor per pair by
-which level is most actionable for the drug's mechanism. On failure (LLM error, unparseable JSON,
-unknown survivors) it logs a WARNING and yields zero decisions, so the caller keeps all candidates
-(error by omission, not inaccuracy).
+`merge_and_dedup()` calls `run_hierarchical_dedup` after the deterministic exact-match passes (ID, name, OT
+name-resolve). The LLM sees the full merged candidate list and identifies super/subtype pairs the exact-match
+passes can't catch (e.g. "ulcerative colitis" ⊂ "inflammatory bowel disease"; "type 2 diabetes mellitus" ⊂
+"diabetes mellitus"), picking ONE survivor per pair by which level is most actionable for the drug's mechanism.
+On failure (LLM error, unparseable JSON, unknown survivors) it logs a WARNING and yields zero decisions, so the
+caller keeps all candidates (error by omission, not inaccuracy).
 """
 
 from __future__ import annotations

@@ -261,9 +261,7 @@ async def _assemble_candidates(
                     candidate_diseases=candidate_names,
                 )
                 approved = {
-                    disease
-                    for disease, label in mapping.items()
-                    if label == "approved"
+                    disease for disease, label in mapping.items() if label == "approved"
                 }
     except Exception as e:
         logger.warning(

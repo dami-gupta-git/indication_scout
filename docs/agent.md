@@ -67,7 +67,9 @@ data; the ranking is **deterministic, post-LLM**:
      disease-driving direction (LoF drug ↔ GoF-driven, GoF drug ↔ LoF-driven).
    - Drops rows whose disease is FDA-approved (via `get_fda_approved_disease_mapping`) or in
      `BROADENING_BLOCKLIST`.
-   - Sorts by `overall_score`, trims to `MECHANISM_TOP_CANDIDATES`.
+   - Sorts by `ranking_score` (OT's `overall_score` in production; a leak-free recomputed
+     score that drops `clinical_precedence` in holdout mode), trims to
+     `MECHANISM_TOP_CANDIDATES`.
 
 Output: `MechanismOutput` with `drug_targets`, `mechanisms_of_action`, `candidates`
 (`MechanismCandidate` rows), `summary`.
@@ -104,10 +106,11 @@ enrollment) are derived at the tool layer from `why_stopped` text. Output: `Clin
 Every sub-agent's prompt mandates `finalize_analysis` as the last call — plain-text AIMessages
 after the loop are discarded. The supervisor mirrors this with `finalize_supervisor`.
 
-When `date_before` is set (holdout evaluations), the supervisor loads
-`prompts/supervisor_holdout.txt` and gains `investigate_top_candidates`, which fans out
-`analyze_literature` + `analyze_clinical_trials` over the top-10 allowlist entries in
-parallel — bypassing the LLM's tendency to skip "obvious" candidates that the holdout was
-designed to recover. Those tool calls happen outside the ReAct loop, so their artifacts are
-stashed in a closure (`auto_findings`) and merged into `SupervisorOutput` by
-`run_supervisor_agent`.
+When `supervisor_fanout` is on, the supervisor appends a fan-out directive to `supervisor.txt`
+(the prompt file is the same with the flag off or on) and gains `investigate_top_candidates`,
+which fans out `analyze_literature` + `analyze_clinical_trials` over the top
+`supervisor_investigation_cap` allowlist entries in parallel — bypassing the LLM's tendency to
+skip "obvious" candidates that holdout evaluations are designed to recover. Those tool calls
+happen outside the ReAct loop, so their artifacts are stashed in a closure (`auto_findings`)
+and merged into `SupervisorOutput` by `run_supervisor_agent`. `date_before` is a separate axis:
+it forwards the holdout cutoff to the literature and clinical-trials sub-agents.

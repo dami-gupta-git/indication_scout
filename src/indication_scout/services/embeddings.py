@@ -80,6 +80,7 @@ def _pin_torch_threads() -> None:
             os.cpu_count(),
         )
 
+
 # Cumulative embedding timing → [call_count, total_seconds]. Measures wall-clock spent
 # inside model.encode() (CPU-bound BioLORD inference), summed across all embed() calls.
 # Read/reset via embed_timing_snapshot() / reset_embed_timing() to attribute how much of
@@ -96,6 +97,7 @@ def reset_embed_timing() -> None:
 def embed_timing_snapshot() -> tuple[int, float]:
     """Return (call_count, total_seconds) of model.encode() time so far."""
     return int(_EMBED_TIMING[0]), _EMBED_TIMING[1]
+
 
 # Serialises model init + encode(). Created lazily and rebound when the running
 # event loop changes — an asyncio.Lock binds to the loop it is created on, so a

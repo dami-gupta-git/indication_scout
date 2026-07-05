@@ -897,7 +897,9 @@ class RetrievalService:
         # affects post-sub-call membership.
         _RELEVANT_VERDICTS = {"supporting", "contradicting", "mixed", "neutral"}
         if isinstance(verdicts, dict):
-            verdict_of = {p: str(verdicts.get(p, "")).strip().lower() for p in input_pmids}
+            verdict_of = {
+                p: str(verdicts.get(p, "")).strip().lower() for p in input_pmids
+            }
         else:
             logger.warning(
                 "synthesize: no usable 'verdicts' for %s / %s; treating all abstracts as "
@@ -934,7 +936,9 @@ class RetrievalService:
                 verdict_of[p] = d
 
         relevant_pmids = [p for p in input_pmids if verdict_of[p] in _RELEVANT_VERDICTS]
-        contaminated_pmids = [p for p in input_pmids if verdict_of[p] not in _RELEVANT_VERDICTS]
+        contaminated_pmids = [
+            p for p in input_pmids if verdict_of[p] not in _RELEVANT_VERDICTS
+        ]
         # supporting = supporting + mixed; contradicting = contradicting + mixed (a mixed abstract
         # appears in both — it carries evidence in each direction).
         supporting_pmids = [
@@ -960,7 +964,9 @@ class RetrievalService:
         # is no relevant evidence. The strength cap below still forces direction "none" for a
         # non-drug_specific basis.
         has_support = bool(supporting_pmids)
-        has_against = any(verdict_of[p] in ("contradicting", "mixed") for p in input_pmids)
+        has_against = any(
+            verdict_of[p] in ("contradicting", "mixed") for p in input_pmids
+        )
         if not relevant_pmids:
             summary.direction = "none"
         elif has_support and has_against:

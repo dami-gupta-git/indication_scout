@@ -55,25 +55,20 @@ _dev_stage_phrase = dev_stage_phrase
 
 
 def _literature_oneliner(es) -> str:
-    """Deterministic one-line literature summary from the typed EvidenceSummary fields
-    (strength, direction, study design) — NOT free LLM prose. Fed to judge_interpretive as the
-    authoritative literature fact and used to overwrite the blurb's `literature` field, so the
-    design word always matches the authoritative is_observational token (this replaces the
-    earlier deterministic 'observational' text repair). Returns "None" when no evidence summary
-    is present.
+    """Deterministic one-line literature summary from the typed EvidenceSummary fields (strength, direction,
+    study design) — NOT free LLM prose. Fed to judge_interpretive and used to overwrite the blurb's `literature`
+    field, so the design word always matches the authoritative is_observational token. Returns "None" when no
+    evidence summary is present.
     """
     if es is None:
         return "None"
-    # class_level = the disease-relevant RCTs are for OTHER drugs in the class, not this one
-    # (the combined synthesize call). The card must NOT read "strong, RCT-backed" — there is no
-    # drug-specific body. State the basis plainly; strength/direction are forced to "none" for
-    # class_level by the deterministic strength cap in synthesize, so the ranking path also sees
-    # no drug strength here.
+    # class_level = the disease-relevant RCTs are for OTHER drugs in the class. Must NOT read "strong,
+    # RCT-backed" — there is no drug-specific body. strength/direction are forced to "none" for class_level by
+    # synthesize, so the ranking path also sees no drug strength.
     if getattr(es, "evidence_basis", "none") == "class_level":
         return "class-level signal (no direct evidence for this drug)"
-    # approved = the only relevant this-drug evidence studies an APPROVED sub-indication of this
-    # broad candidate (already-approved, not repurposing). Strength/direction are forced to "none"
-    # for this basis too, so the ranking path sees no repurposing strength here.
+    # approved = the only relevant this-drug evidence studies an APPROVED sub-indication (not repurposing).
+    # strength/direction forced to "none" here too, so no repurposing strength.
     if getattr(es, "evidence_basis", "none") == "approved":
         return "evidence is for an already-approved sub-indication (not repurposing)"
     design = (
@@ -89,14 +84,11 @@ def _literature_oneliner(es) -> str:
     return ", ".join(parts)
 
 
-# False stage clause the LLM writes in a DEMOTION FOOTER line when it ignores the authoritative
-# dev_stage. Used ONLY for the footer / ranked-summary line, where the stage clause sits in a
-# controlled single-clause context ("- <disease> — <relationship> (… ; <stage clause> ; …)")
-# and a clean replacement is safe. NOT used on free-text blurb fields (verdict/blocker/prose):
-# mid-sentence substitution there mangled grammar (a partial match left "no dedicated Phase 3
-# completed for this indication"). Those fields are kept phase-free by the prompt instead.
-# Anchored to whole semicolon/paren-delimited clauses so a match spans a full clause, not a
-# fragment of a longer sentence.
+# False stage clause the LLM writes in a DEMOTION FOOTER / ranked-summary line when it ignores the authoritative
+# dev_stage. Used ONLY there — those lines are controlled single-clause contexts where replacement is safe. NOT
+# used on free-text blurb fields (verdict/blocker/prose), where mid-sentence substitution mangled grammar; those
+# are kept phase-free by the prompt. Anchored to whole semicolon/paren-delimited clauses so a match spans a full
+# clause.
 _FALSE_STAGE_FRAGMENT = re.compile(
     r"Phase\s*4\s*exploratory\s*only[^;)]*|"
     r"no\s+(?:dedicated|formal)\s+development\s+program[^;)]*|"
@@ -113,10 +105,9 @@ _PROGRAM_STAGES = {
 }
 
 
-# Fresh-context critic for the supervisor's ranked blurbs. Two jobs, both by REASONING (not a
-# rule list): (1) sanity-check the ORDER — think about what each candidate's evidence actually
-# means for whether it is a live repurposing opportunity, and if the order is not defensible,
-# reorder it; (2) repair blurb fields that contradict the machine-derived per-candidate FACT.
+# Fresh-context critic for the supervisor's ranked blurbs. Two jobs, both by REASONING (not a rule list): (1) sanity-check
+# the ORDER — think about what each candidate's evidence actually means for whether it is a live repurposing opportunity, and
+# if the order is not defensible, reorder it; (2) repair blurb fields that contradict the machine-derived per-candidate FACT.
 _RANKING_CRITIC_SYSTEM = """\
 You are a skeptical reviewer of a drug-repurposing candidate ranking. You are given the candidates \
 in their current rank order, each with a verdict tag, a few one-line fields, and a per-candidate \
@@ -144,8 +135,8 @@ Return every blurb. Preserve every key."""
 def _log_disease_banner(title: str, diseases: list[str]) -> None:
     """Emit a boxed WARNING-level banner listing diseases, one per line.
 
-    Makes pivotal candidate-list transitions easy to spot in run logs: FDA-dropped, final
-    allowlist, mechanism-promoted, and top-N investigation set.
+    Makes pivotal candidate-list transitions easy to spot in run logs: FDA-dropped, final allowlist, mechanism-promoted,
+    and top-N investigation set.
     """
     header = f" {title} (n={len(diseases)}) "
     width = max(len(header) + 4, 60)
@@ -203,90 +194,81 @@ def build_supervisor_tools(
 
     The literature and clinical trials agents are compiled once here and reused across calls.
 
-    `session_factory` is a shared `sessionmaker` (one engine/pool) used by the concurrent
-    investigate_top_candidates fan-out: each analyze_literature call checks out its own
-    Session from it, because a SQLAlchemy Session is not safe for concurrent use. When None
-    (single-threaded callers, tests), a factory bound to the run `db`'s existing engine is
-    derived — reusing that engine, never creating a new one (which would leak a pool).
+    `session_factory` is a shared `sessionmaker` (one engine/pool) used by the concurrent investigate_top_candidates fan-out:
+    each analyze_literature call checks out its own Session from it, because a SQLAlchemy Session is not safe for concurrent
+    use. When None (single-threaded callers, tests), a factory bound to the run `db`'s existing engine is derived — reusing
+    that engine, never creating a new one (which would leak a pool).
 
-    `date_before` is forwarded to the literature and clinical trials sub-agents so all PubMed and
-    ClinicalTrials.gov queries share the same temporal cutoff. The mechanism sub-agent doesn't
-    accept it (OpenTargets has no date-filtering API).
+    `date_before` is forwarded to the literature and clinical trials sub-agents so all PubMed and ClinicalTrials.gov queries
+    share the same temporal cutoff. The mechanism sub-agent doesn't accept it (OpenTargets has no date-filtering API).
 
-    Returns (tools, get_merged_allowlist) where get_merged_allowlist() snapshots the post-merge
-    competitor + mechanism disease allowlist (lowercase name → (canonical_name, source)),
-    intended to be read after the agent loop has finished.
+    Returns (tools, get_merged_allowlist) where get_merged_allowlist() snapshots the post-merge competitor + mechanism
+    disease allowlist (lowercase name → (canonical_name, source)), intended to be read after the agent loop has finished.
     """
-    # Reuse the run db's engine when no shared factory was passed (single-threaded callers,
-    # tests). Binding to db.get_bind() means no new engine/pool is created.
+    # Reuse the run db's engine when no shared factory was passed (single-threaded callers, tests). Binding to db.get_bind()
+    # means no new engine/pool is created.
     if session_factory is None:
         session_factory = sessionmaker(
             autocommit=False, autoflush=False, bind=db.get_bind()
         )
 
-    # Build the mechanism sub-agent once at supervisor construction (it runs once in the seed
-    # phase, not in the concurrent per-candidate fan-out). The clinical-trials agent is built
-    # PER analyze_clinical_trials call instead — its tools carry a closure-scoped shown_by_pair
-    # set (the per-trial relevance gate), and investigate_top_candidates fans candidates out
-    # concurrently (asyncio.gather), so a single shared instance would accumulate every pair's
-    # trials across candidates and race on that mutable state. A fresh build per call isolates
-    # the closure state (graph compile only, no I/O — cheap relative to the network/LLM work).
+    # Build the mechanism sub-agent once at supervisor construction (it runs once in the seed phase, not in the concurrent
+    # per-candidate fan-out). The clinical-trials agent is built PER analyze_clinical_trials call instead — its tools carry a
+    # closure-scoped shown_by_pair set (the per-trial relevance gate), and investigate_top_candidates fans candidates out
+    # concurrently (asyncio.gather), so a single shared instance would accumulate every pair's trials across candidates and
+    # race on that mutable state. A fresh build per call isolates the closure state (graph compile only, no I/O — cheap
+    # relative to the network/LLM work).
     mech_agent = build_mechanism_agent(llm=llm, date_before=date_before)
 
-    # Closure-scoped allowlist — populated by find_candidates and analyze_mechanism, checked by
-    # analyze_literature / analyze_clinical_trials.
+    # Closure-scoped allowlist — populated by find_candidates and analyze_mechanism, checked by analyze_literature /
+    # analyze_clinical_trials.
     # allowed_diseases: lowercase disease name → (canonical_name, source)
     allowed_diseases: dict[
         str, tuple[str, Literal["competitor", "mechanism", "both"]]
     ] = {}
-    # EFO ID → lowercase disease name (key into allowed_diseases). Lets the merge step dedup
-    # mechanism candidates against competitor entries by ontology ID even when names differ
-    # (e.g. "NSCLC" vs "non-small cell lung cancer").
+    # EFO ID → lowercase disease name (key into allowed_diseases). Lets the merge step dedup mechanism candidates against
+    # competitor entries by ontology ID even when names differ (e.g. "NSCLC" vs "non-small cell lung cancer").
     allowed_efo_ids: dict[str, str] = {}
-    # Raw mechanism candidates as they arrive. analyze_mechanism appends here; find_candidates
-    # consumes them in merge_and_dedup() after both seed tools finish. Holding the full list lets
-    # the hierarchical LLM pass see the complete competitor + mechanism union in one shot.
+    # Raw mechanism candidates as they arrive. analyze_mechanism appends here; find_candidates consumes them in
+    # merge_and_dedup() after both seed tools finish. Holding the full list lets the hierarchical LLM pass see the complete
+    # competitor + mechanism union in one shot.
     mechanism_candidates_buffer: list = []
-    # Drug-level mechanism target list, set by analyze_mechanism and read by merge_and_dedup so
-    # the hierarchical LLM pass can reason about the drug's MoA when picking survivors.
+    # Drug-level mechanism target list, set by analyze_mechanism and read by merge_and_dedup so the hierarchical LLM pass can
+    # reason about the drug's MoA when picking survivors.
     mechanism_targets_for_dedup: list[tuple[str, str]] = []
-    # Seed-phase gates. find_candidates and analyze_mechanism run in parallel. analyze_mechanism
-    # only buffers raw candidates and sets analyze_mechanism_done; it doesn't touch the allowlist.
-    # find_candidates seeds the competitor allowlist, awaits analyze_mechanism_done, then runs
-    # merge_and_dedup (centralized exact-match + hierarchical-LLM dedup over the union).
-    # find_candidates_done is set inside merge_and_dedup so downstream tools (analyze_literature,
-    # analyze_clinical_trials, investigate_top_candidates) only observe the post-dedup allowlist.
-    # Both events are set in try/finally so a sub-agent crash doesn't deadlock downstream tools.
+    # Seed-phase gates. find_candidates and analyze_mechanism run in parallel. analyze_mechanism only buffers raw candidates
+    # and sets analyze_mechanism_done; it doesn't touch the allowlist. find_candidates seeds the competitor allowlist, awaits
+    # analyze_mechanism_done, then runs merge_and_dedup (centralized exact-match + hierarchical-LLM dedup over the union).
+    # find_candidates_done is set inside merge_and_dedup so downstream tools (analyze_literature, analyze_clinical_trials,
+    # investigate_top_candidates) only observe the post-dedup allowlist. Both events are set in try/finally so a sub-agent
+    # crash doesn't deadlock downstream tools.
     find_candidates_done = asyncio.Event()
     analyze_mechanism_done = asyncio.Event()
 
-    # Drug-level shared store. Populated by sub-agents as they run; surfaced to the supervisor via
-    # get_drug_briefing. Keyed by normalized drug name. See supervisor_ideas.md for rationale.
+    # Drug-level shared store. Populated by sub-agents as they run; surfaced to the supervisor via get_drug_briefing. Keyed
+    # by normalized drug name. See supervisor_ideas.md for rationale.
     drug_facts: dict[str, dict] = {}
 
-    # Fan-out only: artifacts produced by investigate_top_candidates. The tool invokes
-    # analyze_literature/analyze_clinical_trials directly (not through the LangGraph ReAct loop),
-    # so their tool messages don't reach result["messages"]. We stash them here and
-    # run_supervisor_agent reads them via get_auto_findings() after the run completes. Keyed by
-    # lowercase canonical disease name → {"literature": ..., "clinical_trials": ...}.
+    # Fan-out only: artifacts produced by investigate_top_candidates. The tool invokes analyze_literature/
+    # analyze_clinical_trials directly (not through the LangGraph ReAct loop), so their tool messages don't reach
+    # result["messages"]. We stash them here and run_supervisor_agent reads them via get_auto_findings() after the run
+    # completes. Keyed by lowercase canonical disease name → {"literature": ..., "clinical_trials": ...}.
     auto_findings: dict[str, dict] = {}
 
-    # Upstream FDA approval-relationship labels for kept candidates, keyed by lowercase disease
-    # name → "contaminated" | "combination_only". "approved" diseases are dropped (never recorded
-    # here); "none" diseases are omitted (no relationship). run_supervisor_agent reads this via
-    # get_approval_labels() to set CandidateFindings.approval_relationship from the label-grounded
-    # source, NOT from LLM prose.
+    # Upstream FDA approval-relationship labels for kept candidates, keyed by lowercase disease name → "contaminated" |
+    # "combination_only". "approved" diseases are dropped (never recorded here); "none" diseases are omitted (no
+    # relationship). run_supervisor_agent reads this via get_approval_labels() to set CandidateFindings.approval_relationship
+    # from the label-grounded source, NOT from LLM prose.
     approval_labels: dict[str, str] = {}
 
-    # Per-disease sub-agent artifacts written by analyze_literature and analyze_clinical_trials as
-    # the supervisor runs. Used by finalize_supervisor to enforce the top-N evidence gate (drop
-    # blurbs for candidates failing the (0 trials AND <N PMIDs) check). Keyed by lowercase
-    # canonical disease name → {"literature": ... | None, "clinical_trials": ... | None}.
+    # Per-disease sub-agent artifacts written by analyze_literature and analyze_clinical_trials as the supervisor runs. Used
+    # by finalize_supervisor to enforce the top-N evidence gate (drop blurbs for candidates failing the (0 trials AND <N
+    # PMIDs) check). Keyed by lowercase canonical disease name → {"literature": ... | None, "clinical_trials": ... | None}.
     findings_local: dict[str, dict] = {}
 
-    # Ordering gate: finalize_supervisor is rejected until critique_ranking has run this
-    # run, so the ranking is always audited before it is committed. The LLM ignores the
-    # prompt-level "MANDATORY" instruction on its own, so this enforces it in code.
+    # Ordering gate: finalize_supervisor is rejected until critique_ranking has run this run, so the ranking is always
+    # audited before it is committed. The LLM ignores the prompt-level "MANDATORY" instruction on its own, so this enforces
+    # it in code.
     critique_state: dict[str, bool] = {"ran": False}
 
     def _drug_key(drug_name: str) -> str:
@@ -346,18 +328,16 @@ def build_supervisor_tools(
     async def find_candidates(drug_name: str) -> tuple[str, list[str]]:
         """Surface candidate diseases for repurposing this drug.
 
-        Returns the post-dedup candidate list — diseases where competitor drugs (sharing the
-        same molecular targets) are being developed, PLUS diseases surfaced by the mechanism
-        sub-agent. Waits for analyze_mechanism to finish, then runs merge_and_dedup which
-        performs exact-match dedup (ID, name, OT name-resolve) followed by a hierarchical LLM
-        pass to collapse super/subtype overlaps. Each line in the content string is tagged
-        [competitor], [mechanism], or [both].
+        Returns the post-dedup candidate list — diseases where competitor drugs (sharing the same molecular targets) are
+        being developed, PLUS diseases surfaced by the mechanism sub-agent. Waits for analyze_mechanism to finish, then runs
+        merge_and_dedup which performs exact-match dedup (ID, name, OT name-resolve) followed by a hierarchical LLM pass to
+        collapse super/subtype overlaps. Each line in the content string is tagged [competitor], [mechanism], or [both].
         """
         try:
             return await _find_candidates_impl(drug_name)
         finally:
-            # Always release the seed gate so a failure here doesn't deadlock analyze_literature
-            # / analyze_clinical_trials. They will see an empty allowlist and reject downstream.
+            # Always release the seed gate so a failure here doesn't deadlock analyze_literature / analyze_clinical_trials.
+            # They will see an empty allowlist and reject downstream.
             find_candidates_done.set()
 
     async def _find_candidates_impl(drug_name: str) -> tuple[str, list[str]]:
@@ -376,9 +356,9 @@ def build_supervisor_tools(
                 "find_candidates: get_all_drug_names failed for %s: %s", chembl_id, e
             )
 
-        # Fetch first_approval (year first approved anywhere) so the clinical_trials sub-agent's
-        # closure judgment can tell an old/generic drug (no new NDA expected) from a genuine
-        # negative. Stays None on failure — never defaulted to a year (CLAUDE.md no-fallback).
+        # Fetch first_approval (year first approved anywhere) so the clinical_trials sub-agent's closure judgment can tell an
+        # old/generic drug (no new NDA expected) from a genuine negative. Stays None on failure — never defaulted to a year
+        # (CLAUDE.md no-fallback).
         try:
             async with ChEMBLClient(cache_dir=svc.cache_dir) as chembl_client:
                 molecule = await chembl_client.get_molecule(chembl_id)
@@ -390,14 +370,13 @@ def build_supervisor_tools(
                 e,
             )
 
-        # Seed approved_indications from the drug's own FDA label, independent of any candidate
-        # list. Without this, an approved indication absent from OpenTargets competitor diseases
-        # (e.g. semaglutide × MASH) never reaches the briefing and the supervisor can't reason
-        # about subset/superset relationships against it.
+        # Seed approved_indications from the drug's own FDA label, independent of any candidate list. Without this, an
+        # approved indication absent from OpenTargets competitor diseases (e.g. semaglutide × MASH) never reaches the
+        # briefing and the supervisor can't reason about subset/superset relationships against it.
         #
-        # When date_before is set, swap the live openFDA path for the hardcoded approvals table —
-        # the live path leaks today's approvals past the cutoff. Drugs not in the table return []
-        # and approval reasoning is silently disabled for that cutoff run.
+        # When date_before is set, swap the live openFDA path for the hardcoded approvals table — the live path leaks today's
+        # approvals past the cutoff. Drugs not in the table return [] and approval reasoning is silently disabled for that
+        # cutoff run.
         seed_aliases = entry["drug_aliases"] or [drug_name]
         try:
             if date_before is not None:
@@ -431,8 +410,8 @@ def build_supervisor_tools(
                 e,
             )
 
-        # Drop competitor diseases already approved for this drug. Same swap as above: hardcoded
-        # table when date_before is set, live FDA otherwise.
+        # Drop competitor diseases already approved for this drug. Same swap as above: hardcoded table when date_before is
+        # set, live FDA otherwise.
         fda_approved_lower: set[str] = set()
         if diseases:
             if date_before is not None:
@@ -448,14 +427,11 @@ def build_supervisor_tools(
                     cache_dir=svc.cache_dir,
                 )
                 fda_approved = {
-                    disease
-                    for disease, label in mapping.items()
-                    if label == "approved"
+                    disease for disease, label in mapping.items() if label == "approved"
                 }
-                # Record the non-"approved" relationship labels for KEPT candidates so the
-                # report can render them from the label-grounded source (not LLM prose).
-                # "none" carries no relationship → omitted. Holdout (date_before) path has no
-                # label data, so labels are only captured here in the live path.
+                # Record the non-"approved" relationship labels for KEPT candidates so the report can render them from the
+                # label-grounded source (not LLM prose). "none" carries no relationship → omitted. Holdout (date_before) path
+                # has no label data, so labels are only captured here in the live path.
                 for disease, label in mapping.items():
                     if label in ("contaminated", "combination_only"):
                         approval_labels[disease.lower().strip()] = label
@@ -465,10 +441,9 @@ def build_supervisor_tools(
                     f"{'hardcoded table' if date_before is not None else 'live FDA'})",
                     sorted(fda_approved),
                 )
-                # Record the approved indications in the shared store. Discovered as a side
-                # effect of candidate filtering — even though dropped from the candidate list,
-                # the supervisor needs them to reason about subset/superset relationships
-                # (e.g. CML approval makes "myeloid leukemia" candidate ambiguous).
+                # Record the approved indications in the shared store. Discovered as a side effect of candidate filtering —
+                # even though dropped from the candidate list, the supervisor needs them to reason about subset/superset
+                # relationships (e.g. CML approval makes "myeloid leukemia" candidate ambiguous).
                 existing = {
                     ind.lower().strip() for ind in entry["approved_indications"]
                 }
@@ -479,9 +454,9 @@ def build_supervisor_tools(
 
         diseases = [d for d in diseases if d.lower().strip() not in fda_approved_lower]
 
-        # Cap applies to competitor entries only. Mechanism-promoted entries are appended on top
-        # after the merge below — they're already small (capped upstream by
-        # settings.mechanism_top_candidates) and dropping them here would defeat the purpose of the merge.
+        # Cap applies to competitor entries only. Mechanism-promoted entries are appended on top after the merge below —
+        # they're already small (capped upstream by settings.mechanism_top_candidates) and dropping them here would defeat
+        # the purpose of the merge.
         candidate_cap = get_settings().supervisor_candidate_cap
         if len(diseases) > candidate_cap:
             logger.warning(
@@ -498,9 +473,9 @@ def build_supervisor_tools(
         for d in diseases:
             allowed_diseases[d.lower().strip()] = (d, "competitor")
 
-        # Pull EFO IDs for the competitor allowlist from the raw OT cache. Used to dedup mechanism
-        # candidates against competitor entries by ontology ID. Names that don't resolve to an EFO
-        # (e.g. renamed by the LLM merge step) get no entry — dedup falls back to name match.
+        # Pull EFO IDs for the competitor allowlist from the raw OT cache. Used to dedup mechanism candidates against
+        # competitor entries by ontology ID. Names that don't resolve to an EFO (e.g. renamed by the LLM merge step) get no
+        # entry — dedup falls back to name match.
         async with OpenTargetsClient(cache_dir=svc.cache_dir) as ot_client:
             raw = await ot_client.get_drug_competitors(
                 chembl_id, date_before=date_before
@@ -515,19 +490,18 @@ def build_supervisor_tools(
             diseases,
         )
 
-        # Wait for analyze_mechanism to populate mechanism_candidates_buffer. The mechanism
-        # sub-agent's finally block always sets this gate, so a crash just yields an empty
-        # mechanism contribution rather than deadlocking.
+        # Wait for analyze_mechanism to populate mechanism_candidates_buffer. The mechanism sub-agent's finally block always
+        # sets this gate, so a crash just yields an empty mechanism contribution rather than deadlocking.
         await analyze_mechanism_done.wait()
 
-        # Run the centralized merge + dedup pipeline. find_candidates_done is set inside
-        # merge_and_dedup's finally so downstream readers (analyze_literature,
-        # analyze_clinical_trials, investigate_top_candidates) only see the post-dedup allowlist.
+        # Run the centralized merge + dedup pipeline. find_candidates_done is set inside merge_and_dedup's finally so
+        # downstream readers (analyze_literature, analyze_clinical_trials, investigate_top_candidates) only see the
+        # post-dedup allowlist.
         await merge_and_dedup(drug_name)
 
-        # Snapshot the post-dedup allowlist in dict insertion order: competitor entries first (OT
-        # ranked order), then mechanism-only entries (analyze_mechanism's order); hierarchical
-        # dedup may have removed entries from either. "both" entries stay in their competitor slot.
+        # Snapshot the post-dedup allowlist in dict insertion order: competitor entries first (OT ranked order), then
+        # mechanism-only entries (analyze_mechanism's order); hierarchical dedup may have removed entries from either.
+        # "both" entries stay in their competitor slot.
         merged: list[tuple[str, str]] = [
             (canonical, source) for (canonical, source) in allowed_diseases.values()
         ]
@@ -544,27 +518,23 @@ def build_supervisor_tools(
         content = "\n".join(lines)
 
         merged_names = [canonical for canonical, _ in merged]
-        emit_progress(
-            PHASE_CANDIDATES, f"Found {len(merged)} candidate diseases"
-        )
+        emit_progress(PHASE_CANDIDATES, f"Found {len(merged)} candidate diseases")
         return content, merged_names
 
     async def merge_and_dedup(drug_name: str) -> None:
         """Merge buffered mechanism candidates into the competitor-seeded allowlist.
 
         Pipeline (single chokepoint for all candidate-disease deduplication):
-          1. Exact ID match — drop mechanism candidate if disease_id already in allowed_efo_ids;
-             upgrade matched competitor entry's source to "both".
-          2. Exact name match — drop if lowercased name already in allowed_diseases; upgrade to
-             "both".
-          3. OT name-resolve — resolve unresolved mechanism candidate names to EFO IDs; retry
-             step 1 against allowed_efo_ids.
-          4. Hierarchical LLM pass — over the full merged list, identify super/subtype overlaps
-             the exact-match passes can't catch (UC ⊂ IBD, T2DM ⊂ DM); pick one survivor each.
+          1. Exact ID match — drop mechanism candidate if disease_id already in allowed_efo_ids; upgrade matched competitor
+             entry's source to "both".
+          2. Exact name match — drop if lowercased name already in allowed_diseases; upgrade to "both".
+          3. OT name-resolve — resolve unresolved mechanism candidate names to EFO IDs; retry step 1 against allowed_efo_ids.
+          4. Hierarchical LLM pass — over the full merged list, identify super/subtype overlaps the exact-match passes can't
+             catch (UC ⊂ IBD, T2DM ⊂ DM); pick one survivor each.
 
-        Sets find_candidates_done before returning so downstream readers (analyze_literature,
-        analyze_clinical_trials, investigate_top_candidates) observe the post-dedup allowlist. The
-        find_candidates wrapper's try/finally still sets the gate on any exception path.
+        Sets find_candidates_done before returning so downstream readers (analyze_literature, analyze_clinical_trials,
+        investigate_top_candidates) observe the post-dedup allowlist. The find_candidates wrapper's try/finally still sets
+        the gate on any exception path.
         """
         try:
             await _merge_and_dedup_impl(drug_name)
@@ -614,11 +584,9 @@ def build_supervisor_tools(
                 promoted,
             )
 
-        # Step 4: hierarchical LLM pass — temporarily disabled while we revisit
-        # the case that motivated it. The dedup was collapsing actionable
-        # subtype candidates (e.g. PCOS, gestational diabetes) into broad
-        # parents (metabolic disease) for broadly-acting drugs like metformin.
-        # Keep all candidates from the exact-match dedup until we decide on a
+        # Step 4: hierarchical LLM pass — temporarily disabled while we revisit the case that motivated it. The dedup was
+        # collapsing actionable subtype candidates (e.g. PCOS, gestational diabetes) into broad parents (metabolic disease)
+        # for broadly-acting drugs like metformin. Keep all candidates from the exact-match dedup until we decide on a
         # hardcoded equivalence-group approach.
         # if len(allowed_diseases) < 2:
         #     return
@@ -696,18 +664,18 @@ def build_supervisor_tools(
     ) -> tuple[str, LiteratureOutput]:
         """Run a full literature analysis for a drug-disease pair.
 
-        Investigates published evidence via PubMed, embeds and re-ranks abstracts, and produces a
-        structured evidence summary with strength rating (none / weak / moderate / strong).
+        Investigates published evidence via PubMed, embeds and re-ranks abstracts, and produces a structured evidence
+        summary with strength rating (none / weak / moderate / strong).
         """
-        # Wait for both seed tools to finish populating the allowlist. Without this, parallel
-        # tool calls can hit analyze_literature before find_candidates / analyze_mechanism have
-        # merged their candidates, causing legitimate diseases to be rejected.
+        # Wait for both seed tools to finish populating the allowlist. Without this, parallel tool calls can hit
+        # analyze_literature before find_candidates / analyze_mechanism have merged their candidates, causing legitimate
+        # diseases to be rejected.
         await find_candidates_done.wait()
         await analyze_mechanism_done.wait()
 
         drug_name = normalize_drug_name(drug_name)
-        # Build a fresh agent per call so the closure-scoped store dict in literature_tools is not
-        # shared across disease invocations.
+        # Build a fresh agent per call so the closure-scoped store dict in literature_tools is not shared across disease
+        # invocations.
         if disease_name.lower().strip() not in allowed_diseases:
             return _reject(disease_name, "analyze_literature", LiteratureOutput())
 
@@ -717,16 +685,16 @@ def build_supervisor_tools(
             "[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name
         )
 
-        # Per-call DB session from the shared pool. investigate_top_candidates fans
-        # candidates out concurrently (asyncio.gather), and a SQLAlchemy Session is not
-        # safe for concurrent use — sharing one across the fan-out parks a connection in
-        # an open transaction nothing advances (flat CPU / idle Postgres hang). Each call
-        # checks out its own Session and closes it here.
-        # Read the drug's approved-indication list as a LITERAL here (not a deferred closure):
-        # find_candidates has already seeded it before any fan-out, so it is complete. Threaded
-        # into the literature agent so the combined synthesize call excludes papers about an
-        # approved sub-indication of this (possibly broad) candidate.
-        approved_indications = list(_ensure_drug_entry(drug_name)["approved_indications"])
+        # Per-call DB session from the shared pool. investigate_top_candidates fans candidates out concurrently
+        # (asyncio.gather), and a SQLAlchemy Session is not safe for concurrent use — sharing one across the fan-out parks a
+        # connection in an open transaction nothing advances (flat CPU / idle Postgres hang). Each call checks out its own
+        # Session and closes it here.
+        # Read the drug's approved-indication list as a LITERAL here (not a deferred closure): find_candidates has already
+        # seeded it before any fan-out, so it is complete. Threaded into the literature agent so the combined synthesize call
+        # excludes papers about an approved sub-indication of this (possibly broad) candidate.
+        approved_indications = list(
+            _ensure_drug_entry(drug_name)["approved_indications"]
+        )
         _t0 = time.perf_counter()
         with session_factory() as call_db:
             lit_agent = build_literature_agent(
@@ -746,10 +714,9 @@ def build_supervisor_tools(
         direction = (
             output.evidence_summary.direction if output.evidence_summary else "no data"
         )
-        # is_observational is an authoritative design fact from the literature agent: True =
-        # purely observational, False = RCT-backed, None = undetermined. Surface it verbatim
-        # so the blurb does not infer "observational" from prose (it must NOT call RCT-backed
-        # evidence observational).
+        # is_observational is an authoritative design fact from the literature agent: True = purely observational, False =
+        # RCT-backed, None = undetermined. Surface it verbatim so the blurb does not infer "observational" from prose (it
+        # must NOT call RCT-backed evidence observational).
         is_observational = (
             output.evidence_summary.is_observational
             if output.evidence_summary
@@ -760,20 +727,22 @@ def build_supervisor_tools(
             if is_observational is True
             else "rct_or_controlled" if is_observational is False else "undetermined"
         )
-        # evidence_basis tells the supervisor WHY a candidate may have strength=none: drug_specific
-        # (real repurposing evidence), class_level (other drugs in the class), approved (an approved
-        # sub-indication), or none (no relevant abstracts retrieved). The ranking judgment weighs
-        # class_level/approved differently from a genuine no-abstracts-yet pair, so surface it.
+        # evidence_basis tells the supervisor WHY a candidate may have strength=none: drug_specific (real repurposing
+        # evidence), class_level (other drugs in the class), approved (an approved sub-indication), or none (no relevant
+        # abstracts retrieved). The ranking judgment weighs class_level/approved differently from a genuine no-abstracts-yet
+        # pair, so surface it.
         basis = (
-            output.evidence_summary.evidence_basis if output.evidence_summary else "none"
+            output.evidence_summary.evidence_basis
+            if output.evidence_summary
+            else "none"
         )
         header = (
             f"Literature for {drug_name} × {disease_name}: "
             f"{len(output.pmids)} PMIDs, strength={strength}, direction={direction}, "
             f"study_design={design}, evidence_basis={basis}."
         )
-        # Build supervisor-facing summary deterministically from EvidenceSummary so adverse-signal
-        # language reaches the supervisor verbatim with no LLM rewrite in between.
+        # Build supervisor-facing summary deterministically from EvidenceSummary so adverse-signal language reaches the
+        # supervisor verbatim with no LLM rewrite in between.
         synth_summary = (
             output.evidence_summary.summary if output.evidence_summary else ""
         )
@@ -799,8 +768,8 @@ def build_supervisor_tools(
     ) -> tuple[str, ClinicalTrialsOutput]:
         """Run a full clinical trials analysis for a drug-disease pair.
 
-        Checks ClinicalTrials.gov for existing trials, competitive landscape, and terminated
-        trials (safety/efficacy red flags).
+        Checks ClinicalTrials.gov for existing trials, competitive landscape, and terminated trials (safety/efficacy red
+        flags).
         """
         # Wait for both seed tools to finish populating the allowlist (see analyze_literature).
         await find_candidates_done.wait()
@@ -814,19 +783,18 @@ def build_supervisor_tools(
 
         # logger.warning("[TOOL] analyze_clinical_trials(drug=%r, disease=%r)", drug_name, disease_name)
         _t0 = time.perf_counter()
-        # first_approval (seeded in find_candidates) lets the sub-agent's closure judgment tell an
-        # old/generic drug from a genuine negative. None when not resolved — passed through as-is.
+        # first_approval (seeded in find_candidates) lets the sub-agent's closure judgment tell an old/generic drug from a
+        # genuine negative. None when not resolved — passed through as-is.
         seed_entry = drug_facts.get(_drug_key(drug_name))
         first_approval = seed_entry.get("first_approval") if seed_entry else None
-        # Fresh agent per call — isolates the tools' closure-scoped shown_by_pair so concurrent
-        # candidate investigations don't accumulate each other's trials into this pair's
-        # contaminated set (see the build-site note above).
+        # Fresh agent per call — isolates the tools' closure-scoped shown_by_pair so concurrent candidate investigations
+        # don't accumulate each other's trials into this pair's contaminated set (see the build-site note above).
         ct_agent = build_clinical_trials_agent(
             llm=llm, date_before=date_before, assigned_indication=disease_name
         )
-        # Approved indications fully seeded by find_candidates before fan-out (label-grounded;
-        # see PLAN_approval_aware_relevance.md §A). Threaded into the task so the relevance gate's
-        # TEST 1 treats an approved sub-indication's trial as contamination, not roll-up evidence.
+        # Approved indications fully seeded by find_candidates before fan-out (label-grounded; see
+        # PLAN_approval_aware_relevance.md §A). Threaded into the task so the relevance gate's TEST 1 treats an approved
+        # sub-indication's trial as contamination, not roll-up evidence.
         ct_approved = list(_ensure_drug_entry(drug_name)["approved_indications"])
         output = await run_clinical_trials_agent(
             ct_agent,
@@ -841,11 +809,9 @@ def build_supervisor_tools(
             time.perf_counter() - _t0,
         )
 
-        # Drug-level write-through: when the FDA check matches the candidate
-        # against an approved indication, capture it in the supervisor's
-        # briefing so subsequent reasoning sees the approval status. Trial
-        # data still flows through to the summary below — the sub-agent
-        # always investigates fully now (no short-circuits).
+        # Drug-level write-through: when the FDA check matches the candidate against an approved indication, capture it in
+        # the supervisor's briefing so subsequent reasoning sees the approval status. Trial data still flows through to the
+        # summary below — the sub-agent always investigates fully now (no short-circuits).
         approval = output.approval
         if approval is not None and approval.is_approved:
             entry = _ensure_drug_entry(drug_name)
@@ -854,8 +820,8 @@ def build_supervisor_tools(
             if matched.lower().strip() not in existing:
                 entry["approved_indications"].append(matched)
 
-        # Normal path: counts come from the new exact-count tools (countTotal
-        # API). Each scope owns its own count; no cross-scope summing.
+        # Normal path: counts come from the new exact-count tools (countTotal API). Each scope owns its own count; no
+        # cross-scope summing.
         search = output.search
         completed = output.completed
         terminated = output.terminated
@@ -868,8 +834,8 @@ def build_supervisor_tools(
         n_withdrawn = search.by_status.get("WITHDRAWN", 0) if search else 0
         n_completed = completed.total_count if completed else 0
         n_terminated = terminated.total_count if terminated else 0
-        # safety/efficacy classification is computed from the top-50 shown
-        # terminated trials; if total_count > len(trials) this is a floor.
+        # safety/efficacy classification is computed from the top-50 shown terminated trials; if total_count > len(trials)
+        # this is a floor.
         n_safety_efficacy_shown = (
             sum(
                 1
@@ -936,11 +902,10 @@ def build_supervisor_tools(
             f"{terminated_table}"
         )
 
-        # Authoritative reasoning basis: the sub-agent's relevance-filtered signals + its
-        # closure verdict (carried in the prose). The supervisor reasons over THESE, not the
-        # raw counts above and not by re-deriving phase/closure from prose. When the sub-agent
-        # didn't classify relevance (signals None), fall back to all-trial facts so the phase
-        # is still surfaced rather than silently dropped.
+        # Authoritative reasoning basis: the sub-agent's relevance-filtered signals + its closure verdict (carried in the
+        # prose). The supervisor reasons over THESE, not the raw counts above and not by re-deriving phase/closure from
+        # prose. When the sub-agent didn't classify relevance (signals None), fall back to all-trial facts so the phase is
+        # still surfaced rather than silently dropped.
         signals = output.signals or derive_trial_signals(output)
         signals_block = format_derived_signals(signals)
         if output.contaminated_nct_ids:
@@ -949,9 +914,8 @@ def build_supervisor_tools(
                 f"({', '.join(output.contaminated_nct_ids)})"
             )
 
-        # Closure is a TYPED field from the post-loop synthesis call (no longer parsed from
-        # prose). The supervisor TRUSTS it and must not re-judge closure. The prose summary is
-        # HUMAN-REPORT context only.
+        # Closure is a TYPED field from the post-loop synthesis call (no longer parsed from prose). The supervisor TRUSTS it
+        # and must not re-judge closure. The prose summary is HUMAN-REPORT context only.
         summary = f"{header}{structured}\n\n{signals_block}"
         closure_line = f"closure={output.closure}"
         if output.closure_reason:
@@ -973,15 +937,13 @@ def build_supervisor_tools(
     async def analyze_mechanism(drug_name: str) -> tuple[str, MechanismOutput]:
         """Run the mechanism sub-agent for a drug.
 
-        The mechanism agent returns target-level MoA data and the agent's narrative summary.
-        Raw mechanism candidates are buffered for the centralized merge_and_dedup pass that
-        find_candidates runs once both seed tools have completed.
+        The mechanism agent returns target-level MoA data and the agent's narrative summary. Raw mechanism candidates are
+        buffered for the centralized merge_and_dedup pass that find_candidates runs once both seed tools have completed.
         """
         try:
             return await _analyze_mechanism_impl(drug_name)
         finally:
-            # Always release the seed gate so a failure here doesn't deadlock analyze_literature
-            # / analyze_clinical_trials.
+            # Always release the seed gate so a failure here doesn't deadlock analyze_literature / analyze_clinical_trials.
             analyze_mechanism_done.set()
 
     async def _analyze_mechanism_impl(drug_name: str) -> tuple[str, MechanismOutput]:
@@ -993,9 +955,8 @@ def build_supervisor_tools(
         logger.warning("[TOOL] analyze_mechanism(drug=%r)", drug_name)
         logger.warning("[TIMING] analyze_mechanism: %.1fs", time.perf_counter() - _t0)
 
-        # Buffer raw mechanism candidates for find_candidates to consume in merge_and_dedup()
-        # after both seed tools finish. Centralizing the merge lets the full competitor +
-        # mechanism union pass through a single hierarchical-dedup pass.
+        # Buffer raw mechanism candidates for find_candidates to consume in merge_and_dedup() after both seed tools finish.
+        # Centralizing the merge lets the full competitor + mechanism union pass through a single hierarchical-dedup pass.
         mechanism_candidates_buffer.clear()
         raw_received: list[str] = []
         for candidate in output.candidates:
@@ -1010,9 +971,8 @@ def build_supervisor_tools(
                 raw_received,
             )
 
-        # Drug-level write-through: populate mechanism_targets and mechanism_disease_associations
-        # in the shared store. Captured per-MoA so the briefing can show
-        # "ABL1 (INHIBITOR), KIT (INHIBITOR)".
+        # Drug-level write-through: populate mechanism_targets and mechanism_disease_associations in the shared store.
+        # Captured per-MoA so the briefing can show "ABL1 (INHIBITOR), KIT (INHIBITOR)".
         entry = _ensure_drug_entry(drug_name)
         target_pairs: list[tuple[str, str]] = []
         seen_target_pairs: set[tuple[str, str]] = set()
@@ -1024,9 +984,8 @@ def build_supervisor_tools(
                     target_pairs.append(pair)
         entry["mechanism_targets"] = target_pairs
 
-        # Mechanism candidates already carry the high-score target→disease associations the agent
-        # surfaced. We don't have the raw scores on the candidate model — record the pair without
-        # a score for now.
+        # Mechanism candidates already carry the high-score target→disease associations the agent surfaced. We don't have
+        # the raw scores on the candidate model — record the pair without a score for now.
         assocs: list[tuple[str, str, float]] = []
         seen_assoc_pairs: set[tuple[str, str]] = set()
         for cand in output.candidates:
@@ -1034,14 +993,14 @@ def build_supervisor_tools(
             if pair_key in seen_assoc_pairs:
                 continue
             seen_assoc_pairs.add(pair_key)
-            # Score not surfaced on MechanismCandidate; use 0.0 as a placeholder. The supervisor
-            # only needs to know "this gene is associated with this disease per OT mechanism
-            # evidence" — the briefing renderer hides the score if it's the placeholder.
+            # Score not surfaced on MechanismCandidate; use 0.0 as a placeholder. The supervisor only needs to know "this
+            # gene is associated with this disease per OT mechanism evidence" — the briefing renderer hides the score if it's
+            # the placeholder.
             assocs.append((cand.target_symbol, cand.disease_name, 0.0))
         entry["mechanism_disease_associations"] = assocs
 
-        # Record the mechanism target list so merge_and_dedup() can pass it to the hierarchical
-        # LLM pass as context for survivor selection.
+        # Record the mechanism target list so merge_and_dedup() can pass it to the hierarchical LLM pass as context for
+        # survivor selection.
         mechanism_targets_for_dedup.clear()
         mechanism_targets_for_dedup.extend(target_pairs)
 
@@ -1066,21 +1025,19 @@ def build_supervisor_tools(
     def get_drug_briefing(drug_name: str) -> str:
         """Return the accumulated drug-level briefing for this drug.
 
-        Read-only view of facts collected by find_candidates, analyze_mechanism,
-        and analyze_clinical_trials during this run: ChEMBL aliases, FDA-approved
-        indications discovered, mechanism targets, and mechanism disease
-        associations. Call this before finalize_supervisor to check whether any
-        candidate is related to an approved indication (subset/superset/sibling).
+        Read-only view of facts collected by find_candidates, analyze_mechanism, and analyze_clinical_trials during this
+        run: ChEMBL aliases, FDA-approved indications discovered, mechanism targets, and mechanism disease associations.
+        Call this before finalize_supervisor to check whether any candidate is related to an approved indication
+        (subset/superset/sibling).
         """
         drug_name = normalize_drug_name(drug_name)
         return _render_briefing(drug_name)
 
-    # Fan-out tool: bulk-investigate the top-N candidates with no LLM discretion. The probe
-    # (scripts/probe_supervisor_t2dm.py) showed the supervisor LLM systematically skips "obvious"
-    # candidates like T2DM for semaglutide regardless of prompt instructions, so we remove the
-    # LLM's ability to skip by auto-investigating the top-N
-    # (settings.supervisor_investigation_cap). Env-tunable via .env.constants
-    # (SUPERVISOR_INVESTIGATION_CAP) so a validation run can widen coverage.
+    # Fan-out tool: bulk-investigate the top-N candidates with no LLM discretion. The probe (scripts/probe_supervisor_t2dm.py)
+    # showed the supervisor LLM systematically skips "obvious" candidates like T2DM for semaglutide regardless of prompt
+    # instructions, so we remove the LLM's ability to skip by auto-investigating the top-N
+    # (settings.supervisor_investigation_cap). Env-tunable via .env.constants (SUPERVISOR_INVESTIGATION_CAP) so a validation
+    # run can widen coverage.
     investigation_cap = get_settings().supervisor_investigation_cap
 
     @tool(response_format="content_and_artifact")
@@ -1089,13 +1046,12 @@ def build_supervisor_tools(
     ) -> tuple[str, list[dict]]:
         """Auto-investigate the top-N candidates from the merged allowlist.
 
-        Runs analyze_literature AND analyze_clinical_trials in parallel for the top
-        supervisor_investigation_cap candidates by mechanism+competitor strength. Removes the LLM's
-        ability to skip "obvious" candidates that evaluations specifically need to recover.
+        Runs analyze_literature AND analyze_clinical_trials in parallel for the top supervisor_investigation_cap candidates
+        by mechanism+competitor strength. Removes the LLM's ability to skip "obvious" candidates that evaluations
+        specifically need to recover.
 
-        Call this ONCE, after find_candidates and analyze_mechanism complete. After this
-        returns, you may still call analyze_literature / analyze_clinical_trials for
-        candidates beyond the top N if you want.
+        Call this ONCE, after find_candidates and analyze_mechanism complete. After this returns, you may still call
+        analyze_literature / analyze_clinical_trials for candidates beyond the top N if you want.
         """
         # Wait for both seed tools to finish populating the allowlist.
         await find_candidates_done.wait()
@@ -1103,10 +1059,9 @@ def build_supervisor_tools(
 
         drug_name = normalize_drug_name(drug_name)
 
-        # Top-N from the merged allowlist. Insertion order preserves find_candidates's competitor
-        # ranking, with mechanism-promoted entries appended in analyze_mechanism's order.
-        # supervisor_candidate_cap is NOT used here — it only trims the final ranked
-        # list, not how many diseases get investigated.
+        # Top-N from the merged allowlist. Insertion order preserves find_candidates's competitor ranking, with
+        # mechanism-promoted entries appended in analyze_mechanism's order. supervisor_candidate_cap is NOT used here — it
+        # only trims the final ranked list, not how many diseases get investigated.
         top_n = list(allowed_diseases.items())[:investigation_cap]
         if not top_n:
             return "No candidates in allowlist; nothing to investigate.", []
@@ -1117,9 +1072,9 @@ def build_supervisor_tools(
             canonical_diseases,
         )
 
-        # Fan out: analyze_literature + analyze_clinical_trials in parallel. Pass a ToolCall-shaped
-        # dict (not a plain args dict) so .ainvoke() returns a ToolMessage with .artifact
-        # populated. A plain dict input returns just the content string and loses the typed artifact.
+        # Fan out: analyze_literature + analyze_clinical_trials in parallel. Pass a ToolCall-shaped dict (not a plain args
+        # dict) so .ainvoke() returns a ToolMessage with .artifact populated. A plain dict input returns just the content
+        # string and loses the typed artifact.
         async def _invest(disease: str) -> tuple[str, dict]:
             disease_slug = disease.lower().replace(" ", "_")
             logger.warning("[INVEST] starting %s", disease)
@@ -1168,9 +1123,8 @@ def build_supervisor_tools(
 
             lit_artifact = lit_msg.artifact
             ct_artifact = ct_msg.artifact
-            # Stash artifacts in the closure so run_supervisor_agent can merge them into the
-            # SupervisorOutput. The LangGraph ReAct loop doesn't see these tool messages because
-            # they were invoked directly, not through the agent.
+            # Stash artifacts in the closure so run_supervisor_agent can merge them into the SupervisorOutput. The LangGraph
+            # ReAct loop doesn't see these tool messages because they were invoked directly, not through the agent.
             auto_findings[disease.lower().strip()] = {
                 "literature": lit_artifact,
                 "clinical_trials": ct_artifact,
@@ -1201,9 +1155,8 @@ def build_supervisor_tools(
                 if ct_artifact and ct_artifact.terminated
                 else 0
             )
-            # Relevance-filtered signals (sub-agent judgment) — the phase facts the supervisor
-            # ranks on, not the raw counts. None when the sub-agent didn't classify; fall back to
-            # all-trial facts so the phase is still surfaced.
+            # Relevance-filtered signals (sub-agent judgment) — the phase facts the supervisor ranks on, not the raw counts.
+            # None when the sub-agent didn't classify; fall back to all-trial facts so the phase is still surfaced.
             ct_signals = (
                 (ct_artifact.signals or derive_trial_signals(ct_artifact))
                 if ct_artifact
@@ -1225,10 +1178,9 @@ def build_supervisor_tools(
                 "trials_terminated": n_terminated,
                 "relevant_highest_phase": relevant_highest_phase,
                 "relevant_phase3_terminated_for_cause": relevant_phase3_terminated,
-                # Authoritative development-stage tier — seed the LLM's ranking with the same
-                # fact the downstream blurb/footer/ranked-line render, so it isn't biased toward
-                # "Phase 4 only / no program" by a low highest_COMPLETED_phase that ignores
-                # active/recruiting pivotal trials (the T1DM active-Phase-3 case).
+                # Authoritative development-stage tier — seed the LLM's ranking with the same fact the downstream
+                # blurb/footer/ranked-line render, so it isn't biased toward "Phase 4 only / no program" by a low
+                # highest_COMPLETED_phase that ignores active/recruiting pivotal trials (the T1DM active-Phase-3 case).
                 "dev_stage": ct_signals.dev_stage if ct_signals else None,
                 "dev_stage_phrase": _dev_stage_phrase(ct_signals),
             }
@@ -1279,8 +1231,8 @@ def build_supervisor_tools(
             )
             direction = a.get("literature_direction") or "none"
             dir_note = f"/{direction}" if direction not in ("none", "no data") else ""
-            # Authoritative dev_stage seeds the ranking; render it so the LLM ranks on the same
-            # fact the report will show, not on highest_completed_phase alone.
+            # Authoritative dev_stage seeds the ranking; render it so the LLM ranks on the same fact the report will show,
+            # not on highest_completed_phase alone.
             stage_note = (
                 f"; dev_stage {a['dev_stage']} ({a['dev_stage_phrase']})"
                 if a.get("dev_stage_phrase")
@@ -1297,13 +1249,12 @@ def build_supervisor_tools(
     async def _run_fact_critic(items: list[dict]) -> list[dict]:
         """Run the critic over `items`; return the audited blurbs (possibly REORDERED).
 
-        The critic does two things by reasoning: (1) sanity-checks the rank ORDER — a
-        tested-and-failed / closed candidate is a weaker opportunity than a live one and should
-        not lead — and reorders if the order is not defensible; (2) repairs a blurb field that
-        contradicts the authoritative per-disease Phase-3 FACT while preserving true "no
-        regulatory program" claims. Returns the critic's blurb list (same disease SET, order may
-        differ). On ANY parse failure or disease-set mismatch, returns the ORIGINAL items
-        (data-loss guard). Used by both critique_ranking and finalize_supervisor.
+        The critic does two things by reasoning: (1) sanity-checks the rank ORDER — a tested-and-failed / closed candidate
+        is a weaker opportunity than a live one and should not lead — and reorders if the order is not defensible; (2)
+        repairs a blurb field that contradicts the authoritative per-disease Phase-3 FACT while preserving true "no
+        regulatory program" claims. Returns the critic's blurb list (same disease SET, order may differ). On ANY parse
+        failure or disease-set mismatch, returns the ORIGINAL items (data-loss guard). Used by both critique_ranking and
+        finalize_supervisor.
         """
         lines: list[str] = []
         for i, item in enumerate(items, start=1):
@@ -1367,13 +1318,11 @@ def build_supervisor_tools(
     async def critique_ranking(blurbs: list[dict] | None = None) -> str:
         """Have a fresh reviewer audit your ranking before finalizing.
 
-        Call this AFTER you have drafted your ranked blurbs but BEFORE
-        finalize_supervisor. Pass the same `blurbs` list (in your intended rank
-        order) you plan to finalize with. A separate reviewer sanity-checks the
-        ORDER (a tested-and-failed or closed candidate should not lead over a live
-        one) and may REORDER, and repairs any field that contradicts the
-        candidate's authoritative Phase-3 FACT. FINALIZE WITH THE BLURBS IT
-        RETURNS, IN THE ORDER IT RETURNS THEM — they are the reviewed ranking.
+        Call this AFTER you have drafted your ranked blurbs but BEFORE finalize_supervisor. Pass the same `blurbs` list (in
+        your intended rank order) you plan to finalize with. A separate reviewer sanity-checks the ORDER (a
+        tested-and-failed or closed candidate should not lead over a live one) and may REORDER, and repairs any field that
+        contradicts the candidate's authoritative Phase-3 FACT. FINALIZE WITH THE BLURBS IT RETURNS, IN THE ORDER IT RETURNS
+        THEM — they are the reviewed ranking.
 
         Arguments:
         - blurbs: your draft ranked blurbs, same shape as finalize_supervisor.
@@ -1385,9 +1334,7 @@ def build_supervisor_tools(
             return "No blurbs provided — nothing to critique."
         repaired = await _run_fact_critic(items)
         critique_state["last_blurbs"] = repaired
-        result = (
-            "Blurbs fact-checked. Finalize with THESE:\n" + json.dumps(repaired)
-        )
+        result = "Blurbs fact-checked. Finalize with THESE:\n" + json.dumps(repaired)
         logger.info("[TOOL] critique_ranking OUT:\n%s", result)
         return result
 
@@ -1426,9 +1373,8 @@ def build_supervisor_tools(
           with empty disease, or empty in BOTH prose AND every structured
           field, is dropped.
         """
-        # Fact-check gate: refuse to finalize until the blurbs have been fact-checked by
-        # critique_ranking this run. Returns a non-terminal instruction so the agent
-        # loop calls critique_ranking and then retries finalize. (Reject path returns
+        # Fact-check gate: refuse to finalize until the blurbs have been fact-checked by critique_ranking this run. Returns a
+        # non-terminal instruction so the agent loop calls critique_ranking and then retries finalize. (Reject path returns
         # an empty artifact dict so the content_and_artifact contract holds.)
         if not critique_state["ran"]:
             logger.warning(
@@ -1444,12 +1390,11 @@ def build_supervisor_tools(
         logger.info(
             "[TOOL] finalize_supervisor called with %d blurbs", len(blurbs or [])
         )
-        # NOTE: the former finalize-time fact-critic re-run (which repaired false "no Phase 3 /
-        # no development program" claims in the LLM-written verdict/blocker/prose) has been
-        # removed. Those interpretive fields are now authored ONLY by the isolated
-        # judge_interpretive call (in the enrich pass below), fed the resolved stage —  it cannot
-        # produce that false claim, so there is nothing to repair. critique_ranking (fact
-        # check) is unaffected and still runs as the pre-finalize gate above.
+        # NOTE: the former finalize-time fact-critic re-run (which repaired false "no Phase 3 / no development program"
+        # claims in the LLM-written verdict/blocker/prose) has been removed. Those interpretive fields are now authored ONLY
+        # by the isolated judge_interpretive call (in the enrich pass below), fed the resolved stage —  it cannot produce
+        # that false claim, so there is nothing to repair. critique_ranking (fact check) is unaffected and still runs as the
+        # pre-finalize gate above.
         validated: list[dict] = []
         structured_keys = (
             "stage",
@@ -1476,12 +1421,11 @@ def build_supervisor_tools(
                     disease,
                 )
                 continue
-            # Top-N evidence gate: drop candidates where 0 trials AND synthesize indicates no
-            # usable literature signal — strength="none" OR study_count==0 (OR both).
-            # Strong/moderate/weak literature with at least one relevant abstract and 0 trials is
-            # a legitimate repurposing signal and is kept. PMID-count fallback applies only when
-            # synthesize didn't run. Investigated-but-filtered candidates still appear in
-            # disease_findings (per-disease section); they're only removed from top-N + blurbs.
+            # Top-N evidence gate: drop candidates where 0 trials AND synthesize indicates no usable literature signal —
+            # strength="none" OR study_count==0 (OR both). Strong/moderate/weak literature with at least one relevant
+            # abstract and 0 trials is a legitimate repurposing signal and is kept. PMID-count fallback applies only when
+            # synthesize didn't run. Investigated-but-filtered candidates still appear in disease_findings (per-disease
+            # section); they're only removed from top-N + blurbs.
             slot = findings_local.get(disease_key) or {}
             lit = slot.get("literature")
             ct = slot.get("clinical_trials")
@@ -1502,8 +1446,8 @@ def build_supervisor_tools(
                 if lit and lit.evidence_summary
                 else None
             )
-            # Zero-evidence gate keys off DIRECTION, not strength: a contradicting body is real
-            # evidence and must survive the gate, ranked as a negative.
+            # Zero-evidence gate keys off DIRECTION, not strength: a contradicting body is real evidence and must survive the
+            # gate, ranked as a negative.
             no_lit_signal = (
                 lit_direction == "none"
                 or lit_study_count == 0
@@ -1526,14 +1470,12 @@ def build_supervisor_tools(
                     lit_study_count,
                 )
                 continue
-            # Deterministic STAGE override: the development-stage tier is a fact the LLM must
-            # NOT author. The clinical-trials sub-agent computed an authoritative dev_stage from
-            # the relevance-filtered signals; render its phrase verbatim, overwriting whatever
-            # the LLM wrote for `stage`. This replaces the earlier per-signal regex repairs
-            # (false-"no Phase 3" / false-"no development program") with one source of truth, so
-            # there is no path left for the blurb stage to contradict the trial section. Only
-            # when a dev_stage phrase is available (sub-agent classified relevance) — otherwise
-            # the LLM's stage is left as-is rather than asserting a stage the signal doesn't show.
+            # Deterministic STAGE override: the development-stage tier is a fact the LLM must NOT author. The clinical-trials
+            # sub-agent computed an authoritative dev_stage from the relevance-filtered signals; render its phrase verbatim,
+            # overwriting whatever the LLM wrote for `stage`. This replaces the earlier per-signal regex repairs (false-"no
+            # Phase 3" / false-"no development program") with one source of truth, so there is no path left for the blurb
+            # stage to contradict the trial section. Only when a dev_stage phrase is available (sub-agent classified
+            # relevance) — otherwise the LLM's stage is left as-is rather than asserting a stage the signal doesn't show.
             sig = ct.signals if ct else None
             stage_phrase = _dev_stage_phrase(sig)
             if stage_phrase is not None and stage_phrase != fields["stage"]:
@@ -1545,10 +1487,9 @@ def build_supervisor_tools(
                     fields["stage"],
                 )
                 fields["stage"] = stage_phrase
-            # active_programs ("what is still moving") is also an authoritative fact from the
-            # isolated stage judgment (services/dev_stage), not a free-text interpretation — the
-            # blurb LLM kept mis-filling it (e.g. listing a COMPLETED trial as an active program).
-            # Render it verbatim from the signal, overwriting whatever the LLM wrote.
+            # active_programs ("what is still moving") is also an authoritative fact from the isolated stage judgment
+            # (services/dev_stage), not a free-text interpretation — the blurb LLM kept mis-filling it (e.g. listing a
+            # COMPLETED trial as an active program). Render it verbatim from the signal, overwriting whatever the LLM wrote.
             if sig is not None and sig.active_programs:
                 if sig.active_programs != fields["active_programs"]:
                     logger.warning(
@@ -1558,16 +1499,15 @@ def build_supervisor_tools(
                         fields["active_programs"],
                     )
                 fields["active_programs"] = sig.active_programs
-            # literature: overwrite with the deterministic one-liner from the typed
-            # EvidenceSummary (strength + direction + design). One source of truth for the design
-            # word — replaces the earlier deterministic 'observational' text repair.
+            # literature: overwrite with the deterministic one-liner from the typed EvidenceSummary (strength + direction +
+            # design). One source of truth for the design word — replaces the earlier deterministic 'observational' text
+            # repair.
             es = lit.evidence_summary if lit else None
             if es is not None:
                 fields["literature"] = _literature_oneliner(es)
-            # Stash the RESOLVED facts for the interpretive enrich pass after the loop. The
-            # interpretive fields (blocker/key_risk/verdict/prose) are authored ONLY by the
-            # isolated judge_interpretive call fed these facts — never re-derived in the blurb
-            # pass (which contradicted the stage). `_interp_facts` is None when no stage phrase
+            # Stash the RESOLVED facts for the interpretive enrich pass after the loop. The interpretive fields
+            # (blocker/key_risk/verdict/prose) are authored ONLY by the isolated judge_interpretive call fed these facts —
+            # never re-derived in the blurb pass (which contradicted the stage). `_interp_facts` is None when no stage phrase
             # is available (sub-agent didn't classify) — then the LLM blurb text stays.
             approved_ind = (
                 ct.approval.matched_indication
@@ -1584,8 +1524,8 @@ def build_supervisor_tools(
                         disease.lower().strip(), "none"
                     ),
                     "approved_indication": approved_ind,
-                    # Registry trial count so the judge doesn't call a multi-trial candidate
-                    # untested/abandoned when its literature came back empty.
+                    # Registry trial count so the judge doesn't call a multi-trial candidate untested/abandoned when its
+                    # literature came back empty.
                     "trials_on_record": n_trials,
                 }
                 if stage_phrase is not None
@@ -1599,15 +1539,15 @@ def build_supervisor_tools(
             }
             validated.append(entry)
 
-        # Enrich pass: synthesize the interpretive fields from the resolved facts, concurrently.
-        # judge_interpretive is the SINGLE author of blocker/key_risk/verdict/prose — fed the
-        # already-resolved stage/active_programs/literature/approval so it cannot contradict
-        # them (proven in scratch/{interpretive_fields,staged_blurb,approval_input}_harness.py).
-        # Entries without resolved facts (_interp_facts is None) keep their LLM blurb text.
+        # Enrich pass: synthesize the interpretive fields from the resolved facts, concurrently. judge_interpretive is the
+        # SINGLE author of blocker/key_risk/verdict/prose — fed the already-resolved stage/active_programs/literature/
+        # approval so it cannot contradict them (proven in
+        # scratch/{interpretive_fields,staged_blurb,approval_input}_harness.py). Entries without resolved facts
+        # (_interp_facts is None) keep their LLM blurb text.
         _to_interp = [e for e in validated if e.get("_interp_facts")]
         if _to_interp:
-            # drug name is for cache-readability/logging only (not part of the cache identity,
-            # which is the fact-tuple). A run is for one drug → take the single drug_facts key.
+            # drug name is for cache-readability/logging only (not part of the cache identity, which is the fact-tuple). A
+            # run is for one drug → take the single drug_facts key.
             _drug = next(iter(drug_facts), "")
             _results = await asyncio.gather(
                 *(
@@ -1629,17 +1569,15 @@ def build_supervisor_tools(
         for e in validated:
             e.pop("_interp_facts", None)
 
-        # Filter the LLM-written summary to drop ranked lines whose disease didn't pass the
-        # evidence gate (not in validated). Non-ranked lines (e.g. trailing "Closed signals:")
-        # pass through unchanged. Surviving lines are renumbered to stay contiguous. Uses the same
-        # regex and longest-substring match strategy as the report formatter's
+        # Filter the LLM-written summary to drop ranked lines whose disease didn't pass the evidence gate (not in validated).
+        # Non-ranked lines (e.g. trailing "Closed signals:") pass through unchanged. Surviving lines are renumbered to stay
+        # contiguous. Uses the same regex and longest-substring match strategy as the report formatter's
         # _splice_blurbs_into_summary so disease matching is consistent.
         validated_diseases = {e["disease"].lower().strip() for e in validated}
 
-        # Authoritative dev_stage phrase per disease, from the relevance-filtered signals of
-        # every investigated candidate (NOT just the ranked/validated ones — demoted candidates
-        # appear only in the footer and must be corrected there too). Used to overwrite a false
-        # stage clause the LLM wrote in a demotion footer line.
+        # Authoritative dev_stage phrase per disease, from the relevance-filtered signals of every investigated candidate
+        # (NOT just the ranked/validated ones — demoted candidates appear only in the footer and must be corrected there
+        # too). Used to overwrite a false stage clause the LLM wrote in a demotion footer line.
         dev_stage_by_disease: dict[str, str] = {}
         for _dkey, _slot in findings_local.items():
             _ct = (_slot or {}).get("clinical_trials")
@@ -1647,15 +1585,14 @@ def build_supervisor_tools(
             if _phrase is not None:
                 dev_stage_by_disease[_dkey] = _phrase
 
-        # Reuses the module-level _FALSE_STAGE_FRAGMENT / _PROGRAM_STAGES (shared with the blurb
-        # sibling-field scrub) so the footer, ranked line, and blurb fields enforce one rule.
+        # Reuses the module-level _FALSE_STAGE_FRAGMENT / _PROGRAM_STAGES (shared with the blurb sibling-field scrub) so the
+        # footer, ranked line, and blurb fields enforce one rule.
         footer_line = re.compile(r"^\s*-\s+(?P<disease>.+?)\s+—\s+.+$")
 
         def _repair_stage_clause(disease_text: str, line: str, context: str) -> str:
-            """Replace a false 'no program / Phase 4 only' stage clause in `line` with the
-            authoritative dev_stage phrase, when the matched disease's dev_stage asserts a
-            real Phase 3 program. Used for BOTH the ranked summary line and the demotion
-            footer line — the same class of LLM-authored stage leak appears in both."""
+            """Replace a false 'no program / Phase 4 only' stage clause in `line` with the authoritative dev_stage phrase,
+            when the matched disease's dev_stage asserts a real Phase 3 program. Used for BOTH the ranked summary line and
+            the demotion footer line — the same class of LLM-authored stage leak appears in both."""
             head_lower = disease_text.lower()
             # Match the disease by longest containing key (same strategy as ranked lines).
             matched_key = next(
@@ -1697,8 +1634,8 @@ def build_supervisor_tools(
         rank_line = re.compile(
             r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)\s+—\s+(?P<tail>.+)$"
         )
-        # Normalize the heading line so the report uses "signals" instead of
-        # "candidates" / "opportunities" / "indications" regardless of what the LLM wrote.
+        # Normalize the heading line so the report uses "signals" instead of "candidates" / "opportunities" / "indications"
+        # regardless of what the LLM wrote.
         heading_line = re.compile(
             r"^\s*Ranked\s+repurposing\s+"
             r"(?:candidates|opportunities|indications|signals)"
@@ -1717,8 +1654,8 @@ def build_supervisor_tools(
                 continue
             m = rank_line.match(line)
             if m is None:
-                # Non-ranked line (e.g. a demotion footer entry). Correct a false stage clause
-                # against the authoritative dev_stage before passing it through.
+                # Non-ranked line (e.g. a demotion footer entry). Correct a false stage clause against the authoritative
+                # dev_stage before passing it through.
                 filtered_lines.append(_repair_footer_stage(line))
                 continue
             head_lower = m.group("head").lower()
@@ -1733,9 +1670,9 @@ def build_supervisor_tools(
                     m.group("head"),
                 )
                 continue
-            # Repair a false development-status clause in the ranked line's tail against the
-            # authoritative dev_stage (same leak class as the demotion footer: the LLM authors
-            # the dev-status phrase from the prompt's tier menu and can contradict the signal).
+            # Repair a false development-status clause in the ranked line's tail against the authoritative dev_stage (same
+            # leak class as the demotion footer: the LLM authors the dev-status phrase from the prompt's tier menu and can
+            # contradict the signal).
             ranked_line = f"{next_rank}. {m.group('head')} — {m.group('tail')}"
             ranked_line = _repair_stage_clause(
                 m.group("head"), ranked_line, "ranked summary line"
@@ -1752,8 +1689,8 @@ def build_supervisor_tools(
     ):
         """Snapshot the post-merge competitor + mechanism disease allowlist.
 
-        Returns a copy keyed by lowercase disease name → (canonical_name, source). Sources are
-        "competitor", "mechanism", or "both" depending on which sub-agent surfaced the disease.
+        Returns a copy keyed by lowercase disease name → (canonical_name, source). Sources are "competitor", "mechanism", or
+        "both" depending on which sub-agent surfaced the disease.
         """
         return dict(allowed_diseases)
 
@@ -1768,17 +1705,15 @@ def build_supervisor_tools(
     def get_approval_labels() -> dict[str, str]:
         """Snapshot upstream FDA approval-relationship labels for kept candidates.
 
-        Returns {lowercase_disease: "contaminated" | "combination_only"}. Diseases
-        with no relationship ("none") or that were dropped ("approved") are absent.
-        Empty in holdout runs (no label data on the date_before path).
+        Returns {lowercase_disease: "contaminated" | "combination_only"}. Diseases with no relationship ("none") or that
+        were dropped ("approved") are absent. Empty in holdout runs (no label data on the date_before path).
         """
         return dict(approval_labels)
 
-    # supervisor_fanout has no default in Settings, so a missing SUPERVISOR_FANOUT fails loudly at
-    # startup (ValidationError) — it can never silently default to False. A holdout (date_before)
-    # run uses this same flag as a production run: when False the supervisor investigates per
-    # candidate via the ReAct loop, when True it fans out via investigate_top_candidates. Both
-    # mirror production; holdout is no longer special-cased here.
+    # supervisor_fanout has no default in Settings, so a missing SUPERVISOR_FANOUT fails loudly at startup (ValidationError)
+    # — it can never silently default to False. A holdout (date_before) run uses this same flag as a production run: when
+    # False the supervisor investigates per candidate via the ReAct loop, when True it fans out via
+    # investigate_top_candidates. Both mirror production; holdout is no longer special-cased here.
     fanout = get_settings().supervisor_fanout
     tools = [
         find_candidates,
@@ -1790,13 +1725,12 @@ def build_supervisor_tools(
         finalize_supervisor,
     ]
     if fanout:
-        # Insert investigate_top_candidates before finalize so the LLM can see it
-        # after seed-phase tools but before terminating. Enabled when supervisor_fanout
-        # is set (parallel fan-out for speed; see config.Settings.supervisor_fanout).
+        # Insert investigate_top_candidates before finalize so the LLM can see it after seed-phase tools but before
+        # terminating. Enabled when supervisor_fanout is set (parallel fan-out for speed; see
+        # config.Settings.supervisor_fanout).
         tools.insert(-1, investigate_top_candidates)
-        # Force the parallel path: with the per-candidate tools removed, the LLM cannot
-        # investigate serially (it ignores the prompt-level fan-out directive on its own),
-        # so it must call investigate_top_candidates once.
+        # Force the parallel path: with the per-candidate tools removed, the LLM cannot investigate serially (it ignores the
+        # prompt-level fan-out directive on its own), so it must call investigate_top_candidates once.
         tools = [
             t for t in tools if t not in (analyze_literature, analyze_clinical_trials)
         ]

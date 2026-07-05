@@ -41,7 +41,7 @@ indication_scout/
 │   │   ├── model_chembl.py
 │   │   ├── model_drug_profile.py
 │   │   └── model_evidence_summary.py
-│   ├── prompts/                   # LLM prompt templates (.txt files; incl. pmid_direction, extract_fda_approval_single, synthesize_holdout)
+│   ├── prompts/                   # LLM prompt templates (.txt files; incl. pmid_direction, extract_fda_approval_single, synthesize)
 │   ├── regression/                # Snapshot regression harness (diff.py, harness.py) — backs `scout diff-report`
 │   ├── report/                    # `format_report` — SupervisorOutput → markdown
 │   ├── runners/                   # Standalone runner scripts (pubmed_runner, rag_runner)
@@ -114,10 +114,11 @@ Agents never see raw API responses — all data crosses module boundaries as Pyd
 
 ## Agent Layer
 
-All four agents are built using a custom gated ReAct loop (`build_gated_react_loop` in
-`agents/_react_loop.py`) that ends the loop as soon as the agent's `finalize_*` tool
-succeeds. `BaseAgent` (in `agents/base.py`) is a legacy ABC and is not used by the active
-ReAct-style agents.
+The supervisor and clinical-trials agents are built using a custom gated ReAct loop
+(`build_gated_react_loop` in `agents/_react_loop.py`) that ends the loop as soon as the
+agent's `finalize_*` tool succeeds. The literature and mechanism agents use LangGraph's
+prebuilt `create_react_agent`. `BaseAgent` (in `agents/base.py`) is a legacy ABC and is not
+used by the active ReAct-style agents.
 
 ### Supervisor (`agents/supervisor/`)
 
@@ -146,9 +147,9 @@ when `supervisor_fanout` is on; in pure fan-out mode the per-candidate `analyze_
 `analyze_clinical_trials` tools are removed so the LLM must use the parallel path.
 `finalize_supervisor` is rejected until `critique_ranking` has run this turn.
 
-When `date_before` is set, the supervisor loads `prompts/supervisor_holdout.txt` instead of
-`supervisor.txt` and forwards the cutoff to the literature and clinical-trials sub-agents.
-Mechanism analysis (Open Targets) is always current because there is no date-filtering API.
+When `date_before` is set, the supervisor (which always loads `prompts/supervisor.txt`)
+forwards the cutoff to the literature and clinical-trials sub-agents. Mechanism analysis
+(Open Targets) is always current because there is no date-filtering API.
 
 ### Sub-agents
 

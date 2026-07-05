@@ -289,6 +289,7 @@ class PubMedClient(BaseClient):
 
         if batch_size is None:
             batch_size = get_settings().pubmed_efetch_batch_size
+
         async def _fetch_batch(batch: list[str]) -> list[PubmedAbstract]:
             params: dict[str, Any] = {
                 "db": "pubmed",
@@ -304,9 +305,7 @@ class PubMedClient(BaseClient):
                 )
             return self._parse_pubmed_xml(xml_text)
 
-        batches = [
-            pmids[i : i + batch_size] for i in range(0, len(pmids), batch_size)
-        ]
+        batches = [pmids[i : i + batch_size] for i in range(0, len(pmids), batch_size)]
         # gather preserves order, so abstracts stay in PMID-batch order.
         results = await asyncio.gather(*[_fetch_batch(b) for b in batches])
 
@@ -385,9 +384,7 @@ class PubMedClient(BaseClient):
             # esummary round-trip. efetch PublicationType text matches esummary
             # pubtype strings exactly (verified), so the boost lookup is unaffected.
             pubtypes = [
-                pt.text
-                for pt in article_elem.findall(".//PublicationType")
-                if pt.text
+                pt.text for pt in article_elem.findall(".//PublicationType") if pt.text
             ]
             cache_set("pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir)
 
@@ -459,9 +456,7 @@ class PubMedClient(BaseClient):
             # Book articles carry PublicationType too; warm the cache to avoid
             # a later esummary refetch. Empty list is persisted (no pubtype field
             # is a real answer, not a miss) — same policy as fetch_pubtypes.
-            pubtypes = [
-                pt.text for pt in doc.findall(".//PublicationType") if pt.text
-            ]
+            pubtypes = [pt.text for pt in doc.findall(".//PublicationType") if pt.text]
             cache_set("pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir)
 
             articles.append(
