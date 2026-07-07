@@ -194,7 +194,9 @@ async def test_judge_active_programs_lists_recruiting_phase3(test_cache_dir):
     j = await judge_dev_stage(
         trials, test_cache_dir, drug="testdrug", indication="t1dm-shape"
     )
-    assert j.tier == "completed_phase3"
+    # An active pure Phase 3 alongside a completed Phase 2/Phase 3 resolves to active_phase3
+    # (active pure Phase 3 overrides a completed combined 2/3 trial).
+    assert j.tier == "active_phase3"
     ap = j.active_programs
     assert (
         "NCT06082063" in ap or "NCT05819138" in ap

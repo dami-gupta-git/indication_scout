@@ -463,6 +463,7 @@ async def test_finalize_repairs_false_no_phase3_stage():
             signals=TrialSignals(
                 highest_completed_phase="Phase 3",
                 has_completed_phase3=True,
+                has_completed_pure_phase3=True,
                 completed_phase3_nct_ids=["NCT00068861"],
                 dev_stage="completed_phase3",
             ),

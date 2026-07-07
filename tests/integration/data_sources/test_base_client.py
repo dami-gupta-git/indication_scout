@@ -27,11 +27,11 @@ class ConcreteTestClient(BaseClient):
 # --- BaseClient integration tests (requires network) ---
 
 
-async def test_get_request_to_httpbin():
+async def test_get_request_to_postman_echo():
     """Test GET request to a real endpoint."""
     async with _make_client(timeout=30.0) as client:
         result = await client._rest_get(
-            "https://httpbin.org/get",
+            "https://postman-echo.com/get",
             params={"test_param": "test_value"},
         )
 
@@ -39,12 +39,12 @@ async def test_get_request_to_httpbin():
         assert result["args"]["test_param"] == "test_value"
 
 
-async def test_post_request_to_httpbin():
+async def test_post_request_to_postman_echo():
     """Test POST request to a real endpoint."""
     async with _make_client(timeout=30.0) as client:
         result = await client._request(
             "POST",
-            "https://httpbin.org/post",
+            "https://postman-echo.com/post",
             json_body={"key": "value"},
             headers={"Content-Type": "application/json"},
         )
@@ -116,6 +116,6 @@ async def test_timeout_raises_error():
     async with _make_client(timeout=0.001, max_retries=0) as client:
         with pytest.raises(DataSourceError):
             await client._rest_get(
-                "https://httpbin.org/delay/10",  # 10 second delay
+                "https://postman-echo.com/delay/10",  # 10 second delay
                 params={},
             )

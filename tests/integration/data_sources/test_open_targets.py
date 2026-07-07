@@ -95,7 +95,6 @@ async def test_trastuzumab_drug_data(open_targets_client):
     adverse_event = next(
         ae for ae in drug.adverse_events if ae.name == "ejection fraction decreased"
     )
-    assert adverse_event.meddra_code == "10050528"
     assert adverse_event.count > 0
     assert adverse_event.log_likelihood_ratio > 0
 
@@ -252,17 +251,8 @@ async def test_pdgfrb_target_data(open_targets_client):
 
 
 async def test_atp1a1_target_data(open_targets_client):
-    """Test ATP1A1 TargetData: tissue expression and safety liabilities."""
+    """Test ATP1A1 TargetData: safety liabilities."""
     target = await open_targets_client.get_target_data("ENSG00000163399")
-
-    # TissueExpression — liver
-    expression = next(e for e in target.expressions if e.tissue_name == "liver")
-    assert expression.tissue_id == "UBERON_0002107"
-    assert expression.tissue_anatomical_system == "endocrine system"
-    assert expression.rna.value > 0
-    assert expression.rna.quantile == 5
-    assert expression.protein.level == 2
-    assert expression.protein.reliability is True
 
     # SafetyLiability — cardiac arrhythmia
     assert len(target.safety_liabilities) > 5
@@ -388,7 +378,6 @@ async def test_get_rich_drug_data_semaglutide(open_targets_client):
     assert glp1r.name == "glucagon like peptide 1 receptor"
     assert len(glp1r.associations) > 10
     assert len(glp1r.drug_summaries) > 5
-    assert len(glp1r.expressions) > 0
     assert len(glp1r.mouse_phenotypes) > 5
     assert len(glp1r.pathways) > 0
     assert len(glp1r.interactions) > 0

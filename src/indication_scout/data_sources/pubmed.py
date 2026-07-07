@@ -24,6 +24,8 @@ logger = logging.getLogger(__name__)
 from indication_scout.config import get_settings
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
+    PUBMED_EFETCH_PARSE_BACKOFF_SCHEDULE,
+    PUBMED_EFETCH_PARSE_RETRIES,
     PUBMED_FETCH_URL,
     PUBMED_MAX_CONCURRENT_REQUESTS,
     PUBMED_PUBDATE_TTL,
@@ -297,13 +299,40 @@ class PubMedClient(BaseClient):
                 "retmode": "xml",
                 "rettype": "abstract",
             }
-            # Semaphore (PUBMED_MAX_CONCURRENT_REQUESTS) bounds concurrency
-            # against NCBI's per-IP rate ceiling.
-            async with self._get_semaphore():
-                xml_text = await self._rest_get_xml(
-                    self.FETCH_URL, self._inject_api_key(params)
-                )
-            return self._parse_pubmed_xml(xml_text)
+            # NCBI efetch intermittently returns a truncated/error body under an HTTP 200 (so the
+            # base-client retry doesn't fire); the body then fails XML parsing. Re-fetch the batch
+            # with backoff before surfacing the error.
+            for attempt in range(PUBMED_EFETCH_PARSE_RETRIES + 1):
+                # Semaphore (PUBMED_MAX_CONCURRENT_REQUESTS) bounds concurrency
+                # against NCBI's per-IP rate ceiling.
+                async with self._get_semaphore():
+                    xml_text = await self._rest_get_xml(
+                        self.FETCH_URL, self._inject_api_key(params)
+                    )
+                try:
+                    return self._parse_pubmed_xml(xml_text)
+                except DataSourceError as e:
+                    # Only malformed-XML failures are retryable (a well-formed but empty body is a
+                    # real result, not a transient error).
+                    if not isinstance(e.__cause__, ET.ParseError):
+                        raise
+                    if attempt >= PUBMED_EFETCH_PARSE_RETRIES:
+                        raise
+                    delay = PUBMED_EFETCH_PARSE_BACKOFF_SCHEDULE[
+                        min(attempt, len(PUBMED_EFETCH_PARSE_BACKOFF_SCHEDULE) - 1)
+                    ]
+                    logger.warning(
+                        "%s: malformed efetch XML for %d pmids; sleeping %ss and "
+                        "re-fetching (attempt %d/%d)",
+                        self._source_name,
+                        len(batch),
+                        delay,
+                        attempt + 1,
+                        PUBMED_EFETCH_PARSE_RETRIES,
+                    )
+                    await asyncio.sleep(delay)
+            # Unreachable: the loop either returns or raises on the final attempt.
+            raise DataSourceError(self._source_name, "efetch retry loop exited")
 
         batches = [pmids[i : i + batch_size] for i in range(0, len(pmids), batch_size)]
         # gather preserves order, so abstracts stay in PMID-batch order.
@@ -326,7 +355,7 @@ class PubMedClient(BaseClient):
         try:
             root = ET.fromstring(xml_text)
         except ET.ParseError as e:
-            raise DataSourceError(self._source_name, f"Failed to parse XML: {e}")
+            raise DataSourceError(self._source_name, f"Failed to parse XML: {e}") from e
 
         for article_elem in root.findall(".//PubmedArticle"):
             pmid = self._xml_text(article_elem, ".//PMID")

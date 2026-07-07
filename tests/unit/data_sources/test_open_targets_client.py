@@ -309,44 +309,6 @@ def test_parse_drug_summary_drug_type_and_disease_from_source(tmp_path):
     assert d.disease_name == "type 2 diabetes mellitus"
 
 
-# --- _parse_expression: RNAExpression.unit and ProteinExpression.cell_types ---
-
-
-def test_parse_expression_rna_unit_and_cell_types(tmp_path):
-    """_parse_expression populates rna.unit and protein.cell_types from raw response."""
-    raw = {
-        "tissue": {
-            "id": "UBERON_0002107",
-            "label": "liver",
-            "anatomicalSystems": ["digestive system"],
-        },
-        "rna": {"value": 12.5, "level": 4, "unit": "TPM"},
-        "protein": {
-            "level": 2,
-            "reliability": True,
-            "cellType": [
-                {"name": "hepatocytes", "level": 3, "reliability": True},
-                {"name": "bile duct cells", "level": 1, "reliability": False},
-            ],
-        },
-    }
-
-    client = OpenTargetsClient(cache_dir=tmp_path)
-    result = client._parse_expression(raw)
-
-    assert result.tissue_id == "UBERON_0002107"
-    assert result.rna.value == 12.5
-    assert result.rna.quantile == 4
-    assert result.rna.unit == "TPM"
-    assert len(result.protein.cell_types) == 2
-    assert result.protein.cell_types[0].name == "hepatocytes"
-    assert result.protein.cell_types[0].level == 3
-    assert result.protein.cell_types[0].reliability is True
-    assert result.protein.cell_types[1].name == "bile duct cells"
-    assert result.protein.cell_types[1].level == 1
-    assert result.protein.cell_types[1].reliability is False
-
-
 # --- _parse_phenotype: BiologicalModel.model_id and literature ---
 
 

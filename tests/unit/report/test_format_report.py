@@ -487,7 +487,8 @@ def test_format_report_full_assembly():
     assert "- Alzheimer's Disease" in rendered
     assert "## Findings by Disease" in rendered
     # Per-disease nests under the H2 "Findings by Disease" → H3, subsections → H4.
-    assert "### NASH _(source: both)_" in rendered
+    assert "### NASH" in rendered
+    assert "_(source:" not in rendered
     assert "#### Literature" in rendered
     assert "**Evidence strength:** moderate" in rendered
     assert "[12345678](https://pubmed.ncbi.nlm.nih.gov/12345678/)" in rendered
@@ -547,8 +548,8 @@ def test_format_report_findings_extras_render_after_top():
     assert "1. Extra Disease" not in rendered
     assert "2. Extra Disease" not in rendered
     # Both findings appear under Candidate Findings (H3 under the H2 section).
-    assert "### Top Disease _(source: competitor)_" in rendered
-    assert "### Extra Disease _(source: mechanism)_" in rendered
+    assert "### Top Disease" in rendered
+    assert "### Extra Disease" in rendered
 
 
 def test_format_report_no_candidates_or_findings():

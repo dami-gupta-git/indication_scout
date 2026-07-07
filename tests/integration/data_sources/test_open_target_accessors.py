@@ -149,26 +149,6 @@ async def test_get_target_drug_summaries(open_targets_client):
     assert t2d.disease_from_source != ""
 
 
-async def test_get_target_expression(open_targets_client):
-    """Test get_target_expression returns tissue expression with all fields."""
-    expressions = await open_targets_client.get_target_data_tissue_expression(
-        "ENSG00000163399"
-    )
-
-    assert len(expressions) > 10
-    liver = next(e for e in expressions if e.tissue_name == "liver")
-    # Verify all TissueExpression fields
-    assert liver.tissue_id == "UBERON_0002107"
-    assert liver.tissue_name == "liver"
-    assert liver.tissue_anatomical_system == "endocrine system"
-    # Verify all RNAExpression fields
-    assert liver.rna.value > 0
-    assert liver.rna.quantile == 5
-    # Verify all ProteinExpression fields
-    assert liver.protein.level == 2
-    assert liver.protein.reliability is True
-
-
 async def test_get_target_phenotypes(open_targets_client):
     """Test get_target_phenotypes returns mouse phenotype with all fields."""
     phenotypes = await open_targets_client.get_target_data_mouse_phenotypes(

@@ -130,6 +130,11 @@ PUBMED_MAX_CONCURRENT_REQUESTS: int = 8
 # Pre-call sleep on every uncached PubMed search.
 PUBMED_SEARCH_SLEEP_SECONDS: float = 1.0
 
+# NCBI efetch intermittently returns a truncated/error body under an HTTP 200, which fails XML
+# parsing. Re-fetch the batch a few times with backoff before surfacing the error.
+PUBMED_EFETCH_PARSE_RETRIES: int = 3
+PUBMED_EFETCH_PARSE_BACKOFF_SCHEDULE: list[float] = [1.0, 2.0, 4.0]
+
 # -- MeSH resolver ----------------------------------------------------------
 NCBI_ESEARCH_URL: str = f"{NCBI_BASE_URL}/esearch.fcgi"
 NCBI_ESUMMARY_URL: str = f"{NCBI_BASE_URL}/esummary.fcgi"

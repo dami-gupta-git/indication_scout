@@ -113,72 +113,6 @@ class Interaction(BaseModel):
         return values
 
 
-class CellTypeExpression(BaseModel):
-    """Protein expression in a specific cell type within a tissue."""
-
-    name: str = ""
-    level: int | None = None
-    reliability: bool | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def coerce_nones(cls, values: dict) -> dict:
-        for field_name, field_info in cls.model_fields.items():
-            if values.get(field_name) is None and field_info.default is not None:
-                values[field_name] = field_info.default
-        return values
-
-
-class RNAExpression(BaseModel):
-    """RNA expression measurement."""
-
-    value: float | None = None  # TPM
-    quantile: int | None = None  # relative level across tissues
-    unit: str | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def coerce_nones(cls, values: dict) -> dict:
-        for field_name, field_info in cls.model_fields.items():
-            if values.get(field_name) is None and field_info.default is not None:
-                values[field_name] = field_info.default
-        return values
-
-
-class ProteinExpression(BaseModel):
-    """Protein expression measurement with cell type detail."""
-
-    level: int | None = None  # 0-3
-    reliability: bool | None = None
-    cell_types: list[CellTypeExpression] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def coerce_nones(cls, values: dict) -> dict:
-        for field_name, field_info in cls.model_fields.items():
-            if values.get(field_name) is None and field_info.default is not None:
-                values[field_name] = field_info.default
-        return values
-
-
-class TissueExpression(BaseModel):
-    """Expression data for a single tissue."""
-
-    tissue_id: str = ""  # UBERON ID
-    tissue_name: str = ""
-    tissue_anatomical_system: str = ""
-    rna: RNAExpression | None = None
-    protein: ProteinExpression | None = None
-
-    @model_validator(mode="before")
-    @classmethod
-    def coerce_nones(cls, values: dict) -> dict:
-        for field_name, field_info in cls.model_fields.items():
-            if values.get(field_name) is None and field_info.default is not None:
-                values[field_name] = field_info.default
-        return values
-
-
 class BiologicalModel(BaseModel):
     """A specific mouse model (knockout, knock-in, etc.)."""
 
@@ -251,7 +185,6 @@ class AdverseEvent(BaseModel):
     """Significant adverse event from FAERS for a drug."""
 
     name: str = ""
-    meddra_code: str | None = None
     count: int | None = None
     log_likelihood_ratio: float | None = None
 
@@ -337,7 +270,6 @@ class TargetData(BaseModel):
     pathways: list[Pathway] = []
     interactions: list[Interaction] = []
     drug_summaries: list[DrugSummary] = []
-    expressions: list[TissueExpression] = []
     mouse_phenotypes: list[MousePhenotype] = []
     safety_liabilities: list[SafetyLiability] = []
     genetic_constraint: list[GeneticConstraint] = []

@@ -1,10 +1,20 @@
 """Unit tests for PubMedClient."""
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.utils.cache import cache_get
+
+_GOOD_XML = (
+    '<?xml version="1.0"?>'
+    "<PubmedArticleSet><PubmedArticle><MedlineCitation>"
+    "<PMID>12345678</PMID><Article><ArticleTitle>T</ArticleTitle></Article>"
+    "</MedlineCitation></PubmedArticle></PubmedArticleSet>"
+)
+_MALFORMED_XML = "<?xml version='1.0'?>\n<PubmedArticleSet>\n<broken & token"
 
 # --- _parse_pubmed_xml ---
 
@@ -253,3 +263,35 @@ def test_parse_warms_pubtypes_cache_empty_when_absent(tmp_path):
     assert result[0].pmid == "20301421"
     cached = cache_get("pubmed_pubtypes", {"pmid": "20301421"}, tmp_path)
     assert cached == []
+
+
+# --- fetch_abstracts re-fetches on malformed efetch XML ---
+
+
+async def test_fetch_abstracts_retries_malformed_then_succeeds(tmp_path):
+    """A malformed efetch body (HTTP 200) is re-fetched; the next good body parses."""
+    client = PubMedClient(tmp_path)
+    mock_get = AsyncMock(side_effect=[_MALFORMED_XML, _GOOD_XML])
+    with patch.object(client, "_rest_get_xml", mock_get), patch(
+        "indication_scout.data_sources.pubmed.asyncio.sleep", new=AsyncMock()
+    ):
+        result = await client.fetch_abstracts(["12345678"])
+
+    assert mock_get.await_count == 2
+    assert len(result) == 1
+    assert result[0].pmid == "12345678"
+
+
+async def test_fetch_abstracts_raises_after_exhausting_retries(tmp_path):
+    """Persistently malformed bodies raise DataSourceError after the retry budget."""
+    client = PubMedClient(tmp_path)
+    mock_get = AsyncMock(return_value=_MALFORMED_XML)
+    with patch.object(client, "_rest_get_xml", mock_get), patch(
+        "indication_scout.data_sources.pubmed.asyncio.sleep", new=AsyncMock()
+    ):
+        with pytest.raises(DataSourceError) as exc_info:
+            await client.fetch_abstracts(["12345678"])
+
+    # PUBMED_EFETCH_PARSE_RETRIES=3 → 1 initial + 3 retries = 4 fetch attempts.
+    assert mock_get.await_count == 4
+    assert "Failed to parse XML" in str(exc_info.value)

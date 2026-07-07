@@ -262,7 +262,6 @@ def test_target_data_coerce_nones_converts_null_lists_to_empty():
         pathways=None,
         interactions=None,
         drug_summaries=None,
-        expressions=None,
         mouse_phenotypes=None,
         safety_liabilities=None,
         genetic_constraint=None,
@@ -272,7 +271,6 @@ def test_target_data_coerce_nones_converts_null_lists_to_empty():
     assert target.pathways == []
     assert target.interactions == []
     assert target.drug_summaries == []
-    assert target.expressions == []
     assert target.mouse_phenotypes == []
     assert target.safety_liabilities == []
     assert target.genetic_constraint == []

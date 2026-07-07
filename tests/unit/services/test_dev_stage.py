@@ -81,8 +81,9 @@ async def test_judge_active_programs_lists_recruiting_phase3_deterministically(t
 
 async def test_judge_semaglutide_t1d_count_is_four_not_five(tmp_path):
     """Regression for the semaglutide T1D miscount: the LLM said '5 Phase 3' but listed 4 NCTs.
-    judge_dev_stage now renders active_programs deterministically — exactly the 4 recruiting pure
-    Phase 3 NCTs, count == ids, with the Phase 2/3 trials reported separately (not folded into 5).
+    judge_dev_stage now renders active_programs deterministically — the 3 recruiting pure Phase 3
+    NCTs are reported "active", the 1 NOT_YET_RECRUITING pure Phase 3 NCT is reported separately as
+    "not yet recruiting", and the Phase 2/3 trials are reported separately (never folded into 5).
     This is the mid-pipeline hop (real trials in, propagated StageJudgment out)."""
     # Statuses use the real CT.gov underscored forms (NOT_YET_RECRUITING etc).
     trials = [
@@ -99,14 +100,17 @@ async def test_judge_semaglutide_t1d_count_is_four_not_five(tmp_path):
         new=AsyncMock(return_value='{"tier": "active_phase3", "reason": "x"}'),
     ):
         j = await judge_dev_stage(trials, tmp_path, drug="semaglutide", indication="t1d")
-    # The pure-Phase-3 group count must be 4 and list exactly the 4 pure Phase 3 NCTs.
-    assert "4 Phase 3 active" in j.active_programs
+    # The active pure-Phase-3 group count must be 3 (recruiting only) and list exactly those NCTs;
+    # the NOT_YET_RECRUITING pure Phase 3 trial is reported separately, not folded in.
+    assert "3 Phase 3 active" in j.active_programs
     assert "5 Phase 3" not in j.active_programs
-    pure3 = {"NCT06082063", "NCT06909006", "NCT05819138", "NCT06894784"}
+    assert "4 Phase 3 active" not in j.active_programs
+    assert "1 Phase 3 not yet recruiting (NCT06909006)" in j.active_programs
+    pure3_active = {"NCT06082063", "NCT05819138", "NCT06894784"}
     listed_in_pure_group = set(
-        re.findall(r"4 Phase 3 active \(([^)]*)\)", j.active_programs)[0].split(", ")
+        re.findall(r"3 Phase 3 active \(([^)]*)\)", j.active_programs)[0].split(", ")
     )
-    assert listed_in_pure_group == pure3
+    assert listed_in_pure_group == pure3_active
 
 
 async def test_judge_parse_failure_falls_back_to_floor(tmp_path):
@@ -317,8 +321,9 @@ def test_floor_completed_phase3_wins_over_active():
 
 
 def test_render_active_programs_count_equals_listed_phase3_ids():
-    """The semaglutide miscount: count MUST equal the number of NCTs listed. 4 recruiting pure
-    Phase 3 → '4 Phase 3 active (4 ids)', completed/Phase-2 excluded."""
+    """The semaglutide miscount: each group's count MUST equal the number of NCTs it lists. 3
+    recruiting pure Phase 3 → '3 Phase 3 active (3 ids)', the not-yet-recruiting one reported
+    separately, completed/Phase-2 excluded."""
     trials = [
         Trial(nct_id="NCT06082063", phase="Phase 3", overall_status="Recruiting"),
         Trial(nct_id="NCT06909006", phase="Phase 3", overall_status="Not yet recruiting"),
@@ -329,7 +334,8 @@ def test_render_active_programs_count_equals_listed_phase3_ids():
     ]
     line = _render_active_programs(trials)
     listed = set(re.findall(r"NCT\d+", line))
-    assert line.startswith("4 Phase 3 active")
+    assert line.startswith("3 Phase 3 active")
+    assert "1 Phase 3 not yet recruiting (NCT06909006)" in line
     assert len(listed) == 4
     assert "NCT05537233" not in listed and "NCT05205928" not in listed
 
@@ -357,15 +363,16 @@ def test_render_active_programs_non_pivotal_only():
 
 
 def test_render_active_programs_handles_ctgov_underscored_status():
-    """CT.gov returns NOT_YET_RECRUITING / ACTIVE_NOT_RECRUITING (underscored, uppercased) — the
-    semaglutide NCT06909006 bug where a not-yet-recruiting Phase 3 was dropped from the count."""
+    """CT.gov returns NOT_YET_RECRUITING / ACTIVE_NOT_RECRUITING (underscored, uppercased). Both
+    are counted as pivotal programs, but NOT_YET_RECRUITING is reported separately as "not yet
+    recruiting" rather than folded into the "active" count."""
     trials = [
         Trial(nct_id="NCT1", phase="Phase 3", overall_status="RECRUITING"),
         Trial(nct_id="NCT2", phase="Phase 3", overall_status="NOT_YET_RECRUITING"),
         Trial(nct_id="NCT3", phase="Phase 3", overall_status="ACTIVE_NOT_RECRUITING"),
     ]
     line = _render_active_programs(trials)
-    assert line == "3 Phase 3 active (NCT1, NCT2, NCT3)"
+    assert line == "2 Phase 3 active (NCT1, NCT3); 1 Phase 3 not yet recruiting (NCT2)"
 
 
 def test_render_active_programs_none_active():

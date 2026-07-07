@@ -3,7 +3,7 @@ Open Targets Platform GraphQL client.
 
 Two primary methods:
   1. get_drug        — Fetch drug data (indications, targets, warnings, adverse events)
-  2. get_target_data — Fetch target data (associations, pathways, interactions, expression)
+  2. get_target_data — Fetch target data (associations, pathways, interactions)
 
 Plus convenience accessors for specific target data slices.
 """
@@ -36,19 +36,15 @@ from indication_scout.models.model_open_targets import (
     Interaction,
     ClinicalDisease,
     DrugSummary,
-    TissueExpression,
     MousePhenotype,
     TargetData,
     GeneticConstraint,
     AdverseEvent,
-    CellTypeExpression,
-    RNAExpression,
     BiologicalModel,
     DrugData,
     DrugTarget,
     EvidenceRecord,
     MechanismOfAction,
-    ProteinExpression,
     DrugWarning,
     Indication,
     SafetyLiability,
@@ -419,12 +415,6 @@ class OpenTargetsClient(BaseClient):
         target = await self.get_target_data(target_id)
         return target.drug_summaries
 
-    async def get_target_data_tissue_expression(
-        self, target_id: str
-    ) -> list[TissueExpression]:
-        target = await self.get_target_data(target_id)
-        return target.expressions
-
     async def get_target_data_mouse_phenotypes(
         self, target_id: str
     ) -> list[MousePhenotype]:
@@ -779,7 +769,6 @@ class OpenTargetsClient(BaseClient):
                 self._parse_drug_summary(d)
                 for d in (raw.get("drugAndClinicalCandidates") or {}).get("rows", [])
             ],
-            expressions=[self._parse_expression(e) for e in raw.get("expressions", [])],
             mouse_phenotypes=[
                 self._parse_phenotype(p) for p in raw.get("mousePhenotypes", [])
             ],
@@ -871,37 +860,6 @@ class OpenTargetsClient(BaseClient):
             diseases=diseases,
         )
 
-    def _parse_expression(self, raw: dict) -> TissueExpression:
-        tissue = raw.get("tissue", {})
-        rna = raw.get("rna", {})
-        protein = raw.get("protein", {})
-        anatomical_systems = tissue.get("anatomicalSystems", [])
-        cell_types = [
-            CellTypeExpression(
-                name=ct["name"],
-                level=ct["level"],
-                reliability=ct.get("reliability", False),
-            )
-            for ct in protein.get("cellType", []) or []
-        ]
-        return TissueExpression(
-            tissue_id=tissue.get("id", ""),
-            tissue_name=tissue.get("label", ""),
-            tissue_anatomical_system=(
-                anatomical_systems[0] if anatomical_systems else ""
-            ),
-            rna=RNAExpression(
-                value=rna.get("value"),
-                quantile=rna.get("level"),
-                unit=rna.get("unit"),
-            ),
-            protein=ProteinExpression(
-                level=protein.get("level"),
-                reliability=protein.get("reliability"),
-                cell_types=cell_types,
-            ),
-        )
-
     def _parse_phenotype(self, raw: dict) -> MousePhenotype:
         categories = [c["label"] for c in raw.get("modelPhenotypeClasses", [])]
         models = [
@@ -923,7 +881,6 @@ class OpenTargetsClient(BaseClient):
     def _parse_adverse_event(self, raw: dict) -> AdverseEvent:
         return AdverseEvent(
             name=raw["name"],
-            meddra_code=raw.get("meddraCode"),
             count=raw["count"],
             log_likelihood_ratio=raw["logLR"],
         )
@@ -1009,7 +966,7 @@ query($id: String!) {
         }
 
         adverseEvents(page: {index: 0, size: 100}) {
-            rows { name meddraCode count logLR }
+            rows { name count logLR }
             criticalValue
         }
     }
@@ -1062,18 +1019,6 @@ query($id: String!) {
                     drugs { drugFromSource drug { id name } }
                     diseases { diseaseFromSource disease { id name } }
                 }
-            }
-        }
-
-        expressions {
-            tissue {
-                id label
-                anatomicalSystems
-            }
-            rna { value unit level }
-            protein {
-                level reliability
-                cellType { name level reliability }
             }
         }
 
