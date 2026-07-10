@@ -9,6 +9,7 @@ Usage (run from the project root):
 """
 
 import logging
+import re
 import shutil
 from collections import defaultdict
 from pathlib import Path
@@ -19,6 +20,10 @@ logger = logging.getLogger("indication_scout.prune_snapshots")
 SNAPSHOTS_DIR = Path(__file__).resolve().parent.parent / "snapshots"
 BAK_DIR = SNAPSHOTS_DIR / "bak"
 
+# Timestamp parts of `{drug}_{YYYY-MM-DD}_{HH-MM-SS}.md`.
+_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_TIME_RE = re.compile(r"^\d{2}-\d{2}-\d{2}$")
+
 
 def drug_from_filename(name: str) -> str | None:
     """Return the drug name from `{drug}_{date}_{time}.md`, or None if it doesn't match."""
@@ -27,7 +32,7 @@ def drug_from_filename(name: str) -> str | None:
     if len(parts) != 3:
         return None
     drug, date, time = parts
-    if not drug:
+    if not drug or not _DATE_RE.match(date) or not _TIME_RE.match(time):
         return None
     return drug
 
