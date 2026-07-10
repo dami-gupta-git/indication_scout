@@ -1,0 +1,83 @@
+=== model: claude-sonnet-4-6  runs/pair: 2  pairs: 57  (current vs candidate) ===
+
+[DIVERGE] bupropion x attention deficit hyperactivity disorder  (bupropion.json)
+        direction:    supports -> supports
+        strength:       strong -> strong
+        contra:     ['17685748'] -> []
+
+[DIVERGE] bupropion x cocaine dependence  (bupropion.json)
+        direction:       mixed -> mixed
+        strength:       strong -> moderate
+
+[DIVERGE] dulaglutide x obesity  (dulaglutide.json)
+        direction:  contradicts -> contradicts
+        strength:     moderate -> moderate
+        support:    ['29483060', '40183678'] -> []
+
+[DIVERGE] duloxetine x obesity  (duloxetine.json)
+        direction:    supports -> mixed
+        strength:         weak -> weak
+        contra:     [] -> ['17472599']
+
+[DIVERGE] gefitinib x breast cancer  (gefitinib.json)
+        direction:  contradicts -> mixed
+        strength:       strong -> strong
+
+[DIVERGE] hydroxychloroquine x colorectal cancer  (hydroxychloroquine.json)
+        direction:       mixed -> mixed
+        strength:     moderate -> moderate
+        support:    ['20630104', '27288548', '27463016'] -> ['27288548', '27463016']
+
+[DIVERGE] hydroxychloroquine x hiv infection  (hydroxychloroquine.json)
+        direction:       mixed -> mixed
+        strength:     moderate -> moderate
+        support:    ['11362590', '9385480'] -> ['9385480']
+
+[DIVERGE] imatinib x breast cancer  (imatinib.json)
+        direction:       mixed -> contradicts
+        strength:     moderate -> moderate
+        contra:     ['15803362', '19933079', '30311036'] -> ['15803362', '19933079', '25171229', '30311036']
+
+[DIVERGE] lanabecestat x alzheimer disease  (lanabecestat.json)
+        direction:  contradicts -> contradicts
+        strength:       strong -> strong
+        contra:     ['31764959', '33049114'] -> ['28618005', '31764959', '33049114']
+        support:    ['28618005'] -> []
+
+[DIVERGE] lenvatinib x colorectal cancer  (lenvatinib.json)
+        direction:       mixed -> mixed
+        strength:       strong -> strong
+        contra:     ['38833658', '41763955'] -> ['38833658']
+
+[DIVERGE] metformin x cardiovascular disease  (metformin.json)
+        direction:       mixed -> supports
+        strength:       strong -> strong
+        contra:     ['19171717', '24710641'] -> ['19171717', '21205121', '24710641']
+
+[DIVERGE] minoxidil x diabetes mellitus  (minoxidil.json)
+        direction:  contradicts -> none
+        strength:         weak -> none
+        contra:     ['6985752'] -> []
+
+[DIVERGE] raloxifene x menopause  (raloxifene.json)
+        direction:  contradicts -> supports
+        strength:       strong -> strong
+        contra:     ['10960626', '12015525', '12851517', '15146102', '15772568'] -> ['10960626', '12851517', '15772568']
+        support:    ['10960626', '15772568'] -> ['10960626', '12015525', '12851517', '15146102', '15772568']
+
+[DIVERGE] riluzole x epilepsy  (riluzole.json)
+        direction:    supports -> supports
+        strength:         weak -> weak
+        contra:     ['20015615'] -> []
+
+[DIVERGE] semaglutide x non-alcoholic fatty liver disease  (semaglutide.json)
+        direction:       mixed -> mixed
+        strength:       strong -> strong
+        contra:     ['36934740'] -> ['33185364', '36934740']
+
+[DIVERGE] sildenafil x hypertension  (sildenafil.json)
+        direction:    supports -> supports
+        strength:     moderate -> moderate
+        support:    ['16940217', '27400005'] -> ['11132612', '16940217']
+
+=== 16/57 pairs diverged ===
