@@ -727,12 +727,12 @@ class RetrievalService:
                 "rerank_cap": rerank_cap,
             },
         ).fetchall()
-        logger.warning(
-            "[TIMING] semantic_search %s pgvector_scan: %.1fs (%d pmids in)",
-            disease,
-            time.perf_counter() - _t_scan,
-            len(pmids),
-        )
+        # logger.warning(
+        #     "[TIMING] semantic_search %s pgvector_scan: %.1fs (%d pmids in)",
+        #     disease,
+        #     time.perf_counter() - _t_scan,
+        #     len(pmids),
+        # )
 
         if not rows:
             return []
@@ -741,12 +741,12 @@ class RetrievalService:
         _t_pt = time.perf_counter()
         async with PubMedClient(cache_dir=self.cache_dir) as client:
             pubtypes_map = await client.fetch_pubtypes(candidate_pmids)
-        logger.warning(
-            "[TIMING] semantic_search %s fetch_pubtypes: %.1fs (%d candidates)",
-            disease,
-            time.perf_counter() - _t_pt,
-            len(candidate_pmids),
-        )
+        # logger.warning(
+        #     "[TIMING] semantic_search %s fetch_pubtypes: %.1fs (%d candidates)",
+        #     disease,
+        #     time.perf_counter() - _t_pt,
+        #     len(candidate_pmids),
+        # )
 
         if not pubtypes_map:
             logger.warning(

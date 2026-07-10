@@ -116,11 +116,11 @@ def build_literature_tools(
             disease_name, chembl_id, pmids, db, date_before=date_before
         )
         store["abstracts"] = results
-        logger.warning(
-            "[TIMING] semantic_search %s: %.1fs",
-            disease_name,
-            time.perf_counter() - _t0,
-        )
+        # logger.warning(
+        #     "[TIMING] semantic_search %s: %.1fs",
+        #     disease_name,
+        #     time.perf_counter() - _t0,
+        # )
         top = results[0].similarity if results else 0.0
         return f"Found {len(results)} abstracts (top sim: {top:.2f})", results
 
