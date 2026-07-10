@@ -705,9 +705,9 @@ def build_supervisor_tools(
                 approved_indications=approved_indications,
             )
             output = await run_literature_agent(lit_agent, drug_name, disease_name)
-        logger.warning(
-            "[TIMING] literature %s: %.1fs", disease_name, time.perf_counter() - _t0
-        )
+        # logger.warning(
+        #     "[TIMING] literature %s: %.1fs", disease_name, time.perf_counter() - _t0
+        # )
         strength = (
             output.evidence_summary.strength if output.evidence_summary else "no data"
         )
@@ -1090,11 +1090,11 @@ def build_supervisor_tools(
                         "type": "tool_call",
                     }
                 )
-                logger.warning(
-                    "[TIMING] investigate %s: lit leg took %.1fs",
-                    disease,
-                    time.perf_counter() - _lt0,
-                )
+                # logger.warning(
+                #     "[TIMING] investigate %s: lit leg took %.1fs",
+                #     disease,
+                #     time.perf_counter() - _lt0,
+                # )
                 return msg
 
             async def _timed_ct() -> Any:
@@ -1115,11 +1115,11 @@ def build_supervisor_tools(
                 return msg
 
             lit_msg, ct_msg = await asyncio.gather(_timed_lit(), _timed_ct())
-            logger.warning(
-                "[TIMING] investigate %s: lit+trials took %.1fs",
-                disease,
-                time.perf_counter() - _t0,
-            )
+            # logger.warning(
+            #     "[TIMING] investigate %s: lit+trials took %.1fs",
+            #     disease,
+            #     time.perf_counter() - _t0,
+            # )
 
             lit_artifact = lit_msg.artifact
             ct_artifact = ct_msg.artifact

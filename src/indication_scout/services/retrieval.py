@@ -677,11 +677,11 @@ class RetrievalService:
         )
         _t_embed = time.perf_counter()
         query_vector = (await embed_async([query_string]))[0]
-        logger.warning(
-            "[TIMING] semantic_search %s embed_query: %.1fs",
-            disease,
-            time.perf_counter() - _t_embed,
-        )
+        # logger.warning(
+        #     "[TIMING] semantic_search %s embed_query: %.1fs",
+        #     disease,
+        #     time.perf_counter() - _t_embed,
+        # )
 
         # Over-fetch cap: pull top-N by similarity from pgvector, then rerank
         # by pubtype in Python. Cap gives the boost headroom to reorder

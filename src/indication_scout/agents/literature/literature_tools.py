@@ -138,9 +138,9 @@ def build_literature_tools(
             abstracts,
             approved_indications=approved_indications,
         )
-        logger.warning(
-            "[TIMING] synthesize %s: %.1fs", disease_name, time.perf_counter() - _t0
-        )
+        # logger.warning(
+        #     "[TIMING] synthesize %s: %.1fs", disease_name, time.perf_counter() - _t0
+        # )
         # logger.warning(
         #     f"literature agent evidence: {evidence}")
         return (
