@@ -10,7 +10,7 @@ Feeds the REAL clinical_trials.txt as the system prompt and a synthetic batch (t
 shape + regression anchors: severity-qualifier NASH, broad NAFLD kept, T1D sibling kept, PAH
 distinct, NSCLC minority-biomarker kept, wrong-drug). Approved = "MASH (NASH) with fibrosis".
 
-Run: .venv/bin/python tests/harness_tests/trial_relevance_test1_harness.py [model]
+Run: .venv/bin/python tests/harness_tests/trial_relevance_approved_subtype_harness.py [model]
 """
 
 import asyncio

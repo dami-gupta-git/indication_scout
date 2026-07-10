@@ -20,7 +20,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     _classify_stop_reason,
 )
 
-PROMPT = (Path(__file__).parent / "data" / "fact_judge_prompt.txt").read_text()
+PROMPT = (Path(__file__).parent / "prompts" / "fact_judge_prompt.txt").read_text()
 client = AsyncAnthropic()
 
 # Drugs known to be generic/off-patent (for the "no NDA != failure" cue).

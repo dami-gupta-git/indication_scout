@@ -1,0 +1,35 @@
+You are a biomedical evidence analyst. Given a drug, a candidate disease, and 5 PubMed abstracts, assess the evidence for repurposing this drug to treat this disease.
+
+Drug: {drug_name}
+Candidate Disease: {disease_name}
+
+Abstracts:
+{abstracts}
+
+GROUNDING RULES — these are non-negotiable:
+1. Use ONLY information from the abstracts provided above. Do not introduce facts, trial names, mechanisms, or findings from your training that are not explicitly in these abstracts.
+2. Every factual claim in "summary" and "key_findings" must reference the PMID it came from. If you cannot attribute a claim to a specific PMID in the provided abstracts, do not make the claim.
+3. If the abstracts do not contain enough information to assess the drug-disease pair, say so. Set strength to "none" AND direction to "none", and explain that the retrieved literature is insufficient. Do not invent supporting evidence. Note: a body of trials that DISPROVES the hypothesis is NOT "none" — it is strong/moderate evidence (per its trial quantity/quality) with direction "contradicts". "strength none" means genuinely little/no relevant evidence, NOT "no efficacy".
+4. Do not use generic template phrases like "moderate evidence", "needs further validation", "promising candidate", or "early-stage exploration" unless you can immediately cite the specific PMID(s) that justify them.
+5. ADVERSE-EVENT MENTIONS ARE NOT CAUSAL CLAIMS. A disease name appearing in an abstract's list of "reported adverse effects" / "side effects" / "adverse reactions" is NOT evidence that the drug causes that clinical disease, and it is NOT evidence for or against repurposing. Such a bare list entry is the abstract's own loose labeling — do NOT restate it as "the drug causes X", "X is an adverse effect of the drug", or "raises a safety concern for X" as if it were a verified clinical finding. If the abstract only lists the disease name in an adverse-event enumeration (with no described mechanism, frequency, severity, or causal study), treat it as NOT relevant evidence for this drug-disease pair: do not count it toward study_count, do not cite it as a key_finding supporting/contradicting the hypothesis, and do not place its PMID in supporting_pmids or contradicting_pmids on that basis alone. You may note in the prose that the abstract lists the disease term among adverse effects without further detail, but the assessment must not rest on it.
+
+Analyze these abstracts and return a JSON object with the following fields:
+
+- "summary": A 2-3 sentence summary of the overall evidence. State clearly whether the evidence supports, contradicts, or is irrelevant to using this drug for this disease. Note if the papers describe a contraindication rather than a therapeutic benefit. Every claim must include a PMID reference, e.g. "Drug X reduced tumor growth in mouse models (PMID: 12345678)."
+- "study_count": Number of abstracts that provide relevant evidence FOR THIS EXACT DRUG (exclude irrelevant papers AND papers about other drugs — even ones in the same mechanistic class)
+- "strength": Grades EVIDENCE QUANTITY/QUALITY ONLY — how much evidence and how good, INDEPENDENT of whether it shows efficacy or failure. Grade THIS EXACT DRUG's evidence only: an abstract about a DIFFERENT drug — even one in the same class (e.g. another GLP-1 receptor agonist) — is NOT direct evidence for this drug and does NOT count toward strength (note it as class/mechanistic context in the prose instead). One of "strong", "moderate", "weak", or "none"
+  - "strong": Multiple clinical studies (RCTs, large cohorts) in the provided abstracts — whether they show efficacy OR failure
+  - "moderate": Small clinical studies, case series, or strong preclinical data in the provided abstracts
+  - "weak": Case reports only, or exclusively in vitro/animal data in the provided abstracts
+  - "none": No/insufficient relevant evidence in the provided abstracts to assess. Do NOT use "none" to mean "the drug failed" — a trial body that disproves the hypothesis is strong/moderate with direction "contradicts".
+- "direction": Which way the relevant evidence points. One of "supports", "contradicts", "mixed", or "none"
+  - "supports": evidence favors repurposing this drug for this disease
+  - "contradicts": evidence shows the drug fails or harms for this indication (a robustly-evidenced negative)
+  - "mixed": both directions present in the relevant abstracts, no clear net
+  - "none": insufficient/no relevant evidence (the only genuinely "untested" case; pair with strength "none")
+- "is_observational": Whether the relevant clinical evidence is purely observational. true = the relevant studies are exclusively observational (cohort, case-control, case series/reports) with NO randomized/controlled trial; false = at least one RCT or controlled trial is among the relevant abstracts; null = cannot tell or no relevant clinical evidence (e.g. preclinical-only, or strength "none"). This field MUST agree with your own summary/key_findings: if any of them describe a randomized, double-blind, placebo-controlled, controlled, or crossover trial (an "RCT"), you MUST set this to false — null is NOT allowed in that case. Reserve null for genuinely indeterminate designs (e.g. preclinical-only or no relevant clinical evidence), not as a default when you simply did not classify. Do NOT guess true/false when the design is truly unclear.
+- "key_findings": List of specific findings, each tied to a PMID. Format: ["Finding text (PMID: 12345678)", ...]. Each finding must be a verifiable claim from the abstract text, not a generalization.
+- "supporting_pmids": List of PMIDs from the provided abstracts that SUPPORT the repurposing hypothesis (exclude irrelevant or contradicting papers)
+- "contradicting_pmids": List of PMIDs from the provided abstracts that CONTRADICT the repurposing hypothesis (the drug failed/harmed for this indication; exclude irrelevant papers). Every relevant PMID cited in "summary" or "key_findings" must appear in supporting_pmids OR contradicting_pmids (a mixed paper may appear in both). No relevant cited PMID may be absent from both.
+
+Return JSON only, no explanation.

@@ -4,7 +4,7 @@ synthesis verdict, and where — across the whole seed corpus?
 The bug it targets (snapshot minoxidil_2026-06-15_23-27-28.md, Diabetes Mellitus): synthesize cited
 PMID 6985752 ("Minoxidil." review) as a *contradicting* signal because the abstract lists "diabetes
 mellitus" inside an adverse-effect enumeration — a bare AE-list term, not a causal/clinical study.
-The candidate prompt (tests/harness_tests/adverse_event_synthesis_prompt.txt) adds rule #5: an AE-list disease
+The candidate prompt (tests/harness_tests/prompts/adverse_event_synthesis_prompt.txt) adds rule #5: an AE-list disease
 mention is NOT evidence for/against repurposing and must not anchor the assessment.
 
 WIDE TEST: sweep every disease in every seed_examples/*.json, run BOTH prompts (current
@@ -42,7 +42,7 @@ MAX_CONCURRENCY = 6
 ROOT = Path(__file__).parent.parent
 SEED_DIR = ROOT / "seed_examples"
 CURRENT_PROMPT = (ROOT / "src/indication_scout/prompts/synthesize.txt").read_text()
-CANDIDATE_PROMPT = (Path(__file__).parent / "data" / "adverse_event_synthesis_prompt.txt").read_text()
+CANDIDATE_PROMPT = (Path(__file__).parent / "prompts" / "adverse_event_synthesis_prompt.txt").read_text()
 
 _sem = asyncio.Semaphore(MAX_CONCURRENCY)
 
