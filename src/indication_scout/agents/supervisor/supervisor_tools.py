@@ -1155,6 +1155,14 @@ def build_supervisor_tools(
                 if ct_artifact and ct_artifact.terminated
                 else 0
             )
+            # Withdrawn-before-enrolling count from the all-status search breakdown. A withdrawn trial never dosed a
+            # patient, so it is NOT a phase signal (dev_stage stays untested) — it's a separate registry-outcome fact
+            # the ranker needs so a withdrawn-only pair isn't read as a live registered trial.
+            n_withdrawn = (
+                ct_artifact.search.by_status.get("WITHDRAWN", 0)
+                if ct_artifact and ct_artifact.search
+                else 0
+            )
             # Relevance-filtered signals (sub-agent judgment) — the phase facts the supervisor ranks on, not the raw counts.
             # None when the sub-agent didn't classify; fall back to all-trial facts so the phase is still surfaced.
             ct_signals = (
@@ -1176,6 +1184,7 @@ def build_supervisor_tools(
                 "trials_total": n_total,
                 "trials_completed": n_completed,
                 "trials_terminated": n_terminated,
+                "trials_withdrawn": n_withdrawn,
                 "relevant_highest_phase": relevant_highest_phase,
                 "relevant_phase3_terminated_for_cause": relevant_phase3_terminated,
                 # Authoritative development-stage tier — seed the LLM's ranking with the same fact the downstream
@@ -1238,11 +1247,19 @@ def build_supervisor_tools(
                 if a.get("dev_stage_phrase")
                 else ""
             )
+            # Withdrawn-before-enrolling note. Flagged only when the pair's ONLY on-record trials are withdrawn (total
+            # equals withdrawn) — that pair has no live/completed trial and must not read as a registered candidate.
+            n_withdrawn = a.get("trials_withdrawn", 0)
+            withdrawn_note = (
+                "; ALL on-record trial(s) WITHDRAWN before enrolling (never dosed a patient)"
+                if n_withdrawn and a.get("trials_total", 0) == n_withdrawn
+                else (f"; {n_withdrawn} withdrawn" if n_withdrawn else "")
+            )
             lines.append(
                 f"  - {a['disease']}: literature {a['literature_strength']}{dir_note}, "
                 f"{a['literature_pmids']} PMIDs; trials {a['trials_total']} total, "
                 f"{a['trials_completed']} completed, {a['trials_terminated']} terminated; "
-                f"relevant highest phase {phase}{term_note}{stage_note}"
+                f"relevant highest phase {phase}{term_note}{stage_note}{withdrawn_note}"
             )
         return "\n".join(lines), artifacts
 
@@ -1273,6 +1290,18 @@ def build_supervisor_tools(
                 )
             else:
                 fact = "no trial signal available"
+            # Withdrawn-before-enrolling clause. Orthogonal to dev_stage (a withdrawn trial never dosed a patient, so
+            # the pair stays untested) — surfaced so the critic doesn't read a withdrawn-only pair as a live registered
+            # trial. Flagged only when EVERY on-record trial is withdrawn (total == withdrawn).
+            n_total = ct.search.total_count if ct and ct.search else 0
+            n_withdrawn = (
+                ct.search.by_status.get("WITHDRAWN", 0) if ct and ct.search else 0
+            )
+            if n_withdrawn and n_total == n_withdrawn:
+                fact += (
+                    f"; all {n_withdrawn} on-record trial(s) WITHDRAWN before enrolling "
+                    "(never dosed a patient — not a live registered trial)"
+                )
             lines.append(
                 f"{i}. {disease} | FACT: {fact} | verdict: {verdict or '—'} | "
                 f"literature: {literature or '—'} | blocker: {blocker or '—'}"

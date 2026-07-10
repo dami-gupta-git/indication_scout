@@ -21,6 +21,7 @@ from pathlib import Path
 import pytest
 
 from indication_scout.services.llm import query_llm
+from indication_scout.agents.supervisor.supervisor_tools import _RANKING_CRITIC_SYSTEM
 
 logger = logging.getLogger(__name__)
 
@@ -306,3 +307,87 @@ async def test_supervisor_watch_only_cites_own_ncts():
                 f"Gammakinson has no active trial — watch should be empty, "
                 f"got {sorted(cited)}"
             )
+
+
+# --- WITHDRAWN critic case: a withdrawn-only candidate must not lead a human-observational one ---
+# Drives the LIVE critic (_RANKING_CRITIC_SYSTEM) over the exact FACT-block + blurbs format that
+# _run_fact_critic builds, exercising the withdrawn-before-enrolling clause added in change set A.
+# Invented disease names so the critic ranks on the FACTs, not real-world priors. The critic is
+# variance-prone (per the existing ranking tests), so assert a strong majority over N runs.
+
+_CRITIC_WITHDRAWN_RUNS = 5
+
+# Deliberately WRONG input order: the withdrawn-only candidate is #1, the human-observational
+# candidate below it. FACT strings mirror _run_fact_critic exactly, including the withdrawn clause.
+_CRITIC_WITHDRAWN_FACT_LINES = [
+    "1. alphosis | FACT: authoritative dev_stage = untested (no completed or active pivotal "
+    "trials for this indication) — do not contradict this stage; all 1 on-record trial(s) "
+    "WITHDRAWN before enrolling (never dosed a patient — not a live registered trial) | "
+    "verdict: — | literature: weak, supports | blocker: —",
+    "2. betalgia | FACT: authoritative dev_stage = untested (no registry trials for this "
+    "indication) — do not contradict this stage | verdict: — | literature: weak, supports — "
+    "human observational case series | blocker: —",
+]
+
+_CRITIC_WITHDRAWN_BLURBS = [
+    {
+        "disease": "alphosis",
+        "stage": "One trial withdrawn before enrolling; no active program",
+        "literature": "weak, supports",
+        "blocker": "Sole trial never enrolled",
+        "verdict": "",
+        "prose": "The single registered trial was withdrawn before dosing.",
+    },
+    {
+        "disease": "betalgia",
+        "stage": "No registry trials on record for this indication",
+        "literature": "weak, supports — human observational case series",
+        "blocker": "No clinical development initiated",
+        "verdict": "",
+        "prose": "The hypothesis rests on human observational use with no registry trials.",
+    },
+]
+
+
+def _critic_task(fact_lines: list[str], blurbs: list[dict]) -> str:
+    return (
+        "Current ranking (top to bottom), each with its authoritative FACT:\n"
+        + "\n".join(fact_lines)
+        + "\n\nFull blurbs to audit and repair (return all of them):\n"
+        + json.dumps(blurbs)
+    )
+
+
+def _critic_order(text: str) -> list[str]:
+    m = re.search(r"\{.*\}", text, re.DOTALL)
+    if not m:
+        return []
+    try:
+        data = json.loads(m.group(0))
+    except json.JSONDecodeError:
+        return []
+    return [
+        (b.get("disease") or "").strip().lower()
+        for b in data.get("blurbs", [])
+        if isinstance(b, dict)
+    ]
+
+
+@pytest.mark.approval_aware
+async def test_critic_demotes_withdrawn_only_below_human_observational():
+    """The ranking critic, given the withdrawn-before-enrolling FACT clause (change set A), must
+    demote a withdrawn-only candidate below a human-observational one — the humira × asthma vs CRMO
+    misorder. Asserts a strong majority over N runs (critic is LLM-variance-prone)."""
+    task = _critic_task(_CRITIC_WITHDRAWN_FACT_LINES, _CRITIC_WITHDRAWN_BLURBS)
+    orders = [
+        _critic_order(await query_llm(task, system=_RANKING_CRITIC_SYSTEM))
+        for _ in range(_CRITIC_WITHDRAWN_RUNS)
+    ]
+    ok = sum(
+        len(o) == 2 and o[0] == "betalgia" and set(o) == {"alphosis", "betalgia"}
+        for o in orders
+    )
+    assert ok >= 4, (
+        f"critic ranked human-observational (betalgia) above withdrawn-only (alphosis) in only "
+        f"{ok}/{_CRITIC_WITHDRAWN_RUNS} runs; orders={orders}"
+    )

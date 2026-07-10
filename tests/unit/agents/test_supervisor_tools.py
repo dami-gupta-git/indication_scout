@@ -361,9 +361,10 @@ def _make_ct(
     completed: int,
     terminated: int,
     signals: "TrialSignals | None" = None,
+    by_status: dict[str, int] | None = None,
 ) -> ClinicalTrialsOutput:
     return ClinicalTrialsOutput(
-        search=SearchTrialsResult(total_count=total),
+        search=SearchTrialsResult(total_count=total, by_status=by_status or {}),
         completed=CompletedTrialsResult(total_count=completed),
         terminated=TerminatedTrialsResult(total_count=terminated),
         signals=signals,
@@ -401,6 +402,93 @@ def _finalize_tools_and_closure(cutoff: date | None = None):
     findings_local = fin_closure["findings_local"].cell_contents
     allowed_diseases = fin_closure["allowed_diseases"].cell_contents
     return by_name, findings_local, allowed_diseases
+
+
+async def test_fact_critic_flags_withdrawn_only_pair():
+    """A pair whose ONLY on-record trial is withdrawn must surface a WITHDRAWN-before-enrolling
+    clause in the critic FACT — dev_stage stays untested (withdrawn is orthogonal). Guards the
+    humira×asthma misorder: a withdrawn-only pair must not read as a live registered trial."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    allowed_diseases["asthma"] = ("asthma", "competitor")
+    findings_local["asthma"] = {
+        "literature": _make_lit("weak", 1, 1, direction="supports"),
+        # 1 trial total, all withdrawn; no completed/terminated; dev_stage untested.
+        "clinical_trials": _make_ct(
+            1,
+            0,
+            0,
+            signals=TrialSignals(dev_stage="untested"),
+            by_status={"WITHDRAWN": 1},
+        ),
+    }
+
+    captured: dict[str, str] = {}
+
+    async def _capture(prompt: str, system: str | None = None) -> str:
+        captured["prompt"] = prompt
+        return json.dumps(
+            {"ordering": "consistent", "blurbs": [{"disease": "asthma", "prose": ""}]}
+        )
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=_capture,
+    ):
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": [{"disease": "asthma", "prose": ""}]},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+
+    assert "WITHDRAWN before enrolling" in captured["prompt"]
+    # dev_stage untouched: the withdrawn clause is additive, not a stage override.
+    assert "dev_stage = untested" in captured["prompt"]
+
+
+async def test_fact_critic_no_withdrawn_note_when_live_trials_present():
+    """Withdrawn clause fires only when EVERY on-record trial is withdrawn. A pair with a live
+    trial alongside a withdrawn one must NOT get the 'all withdrawn' clause."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    allowed_diseases["crmo"] = ("crmo", "competitor")
+    findings_local["crmo"] = {
+        "literature": _make_lit("weak", 2, 1, direction="supports"),
+        # 3 total, 1 withdrawn but 2 others on record → not withdrawn-only.
+        "clinical_trials": _make_ct(
+            3,
+            1,
+            0,
+            signals=TrialSignals(dev_stage="untested"),
+            by_status={"WITHDRAWN": 1},
+        ),
+    }
+
+    captured: dict[str, str] = {}
+
+    async def _capture(prompt: str, system: str | None = None) -> str:
+        captured["prompt"] = prompt
+        return json.dumps(
+            {"ordering": "consistent", "blurbs": [{"disease": "crmo", "prose": ""}]}
+        )
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=_capture,
+    ):
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": [{"disease": "crmo", "prose": ""}]},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+
+    assert "WITHDRAWN before enrolling" not in captured["prompt"]
 
 
 async def test_finalize_keeps_observational_when_fact_is_true():
