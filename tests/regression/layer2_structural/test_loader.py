@@ -6,7 +6,7 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from tests.regression.failure_buckets import Bucket
+from tests.regression.common.failure_buckets import Bucket
 from tests.regression.layer2_structural.loader import load_spec
 
 

@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field, model_validator
 
-from tests.regression.failure_buckets import Bucket
+from tests.regression.common.failure_buckets import Bucket
 
 
 def _coerce_nones(cls, values):

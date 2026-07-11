@@ -18,7 +18,7 @@ from indication_scout.models.model_clinical_trials import (
 )
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 
-from tests.regression.failure_buckets import Bucket, has_errors
+from tests.regression.common.failure_buckets import Bucket, has_errors
 from tests.regression.layer2_structural.assertions import (
     check_candidate_set_contains,
     check_forbidden_in_ranked,

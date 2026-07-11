@@ -17,7 +17,7 @@ from indication_scout.agents.supervisor.supervisor_output import (
     SupervisorOutput,
 )
 
-from tests.regression.failure_buckets import BucketedDiff
+from tests.regression.common.failure_buckets import BucketedDiff
 from tests.regression.layer2_structural.spec import (
     CandidateSetContains,
     DrugSpec,

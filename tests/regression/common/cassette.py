@@ -20,7 +20,7 @@ from contextlib import contextmanager
 from pathlib import Path
 from typing import Iterator
 
-from tests.regression.constants import (
+from tests.regression.common.constants import (
     CASSETTE_MODE_ENV,
     CASSETTE_MODE_LIVE,
     CASSETTE_MODE_RECORD,
