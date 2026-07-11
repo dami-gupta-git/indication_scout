@@ -68,6 +68,6 @@ def test_real_bupropion_spec_loads():
     )
     spec = load_spec(spec_path)
     assert spec.drug == "bupropion"
-    assert spec.required_in_ranked
+    assert spec.ranked_order
     assert spec.forbidden_in_ranked
     assert spec.required_ncts_surfaced
