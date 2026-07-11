@@ -25,6 +25,11 @@ class EvidenceSummary(BaseModel):
     # it is purely observational, None when undetermined (no-data). Lets the supervisor avoid
     # calling RCT-backed evidence "observational". None stays None (no default coercion).
     is_observational: bool | None = None
+    # True when EVERY relevant drug-specific study is a non-human model (animal/in-vitro), False when
+    # at least one relevant study is in humans, None when there is no relevant drug-specific evidence
+    # to grade (no-data). Lets the ranking critic demote a candidate whose only support is animal
+    # data. None stays None (no default coercion).
+    is_animal_only: bool | None = None
     key_findings: list[str] = []
     # supporting/contradicting/relevant/contaminated_pmids are BUILT IN CODE (services/retrieval.py)
     # from the per-PMID `verdicts` map the synthesize call emits (each PMID labeled contaminated /

@@ -71,11 +71,16 @@ def _literature_oneliner(es) -> str:
     # strength/direction forced to "none" here too, so no repurposing strength.
     if getattr(es, "evidence_basis", "none") == "approved":
         return "evidence is for an already-approved sub-indication (not repurposing)"
-    design = (
-        "RCT-backed / controlled"
-        if es.is_observational is False
-        else "observational" if es.is_observational is True else "undetermined design"
-    )
+    # Animal-only takes precedence: it is the authoritative REASON the design is otherwise "undetermined"
+    # (no human clinical evidence ⇒ is_observational is None). Surfaces the clinical caveat verbatim.
+    if getattr(es, "is_animal_only", None) is True:
+        design = "animal/in-vitro only"
+    else:
+        design = (
+            "RCT-backed / controlled"
+            if es.is_observational is False
+            else "observational" if es.is_observational is True else "undetermined design"
+        )
     direction = es.direction if es.direction and es.direction != "none" else ""
     parts = [es.strength or "none"]
     if direction:
@@ -1140,6 +1145,14 @@ def build_supervisor_tools(
                 else "no data"
             )
             n_pmids = len(lit_artifact.pmids) if lit_artifact else 0
+            # Animal-only literature flag (True = every relevant drug-specific study is a non-human model; False = at
+            # least one human study; None = no relevant drug-specific evidence to grade). Surfaced so the critic can
+            # demote a candidate whose only support is animal data.
+            is_animal_only = (
+                lit_artifact.evidence_summary.is_animal_only
+                if lit_artifact and lit_artifact.evidence_summary
+                else None
+            )
             n_total = (
                 ct_artifact.search.total_count
                 if ct_artifact and ct_artifact.search
@@ -1181,6 +1194,7 @@ def build_supervisor_tools(
                 "literature_strength": strength,
                 "literature_direction": direction,
                 "literature_pmids": n_pmids,
+                "literature_is_animal_only": is_animal_only,
                 "trials_total": n_total,
                 "trials_completed": n_completed,
                 "trials_terminated": n_terminated,
@@ -1255,11 +1269,18 @@ def build_supervisor_tools(
                 if n_withdrawn and a.get("trials_total", 0) == n_withdrawn
                 else (f"; {n_withdrawn} withdrawn" if n_withdrawn else "")
             )
+            # Animal-only literature note. Only True fires a note — False (has human data) and None (nothing to grade)
+            # add nothing, keeping the line quiet unless the animal-only caveat is material.
+            animal_note = (
+                "; literature is ANIMAL/in-vitro only (no human data)"
+                if a.get("literature_is_animal_only") is True
+                else ""
+            )
             lines.append(
                 f"  - {a['disease']}: literature {a['literature_strength']}{dir_note}, "
                 f"{a['literature_pmids']} PMIDs; trials {a['trials_total']} total, "
                 f"{a['trials_completed']} completed, {a['trials_terminated']} terminated; "
-                f"relevant highest phase {phase}{term_note}{stage_note}{withdrawn_note}"
+                f"relevant highest phase {phase}{term_note}{stage_note}{withdrawn_note}{animal_note}"
             )
         return "\n".join(lines), artifacts
 
@@ -1293,6 +1314,8 @@ def build_supervisor_tools(
             # Withdrawn-before-enrolling clause. Orthogonal to dev_stage (a withdrawn trial never dosed a patient, so
             # the pair stays untested) — surfaced so the critic doesn't read a withdrawn-only pair as a live registered
             # trial. Flagged only when EVERY on-record trial is withdrawn (total == withdrawn).
+            # Reads ct.search directly, mirroring the _invest dict's trials_withdrawn/trials_total (same ct.search
+            # source) — keep both in sync if the dict's source ever moves off ct.search.
             n_total = ct.search.total_count if ct and ct.search else 0
             n_withdrawn = (
                 ct.search.by_status.get("WITHDRAWN", 0) if ct and ct.search else 0
@@ -1301,6 +1324,19 @@ def build_supervisor_tools(
                 fact += (
                     f"; all {n_withdrawn} on-record trial(s) WITHDRAWN before enrolling "
                     "(never dosed a patient — not a live registered trial)"
+                )
+            # Animal-only literature clause. Only True adds a clause — False (has human data) and None (nothing to
+            # grade) stay silent. Reads the lit artifact's evidence_summary, mirroring the _invest dict's
+            # literature_is_animal_only (same source).
+            lit = slot.get("literature")
+            if (
+                lit
+                and lit.evidence_summary
+                and lit.evidence_summary.is_animal_only is True
+            ):
+                fact += (
+                    "; supporting literature is ANIMAL/in-vitro only (no human data — "
+                    "not clinical evidence)"
                 )
             lines.append(
                 f"{i}. {disease} | FACT: {fact} | verdict: {verdict or '—'} | "
@@ -1424,6 +1460,19 @@ def build_supervisor_tools(
         # by the isolated judge_interpretive call (in the enrich pass below), fed the resolved stage —  it cannot produce
         # that false claim, so there is nothing to repair. critique_ranking (fact check) is unaffected and still runs as the
         # pre-finalize gate above.
+        #
+        # AUTHORITATIVE ORDER: the critic's repaired+reordered blurbs (critique_state["last_blurbs"]) are the reviewed
+        # ranking. The finalize `blurbs` arg is the LLM's re-passed copy, which may silently revert the critic's reorder
+        # (it is only prompt-instructed to copy them) — so we do NOT trust it for order or content. Use the critic's list
+        # when present; fall back to the passed blurbs only if the critic produced none (e.g. it was called with []).
+        critic_blurbs = critique_state.get("last_blurbs")
+        source_blurbs = critic_blurbs if critic_blurbs else (blurbs or [])
+        if critic_blurbs:
+            logger.info(
+                "[TOOL] finalize_supervisor using %d critic-reviewed blurbs (ignoring the LLM's "
+                "re-passed order)",
+                len(critic_blurbs),
+            )
         validated: list[dict] = []
         structured_keys = (
             "stage",
@@ -1434,7 +1483,7 @@ def build_supervisor_tools(
             "verdict",
             "watch",
         )
-        for item in blurbs or []:
+        for item in source_blurbs:
             disease = (item.get("disease") or "").strip()
             if not disease:
                 continue

@@ -511,3 +511,70 @@ async def test_empagliflozin_ckd_excluded_only_when_approved_list_supplied(
     ), f"CKD RCTs graded none without list: {without_list!r}"
     _assert_self_consistent(with_list)
     _assert_self_consistent(without_list)
+
+
+# Real murine adalimumab-asthma abstract (PMID 24882395) — the sole support for the humira×asthma
+# candidate. A mouse OVA model; no human data → is_animal_only must be True.
+_ASTHMA_MURINE_ABSTRACT = {
+    "pmid": "24882395",
+    "title": (
+        "A human monoclonal anti-TNF alpha antibody (adalimumab) reduces airway inflammation "
+        "and ameliorates lung histology in a murine model of acute asthma."
+    ),
+    "abstract": (
+        "BACKGROUND: A few experimental studies related to asthma have unveiled the beneficial "
+        "effects of TNF alpha blocking agents on the airway histology, cytokine levels in "
+        "bronchoalveolar lavage and bronchial hyper-responsiveness. In the current study, we "
+        "aimed to assess the effect of adalimumab on the inflammation and histology of asthma "
+        "in a murine model. METHOD: Twelve-week-old BALB/c female rats (n=18) were allocated "
+        "into three groups: control, OVA-sensitized untreated, and OVA-sensitized adalimumab-"
+        "treated. RESULTS: Adalimumab significantly reduced peribronchial inflammation, alveolar "
+        "wall thickness and smooth muscle hypertrophy compared with untreated asthmatic mice."
+    ),
+}
+
+# Real human adalimumab RCT (PMID 16200601, psoriatic arthritis) — a genuine human study for the
+# same drug. Paired with the murine abstract, one human study flips is_animal_only to False.
+_PSA_HUMAN_RCT = {
+    "pmid": "16200601",
+    "title": (
+        "Adalimumab for the treatment of patients with moderately to severely active psoriatic "
+        "arthritis: results of a double-blind, randomized, placebo-controlled trial."
+    ),
+    "abstract": (
+        "OBJECTIVE: Adalimumab, a fully human anti-tumor necrosis factor monoclonal antibody, "
+        "was evaluated for safety and efficacy compared with placebo in the treatment of active "
+        "psoriatic arthritis (PsA). METHODS: Patients with moderately to severely active PsA were "
+        "randomized to receive 40 mg adalimumab or placebo subcutaneously every other week for 24 "
+        "weeks. RESULTS: Adalimumab significantly improved the signs and symptoms of arthritis and "
+        "psoriasis compared with placebo."
+    ),
+}
+
+
+@pytest.mark.approval_aware
+async def test_animal_only_murine_asthma_is_true(test_cache_dir):
+    """The only relevant adalimumab-asthma study is a murine OVA model → is_animal_only True."""
+    s = await _synthesize(
+        [_ASTHMA_MURINE_ABSTRACT],
+        drug="adalimumab",
+        indication="Asthma",
+        cache_dir=test_cache_dir,
+    )
+    assert s.is_animal_only is True, f"murine-only asthma graded {s.is_animal_only!r}: {s!r}"
+    _assert_self_consistent(s)
+
+
+@pytest.mark.approval_aware
+async def test_animal_only_false_when_relevant_human_rct_present(test_cache_dir):
+    """A human adalimumab PsA RCT is relevant human evidence → is_animal_only False. The off-disease
+    murine asthma abstract is excluded as contaminated, so the graded evidence is human-only."""
+    s = await _synthesize(
+        [_ASTHMA_MURINE_ABSTRACT, _PSA_HUMAN_RCT],
+        drug="adalimumab",
+        indication="Psoriatic Arthritis",
+        cache_dir=test_cache_dir,
+    )
+    assert s.is_animal_only is False, f"human RCT present but graded {s.is_animal_only!r}: {s!r}"
+    assert "16200601" in s.relevant_pmids, "human PsA RCT should be relevant"
+    _assert_self_consistent(s)

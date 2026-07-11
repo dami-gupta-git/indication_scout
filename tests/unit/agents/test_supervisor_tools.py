@@ -342,6 +342,7 @@ def _make_lit(
     study_count: int,
     direction: str = "supports",
     is_observational: bool | None = None,
+    is_animal_only: bool | None = None,
 ) -> LiteratureOutput:
     return LiteratureOutput(
         pmids=[str(1000000 + i) for i in range(n_pmids)],
@@ -350,6 +351,7 @@ def _make_lit(
             direction=direction,
             study_count=study_count,
             is_observational=is_observational,
+            is_animal_only=is_animal_only,
             summary="",
             key_findings=[],
         ),
@@ -449,6 +451,68 @@ async def test_fact_critic_flags_withdrawn_only_pair():
     assert "dev_stage = untested" in captured["prompt"]
 
 
+async def test_finalize_uses_critic_order_not_llm_repassed_order():
+    """The finalize trust-gap: when the critic REORDERS the blurbs, finalize must use the critic's
+    order even if the LLM re-passes finalize with its ORIGINAL (bad) order. Guards the humira run
+    where asthma reverted to #1 because finalize trusted the LLM's re-passed list."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    for name in ("asthma", "crmo"):
+        allowed_diseases[name] = (name, "competitor")
+        findings_local[name] = {
+            "literature": _make_lit("weak", 1, 1, direction="supports"),
+            "clinical_trials": _make_ct(
+                0, 0, 0, signals=TrialSignals(dev_stage="untested")
+            ),
+        }
+
+    # Critic REORDERS [asthma, crmo] -> [crmo, asthma] (the correct demotion).
+    critic_out = json.dumps(
+        {
+            "ordering": "reordered",
+            "blurbs": [
+                {"disease": "crmo", "prose": "human observational."},
+                {"disease": "asthma", "prose": "animal-only."},
+            ],
+        }
+    )
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=AsyncMock(return_value=critic_out),
+    ):
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {
+                    "blurbs": [
+                        {"disease": "asthma", "prose": "animal-only."},
+                        {"disease": "crmo", "prose": "human observational."},
+                    ]
+                },
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+        # LLM re-passes finalize with the ORIGINAL bad order (asthma first) — finalize must ignore it.
+        msg = await by_name["finalize_supervisor"].ainvoke(
+            {
+                "name": "finalize_supervisor",
+                "args": {
+                    "summary": "Ranked repurposing signals:\n1. asthma\n2. crmo",
+                    "blurbs": [
+                        {"disease": "asthma", "prose": "animal-only."},
+                        {"disease": "crmo", "prose": "human observational."},
+                    ],
+                },
+                "id": "test_call",
+                "type": "tool_call",
+            }
+        )
+
+    order = [b["disease"].lower() for b in msg.artifact["blurbs"]]
+    assert order == ["crmo", "asthma"], f"finalize did not use critic order: {order}"
+
+
 async def test_fact_critic_no_withdrawn_note_when_live_trials_present():
     """Withdrawn clause fires only when EVERY on-record trial is withdrawn. A pair with a live
     trial alongside a withdrawn one must NOT get the 'all withdrawn' clause."""
@@ -489,6 +553,96 @@ async def test_fact_critic_no_withdrawn_note_when_live_trials_present():
         )
 
     assert "WITHDRAWN before enrolling" not in captured["prompt"]
+
+
+async def test_fact_critic_flags_animal_only_literature():
+    """A pair whose supporting literature is animal/in-vitro only (is_animal_only=True) must surface
+    an ANIMAL/in-vitro clause in the critic FACT — the humira×asthma murine-model case."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    allowed_diseases["asthma"] = ("asthma", "competitor")
+    findings_local["asthma"] = {
+        "literature": _make_lit(
+            "weak", 1, 1, direction="supports", is_animal_only=True
+        ),
+        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+    }
+
+    captured: dict[str, str] = {}
+
+    async def _capture(prompt: str, system: str | None = None) -> str:
+        captured["prompt"] = prompt
+        return json.dumps(
+            {"ordering": "consistent", "blurbs": [{"disease": "asthma", "prose": ""}]}
+        )
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=_capture,
+    ):
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": [{"disease": "asthma", "prose": ""}]},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+
+    assert "ANIMAL/in-vitro only" in captured["prompt"]
+
+
+async def test_fact_critic_no_animal_note_when_human_or_undetermined():
+    """The animal-only clause fires only for is_animal_only=True. False (human data) and None
+    (nothing to grade) must NOT add the clause."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    allowed_diseases["crmo"] = ("crmo", "competitor")  # human evidence → False
+    findings_local["crmo"] = {
+        "literature": _make_lit(
+            "weak", 2, 2, direction="supports", is_animal_only=False
+        ),
+        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+    }
+    allowed_diseases["psoriasis"] = ("psoriasis", "competitor")  # undetermined → None
+    findings_local["psoriasis"] = {
+        "literature": _make_lit("none", 0, 0, direction="none", is_animal_only=None),
+        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+    }
+
+    captured: dict[str, str] = {}
+
+    async def _capture(prompt: str, system: str | None = None) -> str:
+        captured["prompt"] = prompt
+        return json.dumps(
+            {
+                "ordering": "consistent",
+                "blurbs": [
+                    {"disease": "crmo", "prose": ""},
+                    {"disease": "psoriasis", "prose": ""},
+                ],
+            }
+        )
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=_capture,
+    ):
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {
+                    "blurbs": [
+                        {"disease": "crmo", "prose": ""},
+                        {"disease": "psoriasis", "prose": ""},
+                    ]
+                },
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+
+    assert "ANIMAL/in-vitro only" not in captured["prompt"]
 
 
 async def test_finalize_keeps_observational_when_fact_is_true():
@@ -931,6 +1085,32 @@ def test_literature_oneliner_class_level_states_basis_not_strength():
         _literature_oneliner(es)
         == "class-level signal (no direct evidence for this drug)"
     )
+
+
+def test_literature_oneliner_animal_only_renders_caveat():
+    """The humira×asthma case: animal-only evidence renders the 'animal/in-vitro only' design token
+    instead of 'undetermined design', surfacing the clinical caveat."""
+    es = EvidenceSummary(
+        strength="weak",
+        direction="supports",
+        is_observational=None,
+        is_animal_only=True,
+        evidence_basis="drug_specific",
+    )
+    assert _literature_oneliner(es) == "weak, supports, animal/in-vitro only"
+
+
+def test_literature_oneliner_animal_only_takes_precedence_over_observational():
+    """is_animal_only=True overrides the observational token (they shouldn't co-occur, but animal
+    wins if they do — a mouse study is never 'observational' human evidence)."""
+    es = EvidenceSummary(
+        strength="weak",
+        direction="supports",
+        is_observational=True,
+        is_animal_only=True,
+        evidence_basis="drug_specific",
+    )
+    assert _literature_oneliner(es) == "weak, supports, animal/in-vitro only"
 
 
 def test_literature_oneliner_none_summary_returns_none():

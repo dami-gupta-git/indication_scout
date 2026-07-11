@@ -877,6 +877,7 @@ class RetrievalService:
                 "direction": "none",
                 "evidence_basis": "none",
                 "is_observational": None,
+                "is_animal_only": None,
                 "key_findings": [],
                 "supporting_pmids": [],
                 "contradicting_pmids": [],

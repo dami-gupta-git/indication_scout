@@ -12,6 +12,7 @@ def test_defaults_strength_and_direction_none():
     assert es.strength == "none"
     assert es.direction == "none"
     assert es.is_observational is None
+    assert es.is_animal_only is None
     assert es.key_findings == []
     assert es.supporting_pmids == []
     assert es.contradicting_pmids == []
@@ -25,11 +26,21 @@ def test_is_observational_preserves_explicit_value(value):
     assert es.is_observational is value
 
 
+@pytest.mark.parametrize("value", [True, False, None])
+def test_is_animal_only_preserves_explicit_value(value):
+    # None (nothing to grade) must NOT be coerced — a fabricated animal-only verdict would
+    # wrongly demote or rescue a candidate. Round-trips exactly.
+    es = EvidenceSummary(is_animal_only=value)
+    assert es.is_animal_only is value
+
+
 def test_missing_is_observational_in_old_cache_defaults_none():
     # Old cached JSON has no `is_observational` key — defaults to None (undetermined),
     # the safe value (never a fabricated "observational").
     es = EvidenceSummary(**{"summary": "x", "strength": "strong"})
     assert es.is_observational is None
+    # Same for is_animal_only — a cache written before the field existed defaults to None.
+    assert es.is_animal_only is None
 
 
 def test_strong_contradicts_disproven_hypothesis():
