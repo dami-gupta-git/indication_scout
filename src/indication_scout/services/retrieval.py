@@ -584,7 +584,8 @@ class RetrievalService:
             # Per-query attribution: how many PMIDs each query returned (PMIDs themselves
             # omitted to keep logs readable).
             for _q, _pmids in zip(queries, search_results):
-                logger.warning("[QUERYMAP] query=%r returned %d pmids", _q, len(_pmids))
+                # logger.warning("[QUERYMAP] query=%r returned %d pmids", _q, len(_pmids))
+                pass
 
             # 1.5 Cutoff post-guard. PubMed's eutils maxdate filter is not
             # strictly respected, so we re-verify each PMID's publication
@@ -698,15 +699,15 @@ class RetrievalService:
             text("SELECT count(*) FROM pubmed_abstracts WHERE pmid = ANY(:pmids)"),
             {"pmids": pmids},
         ).scalar()
-        logger.warning(
-            "[RELEVANCE] semantic_search %s: %d pmids fetched, %d had embeddings, "
-            "rerank_cap=%d, top_k kept=%d",
-            disease,
-            len(pmids),
-            _embedded_count or 0,
-            rerank_cap,
-            top_k,
-        )
+        # logger.warning(
+        #     "[RELEVANCE] semantic_search %s: %d pmids fetched, %d had embeddings, "
+        #     "rerank_cap=%d, top_k kept=%d",
+        #     disease,
+        #     len(pmids),
+        #     _embedded_count or 0,
+        #     rerank_cap,
+        #     top_k,
+        # )
 
         _t_scan = time.perf_counter()
         rows = db.execute(
@@ -777,13 +778,13 @@ class RetrievalService:
 
         scored.sort(key=lambda x: x[2], reverse=True)
 
-        logger.info(
-            "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
-            chembl_id,
-            disease,
-            len(scored),
-            rerank_cap,
-        )
+        # logger.info(
+        #     "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
+        #     chembl_id,
+        #     disease,
+        #     len(scored),
+        #     rerank_cap,
+        # )
 
         # for result, boost, final_score in scored[:20]:
         #     logger.info(
