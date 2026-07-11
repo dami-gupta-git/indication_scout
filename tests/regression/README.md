@@ -13,10 +13,8 @@ gold_standard/          # frozen SupervisorOutput snapshots (JSON) + rendered re
 specs/                  # per-drug YAML: the invariants extracted from each snapshot
 layer1_deterministic/   # pure-unit tests of the evidence gate (no fixtures)
 layer2_structural/      # spec-driven assertions run against the gold_standard snapshots
+pipeline_replay/        # full-pipeline replay test + its cassettes + compare_reports unit tests
 common/                 # shared helpers: constants, failure-mode taxonomy, cassette wiring
-cassettes/              # recorded HTTP/LLM traffic for the full-pipeline replay
-test_pipeline_regression.py   # full-pipeline replay, diffed against the gold_standard snapshot
-test_harness.py         # unit tests for compare_reports (the replay's diff logic)
 ```
 
 ## The layers
