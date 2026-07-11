@@ -1,0 +1,95 @@
+# Bupropion regression spec.
+#
+# Authored against gold_standard/bupropion_2026-07-10_21-15-58.json. Each
+# assertion encodes a domain-meaningful invariant — a fact about bupropion's
+# evidence base that a regression must NOT silently flip. If one fails, the
+# supervisor, a sub-agent, or the upstream data layer stopped surfacing a
+# known-good signal.
+#
+# Anchors are chosen to be STABLE across runs. Trials the relevance classifier
+# treats as borderline (comorbid / dual-indication studies whose
+# relevant-vs-contaminated call flips run to run — e.g. cocaine NCT00000268,
+# cocaine+ADHD) are deliberately NOT pinned; pinning them makes the test flaky
+# without catching real coverage loss.
+#
+# Bucket values must match `tests/regression/failure_buckets.Bucket`.
+
+drug: bupropion
+
+# The three ranked repurposing signals, in the order the report presents them.
+ranked_order:
+  bucket: ranking
+  indications:
+    - attention deficit hyperactivity disorder
+    - cocaine dependence
+    - mood disorder
+
+candidate_set_contains:
+  bucket: structural_integrity
+  indications:
+    - attention deficit hyperactivity disorder
+    - cocaine dependence
+    - mood disorder
+    - schizophrenia
+    - methamphetamine dependence
+    - obesity
+
+# Curated trials the report surfaces (clinical_trials.relevant_nct_ids).
+required_ncts_surfaced:
+  - bucket: literature_coverage
+    indication: attention deficit hyperactivity disorder
+    section: relevant
+    ncts:
+      - NCT00048360   # adult ADHD, Phase 3, completed
+      - NCT00061087   # ADHD in methadone patients, Phase 2/3, completed
+  - bucket: literature_coverage
+    indication: cocaine dependence
+    section: relevant
+    ncts:
+      - NCT02111798   # bupropion + contingency management, Phase 2/3, completed (stable across runs)
+  - bucket: literature_coverage
+    indication: cocaine dependence
+    section: terminated
+    ncts:
+      - NCT00000276   # dopamine reuptake inhibitors of cocaine abuse, Phase 1, terminated (stable)
+  - bucket: literature_coverage
+    indication: mood disorder
+    section: relevant
+    ncts:
+      - NCT00012558   # STEP-BD, bipolar disorder, completed
+
+# Cited PMIDs (evidence_summary supporting + contradicting).
+required_pmids_cited:
+  - bucket: literature_coverage
+    indication: attention deficit hyperactivity disorder
+    mode: cited
+    pmids:
+      - "11156812"   # adult ADHD RCT, bupropion SR
+      - "15820237"   # bupropion XL, 162 adults
+  - bucket: literature_coverage
+    indication: cocaine dependence
+    mode: cited
+    pmids:
+      - "16461866"   # bupropion + contingency management RCT (supporting)
+      - "18551884"   # no benefit vs placebo (contradicting)
+      - "18612883"   # not more effective than placebo, opioid-dependent (contradicting)
+  - bucket: literature_coverage
+    indication: mood disorder
+    mode: cited
+    pmids:
+      - "2856918"    # open trial, bipolar/schizoaffective maintenance
+
+forbidden_in_ranked:
+  # Obesity is FDA-approved only as Contrave (bupropion + naltrexone), not
+  # bupropion monotherapy — the supervisor must keep it out of the ranked
+  # signals via the combination-product rule.
+  - bucket: demotion_logic
+    indication: obesity
+
+forbidden_phrases:
+  # Bupropion monotherapy is not FDA-approved for obesity — the combination
+  # product (Contrave/Mysimba) is. A report saying "approved for obesity"
+  # without qualifying it as the combination is a factual regression.
+  - bucket: factual_accuracy
+    phrase: "approved for obesity"
+    scope: summary

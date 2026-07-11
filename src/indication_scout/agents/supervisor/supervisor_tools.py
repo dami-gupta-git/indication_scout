@@ -1709,8 +1709,11 @@ def build_supervisor_tools(
                 return line
             return _repair_stage_clause(fm.group("disease"), line, "demotion footer")
 
+        # A ranked summary line: "N. <disease> — <tail>" or the tail-less "N. <disease>". The tail is optional because the
+        # report formatter discards it (it splices the blurb in), and a tail-less line must still be recognized as a ranked
+        # entry so it is rebuilt in critic order rather than leaking into the footer passthrough.
         rank_line = re.compile(
-            r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)\s+—\s+(?P<tail>.+)$"
+            r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)(?:\s+—\s+(?P<tail>.+))?$"
         )
         # Normalize the heading line so the report uses "signals" instead of "candidates" / "opportunities" / "indications"
         # regardless of what the LLM wrote.
@@ -1720,43 +1723,78 @@ def build_supervisor_tools(
             r"(?P<rest>\s+for\s+.+?:?\s*)$",
             re.IGNORECASE,
         )
-        filtered_lines: list[str] = []
-        next_rank = 1
+        # RANK ORDER = `validated` (the critic-reviewed blurbs), never the LLM's summary-line order. The LLM's ranked lines
+        # are used ONLY for their per-disease tail text (which the report formatter discards anyway when it splices the blurb
+        # in) — their sequence is discarded. We rebuild the ranked block by iterating `validated` in order and pulling each
+        # disease's matched tail, so the summary's numbering agrees with top_diseases/blurbs by construction. Heading and
+        # non-ranked footer lines (Closed signals / Demoted / Evidence gate exclusions) keep their position; the ranked block
+        # is emitted where the LLM's first ranked line sat.
+        def _match_validated(head_lower: str) -> str | None:
+            """The validated-disease key contained in `head_lower` (longest match), or None."""
+            return next(
+                (
+                    d
+                    for d in sorted(validated_diseases, key=len, reverse=True)
+                    if d and d in head_lower
+                ),
+                None,
+            )
+
+        # First pass: collect each LLM ranked line's tail keyed by its matched validated disease, and record where the ranked
+        # block begins so we can slot the rebuilt block back into the same position.
+        tail_by_disease: dict[str, str] = {}
+        ranked_block_index: int | None = None
+        passthrough: list[str | None] = []  # None marks the ranked-block insertion slot
         for line in summary.splitlines():
             heading_match = heading_line.match(line)
             if heading_match is not None:
                 rest = heading_match.group("rest").rstrip()
                 if not rest.endswith(":"):
                     rest = rest + ":"
-                filtered_lines.append(f"Ranked repurposing signals{rest}")
+                passthrough.append(f"Ranked repurposing signals{rest}")
                 continue
             m = rank_line.match(line)
             if m is None:
                 # Non-ranked line (e.g. a demotion footer entry). Correct a false stage clause against the authoritative
                 # dev_stage before passing it through.
-                filtered_lines.append(_repair_footer_stage(line))
+                passthrough.append(_repair_footer_stage(line))
                 continue
-            head_lower = m.group("head").lower()
-            keep = any(
-                d and d in head_lower
-                for d in sorted(validated_diseases, key=len, reverse=True)
-            )
-            if not keep:
+            matched = _match_validated(m.group("head").lower())
+            if matched is None:
                 logger.warning(
                     "[TOOL] finalize_supervisor dropping summary line for "
                     "disease=%r (failed evidence gate)",
                     m.group("head"),
                 )
                 continue
-            # Repair a false development-status clause in the ranked line's tail against the authoritative dev_stage (same
-            # leak class as the demotion footer: the LLM authors the dev-status phrase from the prompt's tier menu and can
-            # contradict the signal).
-            ranked_line = f"{next_rank}. {m.group('head')} — {m.group('tail')}"
-            ranked_line = _repair_stage_clause(
-                m.group("head"), ranked_line, "ranked summary line"
-            )
-            filtered_lines.append(ranked_line)
-            next_rank += 1
+            tail_by_disease[matched] = m.group("tail") or ""
+            if ranked_block_index is None:
+                ranked_block_index = len(passthrough)
+                passthrough.append(None)  # reserve the ranked-block slot
+
+        # Build the ranked block in `validated` order, renumbered 1..N. A validated disease with no matching LLM line still
+        # appears (its blurb carries the content) with an empty tail — the formatter splices the blurb regardless of tail.
+        ranked_lines: list[str] = []
+        for entry in validated:
+            disease_key = entry["disease"].lower().strip()
+            tail = tail_by_disease.get(disease_key, "")
+            head = entry["disease"]
+            line = f"{len(ranked_lines) + 1}. {head}" + (f" — {tail}" if tail else "")
+            line = _repair_stage_clause(head, line, "ranked summary line")
+            ranked_lines.append(line)
+
+        # If the LLM produced no ranked lines at all, the block still must appear — put it right after the heading.
+        if ranked_block_index is None and ranked_lines:
+            insert_at = 1 if passthrough else 0
+            passthrough.insert(insert_at, None)
+            ranked_block_index = insert_at
+
+        filtered_lines: list[str] = []
+        for item in passthrough:
+            if item is None:
+                filtered_lines.extend(ranked_lines)
+            else:
+                filtered_lines.append(item)
         filtered_summary = "\n".join(filtered_lines)
 
         artifact = {"summary": filtered_summary, "blurbs": validated}

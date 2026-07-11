@@ -1,0 +1,53 @@
+# Semaglutide regression spec.
+#
+# Authored against gold_standard/semaglutide_2026-07-10_21-19-04.json. Each
+# assertion encodes a domain-meaningful invariant a regression must NOT flip.
+#
+# Bucket values must match `tests/regression/failure_buckets.Bucket`.
+
+drug: semaglutide
+
+ranked_order:
+  bucket: ranking
+  indications:
+    - type 1 diabetes mellitus
+    - non-alcoholic fatty liver disease
+    - parkinson disease
+
+candidate_set_contains:
+  bucket: structural_integrity
+  indications:
+    - type 1 diabetes mellitus
+    - non-alcoholic fatty liver disease
+    - parkinson disease
+    - cardiovascular disease
+    - polycystic ovary syndrome
+    - alcohol dependence
+
+required_ncts_surfaced:
+  - bucket: literature_coverage
+    indication: type 1 diabetes mellitus
+    section: relevant
+    ncts:
+      - NCT03899402
+      - NCT05537233
+  - bucket: literature_coverage
+    indication: non-alcoholic fatty liver disease
+    section: relevant
+    ncts:
+      - NCT03884075
+      - NCT03357380
+  - bucket: literature_coverage
+    indication: parkinson disease
+    section: relevant
+    ncts:
+      - NCT03659682
+
+# type 1 diabetes is the only ranked indication with a cited PMID; NAFLD and
+# Parkinson report no supporting/contradicting citations in this snapshot.
+required_pmids_cited:
+  - bucket: literature_coverage
+    indication: type 1 diabetes mellitus
+    mode: cited
+    pmids:
+      - "40550013"   # supporting

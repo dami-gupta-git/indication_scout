@@ -1,6 +1,7 @@
 """Unit tests for supervisor_tools — briefing rendering."""
 
 import json
+import re
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -511,6 +512,18 @@ async def test_finalize_uses_critic_order_not_llm_repassed_order():
 
     order = [b["disease"].lower() for b in msg.artifact["blurbs"]]
     assert order == ["crmo", "asthma"], f"finalize did not use critic order: {order}"
+
+    # The rendered summary's numbered order must ALSO follow the critic, not the LLM's re-passed
+    # summary string (which had asthma #1). Otherwise the MD (rendered from summary) and the JSON
+    # (top_diseases, built from blurbs) disagree on rank — the bug this guards.
+    summary_ranks = [
+        re.match(r"^\d+\.\s+(.+)$", ln).group(1).strip().lower()
+        for ln in msg.artifact["summary"].splitlines()
+        if re.match(r"^\d+\.\s+", ln)
+    ]
+    assert summary_ranks == ["crmo", "asthma"], (
+        f"summary rank order did not follow critic: {summary_ranks}"
+    )
 
 
 async def test_fact_critic_no_withdrawn_note_when_live_trials_present():

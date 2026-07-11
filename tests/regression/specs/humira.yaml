@@ -1,0 +1,52 @@
+# Humira (adalimumab) regression spec.
+#
+# Authored against gold_standard/humira_2026-07-10_21-08-16.json. Each assertion
+# encodes a domain-meaningful invariant a regression must NOT flip. Anchors are
+# chosen to be STABLE across runs.
+#
+# This drug is the animal-only-down-ranking regression case: asthma's evidence
+# is animal-only (is_animal_only=True) and must rank BELOW CRMO (human,
+# is_animal_only=False). Pre-fix the two flipped run to run; the ranked_order
+# below pins the correct, now-stable ordering.
+#
+# Bucket values must match `tests/regression/failure_buckets.Bucket`.
+
+drug: humira
+
+# CRMO (human evidence) must outrank asthma (animal-only). Stable across runs.
+# type 1 diabetes mellitus sits right at the evidence gate (strength=none) and
+# flips in/out of top — deliberately NOT pinned.
+ranked_order:
+  bucket: ranking
+  indications:
+    - chronic recurrent multifocal osteomyelitis
+    - asthma
+
+candidate_set_contains:
+  bucket: structural_integrity
+  indications:
+    - chronic recurrent multifocal osteomyelitis
+    - asthma
+    - type 1 diabetes mellitus
+    - sarcoidosis
+    - behcet disease
+    - uveitis
+
+required_ncts_surfaced:
+  - bucket: literature_coverage
+    indication: asthma
+    section: relevant
+    ncts:
+      - NCT00512863   # stable across runs
+
+required_pmids_cited:
+  - bucket: literature_coverage
+    indication: chronic recurrent multifocal osteomyelitis
+    mode: cited
+    pmids:
+      - "33087018"   # supporting (stable across runs)
+  - bucket: literature_coverage
+    indication: asthma
+    mode: cited
+    pmids:
+      - "24882395"   # supporting (stable across runs)

@@ -1,0 +1,66 @@
+# Sildenafil regression spec.
+#
+# Authored against gold_standard/sildenafil_2026-07-10_21-14-08.json. Each
+# assertion encodes a domain-meaningful invariant a regression must NOT flip.
+# Anchors are chosen to be STABLE across runs.
+#
+# Bucket values must match `tests/regression/failure_buckets.Bucket`.
+
+drug: sildenafil
+
+ranked_order:
+  bucket: ranking
+  indications:
+    - raynaud disease
+    - covid-19
+    - hypertension
+
+candidate_set_contains:
+  bucket: structural_integrity
+  indications:
+    - raynaud disease
+    - covid-19
+    - hypertension
+    - eisenmenger syndrome
+    - benign prostatic hyperplasia
+    - duchenne muscular dystrophy
+
+required_ncts_surfaced:
+  - bucket: literature_coverage
+    indication: raynaud disease
+    section: relevant
+    ncts:
+      - NCT01347008
+      - NCT02050360
+  - bucket: literature_coverage
+    indication: covid-19
+    section: relevant
+    ncts:
+      - NCT04489446
+      - NCT04304313
+  - bucket: literature_coverage
+    indication: hypertension
+    section: relevant
+    ncts:
+      - NCT00223717
+      - NCT01044693
+
+required_pmids_cited:
+  - bucket: literature_coverage
+    indication: raynaud disease
+    mode: cited
+    pmids:
+      - "21360507"   # supporting
+      - "30383134"   # contradicting
+  - bucket: literature_coverage
+    indication: covid-19
+    mode: cited
+    pmids:
+      - "37243243"
+      - "34980198"
+  - bucket: literature_coverage
+    indication: hypertension
+    mode: cited
+    pmids:
+      - "16940217"   # supporting (stable across all runs)
+      - "11132612"   # BP on antihypertensives, small effect (contradicting; stable in current behavior)

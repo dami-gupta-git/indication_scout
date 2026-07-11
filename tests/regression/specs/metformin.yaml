@@ -1,0 +1,73 @@
+# Metformin regression spec.
+#
+# Authored against gold_standard/metformin_2026-07-10_21-17-27.json. Each
+# assertion encodes a domain-meaningful invariant a regression must NOT flip.
+# Anchors are chosen to be STABLE across runs.
+#
+# Bucket values must match `tests/regression/failure_buckets.Bucket`.
+
+drug: metformin
+
+# PCOS is stably #1. Cardiovascular disease and hepatic steatosis are similarly
+# weighted (both weak/mixed, neither animal-only) and swap #2/#3 run to run, so
+# they are pinned present-in-top but NOT order-pinned.
+ranked_order:
+  bucket: ranking
+  indications:
+    - polycystic ovary syndrome
+
+required_in_ranked:
+  - bucket: ranking
+    indication: cardiovascular disease
+  - bucket: ranking
+    indication: hepatic steatosis
+
+candidate_set_contains:
+  bucket: structural_integrity
+  indications:
+    - polycystic ovary syndrome
+    - cardiovascular disease
+    - hepatic steatosis
+    - gestational diabetes
+    - obesity
+    - prediabetes syndrome
+
+required_ncts_surfaced:
+  - bucket: literature_coverage
+    indication: polycystic ovary syndrome
+    section: relevant
+    ncts:
+      - NCT00068861
+      - NCT00994812
+  - bucket: literature_coverage
+    indication: cardiovascular disease
+    section: relevant
+    ncts:
+      - NCT01037660
+      - NCT00443755
+  - bucket: literature_coverage
+    indication: hepatic steatosis
+    section: relevant
+    ncts:
+      - NCT00063635
+      - NCT00303537
+
+required_pmids_cited:
+  - bucket: literature_coverage
+    indication: polycystic ovary syndrome
+    mode: cited
+    pmids:
+      - "10634377"   # supporting
+      - "21917254"   # contradicting
+  - bucket: literature_coverage
+    indication: cardiovascular disease
+    mode: cited
+    pmids:
+      - "30672083"   # supporting
+      - "19171717"   # contradicting
+  - bucket: literature_coverage
+    indication: hepatic steatosis
+    mode: cited
+    pmids:
+      - "19811343"   # contradicting
+      - "18640473"   # contradicting
