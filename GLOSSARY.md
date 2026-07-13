@@ -124,7 +124,8 @@ override the grade.
 
 **Deterministic cap (overrides the LLM):** if the evidence isn't drug-specific — i.e. it's class-level,
 for an already-approved sub-indication, or absent — strength is forced to **none** regardless of the
-LLM grade.
+LLM grade. (What "already-approved sub-indication" means, and how such evidence is stripped out across
+the whole report, is §9.)
 
 How it renders on the detail card:
 - Class-level evidence → "class-level signal (no direct evidence for this drug)".
@@ -260,6 +261,79 @@ order, earliest to latest:
   sponsor+drug program (see §3).
 - **Excluded trials** — trials the agent judged to belong to a *different* indication are removed from
   the tables but still counted in the verbatim total-count headers.
+
+---
+
+## 9. Approval relationship & contamination — why some evidence is stripped out
+
+This is the machinery that keeps the report from presenting *"the drug already works for an approved
+part of this disease"* as if it were new repurposing evidence. It is why a candidate can show a high
+trial count yet a low evidence grade, and why some trials appear in the count headers but not in the
+tables.
+
+### The problem it solves
+
+A candidate disease is usually **broad** (e.g. "NAFLD"). The drug may already be FDA-approved for a
+**narrower part** of it (e.g. "NASH" ⊂ NAFLD). Trials and papers about that approved narrow part are
+**not** repurposing evidence — but a naive count would include them, making a candidate look more mature
+than its genuine repurposing signal warrants. "Contamination" is the term for that already-approved
+evidence leaking into a candidate's counts.
+
+The governing rule is **accuracy over coverage**: it is acceptable to miss a real candidate; it is not
+acceptable to surface evidence that is really about the approved use. When unsure, exclude.
+
+### The approval relationship label (one per candidate, decided once)
+
+Every candidate is classified once, upstream, against the drug's FDA label into exactly one of four
+**approval-relationship** labels. This is typed data — computed before any per-disease analysis and
+then handed down — not something re-decided per surface.
+
+| Label | Meaning | Effect on the report |
+|---|---|---|
+| **approved** | The candidate is the same disease, a synonym, or a **narrower child** of an approved indication. | **Dropped entirely** — never appears as a candidate. |
+| **combination_only** | Approved only as part of a combination product. | Kept but demoted. |
+| **contaminated** | A genuine repurposing target, **but** its trial/registry counts are polluted by an approved sibling or child. | **Kept and ranked**; its trial/paper counts are treated as suspect and filtered (below). |
+| **none** | A sibling, a broader indication with an uncovered population, or unrelated. | Kept and ranked normally. |
+
+Only **approved** removes a candidate. The deciding test is *"would prescribing the drug for this
+candidate be on-label — do its patients already fall inside the approved population?"* Yes → `approved`
+(dropped); No → `none` (kept). So a clinically-named subtype of a broad approval is dropped, but a
+*distinct* disease that merely causes the approved condition is kept.
+
+### The directional rule (shared by trials and literature)
+
+Once a candidate is kept, individual trials and papers are filtered by one rule:
+
+> Exclude evidence about the approved indication **or anything narrower**. **Keep** evidence about a
+> **broader approved parent** of the candidate.
+
+- candidate **NAFLD**, approved **NASH** (narrower) → a NASH trial/paper is **excluded** (it's the
+  approved subtype).
+- candidate **DKD**, approved **CKD** (broader parent) → a CKD trial/paper is **kept** — it rolls up as
+  the candidate's own evidence.
+
+Two refinements: a severity/stage qualifier does **not** create a separable disease (approved "NASH with
+moderate fibrosis" still means a bare "NASH" trial is excluded); but a **minority-biomarker** approval
+does (approved "EGFR-mutated NSCLC", ~10–15% of NSCLC, means an all-comers NSCLC trial is genuinely
+broader → kept). A **sibling** is never a subtype ("type 1 diabetes" vs approved "type 2 diabetes" →
+kept).
+
+### Where contamination shows up in the report
+
+- **Trials tab — "Excluded trials"** (§8): trials judged to be about the approved part (or a distinct
+  indication) are removed from the tables. They are **still counted in the verbatim total-count
+  headers** — the header is the raw registry total, the tables show only the relevant subset.
+- **Stage & Active programs** (§7): computed over the **relevant** (non-contaminated) trials only, so a
+  contaminating approved-indication Phase 3 does not inflate the stage.
+- **Evidence strength** (§5): if the only relevant literature is for the approved sub-indication, the
+  deterministic cap forces strength to **none**, and the card reads *"evidence is for an already-approved
+  sub-indication (not repurposing)"*.
+
+The internal word "contaminated" is never shown in report prose — it is always translated to plain
+language like the phrase above.
+
+> **Full reference:** the design, the exact prompt tests (TEST 1/2/3), the per-PMID literature gate, and
+> where each invariant is enforced in code live in [`docs/APPROVAL_AWARENESS.md`](docs/APPROVAL_AWARENESS.md).
 
 ---
 

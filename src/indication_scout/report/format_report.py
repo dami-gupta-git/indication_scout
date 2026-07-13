@@ -172,9 +172,15 @@ def _fmt_clinical_trials(
                     "the candidate overlaps the drug's approved indications"
                 )
             else:
-                lines.append(
-                    "**FDA approval:** Not found on FDA label for this indication"
+                # Name the queried indication so this line can't read as denying an approval the
+                # exclusion note mentions for a DIFFERENT indication (e.g. sildenafil approved for
+                # PAH, but not for the queried systemic hypertension).
+                for_ind = (
+                    f"for {_title_case_disease(indication)}"
+                    if indication
+                    else "for this indication"
                 )
+                lines.append(f"**FDA approval:** Not found on FDA label {for_ind}")
         else:
             names = ", ".join(a.drug_names_checked) if a.drug_names_checked else "drug"
             lines.append(

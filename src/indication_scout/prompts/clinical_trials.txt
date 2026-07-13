@@ -40,6 +40,13 @@ regardless of how relevant the disease is. Only if this drug IS the studied agen
     arms. When the trial TITLE names a DIFFERENT drug as the subject (e.g. "A Study of
     Efinopegdutide in NAFLD") and this drug is present only as a second/reference arm, the studied
     agent is the other drug => TEST 0 CONTAMINATION, even though this drug is a listed intervention.
+  - ARM ROLES ARE AUTHORITATIVE. Each trial row may carry an "[arms: <label>=<ROLE>; ...]" clause
+    from the registry, where ROLE is EXPERIMENTAL / ACTIVE_COMPARATOR / PLACEBO_COMPARATOR /
+    SHAM_COMPARATOR / NO_INTERVENTION / OTHER. If THIS drug's arm is any COMPARATOR role
+    (ACTIVE_COMPARATOR / PLACEBO_COMPARATOR / SHAM_COMPARATOR) and NOT an EXPERIMENTAL arm, the
+    trial is studying a DIFFERENT agent and this drug is only a control => TEST 0 CONTAMINATION,
+    regardless of the disease. Only when THIS drug has an EXPERIMENTAL arm is it the studied agent.
+    Trust this arm-role signal over the title and over the disease context.
   - The rule is about which drug the trial is ABOUT, not which drugs it administers. Do not rescue a
     trial to "relevant" just because this drug's name is in the interventions.
 

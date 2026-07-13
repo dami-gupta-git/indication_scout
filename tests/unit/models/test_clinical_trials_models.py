@@ -3,6 +3,7 @@
 import pytest
 from indication_scout.models.model_clinical_trials import (
     ApprovalCheck,
+    ArmGroup,
     CompetitorEntry,
     CompletedTrialsResult,
     IndicationLandscape,
@@ -13,6 +14,34 @@ from indication_scout.models.model_clinical_trials import (
     TerminatedTrialsResult,
     Trial,
 )
+
+# --- ArmGroup ---
+
+
+def test_arm_group_all_fields():
+    g = ArmGroup(
+        label="Sildenafil 25 mg",
+        arm_type="ACTIVE_COMPARATOR",
+        intervention_names=["Drug: Sildenafil 25 mg"],
+    )
+    assert g.label == "Sildenafil 25 mg"
+    assert g.arm_type == "ACTIVE_COMPARATOR"
+    assert g.intervention_names == ["Drug: Sildenafil 25 mg"]
+
+
+def test_arm_group_defaults():
+    g = ArmGroup()
+    assert g.label == ""
+    assert g.arm_type == ""
+    assert g.intervention_names == []
+
+
+def test_arm_group_coerce_nones():
+    g = ArmGroup(label=None, arm_type=None, intervention_names=None)
+    assert g.label == ""
+    assert g.arm_type == ""
+    assert g.intervention_names == []
+
 
 # --- Intervention and PrimaryOutcome ---
 
