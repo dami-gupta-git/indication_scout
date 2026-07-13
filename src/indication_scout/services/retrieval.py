@@ -201,11 +201,11 @@ class RetrievalService:
         drug_indications = raw["drug_indications"]
         disease_names = list(top_40.keys())
         merge_result = await merge_duplicate_diseases(disease_names, drug_indications)
-        logger.warning(
-            "[COMP] merge_result: merge=%s remove=%s",
-            merge_result["merge"],
-            merge_result["remove"],
-        )
+        # logger.warning(
+        #     "[COMP] merge_result: merge=%s remove=%s",
+        #     merge_result["merge"],
+        #     merge_result["remove"],
+        # )
 
         for disease in merge_result["remove"]:
             if disease.lower() in top_40:
@@ -238,7 +238,7 @@ class RetrievalService:
             sorted(top_40.items(), key=lambda item: len(item[1]), reverse=True)
         )
         top_15 = dict(list(sorted_data.items())[: _settings.literature_top_k])
-        logger.warning("[COMP] final top_15: %s", list(top_15.keys()))
+        # logger.warning("[COMP] final top_15: %s", list(top_15.keys()))
 
         cache_set(
             "competitors_merged",
@@ -619,17 +619,17 @@ class RetrievalService:
         self.insert_abstracts(pairs, db)
         _dt_insert = time.perf_counter() - _t_insert
 
-        logger.warning(
-            "[TIMING] fetch_and_cache breakdown: search=%.1fs fetch_abstracts=%.1fs "
-            "embed=%.1fs(%d new) insert=%.1fs | %d total pmids, %d stored",
-            _dt_search,
-            _dt_fetch,
-            _dt_embed,
-            len(abstracts_with_text),
-            _dt_insert,
-            len(all_pmids),
-            len(stored),
-        )
+        # logger.warning(
+        #     "[TIMING] fetch_and_cache breakdown: search=%.1fs fetch_abstracts=%.1fs "
+        #     "embed=%.1fs(%d new) insert=%.1fs | %d total pmids, %d stored",
+        #     _dt_search,
+        #     _dt_fetch,
+        #     _dt_embed,
+        #     len(abstracts_with_text),
+        #     _dt_insert,
+        #     len(all_pmids),
+        #     len(stored),
+        # )
 
         return all_pmids
 

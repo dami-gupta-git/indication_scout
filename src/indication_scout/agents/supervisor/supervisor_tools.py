@@ -1059,11 +1059,11 @@ def build_supervisor_tools(
                         "type": "tool_call",
                     }
                 )
-                logger.warning(
-                    "[TIMING] investigate %s: trials leg took %.1fs",
-                    disease,
-                    time.perf_counter() - _ct0,
-                )
+                # logger.warning(
+                #     "[TIMING] investigate %s: trials leg took %.1fs",
+                #     disease,
+                #     time.perf_counter() - _ct0,
+                # )
                 return msg
 
             lit_msg, ct_msg = await asyncio.gather(_timed_lit(), _timed_ct())

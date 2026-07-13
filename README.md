@@ -139,7 +139,8 @@ ranking. It still runs the mechanism (MoA), literature, and clinical-trials sub-
 pair and renders the same report as `find`. Useful for inspecting the literature and
 clinical-trial evidence for a hypothesis that Open Targets would not surface as a candidate.
 CLI-only; report is written to `./snapshots` (or `--out-dir`), and `--no-write` prints to stdout.
-No JSON payload is saved, so `scout render` is not available for these runs.
+No JSON payload is saved, so `scout render` is not available for these runs. Supports
+`--date-before YYYY-MM-DD` for a temporal holdout (same semantics as `find`; see below).
 
 #### Temporal holdout (`--date-before`)
 

@@ -180,7 +180,7 @@ async def run_mechanism_agent(
         len(drug_targets),
         time.perf_counter() - _asm_t0,
     )
-    logger.warning(f"mechanism_agent SUMMARY: {summary}")
+    logger.error(f"mechanism_agent SUMMARY: {summary}")
     return MechanismOutput(
         drug_targets=drug_targets,
         mechanisms_of_action=mechanisms_of_action,

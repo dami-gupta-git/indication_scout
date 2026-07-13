@@ -78,11 +78,11 @@ def build_literature_tools(
         profile = store.get("drug_profile") or await svc.build_drug_profile(chembl_id)
         queries = await svc.expand_search_terms(chembl_id, disease_name, profile)
         store["queries"] = queries
-        logger.warning(
-            "[TIMING] expand_search_terms %s: %.1fs",
-            disease_name,
-            time.perf_counter() - _t0,
-        )
+        # logger.warning(
+        #     "[TIMING] expand_search_terms %s: %.1fs",
+        #     disease_name,
+        #     time.perf_counter() - _t0,
+        # )
         return f"Generated {len(queries)} queries", queries
 
     @tool(response_format="content_and_artifact")
@@ -97,9 +97,9 @@ def build_literature_tools(
         # )
         pmids = await svc.fetch_and_cache(queries, db, date_before=date_before)
         store["pmids"] = pmids
-        logger.warning(
-            "[TIMING] fetch_and_cache %s: %.1fs", drug_name, time.perf_counter() - _t0
-        )
+        # logger.warning(
+        #     "[TIMING] fetch_and_cache %s: %.1fs", drug_name, time.perf_counter() - _t0
+        # )
         return f"Fetched {len(pmids)} PMIDs", pmids
 
     @tool(response_format="content_and_artifact")
