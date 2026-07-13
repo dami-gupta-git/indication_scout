@@ -108,6 +108,12 @@ Before implementing any feature that depends on external data:
 2. **Confirm field names** - Don't assume field names; inspect actual response shapes
 3. **Document assumptions** - List any assumptions made and how they were validated
 
+Before proposing any fix or feature that relies on a heuristic or data signal (a field, score,
+label, or classifier input), first PROVE the signal holds across a broad sample of real data — not
+just the one failing case. Query the actual data (test_reports, cache, live API) and check coverage
+and correctness across many drugs/diseases/trials. A signal that resolves the failing example is not
+validated; report where it breaks before recommending it.
+
 When creating a plan:
 - [ ] Identify all external dependencies (APIs, databases, services)
 - [ ] Verify each dependency's schema/contract before writing code

@@ -1,6 +1,6 @@
 # Sildenafil regression spec.
 #
-# Authored against gold_standard/sildenafil_2026-07-10_21-14-08.json. Each
+# Authored against gold_standard/sildenafil_2026-07-13_16-13-09.json. Each
 # assertion encodes a domain-meaningful invariant a regression must NOT flip.
 # Anchors are chosen to be STABLE across runs.
 #

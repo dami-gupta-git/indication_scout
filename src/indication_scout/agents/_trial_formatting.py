@@ -66,7 +66,7 @@ _PHASE_RANK = {
 _MESH_CAP = 10
 _WHY_STOPPED_CAP = 500
 _INTERVENTIONS_CAP = 5
-_BRIEF_SUMMARY_CAP = 160
+_BRIEF_SUMMARY_CAP = 500
 
 
 def _format_interventions(interventions: list, cap: int = _INTERVENTIONS_CAP) -> str:
@@ -80,21 +80,6 @@ def _format_interventions(interventions: list, cap: int = _INTERVENTIONS_CAP) ->
     if not names:
         return "(none)"
     return "; ".join(names)
-
-
-def _format_arm_roles(arm_groups: list, cap: int = _INTERVENTIONS_CAP) -> str:
-    """Render arm roles as "label=TYPE; label=TYPE", capped at `cap`.
-
-    Surfaces the per-arm role (EXPERIMENTAL / ACTIVE_COMPARATOR / ...) so the relevance gate can
-    tell whether the queried drug is the studied agent or merely a comparator arm. Empty renders as
-    "" (caller omits the clause) — absence is conveyed by the interventions column, not duplicated.
-    """
-    if not arm_groups:
-        return ""
-    parts = [
-        f"{g.label}={g.arm_type}" for g in arm_groups[:cap] if g.label and g.arm_type
-    ]
-    return "; ".join(parts)
 
 
 def _truncate_brief_summary(summary: str | None, cap: int = _BRIEF_SUMMARY_CAP) -> str:
@@ -206,11 +191,7 @@ def _format_trial_row(
         elif col == "mesh":
             parts.append(f"mesh: {_format_mesh_list(trial.mesh_conditions)}")
         elif col == "interventions":
-            drugs = f"drugs: {_format_interventions(trial.interventions)}"
-            # Append per-arm roles when the registry provides them, so the relevance gate can see
-            # which drug is EXPERIMENTAL vs a comparator arm rather than inferring from the title.
-            roles = _format_arm_roles(trial.arm_groups)
-            parts.append(f"{drugs} [arms: {roles}]" if roles else drugs)
+            parts.append(f"drugs: {_format_interventions(trial.interventions)}")
         elif col == "brief_summary":
             parts.append(f"summary: {_truncate_brief_summary(trial.brief_summary)}")
         elif col == "refs":

@@ -28,29 +28,6 @@ class Intervention(BaseModel):
         return values
 
 
-class ArmGroup(BaseModel):
-    """A trial arm and its role, from ClinicalTrials.gov's armsInterventionsModule.armGroups.
-
-    `arm_type` is the authoritative experimental-vs-comparator flag (EXPERIMENTAL,
-    ACTIVE_COMPARATOR, PLACEBO_COMPARATOR, SHAM_COMPARATOR, NO_INTERVENTION, OTHER). It lets the
-    relevance gate judge whether THIS drug is the studied agent or merely a comparator arm without
-    inferring it from the title. `intervention_names` links the arm to its intervention(s) by the
-    raw registry name string (e.g. "Drug: Sildenafil 25 mg").
-    """
-
-    label: str = ""  # arm label, e.g. "Sildenafil 25 mg"
-    arm_type: str = ""  # EXPERIMENTAL / ACTIVE_COMPARATOR / PLACEBO_COMPARATOR / ...
-    intervention_names: list[str] = []
-
-    @model_validator(mode="before")
-    @classmethod
-    def coerce_nones(cls, values: dict) -> dict:
-        for field_name, field_info in cls.model_fields.items():
-            if values.get(field_name) is None and field_info.default is not None:
-                values[field_name] = field_info.default
-        return values
-
-
 class MeshTerm(BaseModel):
     """A MeSH term from ClinicalTrials.gov's derived conditionBrowseModule."""
 
@@ -94,7 +71,6 @@ class Trial(BaseModel):
     mesh_conditions: list[MeshTerm] = []
     mesh_ancestors: list[MeshTerm] = []
     interventions: list[Intervention] = []
-    arm_groups: list[ArmGroup] = []
     sponsor: str = ""
     enrollment: int | None = None
     start_date: str | None = None

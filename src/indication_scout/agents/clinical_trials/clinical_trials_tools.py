@@ -204,14 +204,22 @@ def build_clinical_trials_tools(
             f"column against this descriptor to judge relevance vs contamination."
         )
         phase_dist = _phase_distribution(result.trials)
-        # `interventions` is included so the relevance gate's TEST 0 (is THIS drug the studied
-        # agent, or only a comparator/background arm?) can be judged from the trial's actual drug
-        # list rather than inferred from the title. Parity with the completed/terminated tables,
-        # which already show it. The Trial objects already carry it (same _parse_trial), so this is
-        # a display-only change — no extra fetch.
+        # `interventions` + `brief_summary` feed the relevance gate's TEST 0 (is THIS drug the
+        # studied agent, or only a comparator/background arm?). The summary states what the trial is
+        # actually testing; interventions list the drugs present. Together they let the gate name the
+        # studied agent without inferring from the title alone. Both come off the same _parse_trial
+        # Trial objects, so this is display-only — no extra fetch.
         table = _format_trial_table(
             result.trials,
-            columns=("nct_id", "phase", "status", "interventions", "mesh", "title"),
+            columns=(
+                "nct_id",
+                "phase",
+                "status",
+                "interventions",
+                "mesh",
+                "brief_summary",
+                "title",
+            ),
             cap=_settings.clinical_trials_cap,
         )
         content = (

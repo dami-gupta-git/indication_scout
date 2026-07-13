@@ -75,7 +75,7 @@
         "target_function": "Plays a role in signal transduction by regulating the intracellular concentration of cyclic nucleotides. This phosphodiesterase catalyzes the specific hydrolysis of cGMP to 5'-GMP. Specifically regulates nitric-oxide- generated cGMP.."
       }
     ],
-    "summary": "Sildenafil acts primarily as a PDE5A inhibitor, blocking the degradation of cGMP and thereby promoting smooth muscle relaxation and vasodilation. The strongest disease associations for PDE5A include coronary artery disease (overall score 0.661, with high clinical and genetic evidence), benign prostatic hyperplasia (0.605, strong clinical evidence — consistent with sildenafil's approved use in BPH), and obesity (0.312, driven by genetic association). Notably, PDE5A also shows associations with Parkinson's disease (0.300, genetic + literature evidence) and several cancers including breast cancer and melanoma (literature-driven), suggesting potential repurposing opportunities in neurodegeneration and oncology. These findings align with emerging clinical interest in sildenafil for cardiovascular protection, metabolic disorders, and exploratory use in neurodegenerative conditions."
+    "summary": "Sildenafil acts primarily as a PDE5A inhibitor, and disease association data for PDE5A reveals strong repurposing signals across several therapeutic areas. The highest-confidence associations are coronary artery disease (overall score 0.661, with robust genetic, literature, and clinical evidence) and benign prostatic hyperplasia (0.605, driven heavily by clinical evidence) — the latter already being an approved indication for sildenafil's sister drug tadalafil. Notably, PDE5A also shows genetic and literature links to Parkinson's disease (0.300) and carotid artery disease (0.308), suggesting potential neuroprotective and broader vascular repurposing opportunities. Additionally, literature-driven associations with cancer phenotypes (breast cancer, melanoma, and neoplasm broadly) hint at an emerging oncology angle, consistent with preclinical research into PDE5 inhibition as an immunomodulatory and anti-tumor strategy."
   },
   "disease_findings": [
     {
@@ -817,7 +817,7 @@
             "23443723"
           ]
         },
-        "summary": "Strong but mixed evidence supports sildenafil repurposing for Raynaud disease, based on synthesized PubMed abstracts covering its PDE5-inhibitory vasodilatory mechanism and clinical outcomes in Raynaud patients."
+        "summary": "Strong evidence with mixed direction for sildenafil in Raynaud's disease."
       },
       "clinical_trials": {
         "search": {
@@ -1697,7 +1697,7 @@
           "NCT03027674"
         ],
         "contaminated_nct_ids": [],
-        "relevance_reasoning": "All three trials study sildenafil (oral or topical) as the experimental intervention for Raynaud's phenomenon/disease or its secondary form in systemic sclerosis — none of these conditions are among sildenafil's FDA-approved indications (erectile dysfunction and pulmonary arterial hypertension), so all three are genuine repurposing evidence. NCT01347008 focuses on microcirculatory effects in systemic sclerosis with Raynaud's as a co-listed mesh term, but sildenafil is the studied drug and Raynaud disease is a direct target, keeping it relevant.",
+        "relevance_reasoning": "All three trials study sildenafil (oral or topical formulations) as the experimental agent for Raynaud's phenomenon/disease, which is not among sildenafil's FDA-approved indications (erectile dysfunction and pulmonary arterial hypertension). None of the trials involve an approved indication or a distinct unrelated disease, so all three are classified as relevant repurposing evidence.",
         "signals": {
           "highest_completed_phase": "Phase 3",
           "has_completed_phase3": true,
@@ -3151,7 +3151,7 @@
           "NCT04304313"
         ],
         "contaminated_nct_ids": [],
-        "relevance_reasoning": "Both trials study sildenafil as the experimental intervention directly in COVID-19 patients (one assessing oxygenation improvement, one a pilot study), and COVID-19 is not among sildenafil's FDA-approved indications (erectile dysfunction, pulmonary arterial hypertension, impotence). No contamination applies.",
+        "relevance_reasoning": "Both trials study sildenafil as the experimental intervention directly in COVID-19 patients, and COVID-19 is not among sildenafil's FDA-approved indications (erectile dysfunction, pulmonary arterial hypertension, impotence). All trials pass all relevance tests and represent genuine repurposing evidence.",
         "signals": {
           "highest_completed_phase": "Phase 1/Phase 2",
           "has_completed_phase3": false,
@@ -4432,7 +4432,7 @@
             "23443723"
           ]
         },
-        "summary": "Evidence synthesis complete for sildenafil in hypertension."
+        "summary": "Sildenafil in hypertension: moderate mixed evidence from 5 top-ranked abstracts (top similarity 0.70). The drug's PDE5-inhibitory mechanism supports vasodilation and blood pressure reduction, with evidence particularly strong in pulmonary arterial hypertension. Effects on systemic hypertension are mixed, warranting further investigation."
       },
       "clinical_trials": {
         "search": {
@@ -6731,72 +6731,10 @@
               ]
             },
             {
-              "nct_id": "NCT02284737",
-              "title": "A Study to Investigate the Efficacy of PADN to Improved Functional Capacity and Hemodynamics in Patients With PAH",
-              "brief_summary": "Pulmonary arterial hypertension (PAH) is characterized by premature death mainly because of progressive and severe right ventricular failure. Target drugs are reported to be associated with significant improvement of clinical outcome for PAH patients. However, previous studies using those target drugs focused on the change of 6-minute walk distance (6MWD) and or hemodynamic responses. As 6MWD has weak correlation with clinical outcome (time to clinical worsening, TTCW), benefits from target drugs for PAH patients are not clear. We previously reported the safety and efficacy of pulmonary artery denervation (PADN) for treatment of PAH patients who were unresponsive to target drugs. Hence, we design the randomized study to identify the effect of PADN on PAH.",
-              "phase": "Phase 4",
-              "overall_status": "TERMINATED",
-              "why_stopped": "Lack of subjects.",
-              "indications": [
-                "Pulmonary Arterial Hypertension"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D000081029",
-                  "term": "Pulmonary Arterial Hypertension"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
-                },
-                {
-                  "id": "D008171",
-                  "term": "Lung Diseases"
-                },
-                {
-                  "id": "D012140",
-                  "term": "Respiratory Tract Diseases"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Procedure",
-                  "intervention_name": "PADN",
-                  "description": "Contrast pulmonary artery angiography is performed to localize the pulmonary artery bifurcation level and to calculate the PA diameter. Once the anatomy is deemed acceptable, the radiofrequency ablation catheter is introduced into the distal bifurcation area of the main PA. The catheter is then maneuvered within the PA to allow energy delivery to ensure that the electrodes are tightly in contact with the endovascular surface. Two to three ablations at 1-15 W for 120 seconds at each point were performed in the distal bifurcation area of the main PA."
-                },
-                {
-                  "intervention_type": "Procedure",
-                  "intervention_name": "sham PADN",
-                  "description": "The radiofrequency ablation catheter placed, no ablations for patients in the sham PADN group."
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Sildenafil",
-                  "description": "Participants initially received 5 mg tadalafil for the first 2 weeks in the two groups. The tadalafil dose may have been up titrated to 40 mg after 2 weeks, with maximum effects being obtained. The up titrated of tadalafil to 40 mg was not mandatory if the investigator decided for tolerability reasons the participants should remain on 5 mg."
-                }
-              ],
-              "sponsor": "Nanjing First Hospital, Nanjing Medical University",
-              "enrollment": 100,
-              "start_date": "2014-11-28",
-              "completion_date": "2021-07-30",
-              "primary_outcomes": [
-                {
-                  "measure": "Pulmonary artery hypertension (PAH)- related events",
-                  "time_frame": "Baseline to month 6"
-                }
-              ],
-              "references": [
-                "23850902",
-                "23466961"
-              ]
-            },
-            {
-              "nct_id": "NCT00433329",
-              "title": "Combination Therapy in Pulmonary Arterial Hypertension",
-              "brief_summary": "An open label, non-comparative study design is appropriate for this Phase 4 study designed to assess whether a core therapy of bosentan, either as monotherapy or with the addition of sildenafil, enables patients with pulmonary arterial hypertension (PAH) to achieve a 6-minute walk distance (6 MWD) of ≥380 meters after 28 weeks of therapy This design is also appropriate to pioneer the utility of cardiac MRI in assessing improved functional capacity in PAH and exploring its correlation with other parameters.",
-              "phase": "Phase 4",
+              "nct_id": "NCT01043627",
+              "title": "Sildenafil to Tadalafil in Pulmonary Arterial Hypertension (SITAR)",
+              "brief_summary": "Assess tolerability, transition methods and clinical effects of transition from sildenafil (Revatio) to tadalafil (Adcirca) for treatment of pulmonary arterial hypertension.",
+              "phase": "Not Applicable",
               "overall_status": "COMPLETED",
               "why_stopped": null,
               "indications": [
@@ -6822,30 +6760,19 @@
                   "term": "Respiratory Tract Diseases"
                 }
               ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Bosentan",
-                  "description": "Oral bosentan 62.5 mg BID first 4 weeks followed by 24 weeks of 125 mg BID if the 62.5 mg BID dose was well tolerated"
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Sildenafil",
-                  "description": "Oral sildenafil 20 mg TID in patients who do not reach the 6-MWT distance threshold at Week 16"
-                }
-              ],
-              "sponsor": "Actelion",
+              "interventions": [],
+              "sponsor": "Mayo Clinic",
               "enrollment": 100,
-              "start_date": "2007-03",
-              "completion_date": "2010-05",
+              "start_date": "2009-12",
+              "completion_date": "2011-12",
               "primary_outcomes": [
                 {
-                  "measure": "Number of Patients Reaching a 6-Minute Walk Test (6MWT) Distance ≥ 380 Meters",
-                  "time_frame": "at 16 weeks and at 28 weeks of a stepped approach to therapy"
+                  "measure": "Describe tolerability of transition from sildenafil to tadalafil for treatment of pulmonary arterial hypertension (PAH).",
+                  "time_frame": "12/2011"
                 }
               ],
               "references": [
-                "29064349"
+                "24742768"
               ]
             },
             {
@@ -6965,10 +6892,10 @@
               "references": []
             },
             {
-              "nct_id": "NCT01043627",
-              "title": "Sildenafil to Tadalafil in Pulmonary Arterial Hypertension (SITAR)",
-              "brief_summary": "Assess tolerability, transition methods and clinical effects of transition from sildenafil (Revatio) to tadalafil (Adcirca) for treatment of pulmonary arterial hypertension.",
-              "phase": "Not Applicable",
+              "nct_id": "NCT00433329",
+              "title": "Combination Therapy in Pulmonary Arterial Hypertension",
+              "brief_summary": "An open label, non-comparative study design is appropriate for this Phase 4 study designed to assess whether a core therapy of bosentan, either as monotherapy or with the addition of sildenafil, enables patients with pulmonary arterial hypertension (PAH) to achieve a 6-minute walk distance (6 MWD) of ≥380 meters after 28 weeks of therapy This design is also appropriate to pioneer the utility of cardiac MRI in assessing improved functional capacity in PAH and exploring its correlation with other parameters.",
+              "phase": "Phase 4",
               "overall_status": "COMPLETED",
               "why_stopped": null,
               "indications": [
@@ -6994,19 +6921,92 @@
                   "term": "Respiratory Tract Diseases"
                 }
               ],
-              "interventions": [],
-              "sponsor": "Mayo Clinic",
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Bosentan",
+                  "description": "Oral bosentan 62.5 mg BID first 4 weeks followed by 24 weeks of 125 mg BID if the 62.5 mg BID dose was well tolerated"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil",
+                  "description": "Oral sildenafil 20 mg TID in patients who do not reach the 6-MWT distance threshold at Week 16"
+                }
+              ],
+              "sponsor": "Actelion",
               "enrollment": 100,
-              "start_date": "2009-12",
-              "completion_date": "2011-12",
+              "start_date": "2007-03",
+              "completion_date": "2010-05",
               "primary_outcomes": [
                 {
-                  "measure": "Describe tolerability of transition from sildenafil to tadalafil for treatment of pulmonary arterial hypertension (PAH).",
-                  "time_frame": "12/2011"
+                  "measure": "Number of Patients Reaching a 6-Minute Walk Test (6MWT) Distance ≥ 380 Meters",
+                  "time_frame": "at 16 weeks and at 28 weeks of a stepped approach to therapy"
                 }
               ],
               "references": [
-                "24742768"
+                "29064349"
+              ]
+            },
+            {
+              "nct_id": "NCT02284737",
+              "title": "A Study to Investigate the Efficacy of PADN to Improved Functional Capacity and Hemodynamics in Patients With PAH",
+              "brief_summary": "Pulmonary arterial hypertension (PAH) is characterized by premature death mainly because of progressive and severe right ventricular failure. Target drugs are reported to be associated with significant improvement of clinical outcome for PAH patients. However, previous studies using those target drugs focused on the change of 6-minute walk distance (6MWD) and or hemodynamic responses. As 6MWD has weak correlation with clinical outcome (time to clinical worsening, TTCW), benefits from target drugs for PAH patients are not clear. We previously reported the safety and efficacy of pulmonary artery denervation (PADN) for treatment of PAH patients who were unresponsive to target drugs. Hence, we design the randomized study to identify the effect of PADN on PAH.",
+              "phase": "Phase 4",
+              "overall_status": "TERMINATED",
+              "why_stopped": "Lack of subjects.",
+              "indications": [
+                "Pulmonary Arterial Hypertension"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D000081029",
+                  "term": "Pulmonary Arterial Hypertension"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Procedure",
+                  "intervention_name": "PADN",
+                  "description": "Contrast pulmonary artery angiography is performed to localize the pulmonary artery bifurcation level and to calculate the PA diameter. Once the anatomy is deemed acceptable, the radiofrequency ablation catheter is introduced into the distal bifurcation area of the main PA. The catheter is then maneuvered within the PA to allow energy delivery to ensure that the electrodes are tightly in contact with the endovascular surface. Two to three ablations at 1-15 W for 120 seconds at each point were performed in the distal bifurcation area of the main PA."
+                },
+                {
+                  "intervention_type": "Procedure",
+                  "intervention_name": "sham PADN",
+                  "description": "The radiofrequency ablation catheter placed, no ablations for patients in the sham PADN group."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil",
+                  "description": "Participants initially received 5 mg tadalafil for the first 2 weeks in the two groups. The tadalafil dose may have been up titrated to 40 mg after 2 weeks, with maximum effects being obtained. The up titrated of tadalafil to 40 mg was not mandatory if the investigator decided for tolerability reasons the participants should remain on 5 mg."
+                }
+              ],
+              "sponsor": "Nanjing First Hospital, Nanjing Medical University",
+              "enrollment": 100,
+              "start_date": "2014-11-28",
+              "completion_date": "2021-07-30",
+              "primary_outcomes": [
+                {
+                  "measure": "Pulmonary artery hypertension (PAH)- related events",
+                  "time_frame": "Baseline to month 6"
+                }
+              ],
+              "references": [
+                "23850902",
+                "23466961"
               ]
             },
             {
@@ -7749,80 +7749,6 @@
               ]
             },
             {
-              "nct_id": "NCT01548950",
-              "title": "Drug Therapy and Surgery in Congenital Heart Disease With Pulmonary Hypertension",
-              "brief_summary": "The purpose of this study is to test the hypothesis that treating PAH-CHD patients preoperatively with PAH drugs and keeping them on treatment for six months after surgery reduces the risk of immediate postoperative death and the risk of residual PAH at six months following operation to \\<10%.",
-              "phase": "Not Applicable",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Congenital Heart Disease",
-                "Pulmonary Arterial Hypertension"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D006330",
-                  "term": "Heart Defects, Congenital"
-                },
-                {
-                  "id": "D000081029",
-                  "term": "Pulmonary Arterial Hypertension"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D018376",
-                  "term": "Cardiovascular Abnormalities"
-                },
-                {
-                  "id": "D002318",
-                  "term": "Cardiovascular Diseases"
-                },
-                {
-                  "id": "D006331",
-                  "term": "Heart Diseases"
-                },
-                {
-                  "id": "D000013",
-                  "term": "Congenital Abnormalities"
-                },
-                {
-                  "id": "D009358",
-                  "term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities"
-                },
-                {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
-                },
-                {
-                  "id": "D008171",
-                  "term": "Lung Diseases"
-                },
-                {
-                  "id": "D012140",
-                  "term": "Respiratory Tract Diseases"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Sildenafil singly or in association with Bosentan",
-                  "description": "Sildenafil, 1-4 mg/Kg/day (6-hour intervals) preoperatively, until development of pulmonary congestion (generally 1-4 weeks) or preoperatively, for 10-12 months, in association with bosentan (15.6-62.5 mg b.i.d.) if pulmonary congestion does not develop. Surgery will be performed at 1-4 weeks (short-term treatment) or at 10-12 months (medium-term treatment) if operability criteria are met (catheterization). In both cases (short and medium-term treatments), the drug or drugs will be kept for 6 months postoperatively, when final catheterization will be performed for efficacy testing."
-                }
-              ],
-              "sponsor": "University of Sao Paulo General Hospital",
-              "enrollment": 50,
-              "start_date": "2011-09",
-              "completion_date": "2014-01",
-              "primary_outcomes": [
-                {
-                  "measure": "Immediate postoperative right cardiac failure and mortality, and prevalence of residual PAH six months after surgery.",
-                  "time_frame": "Six months following surgery"
-                }
-              ],
-              "references": []
-            },
-            {
               "nct_id": "NCT02620995",
               "title": "Effects of Sildenafil on Penile Vascular Function in Hypertensive Men With Erectile Dysfunction",
               "brief_summary": "The study will evaluate the effects of a chronic 30-day treatment with sildenafil citrate on penile and systemic microvascular function as well as in blood pressure.\n\nA control group of normotensive age-matched healthy subjects will serve as a comparator group for normal penile and systemic microvascular function.",
@@ -7901,6 +7827,129 @@
                 {
                   "measure": "Penile microvascular vasodilatory capacity",
                   "time_frame": "at the end of a 30-day treatment"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT01548950",
+              "title": "Drug Therapy and Surgery in Congenital Heart Disease With Pulmonary Hypertension",
+              "brief_summary": "The purpose of this study is to test the hypothesis that treating PAH-CHD patients preoperatively with PAH drugs and keeping them on treatment for six months after surgery reduces the risk of immediate postoperative death and the risk of residual PAH at six months following operation to \\<10%.",
+              "phase": "Not Applicable",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Congenital Heart Disease",
+                "Pulmonary Arterial Hypertension"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D006330",
+                  "term": "Heart Defects, Congenital"
+                },
+                {
+                  "id": "D000081029",
+                  "term": "Pulmonary Arterial Hypertension"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D018376",
+                  "term": "Cardiovascular Abnormalities"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D006331",
+                  "term": "Heart Diseases"
+                },
+                {
+                  "id": "D000013",
+                  "term": "Congenital Abnormalities"
+                },
+                {
+                  "id": "D009358",
+                  "term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities"
+                },
+                {
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil singly or in association with Bosentan",
+                  "description": "Sildenafil, 1-4 mg/Kg/day (6-hour intervals) preoperatively, until development of pulmonary congestion (generally 1-4 weeks) or preoperatively, for 10-12 months, in association with bosentan (15.6-62.5 mg b.i.d.) if pulmonary congestion does not develop. Surgery will be performed at 1-4 weeks (short-term treatment) or at 10-12 months (medium-term treatment) if operability criteria are met (catheterization). In both cases (short and medium-term treatments), the drug or drugs will be kept for 6 months postoperatively, when final catheterization will be performed for efficacy testing."
+                }
+              ],
+              "sponsor": "University of Sao Paulo General Hospital",
+              "enrollment": 50,
+              "start_date": "2011-09",
+              "completion_date": "2014-01",
+              "primary_outcomes": [
+                {
+                  "measure": "Immediate postoperative right cardiac failure and mortality, and prevalence of residual PAH six months after surgery.",
+                  "time_frame": "Six months following surgery"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT06753981",
+              "title": "Efficacy and Safety of Triple-targeted Drug Therapy in Treatment-naive Patients With Non-low-risk PAH: A Real-world, Multicenter Study",
+              "brief_summary": "This study is a multicenter, prospective, observational study aimed at investigating the efficacy and safety of triple targeted drug therapy in patients with arterial pulmonary hypertension (PAH) who are not at low risk and are receiving initial treatment. The prognosis of arterial pulmonary hypertension is explored.",
+              "phase": "Not Applicable",
+              "overall_status": "RECRUITING",
+              "why_stopped": null,
+              "indications": [
+                "Arterial Pulmonary Hypertension (PAH)"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D000081029",
+                  "term": "Pulmonary Arterial Hypertension"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Endothelin receptor antagonist (ERA) combined with PDE5i/sGC agonist dual therapy prostacyclin drugs",
+                  "description": "Endothelin receptor antagonist (ERA) combined with PDE5i/sGC agonist dual therapy prostacyclin drugs Including macitentan sildenafil/tadalafil or riociguat selexipag/epoprostenol."
+                }
+              ],
+              "sponsor": "Qianfoshan Hospital",
+              "enrollment": 48,
+              "start_date": "2024-12-10",
+              "completion_date": "2026-11-14",
+              "primary_outcomes": [
+                {
+                  "measure": "Pulmonary Vascular Resistance (PVR)",
+                  "time_frame": "Up to 3 months"
                 }
               ],
               "references": []
@@ -7988,55 +8037,6 @@
                 {
                   "measure": "Mean Change From Baseline in Pulmonary Vascular Resistance Index (PVRI) Over 4 Hours Post Dose",
                   "time_frame": "Baseline, up to 4 hours post-dose on Day 1"
-                }
-              ],
-              "references": []
-            },
-            {
-              "nct_id": "NCT06753981",
-              "title": "Efficacy and Safety of Triple-targeted Drug Therapy in Treatment-naive Patients With Non-low-risk PAH: A Real-world, Multicenter Study",
-              "brief_summary": "This study is a multicenter, prospective, observational study aimed at investigating the efficacy and safety of triple targeted drug therapy in patients with arterial pulmonary hypertension (PAH) who are not at low risk and are receiving initial treatment. The prognosis of arterial pulmonary hypertension is explored.",
-              "phase": "Not Applicable",
-              "overall_status": "RECRUITING",
-              "why_stopped": null,
-              "indications": [
-                "Arterial Pulmonary Hypertension (PAH)"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D000081029",
-                  "term": "Pulmonary Arterial Hypertension"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
-                },
-                {
-                  "id": "D008171",
-                  "term": "Lung Diseases"
-                },
-                {
-                  "id": "D012140",
-                  "term": "Respiratory Tract Diseases"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Endothelin receptor antagonist (ERA) combined with PDE5i/sGC agonist dual therapy prostacyclin drugs",
-                  "description": "Endothelin receptor antagonist (ERA) combined with PDE5i/sGC agonist dual therapy prostacyclin drugs Including macitentan sildenafil/tadalafil or riociguat selexipag/epoprostenol."
-                }
-              ],
-              "sponsor": "Qianfoshan Hospital",
-              "enrollment": 48,
-              "start_date": "2024-12-10",
-              "completion_date": "2026-11-14",
-              "primary_outcomes": [
-                {
-                  "measure": "Pulmonary Vascular Resistance (PVR)",
-                  "time_frame": "Up to 3 months"
                 }
               ],
               "references": []
@@ -10518,80 +10518,6 @@
               ]
             },
             {
-              "nct_id": "NCT01548950",
-              "title": "Drug Therapy and Surgery in Congenital Heart Disease With Pulmonary Hypertension",
-              "brief_summary": "The purpose of this study is to test the hypothesis that treating PAH-CHD patients preoperatively with PAH drugs and keeping them on treatment for six months after surgery reduces the risk of immediate postoperative death and the risk of residual PAH at six months following operation to \\<10%.",
-              "phase": "Not Applicable",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Congenital Heart Disease",
-                "Pulmonary Arterial Hypertension"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D006330",
-                  "term": "Heart Defects, Congenital"
-                },
-                {
-                  "id": "D000081029",
-                  "term": "Pulmonary Arterial Hypertension"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D018376",
-                  "term": "Cardiovascular Abnormalities"
-                },
-                {
-                  "id": "D002318",
-                  "term": "Cardiovascular Diseases"
-                },
-                {
-                  "id": "D006331",
-                  "term": "Heart Diseases"
-                },
-                {
-                  "id": "D000013",
-                  "term": "Congenital Abnormalities"
-                },
-                {
-                  "id": "D009358",
-                  "term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities"
-                },
-                {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
-                },
-                {
-                  "id": "D008171",
-                  "term": "Lung Diseases"
-                },
-                {
-                  "id": "D012140",
-                  "term": "Respiratory Tract Diseases"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Sildenafil singly or in association with Bosentan",
-                  "description": "Sildenafil, 1-4 mg/Kg/day (6-hour intervals) preoperatively, until development of pulmonary congestion (generally 1-4 weeks) or preoperatively, for 10-12 months, in association with bosentan (15.6-62.5 mg b.i.d.) if pulmonary congestion does not develop. Surgery will be performed at 1-4 weeks (short-term treatment) or at 10-12 months (medium-term treatment) if operability criteria are met (catheterization). In both cases (short and medium-term treatments), the drug or drugs will be kept for 6 months postoperatively, when final catheterization will be performed for efficacy testing."
-                }
-              ],
-              "sponsor": "University of Sao Paulo General Hospital",
-              "enrollment": 50,
-              "start_date": "2011-09",
-              "completion_date": "2014-01",
-              "primary_outcomes": [
-                {
-                  "measure": "Immediate postoperative right cardiac failure and mortality, and prevalence of residual PAH six months after surgery.",
-                  "time_frame": "Six months following surgery"
-                }
-              ],
-              "references": []
-            },
-            {
               "nct_id": "NCT02620995",
               "title": "Effects of Sildenafil on Penile Vascular Function in Hypertensive Men With Erectile Dysfunction",
               "brief_summary": "The study will evaluate the effects of a chronic 30-day treatment with sildenafil citrate on penile and systemic microvascular function as well as in blood pressure.\n\nA control group of normotensive age-matched healthy subjects will serve as a comparator group for normal penile and systemic microvascular function.",
@@ -10675,19 +10601,20 @@
               "references": []
             },
             {
-              "nct_id": "NCT00454207",
-              "title": "Open Label Study of Sildenafil in Patients With Pulmonary Arterial Hypertension",
-              "brief_summary": "To assess the safety of sildenafil 20 mg TID orally given to Japanese pulmonary arterial hypertension patients (Part 1 and 2) To assess the efficacy after 12 weeks of treatment of sildenafil 20 mg TID orally given to Japanese pulmonary arterial hypertension patients (Part 1)",
-              "phase": "Phase 3",
+              "nct_id": "NCT01548950",
+              "title": "Drug Therapy and Surgery in Congenital Heart Disease With Pulmonary Hypertension",
+              "brief_summary": "The purpose of this study is to test the hypothesis that treating PAH-CHD patients preoperatively with PAH drugs and keeping them on treatment for six months after surgery reduces the risk of immediate postoperative death and the risk of residual PAH at six months following operation to \\<10%.",
+              "phase": "Not Applicable",
               "overall_status": "COMPLETED",
               "why_stopped": null,
               "indications": [
-                "Pulmonary Hypertension"
+                "Congenital Heart Disease",
+                "Pulmonary Arterial Hypertension"
               ],
               "mesh_conditions": [
                 {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
+                  "id": "D006330",
+                  "term": "Heart Defects, Congenital"
                 },
                 {
                   "id": "D000081029",
@@ -10696,53 +10623,53 @@
               ],
               "mesh_ancestors": [
                 {
+                  "id": "D018376",
+                  "term": "Cardiovascular Abnormalities"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D006331",
+                  "term": "Heart Diseases"
+                },
+                {
+                  "id": "D000013",
+                  "term": "Congenital Abnormalities"
+                },
+                {
+                  "id": "D009358",
+                  "term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities"
+                },
+                {
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
+                },
+                {
                   "id": "D008171",
                   "term": "Lung Diseases"
                 },
                 {
                   "id": "D012140",
                   "term": "Respiratory Tract Diseases"
-                },
-                {
-                  "id": "D006973",
-                  "term": "Hypertension"
-                },
-                {
-                  "id": "D014652",
-                  "term": "Vascular Diseases"
-                },
-                {
-                  "id": "D002318",
-                  "term": "Cardiovascular Diseases"
                 }
               ],
               "interventions": [
                 {
                   "intervention_type": "Drug",
-                  "intervention_name": "sildenafil citrate (UK-92,480)",
-                  "description": "sildenafil citrate (UK-92,480)"
+                  "intervention_name": "Sildenafil singly or in association with Bosentan",
+                  "description": "Sildenafil, 1-4 mg/Kg/day (6-hour intervals) preoperatively, until development of pulmonary congestion (generally 1-4 weeks) or preoperatively, for 10-12 months, in association with bosentan (15.6-62.5 mg b.i.d.) if pulmonary congestion does not develop. Surgery will be performed at 1-4 weeks (short-term treatment) or at 10-12 months (medium-term treatment) if operability criteria are met (catheterization). In both cases (short and medium-term treatments), the drug or drugs will be kept for 6 months postoperatively, when final catheterization will be performed for efficacy testing."
                 }
               ],
-              "sponsor": "Pfizer's Upjohn has merged with Mylan to form Viatris Inc.",
-              "enrollment": 44,
-              "start_date": "2007-04",
-              "completion_date": "2009-02",
+              "sponsor": "University of Sao Paulo General Hospital",
+              "enrollment": 50,
+              "start_date": "2011-09",
+              "completion_date": "2014-01",
               "primary_outcomes": [
                 {
-                  "measure": "Change in the 6-minute Walk Distance From Baseline at Week 12 in Participants Who Entered the Study From Part I",
-                  "time_frame": "Baseline, Week 12"
-                },
-                {
-                  "measure": "Change in the Mean Pulmonary Arterial Pressure From Baseline at Week 12 in Participants Who Entered the Study From Part I",
-                  "time_frame": "Baseline, Week 12"
-                },
-                {
-                  "measure": "Change in the Pulmonary Vascular Resistance From Baseline at Week 12 in Participants Who Entered the Study From Part I",
-                  "time_frame": "Baseline, Week 12"
-                },
-                {
-                  "measure": "Change in the Cardiac Output From Baseline at Week 12 in Participants Who Entered the Study From Part I",
-                  "time_frame": "Baseline, week 12"
+                  "measure": "Immediate postoperative right cardiac failure and mortality, and prevalence of residual PAH six months after surgery.",
+                  "time_frame": "Six months following surgery"
                 }
               ],
               "references": []
@@ -10823,6 +10750,79 @@
               "references": [
                 "21709061"
               ]
+            },
+            {
+              "nct_id": "NCT00454207",
+              "title": "Open Label Study of Sildenafil in Patients With Pulmonary Arterial Hypertension",
+              "brief_summary": "To assess the safety of sildenafil 20 mg TID orally given to Japanese pulmonary arterial hypertension patients (Part 1 and 2) To assess the efficacy after 12 weeks of treatment of sildenafil 20 mg TID orally given to Japanese pulmonary arterial hypertension patients (Part 1)",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Pulmonary Hypertension"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
+                },
+                {
+                  "id": "D000081029",
+                  "term": "Pulmonary Arterial Hypertension"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                },
+                {
+                  "id": "D006973",
+                  "term": "Hypertension"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "sildenafil citrate (UK-92,480)",
+                  "description": "sildenafil citrate (UK-92,480)"
+                }
+              ],
+              "sponsor": "Pfizer's Upjohn has merged with Mylan to form Viatris Inc.",
+              "enrollment": 44,
+              "start_date": "2007-04",
+              "completion_date": "2009-02",
+              "primary_outcomes": [
+                {
+                  "measure": "Change in the 6-minute Walk Distance From Baseline at Week 12 in Participants Who Entered the Study From Part I",
+                  "time_frame": "Baseline, Week 12"
+                },
+                {
+                  "measure": "Change in the Mean Pulmonary Arterial Pressure From Baseline at Week 12 in Participants Who Entered the Study From Part I",
+                  "time_frame": "Baseline, Week 12"
+                },
+                {
+                  "measure": "Change in the Pulmonary Vascular Resistance From Baseline at Week 12 in Participants Who Entered the Study From Part I",
+                  "time_frame": "Baseline, Week 12"
+                },
+                {
+                  "measure": "Change in the Cardiac Output From Baseline at Week 12 in Participants Who Entered the Study From Part I",
+                  "time_frame": "Baseline, week 12"
+                }
+              ],
+              "references": []
             },
             {
               "nct_id": "NCT01409122",
@@ -11128,61 +11128,6 @@
               "references": []
             },
             {
-              "nct_id": "NCT00599235",
-              "title": "Sildenafil and Exercise Capacity in Hypertension",
-              "brief_summary": "Hypertension (persistently elevated blood pressure) is a major risk factor for heart disease and stroke. Hypertensive individuals show a reduced exercise capacity, which is present from a very early stage and contributes to their increased cardiovascular risk. Sildenafil belongs to a class of drugs called phosphodiesterase type 5 (PDE5) inhibitors, and it works by enhancing the effects of nitric oxide, a substance that dilates blood vessels and increases blood flow. We hypothesize that sildenafil, because of its effect on nitric oxide and blood flow, will improve exercise capacity in hypertensive patients. Therefore, the main aim of the study is to investigate the effects of PDE5 inhibition on exercise capacity and vascular function in hypertension, and to compare these effects in hypertensive patients and healthy controls.",
-              "phase": "Not Applicable",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Hypertension"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D006973",
-                  "term": "Hypertension"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D014652",
-                  "term": "Vascular Diseases"
-                },
-                {
-                  "id": "D002318",
-                  "term": "Cardiovascular Diseases"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "sildenafil",
-                  "description": "50mg 3 times daily for 7 days"
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "hydralazine",
-                  "description": "25mg 3 times daily for 7 days"
-                },
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "placebo",
-                  "description": "3 times daily for 7 days"
-                }
-              ],
-              "sponsor": "University of Edinburgh",
-              "enrollment": 30,
-              "start_date": "2007-03",
-              "completion_date": "2008-05",
-              "primary_outcomes": [
-                {
-                  "measure": "Peak oxygen uptake (VO2) during exercise",
-                  "time_frame": "1 week of treatment"
-                }
-              ],
-              "references": []
-            },
-            {
               "nct_id": "NCT02595541",
               "title": "Oral Sildenafil and Intravenous Milrinone on Postoperative Pulmonary Hypertension",
               "brief_summary": "Pulmonary hypertension (PH) is a consequence of an increase in pulmonary vascular resistance (PVR), pulmonary blood flow, pulmonary venous pressure, or a combination of these elements. Pulmonary arterial hypertension is a frequent complication of congenital heart disease, particularly in patients with systemic-to-pulmonary shunts. Persistent exposure o f the pulmonary vasculature to increased blood flow and pressure may result in vascular remodeling and dysfunction. This leads to increased pulmonary vascular resistance and, ultimately, to reversal of the shunt and development of Eisenmenger's syndrome. It may be more appropriate to define pulmonary hypertension according to the ratio of MPAP to mean systemic arterial pressure (MPAP/MAP) because children may have a low mean systemic blood pressure. MPAP/MAP ratio of \\< 0.25 is normal, a ratio of 0.33-0.5 indicates moderate pulmonary hypertension, and a ratio of \\> 0.5 is indicative of severe pulmonary hypertension",
@@ -11240,6 +11185,61 @@
                 {
                   "measure": "mean pulmonary arterial pressure",
                   "time_frame": "within the first 24 hours postoperative"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT00599235",
+              "title": "Sildenafil and Exercise Capacity in Hypertension",
+              "brief_summary": "Hypertension (persistently elevated blood pressure) is a major risk factor for heart disease and stroke. Hypertensive individuals show a reduced exercise capacity, which is present from a very early stage and contributes to their increased cardiovascular risk. Sildenafil belongs to a class of drugs called phosphodiesterase type 5 (PDE5) inhibitors, and it works by enhancing the effects of nitric oxide, a substance that dilates blood vessels and increases blood flow. We hypothesize that sildenafil, because of its effect on nitric oxide and blood flow, will improve exercise capacity in hypertensive patients. Therefore, the main aim of the study is to investigate the effects of PDE5 inhibition on exercise capacity and vascular function in hypertension, and to compare these effects in hypertensive patients and healthy controls.",
+              "phase": "Not Applicable",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Hypertension"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D006973",
+                  "term": "Hypertension"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "sildenafil",
+                  "description": "50mg 3 times daily for 7 days"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "hydralazine",
+                  "description": "25mg 3 times daily for 7 days"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "placebo",
+                  "description": "3 times daily for 7 days"
+                }
+              ],
+              "sponsor": "University of Edinburgh",
+              "enrollment": 30,
+              "start_date": "2007-03",
+              "completion_date": "2008-05",
+              "primary_outcomes": [
+                {
+                  "measure": "Peak oxygen uptake (VO2) during exercise",
+                  "time_frame": "1 week of treatment"
                 }
               ],
               "references": []
@@ -11429,6 +11429,188 @@
               "references": [
                 "23585527"
               ]
+            },
+            {
+              "nct_id": "NCT04715113",
+              "title": "Blood Markers Predict Effect of Normobaric Hypoxia at Rest and During Exercise in Patients With Pulmonary Hypertension",
+              "brief_summary": "To study the effect of acute normobaric hypoxia during exercise in patients with pulmonary hypertension on blood markers (serum markers of iron and red blood cell homeostasis and micro-RNAs known to be associated with PH).",
+              "phase": "Not Applicable",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Hypertension, Pulmonary"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
+                },
+                {
+                  "id": "D000860",
+                  "term": "Hypoxia"
+                },
+                {
+                  "id": "D009043",
+                  "term": "Motor Activity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                },
+                {
+                  "id": "D006973",
+                  "term": "Hypertension"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D012818",
+                  "term": "Signs and Symptoms, Respiratory"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                },
+                {
+                  "id": "D001519",
+                  "term": "Behavior"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Other",
+                  "intervention_name": "Normobaric hypoxia (FiO2 15%)",
+                  "description": "Inhalation of deoxygenated air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise."
+                },
+                {
+                  "intervention_type": "Other",
+                  "intervention_name": "Placebo-ambient air (FiO2 21%)",
+                  "description": "Inhalation of room air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise."
+                },
+                {
+                  "intervention_type": "Other",
+                  "intervention_name": "Normobaric hypoxia (FiO2 15%) under Sildenafil",
+                  "description": "Inhalation of deoxygenated air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise under Sildenafil."
+                },
+                {
+                  "intervention_type": "Other",
+                  "intervention_name": "Placebo-ambient air (FiO2 21%) under Sildenafil",
+                  "description": "Inhalation of room air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise under Sildenafil."
+                }
+              ],
+              "sponsor": "University of Zurich",
+              "enrollment": 24,
+              "start_date": "2021-02-01",
+              "completion_date": "2023-05-31",
+              "primary_outcomes": [
+                {
+                  "measure": "Serum levels of ferritin",
+                  "time_frame": "Baseline"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT04706546",
+              "title": "Hemodynamic Effects During Exercise in Patients With Pulmonary Hypertension Receiving Sildenafil",
+              "brief_summary": "To study hemodynamic effects of Sildenafil during exercise in patients with pulmonary hypertension.",
+              "phase": "Not Applicable",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Hypertension, Pulmonary"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
+                },
+                {
+                  "id": "D000860",
+                  "term": "Hypoxia"
+                },
+                {
+                  "id": "D009043",
+                  "term": "Motor Activity"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                },
+                {
+                  "id": "D006973",
+                  "term": "Hypertension"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D012818",
+                  "term": "Signs and Symptoms, Respiratory"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                },
+                {
+                  "id": "D001519",
+                  "term": "Behavior"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Other",
+                  "intervention_name": "Hemodynamic effect of exercise under Sildenafil",
+                  "description": "Inhalation of room air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise under SIldenafil."
+                },
+                {
+                  "intervention_type": "Other",
+                  "intervention_name": "Hemodynamic effect of exercise",
+                  "description": "Inhalation of room air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise."
+                }
+              ],
+              "sponsor": "University of Zurich",
+              "enrollment": 24,
+              "start_date": "2021-02-01",
+              "completion_date": "2023-05-31",
+              "primary_outcomes": [
+                {
+                  "measure": "mean pulmonary artery pressure (mPAP) / cardiac output (CO)",
+                  "time_frame": "4 hours"
+                }
+              ],
+              "references": []
             },
             {
               "nct_id": "NCT04704440",
@@ -11656,188 +11838,6 @@
               "references": []
             },
             {
-              "nct_id": "NCT04715113",
-              "title": "Blood Markers Predict Effect of Normobaric Hypoxia at Rest and During Exercise in Patients With Pulmonary Hypertension",
-              "brief_summary": "To study the effect of acute normobaric hypoxia during exercise in patients with pulmonary hypertension on blood markers (serum markers of iron and red blood cell homeostasis and micro-RNAs known to be associated with PH).",
-              "phase": "Not Applicable",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Hypertension, Pulmonary"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
-                },
-                {
-                  "id": "D000860",
-                  "term": "Hypoxia"
-                },
-                {
-                  "id": "D009043",
-                  "term": "Motor Activity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D008171",
-                  "term": "Lung Diseases"
-                },
-                {
-                  "id": "D012140",
-                  "term": "Respiratory Tract Diseases"
-                },
-                {
-                  "id": "D006973",
-                  "term": "Hypertension"
-                },
-                {
-                  "id": "D014652",
-                  "term": "Vascular Diseases"
-                },
-                {
-                  "id": "D002318",
-                  "term": "Cardiovascular Diseases"
-                },
-                {
-                  "id": "D012818",
-                  "term": "Signs and Symptoms, Respiratory"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                },
-                {
-                  "id": "D001519",
-                  "term": "Behavior"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Other",
-                  "intervention_name": "Normobaric hypoxia (FiO2 15%)",
-                  "description": "Inhalation of deoxygenated air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise."
-                },
-                {
-                  "intervention_type": "Other",
-                  "intervention_name": "Placebo-ambient air (FiO2 21%)",
-                  "description": "Inhalation of room air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise."
-                },
-                {
-                  "intervention_type": "Other",
-                  "intervention_name": "Normobaric hypoxia (FiO2 15%) under Sildenafil",
-                  "description": "Inhalation of deoxygenated air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise under Sildenafil."
-                },
-                {
-                  "intervention_type": "Other",
-                  "intervention_name": "Placebo-ambient air (FiO2 21%) under Sildenafil",
-                  "description": "Inhalation of room air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise under Sildenafil."
-                }
-              ],
-              "sponsor": "University of Zurich",
-              "enrollment": 24,
-              "start_date": "2021-02-01",
-              "completion_date": "2023-05-31",
-              "primary_outcomes": [
-                {
-                  "measure": "Serum levels of ferritin",
-                  "time_frame": "Baseline"
-                }
-              ],
-              "references": []
-            },
-            {
-              "nct_id": "NCT04706546",
-              "title": "Hemodynamic Effects During Exercise in Patients With Pulmonary Hypertension Receiving Sildenafil",
-              "brief_summary": "To study hemodynamic effects of Sildenafil during exercise in patients with pulmonary hypertension.",
-              "phase": "Not Applicable",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Hypertension, Pulmonary"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
-                },
-                {
-                  "id": "D000860",
-                  "term": "Hypoxia"
-                },
-                {
-                  "id": "D009043",
-                  "term": "Motor Activity"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D008171",
-                  "term": "Lung Diseases"
-                },
-                {
-                  "id": "D012140",
-                  "term": "Respiratory Tract Diseases"
-                },
-                {
-                  "id": "D006973",
-                  "term": "Hypertension"
-                },
-                {
-                  "id": "D014652",
-                  "term": "Vascular Diseases"
-                },
-                {
-                  "id": "D002318",
-                  "term": "Cardiovascular Diseases"
-                },
-                {
-                  "id": "D012818",
-                  "term": "Signs and Symptoms, Respiratory"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                },
-                {
-                  "id": "D001519",
-                  "term": "Behavior"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Other",
-                  "intervention_name": "Hemodynamic effect of exercise under Sildenafil",
-                  "description": "Inhalation of room air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise under SIldenafil."
-                },
-                {
-                  "intervention_type": "Other",
-                  "intervention_name": "Hemodynamic effect of exercise",
-                  "description": "Inhalation of room air through an altitude simulator (\"Altitrainer\"), for approx. 1/2 hour given by a facemask, first at rest and then during exercise."
-                }
-              ],
-              "sponsor": "University of Zurich",
-              "enrollment": 24,
-              "start_date": "2021-02-01",
-              "completion_date": "2023-05-31",
-              "primary_outcomes": [
-                {
-                  "measure": "mean pulmonary artery pressure (mPAP) / cardiac output (CO)",
-                  "time_frame": "4 hours"
-                }
-              ],
-              "references": []
-            },
-            {
               "nct_id": "NCT00808912",
               "title": "Does Sildenafil Increase Exercise Performance in Air Pollution?",
               "brief_summary": "The purpose of this study is to examine if the ingestion of a standard dose of sildenafil enhances the athletic performance of competitive athletes when exercising in a high pollutant environment verses a low air pollutant environment.",
@@ -12048,35 +12048,22 @@
               "references": []
             },
             {
-              "nct_id": "NCT00352482",
-              "title": "Sildenafil to Increase Exercise Capacity in Individuals With Idiopathic Pulmonary Fibrosis and Pulmonary Hypertension",
-              "brief_summary": "Idiopathic pulmonary fibrosis (IPF) is a chronic lung disease that affects an individual's ability to breathe. Currently, no medications can reverse the damage to the lungs caused by IPF, but individuals are encouraged to engage in moderate exercise to strengthen lung function. This study will evaluate the effectiveness of sildenafil at improving exercise tolerance and breathing difficulties in individuals with IPF.",
+              "nct_id": "NCT01481350",
+              "title": "Sildenafil for Post-capillary Pulmonary Hypertension in Patients Undergoing Cardiac Surgery",
+              "brief_summary": "Pulmonary hypertension increases the perioperative risk in patients undergoing cardiac surgery for valvular heart diseases, especially in patients with a long life mitral valve disease. The present study wants to test the hypothesis that intravenous administration of sildenafil reduces pulmonary vascular resistances and afterload of the right ventricle.",
               "phase": "Phase 2",
               "overall_status": "COMPLETED",
               "why_stopped": null,
               "indications": [
-                "Pulmonary Fibrosis",
-                "Hypertension, Pulmonary"
+                "Pulmonary Hypertension"
               ],
               "mesh_conditions": [
                 {
-                  "id": "D011658",
-                  "term": "Pulmonary Fibrosis"
-                },
-                {
                   "id": "D006976",
                   "term": "Hypertension, Pulmonary"
-                },
-                {
-                  "id": "D054990",
-                  "term": "Idiopathic Pulmonary Fibrosis"
                 }
               ],
               "mesh_ancestors": [
-                {
-                  "id": "D017563",
-                  "term": "Lung Diseases, Interstitial"
-                },
                 {
                   "id": "D008171",
                   "term": "Lung Diseases"
@@ -12084,18 +12071,6 @@
                 {
                   "id": "D012140",
                   "term": "Respiratory Tract Diseases"
-                },
-                {
-                  "id": "D005355",
-                  "term": "Fibrosis"
-                },
-                {
-                  "id": "D010335",
-                  "term": "Pathologic Processes"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
                 },
                 {
                   "id": "D006973",
@@ -12113,23 +12088,21 @@
               "interventions": [
                 {
                   "intervention_type": "Drug",
-                  "intervention_name": "Sildenafil (50 mg)",
-                  "description": null
+                  "intervention_name": "sildenafil",
+                  "description": "The patients will receive a dose of 10 mg every 8 hours, for a maximum time of 72 hours."
                 }
               ],
-              "sponsor": "National Heart, Lung, and Blood Institute (NHLBI)",
+              "sponsor": "University of Turin, Italy",
               "enrollment": 20,
-              "start_date": "2004-11",
-              "completion_date": "2007-07",
+              "start_date": "2012-02",
+              "completion_date": "2013-06",
               "primary_outcomes": [
                 {
-                  "measure": "6-minute walk distance (measured at Week 3)",
-                  "time_frame": null
+                  "measure": "reduced mechanical ventilation",
+                  "time_frame": "seven days"
                 }
               ],
-              "references": [
-                "17356110"
-              ]
+              "references": []
             },
             {
               "nct_id": "NCT01044693",
@@ -13178,6 +13151,67 @@
               "references": []
             },
             {
+              "nct_id": "NCT00742014",
+              "title": "The Assessment of Right Ventricular Contractility in Response to Sildenafil",
+              "brief_summary": "The primary objective of this study is to examine the effects of Sildenafil, administered during cardiac catheterization, on right ventricular contractility in children with pulmonary arterial hypertension.",
+              "phase": "Phase 3",
+              "overall_status": "TERMINATED",
+              "why_stopped": "absorption of oral sildenafil not consistent",
+              "indications": [
+                "Hypertension"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D006973",
+                  "term": "Hypertension"
+                },
+                {
+                  "id": "D000081029",
+                  "term": "Pulmonary Arterial Hypertension"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil",
+                  "description": "One oral dose of Sildenafil (0.5 mg/kg) will be administered nia a nasogastric tube"
+                }
+              ],
+              "sponsor": "The Hospital for Sick Children",
+              "enrollment": 10,
+              "start_date": "2008-08",
+              "completion_date": "2011-08",
+              "primary_outcomes": [
+                {
+                  "measure": "Increase (% change) in endsystolic elastance of the right ventricle from baseline (in comparison to change in endsystolic elastance after inhaled NO)",
+                  "time_frame": "30 mins after Sildenafil adminsitration"
+                }
+              ],
+              "references": []
+            },
+            {
               "nct_id": "NCT00145938",
               "title": "Sildenafil and Pulmonary Artery Pressure",
               "brief_summary": "The purpose of the study is to see if the administration of sildenafil (Viagra) in patients with portopulmonary hypertension could be a safe and effective treatment.\n\nPortopulmonary hypertension (PTPH) is a special type of pulmonary hypertension. Pulmonary hypertension is high blood pressure in the pulmonary arteries that carry unoxygenated blood from the right ventricle of the heart to the lungs. Pulmonary hypertension results from constriction, or tightening, of the blood vessels that supply blood to the lungs. Consequently, it becomes difficult for blood to pass through the lungs, making it harder for the heart to pump blood forward. This stress on the heart leads to enlargement of the heart and eventually fluid can build up in the liver and tissues, such as in the legs. Affected patients can sometimes notice increasing shortness of breath and dizziness.\n\nThere is a growing body of evidence suggesting a potential therapeutic role for this sildenafil in patients with primary pulmonary hypertension. Studies are ongoing regarding this area.\n\nOur hypothesis is that chronic oral sildenafil will successfully reduce pulmonary artery pressures by at least 25% (reduction in mean pulmonary artery pressure) and could be an effective treatment for PTPH, especially in candidates for liver transplantation\n\nPrimary Hypothesis To measure the effects of a single dose of sildenafil on pulmonary arterial pressure in patients with PTPH\n\nSecondary Hypothesis To measure the effects of chronic (3 month) treatment with sildenafil on pulmonary arterial pressure, safety, and tolerability in patients with PTPH",
@@ -13235,38 +13269,22 @@
               "references": []
             },
             {
-              "nct_id": "NCT00742014",
-              "title": "The Assessment of Right Ventricular Contractility in Response to Sildenafil",
-              "brief_summary": "The primary objective of this study is to examine the effects of Sildenafil, administered during cardiac catheterization, on right ventricular contractility in children with pulmonary arterial hypertension.",
-              "phase": "Phase 3",
+              "nct_id": "NCT00718185",
+              "title": "Pharmacokinetics and Pharmacdynamics of Sildenafil",
+              "brief_summary": "The study is being done to investigate what happens to sildenafil in the body and how long it takes to get rid of this drug. Understanding how long the drug stays in the body and how it is changed by the body will help doctors determine the best dose. We also want to learn how well the medicine works based on the size of the dose or amount in the bloodstream.",
+              "phase": "Not Applicable",
               "overall_status": "TERMINATED",
-              "why_stopped": "absorption of oral sildenafil not consistent",
+              "why_stopped": "Similar study completed.",
               "indications": [
-                "Hypertension"
+                "Pulmonary Hypertension"
               ],
               "mesh_conditions": [
                 {
-                  "id": "D006973",
-                  "term": "Hypertension"
-                },
-                {
-                  "id": "D000081029",
-                  "term": "Pulmonary Arterial Hypertension"
+                  "id": "D006976",
+                  "term": "Hypertension, Pulmonary"
                 }
               ],
               "mesh_ancestors": [
-                {
-                  "id": "D014652",
-                  "term": "Vascular Diseases"
-                },
-                {
-                  "id": "D002318",
-                  "term": "Cardiovascular Diseases"
-                },
-                {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
-                },
                 {
                   "id": "D008171",
                   "term": "Lung Diseases"
@@ -13274,23 +13292,35 @@
                 {
                   "id": "D012140",
                   "term": "Respiratory Tract Diseases"
+                },
+                {
+                  "id": "D006973",
+                  "term": "Hypertension"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
                 }
               ],
               "interventions": [
                 {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Sildenafil",
-                  "description": "One oral dose of Sildenafil (0.5 mg/kg) will be administered nia a nasogastric tube"
+                  "intervention_type": "Procedure",
+                  "intervention_name": "Obtain blood specimens",
+                  "description": "Obtain blood samples at multiple timepoints."
                 }
               ],
-              "sponsor": "The Hospital for Sick Children",
-              "enrollment": 10,
-              "start_date": "2008-08",
-              "completion_date": "2011-08",
+              "sponsor": "Children's Hospital of Philadelphia",
+              "enrollment": 9,
+              "start_date": "2008-05",
+              "completion_date": "2009-12",
               "primary_outcomes": [
                 {
-                  "measure": "Increase (% change) in endsystolic elastance of the right ventricle from baseline (in comparison to change in endsystolic elastance after inhaled NO)",
-                  "time_frame": "30 mins after Sildenafil adminsitration"
+                  "measure": "To define the PK of sildenafil administered as standard of care in infants with pulmonary hypertension",
+                  "time_frame": "predose, .5mins after dose, 2-4 hrs after dose, and 5-7 hrs after dose"
                 }
               ],
               "references": []
@@ -13375,63 +13405,6 @@
                 {
                   "measure": "Estimated Systolic Pulmonary Arterial Pressure at Final Echocardiogram",
                   "time_frame": "7 weeks"
-                }
-              ],
-              "references": []
-            },
-            {
-              "nct_id": "NCT00718185",
-              "title": "Pharmacokinetics and Pharmacdynamics of Sildenafil",
-              "brief_summary": "The study is being done to investigate what happens to sildenafil in the body and how long it takes to get rid of this drug. Understanding how long the drug stays in the body and how it is changed by the body will help doctors determine the best dose. We also want to learn how well the medicine works based on the size of the dose or amount in the bloodstream.",
-              "phase": "Not Applicable",
-              "overall_status": "TERMINATED",
-              "why_stopped": "Similar study completed.",
-              "indications": [
-                "Pulmonary Hypertension"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D006976",
-                  "term": "Hypertension, Pulmonary"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D008171",
-                  "term": "Lung Diseases"
-                },
-                {
-                  "id": "D012140",
-                  "term": "Respiratory Tract Diseases"
-                },
-                {
-                  "id": "D006973",
-                  "term": "Hypertension"
-                },
-                {
-                  "id": "D014652",
-                  "term": "Vascular Diseases"
-                },
-                {
-                  "id": "D002318",
-                  "term": "Cardiovascular Diseases"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Procedure",
-                  "intervention_name": "Obtain blood specimens",
-                  "description": "Obtain blood samples at multiple timepoints."
-                }
-              ],
-              "sponsor": "Children's Hospital of Philadelphia",
-              "enrollment": 9,
-              "start_date": "2008-05",
-              "completion_date": "2009-12",
-              "primary_outcomes": [
-                {
-                  "measure": "To define the PK of sildenafil administered as standard of care in infants with pulmonary hypertension",
-                  "time_frame": "predose, .5mins after dose, 2-4 hrs after dose, and 5-7 hrs after dose"
                 }
               ],
               "references": []
@@ -14122,10 +14095,10 @@
           "NCT01055405",
           "NCT02378649",
           "NCT01726049",
-          "NCT01548950",
           "NCT02620995",
-          "NCT00454207",
+          "NCT01548950",
           "NCT01156636",
+          "NCT00454207",
           "NCT01409122",
           "NCT00334490",
           "NCT00617305",
@@ -14133,15 +14106,15 @@
           "NCT02595541",
           "NCT00359736",
           "NCT00872170",
+          "NCT04715113",
+          "NCT04706546",
           "NCT04704440",
           "NCT04697862",
           "NCT01181284",
-          "NCT04715113",
-          "NCT04706546",
           "NCT00808912",
           "NCT01391104",
           "NCT01392469",
-          "NCT00352482",
+          "NCT01481350",
           "NCT00796666",
           "NCT00430716",
           "NCT02284737",
@@ -14151,10 +14124,10 @@
           "NCT00586794",
           "NCT00327080",
           "NCT01244620",
-          "NCT00145938",
           "NCT00742014",
-          "NCT00133679",
+          "NCT00145938",
           "NCT00718185",
+          "NCT00133679",
           "NCT00796510",
           "NCT01409031",
           "NCT02435303",
@@ -14168,7 +14141,7 @@
           "NCT07462260",
           "NCT07647003"
         ],
-        "relevance_reasoning": "The overwhelming majority of trials retrieved are for pulmonary arterial hypertension (PAH) or pulmonary hypertension — an FDA-approved indication for sildenafil (Revatio) and a distinct disease from systemic hypertension — or for erectile dysfunction in hypertensive men (another approved indication where hypertension is merely the patient population), or study a different drug entirely (sitaxsentan, sodium nitrite, PF-00489791, treprostinil, etc.). Only four trials are genuinely relevant to systemic hypertension as a repurposing target: NCT01392638 (sildenafil in resistant hypertensives and genetic polymorphism), NCT00599235 (sildenafil and exercise capacity in systemic hypertension), NCT00223717 (sildenafil for supine hypertension in autonomic failure), and NCT01044693 (nebivolol vs sildenafil for supine hypertension in autonomic failure — sildenafil is a studied comparator agent for systemic hypertension).",
+        "relevance_reasoning": "The vast majority of trials in this search are for pulmonary arterial hypertension (PAH) or pulmonary hypertension — sildenafil's FDA-approved indication — or for erectile dysfunction (also approved), making them contaminated under TEST 1. Only a small number of trials genuinely target systemic/arterial hypertension as the primary indication: NCT01392638 (sildenafil in resistant hypertension), NCT00599235 (sildenafil and exercise capacity in systemic hypertension), NCT00223717 (sildenafil among agents for supine hypertension in autonomic failure), and NCT01044693 (sildenafil vs nebivolol/metoprolol for supine hypertension in autonomic failure). Trials studying sildenafil only as background therapy or comparator for another drug in PAH, or studying ED in hypertensive men, are contaminated under TEST 0 or TEST 1.",
         "signals": {
           "highest_completed_phase": "Phase 1",
           "has_completed_phase3": false,
@@ -14200,5 +14173,5 @@
     "covid-19",
     "hypertension"
   ],
-  "summary": "Ranked repurposing signals for sildenafil:\n\n1. raynaud disease — strong mixed literature; Phase 3 completed\n2. covid-19 — moderate mixed literature; Phase 3 on record (status unknown), Phase 1/Phase 2 completed\n3. hypertension — moderate mixed literature; early-phase only, no completed pivotal readout\n\nNote: Only 3 candidates were fully investigated (raynaud disease, covid-19, hypertension) via the auto-investigation pipeline. Remaining candidates from the merged list (major depressive disorder, eisenmenger syndrome, benign prostatic hyperplasia, duchenne muscular dystrophy, heart disease, coronary artery disease, chronic obstructive pulmonary disease, infertility, stroke, diastolic heart failure, cirrhosis of liver, pulmonary hypertension) were not investigated this run and are excluded from the ranked summary per hard rules."
+  "summary": "Ranked repurposing signals for sildenafil:\n\n1. raynaud disease — strong mixed literature (multiple RCTs and meta-analyses); Phase 3 completed\n2. covid-19 — moderate mixed literature (observational and interventional studies); Phase 3 on record, status unknown\n3. hypertension — moderate mixed literature (large body, no pivotal repurposing RCT); early-phase only, no completed pivotal readout"
 }

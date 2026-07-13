@@ -1,6 +1,6 @@
 # Semaglutide regression spec.
 #
-# Authored against gold_standard/semaglutide_2026-07-10_21-19-04.json. Each
+# Authored against gold_standard/semaglutide_2026-07-13_16-18-19.json. Each
 # assertion encodes a domain-meaningful invariant a regression must NOT flip.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.

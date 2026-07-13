@@ -48,7 +48,6 @@ def _mesh_cond(mesh_term: str) -> str:
 
 
 from indication_scout.models.model_clinical_trials import (
-    ArmGroup,
     CompetitorEntry,
     CompletedTrialsResult,
     IndicationLandscape,
@@ -633,17 +632,6 @@ class ClinicalTrialsClient(BaseClient):
             for i in arms.get("interventions", [])
         ]
 
-        # Arm groups — carry the authoritative per-arm role (EXPERIMENTAL / ACTIVE_COMPARATOR / ...)
-        # so the relevance gate can tell a studied agent from a comparator arm without guessing.
-        arm_groups = [
-            ArmGroup(
-                label=g.get("label", ""),
-                arm_type=g.get("type", ""),
-                intervention_names=g.get("interventionNames", []),
-            )
-            for g in arms.get("armGroups", [])
-        ]
-
         # Primary outcomes
         primary_outcomes = [
             PrimaryOutcome(
@@ -675,7 +663,6 @@ class ClinicalTrialsClient(BaseClient):
             mesh_conditions=mesh_conditions,
             mesh_ancestors=mesh_ancestors,
             interventions=interventions,
-            arm_groups=arm_groups,
             sponsor=sponsor_mod.get("leadSponsor", {}).get("name", ""),
             enrollment=enrollment,
             start_date=self._extract_date(status.get("startDateStruct")),

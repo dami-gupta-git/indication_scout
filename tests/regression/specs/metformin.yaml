@@ -1,6 +1,6 @@
 # Metformin regression spec.
 #
-# Authored against gold_standard/metformin_2026-07-10_21-17-27.json. Each
+# Authored against gold_standard/metformin_2026-07-13_16-16-37.json. Each
 # assertion encodes a domain-meaningful invariant a regression must NOT flip.
 # Anchors are chosen to be STABLE across runs.
 #

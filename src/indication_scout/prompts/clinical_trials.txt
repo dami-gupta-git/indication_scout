@@ -40,13 +40,18 @@ regardless of how relevant the disease is. Only if this drug IS the studied agen
     arms. When the trial TITLE names a DIFFERENT drug as the subject (e.g. "A Study of
     Efinopegdutide in NAFLD") and this drug is present only as a second/reference arm, the studied
     agent is the other drug => TEST 0 CONTAMINATION, even though this drug is a listed intervention.
-  - ARM ROLES ARE AUTHORITATIVE. Each trial row may carry an "[arms: <label>=<ROLE>; ...]" clause
-    from the registry, where ROLE is EXPERIMENTAL / ACTIVE_COMPARATOR / PLACEBO_COMPARATOR /
-    SHAM_COMPARATOR / NO_INTERVENTION / OTHER. If THIS drug's arm is any COMPARATOR role
-    (ACTIVE_COMPARATOR / PLACEBO_COMPARATOR / SHAM_COMPARATOR) and NOT an EXPERIMENTAL arm, the
-    trial is studying a DIFFERENT agent and this drug is only a control => TEST 0 CONTAMINATION,
-    regardless of the disease. Only when THIS drug has an EXPERIMENTAL arm is it the studied agent.
-    Trust this arm-role signal over the title and over the disease context.
+  - USE THE SUMMARY to name the studied agent. Each trial row carries a "summary: ..." clause — the
+    registry's brief_summary, which states what the trial is designed to test. Read it together with
+    the drugs list: the summary usually names the studied drug ("This study will test <drug> for
+    <condition>"). If the summary names a DIFFERENT drug as the agent being evaluated and THIS drug
+    is only administered alongside it (background, standard-of-care, comparator), the studied agent
+    is the other drug => TEST 0 CONTAMINATION. Do NOT infer contamination from an arm-type label
+    alone — a single-drug placebo-controlled trial is studying that drug even if the registry labels
+    its arm "ACTIVE_COMPARATOR".
+  - If the summary does NOT name any drug (describes only the condition/design) and the drugs list
+    shows THIS drug as the sole active agent (others placebo/sham), treat THIS drug as the studied
+    agent. If multiple active drugs are present and neither summary nor title disambiguates which is
+    the subject, err toward CONTAMINATION (omission over a wrong relevant).
   - The rule is about which drug the trial is ABOUT, not which drugs it administers. Do not rescue a
     trial to "relevant" just because this drug's name is in the interventions.
 

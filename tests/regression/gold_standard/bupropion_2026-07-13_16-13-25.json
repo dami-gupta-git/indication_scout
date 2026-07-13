@@ -87,7 +87,7 @@
         "target_function": "Mediates sodium- and chloride-dependent transport of norepinephrine (also known as noradrenaline), the primary signaling neurotransmitter in the autonomic sympathetic nervous system. Is responsible for norepinephrine re-uptake and clearance from the synaptic cleft, thus playing a crucial role in norepinephrine inactivation and homeostasis. Can also mediate sodium- and chloride-dependent transport of dopamine.."
       }
     ],
-    "summary": "Bupropion acts primarily as an inhibitor of the dopamine transporter (SLC6A3/DAT) and the norepinephrine transporter (SLC6A2/NET), making these two targets the core of its pharmacology. SLC6A3 shows its strongest disease associations with rare movement disorders (infantile dystonia-parkinsonism and dopamine transporter deficiency syndrome via genetic evidence), and also carries high-confidence clinical and literature links to ADHD, major depressive disorder, and obesity — all conditions where bupropion already has established or emerging clinical use. SLC6A2 reinforces the ADHD and major depressive disorder signals with very strong clinical evidence scores, and additionally surfaces orthostatic intolerance (linked to norepinephrine dysregulation) and alcohol use disorder as potential repurposing opportunities. Together, the dual-transporter inhibition profile supports exploring bupropion beyond its approved indications (depression, smoking cessation) into areas such as obesity management (already partially validated), ADHD, and possibly alcohol use disorder, while the rare DAT-deficiency syndromes highlight a mechanistic rationale for investigational use in dopamine transporter-related movement disorders."
+    "summary": "Bupropion acts primarily by inhibiting the Dopamine Transporter (SLC6A3) and the Norepinephrine Transporter (SLC6A2), blocking reuptake of dopamine and norepinephrine respectively. Both targets converge strongly on **attention deficit hyperactivity disorder (ADHD)** (SLC6A3: 0.647; SLC6A2: 0.631) and **major depressive disorder** (SLC6A3: 0.629; SLC6A2: 0.621), consistent with bupropion's approved indications and its well-established antidepressant and ADHD-related use. SLC6A3 additionally shows high-confidence genetic associations with rare dopamine transporter deficiency syndromes (infantile dystonia-parkinsonism, overall ~0.75–0.80) and notable clinical/literature links to **obesity** (0.610) and **Alzheimer's disease** (0.554), pointing to potential repurposing opportunities in weight management (already partially explored with bupropion/naltrexone combinations) and neurodegeneration. SLC6A2 uniquely flags **orthostatic intolerance** (0.558) via genetic association, suggesting bupropion's noradrenergic mechanism could be relevant in autonomic disorders, and also surfaces alcohol drinking (0.311), aligning with emerging interest in bupropion for addiction-related conditions."
   },
   "disease_findings": [
     {
@@ -1493,7 +1493,7 @@
           ],
           "neutral_pmids": []
         },
-        "summary": "The synthesized evidence strongly supports bupropion as a viable option for attention deficit hyperactivity disorder (ADHD), based on the retrieved PubMed abstracts."
+        "summary": "Strong evidence supports bupropion repurposing for ADHD based on retrieved abstracts."
       },
       "clinical_trials": {
         "search": {
@@ -2672,20 +2672,20 @@
             "bvf-033"
           ]
         },
-        "summary": "Four trials have examined bupropion in attention-deficit hyperactivity disorder (ADHD). NCT00048360 is a completed Phase 3 study titled 'Attention-Deficit Hyperactivity Disorder (ADHD) Study With Adults,' evaluating bupropion in an adult ADHD population. NCT00061087 is a completed Phase 2/Phase 3 trial titled 'Treatment of Adult Attention Deficit Hyperactivity Disorder (ADHD) in Methadone Patients - 1,' which assessed bupropion in adults with co-occurring ADHD and methadone maintenance treatment. NCT00936299 is a completed Phase 4 study titled 'Bupropion for ADHD in Adolescents With Substance Use Disorder,' focusing on an adolescent population with comorbid substance use disorder. NCT01270555 is a completed interventional study (Not Applicable phase designation) titled 'Efficacy Of Bupropion For Attention Deficit Hyperactivity Disorder (ADHD) In Adults,' further examining efficacy in adult ADHD. No trials in this set are currently active or ongoing.",
+        "summary": "Bupropion has been evaluated across multiple trials for attention-deficit hyperactivity disorder (ADHD). A completed Phase 3 trial (NCT00048360) examined bupropion in adults with ADHD. A completed Phase 2/Phase 3 trial (NCT00061087) investigated treatment of adult ADHD in patients on methadone maintenance. A completed Phase 4 trial (NCT00936299) assessed bupropion for ADHD in adolescents with comorbid substance use disorder. An additional completed study (NCT01270555, Not Applicable phase designation) evaluated the efficacy of bupropion for ADHD in adults. One early-phase trial (NCT04553263) was withdrawn before initiation due to the study never being started, and is not informative about the program's direction.",
         "closure": "live",
-        "closure_reason": "No Phase 3 trial was terminated for safety or benefit:risk reasons, and no literature reports a definitive efficacy failure for bupropion in ADHD; the absence of a commercial filing for an off-patent drug does not constitute closure.",
+        "closure_reason": "No Phase 3 trial was terminated for safety or benefit-risk reasons, and no literature reports efficacy failure for this indication.",
         "relevant_nct_ids": [
           "NCT00048360",
           "NCT00061087",
           "NCT00936299",
-          "NCT01270555"
+          "NCT01270555",
+          "NCT04553263"
         ],
         "contaminated_nct_ids": [
-          "NCT04553263",
           "NCT00330434"
         ],
-        "relevance_reasoning": "NCT00048360, NCT00061087, NCT00936299, and NCT01270555 all study bupropion as the experimental intervention directly for ADHD (with or without comorbidities), making them relevant repurposing evidence. NCT04553263 targets stimulant use disorder relapse prevention (a distinct condition), and NCT00330434 is a pharmacokinetic/metabolism study of bupropion in the context of alcohol/smoking — neither is studying bupropion for ADHD as the primary therapeutic aim.",
+        "relevance_reasoning": "All trials with bupropion as the studied agent targeting ADHD symptoms are classified as relevant — ADHD is not an FDA-approved indication for bupropion (approved only for MDD, SAD, and nicotine dependence), so all ADHD trials represent genuine repurposing evidence. NCT00330434 is contaminated because bupropion appears only as a pharmacokinetic probe to study ethanol and genetic effects on its metabolism, not as a therapeutic agent for ADHD; ADHD is merely part of the study population descriptor and the trial is not designed to evaluate bupropion's efficacy for ADHD.",
         "signals": {
           "highest_completed_phase": "Phase 4",
           "has_completed_phase3": true,
@@ -3533,7 +3533,7 @@
           "contaminated_pmids": [],
           "neutral_pmids": []
         },
-        "summary": "Evidence strength: strong, direction: mixed"
+        "summary": "Bupropion for cocaine dependence: strong but mixed evidence across retrieved abstracts."
       },
       "clinical_trials": {
         "search": {
@@ -4570,20 +4570,20 @@
             "bvf-033"
           ]
         },
-        "summary": "Clinical investigation of bupropion for cocaine dependence includes a completed Phase 2/Phase 3 trial (NCT02111798, 'Bupropion-Enhanced Contingency Management (CM) for Cocaine Dependence'), which evaluated bupropion in combination with contingency management as a behavioral reinforcement strategy in patients with cocaine dependence. An earlier Phase 1 study (NCT00000276, 'Dopamine Reuptake Inhibitors of Cocaine Abuse - 1') was terminated, though the record does not indicate this termination was driven by safety or benefit-risk concerns.",
+        "summary": "Clinical development of bupropion for cocaine dependence/abuse spans several studies. NCT00227812 (Phase 2, completed) examined integrated treatment for cocaine and comorbid mood disorders. The most advanced study, NCT02111798 (Phase 2/Phase 3, completed), evaluated bupropion-enhanced contingency management for cocaine dependence, representing the program's highest level of evidence. An additional completed study, NCT00000268 (Not Applicable phase designation, completed), investigated cocaine abuse in the context of attention deficit disorder. One early-stage trial, NCT00000276 (Phase 1), was terminated — this study examined dopamine reuptake inhibitors in cocaine abuse, though no safety or benefit:risk concern was cited as the reason for its stop. No trials are currently active for this indication.",
         "closure": "live",
-        "closure_reason": "No Phase 3 termination for safety or efficacy failure has been identified, and the absence of a commercial filing for an off-patent drug does not constitute program closure.",
+        "closure_reason": "No relevant Phase 3 termination for safety or efficacy failure has been recorded, and the absence of an approval for this indication in an off-patent drug does not constitute closure.",
         "relevant_nct_ids": [
+          "NCT00227812",
           "NCT02111798",
+          "NCT00000268",
           "NCT00000276"
         ],
         "contaminated_nct_ids": [
           "NCT01077024",
-          "NCT00227812",
-          "NCT00061087",
-          "NCT00000268"
+          "NCT00061087"
         ],
-        "relevance_reasoning": "NCT02111798 and NCT00000276 study bupropion directly as the experimental agent for cocaine dependence/abuse without an approved-indication co-condition driving the trial. The remaining four trials are contaminated: NCT01077024 targets smoking cessation (an approved bupropion indication); NCT00227812 co-targets MDD (an approved bupropion indication); NCT00061087 and NCT00000268 are primarily designed to treat ADHD (a distinct disease), with cocaine dependence as the patient population context rather than the therapeutic target.",
+        "relevance_reasoning": "Bupropion is the studied agent in NCT00227812, NCT02111798, NCT00000268, and NCT00000276, all of which directly target cocaine dependence/abuse as the primary indication — a non-approved repurposing context. NCT01077024 is contaminated because the studied intervention is a generic smoking-cessation treatment bundle (an approved bupropion indication) and bupropion is not the specific studied agent. NCT00061087 is contaminated because the trial's therapeutic intent is ADHD treatment (a distinct disease), not cocaine dependence, even though cocaine-related disorder appears as a co-listed mesh term.",
         "signals": {
           "highest_completed_phase": "Phase 2/Phase 3",
           "has_completed_phase3": true,
@@ -5567,7 +5567,7 @@
             "8830063"
           ]
         },
-        "summary": "Evidence strength: moderate, direction: supports"
+        "summary": "Bupropion shows moderate evidence supporting its use in mood disorders, based on synthesized PubMed literature."
       },
       "clinical_trials": {
         "search": {
@@ -6794,6 +6794,40 @@
               "references": []
             },
             {
+              "nct_id": "NCT00001478",
+              "title": "Effects of Drugs on Cerebral Blood Flow in Patients With Mood Disorders",
+              "brief_summary": "Positron Emission Tomography (PET) is a technique used to investigate the functional activity of the brain. The PET technique allows doctors to study the normal biochemical and metabolic processes of the central nervous system of normal individuals and patients with neurologic illnesses without physical / structural damage to the brain.\n\nWhen a region of the brain is active, it uses more fuel in the form of oxygen and sugar (glucose). As the brain uses more fuel it produces more waste products, carbon dioxide and water. Blood carries fuel to the brain and waste products away from the brain. As brain activity increases blood flow to and from the area of activity increases also. Knowing these facts, researchers can use radioactive chemicals (H215O) and PET scans to observe what areas of the brain are receiving more blood flow.\n\nPatients diagnosed with mood disorders and healthy volunteers will receive positron emission tomographic (PET) scans with H215O while doing simple tasks. Patients will continue to receive scans while in different mood states and while taking different medications. Patients eligible for this study will be participating in other research studies measuring other clinical and biochemical parameters (mood and anxiety ratings, medication responses, and psychological test results). Information gathered from H215O PET scans measuring blood flow to specific brain areas will be compared to the data gathered from other studies.\n\nObjectives of this study are;\n\n1. To determine differences in blood flow to the brain of patients with mood disorders compared to healthy volunteers.\n2. To determine differences in blood flow to the brain of patients with subtype mood disorders (such as unipolar versus bipolar) compared to healthy volunteers.\n\n2\\. To determine changes in blood flow to the brain of patients with mood disorders who experience spontaneous changes in symptoms\n\n3\\. To determine changes in blood flow to the brain of patients with mood disorders who receive various kinds of therapy (medication, transcranial magnetic stimulation, etc.)\n\n4\\. To determine if blood flow to specific areas of the brain can be used to predict how patients will respond to certain types of therapy\n\n5\\. To compare blood flow changes with various other clinical and biochemical parameters.",
+              "phase": "Not Applicable",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Healthy",
+                "Mood Disorders"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D019964",
+                  "term": "Mood Disorders"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D001523",
+                  "term": "Mental Disorders"
+                }
+              ],
+              "interventions": [],
+              "sponsor": "National Institute of Mental Health (NIMH)",
+              "enrollment": 170,
+              "start_date": "1994-10",
+              "completion_date": "2001-01",
+              "primary_outcomes": [],
+              "references": [
+                "2610821",
+                "6334502"
+              ]
+            },
+            {
               "nct_id": "NCT00742573",
               "title": "Incorporating Patient Treatment Choice to Improve Treatment Retention in Depressed Hispanics",
               "brief_summary": "This study will determine whether combination treatment driven by patient choice is better than standardized medication treatment at retaining and improving Hispanic patients with major depressive disorder.",
@@ -6851,40 +6885,6 @@
               ],
               "references": [
                 "30343455"
-              ]
-            },
-            {
-              "nct_id": "NCT00001478",
-              "title": "Effects of Drugs on Cerebral Blood Flow in Patients With Mood Disorders",
-              "brief_summary": "Positron Emission Tomography (PET) is a technique used to investigate the functional activity of the brain. The PET technique allows doctors to study the normal biochemical and metabolic processes of the central nervous system of normal individuals and patients with neurologic illnesses without physical / structural damage to the brain.\n\nWhen a region of the brain is active, it uses more fuel in the form of oxygen and sugar (glucose). As the brain uses more fuel it produces more waste products, carbon dioxide and water. Blood carries fuel to the brain and waste products away from the brain. As brain activity increases blood flow to and from the area of activity increases also. Knowing these facts, researchers can use radioactive chemicals (H215O) and PET scans to observe what areas of the brain are receiving more blood flow.\n\nPatients diagnosed with mood disorders and healthy volunteers will receive positron emission tomographic (PET) scans with H215O while doing simple tasks. Patients will continue to receive scans while in different mood states and while taking different medications. Patients eligible for this study will be participating in other research studies measuring other clinical and biochemical parameters (mood and anxiety ratings, medication responses, and psychological test results). Information gathered from H215O PET scans measuring blood flow to specific brain areas will be compared to the data gathered from other studies.\n\nObjectives of this study are;\n\n1. To determine differences in blood flow to the brain of patients with mood disorders compared to healthy volunteers.\n2. To determine differences in blood flow to the brain of patients with subtype mood disorders (such as unipolar versus bipolar) compared to healthy volunteers.\n\n2\\. To determine changes in blood flow to the brain of patients with mood disorders who experience spontaneous changes in symptoms\n\n3\\. To determine changes in blood flow to the brain of patients with mood disorders who receive various kinds of therapy (medication, transcranial magnetic stimulation, etc.)\n\n4\\. To determine if blood flow to specific areas of the brain can be used to predict how patients will respond to certain types of therapy\n\n5\\. To compare blood flow changes with various other clinical and biochemical parameters.",
-              "phase": "Not Applicable",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Healthy",
-                "Mood Disorders"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D019964",
-                  "term": "Mood Disorders"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D001523",
-                  "term": "Mental Disorders"
-                }
-              ],
-              "interventions": [],
-              "sponsor": "National Institute of Mental Health (NIMH)",
-              "enrollment": 170,
-              "start_date": "1994-10",
-              "completion_date": "2001-01",
-              "primary_outcomes": [],
-              "references": [
-                "2610821",
-                "6334502"
               ]
             },
             {
@@ -7273,7 +7273,7 @@
           "NCT00616915",
           "NCT03993457"
         ],
-        "relevance_reasoning": "The vast majority of trials study bupropion for its FDA-approved indications (MDD or SAD), making them contaminated. The single relevant trial (NCT00012558, STEP-BD) studies bupropion as one of several agents for bipolar disorder, a mood disorder subtype that is not an approved indication for bupropion. NCT00001478 is contaminated because no drugs are listed and bupropion cannot be confirmed as the studied agent.",
+        "relevance_reasoning": "The vast majority of trials study bupropion specifically for MDD or SAD — both FDA-approved indications — making them contaminated under TEST 1. NCT00001478 lists no drug interventions (drugs: none), so bupropion is not the studied agent (TEST 0 contamination). NCT00742573 studies a psychotherapy-driven algorithm (IPT-B vs. TMA antidepressants) in MDD patients, where bupropion is not the specific studied agent. NCT00012558 (STEP-BD) is the sole trial genuinely targeting a broader mood disorder context (bipolar disorder), where bupropion is one of several agents studied in a non-approved indication; however, bipolar disorder is a distinct sibling condition to MDD/SAD and not itself an approved indication for bupropion, making it relevant as a repurposing signal.",
         "signals": {
           "highest_completed_phase": "Not Applicable",
           "has_completed_phase3": false,
@@ -7305,5 +7305,5 @@
     "cocaine dependence",
     "mood disorder"
   ],
-  "summary": "Ranked repurposing signals for bupropion:\n\n1. attention deficit hyperactivity disorder — strong RCT-level literature, supports; Phase 3 completed\n2. cocaine dependence — strong mixed literature (efficacy and negative signals); Phase 2/Phase 3 completed (no standalone Phase 3)\n3. mood disorder — moderate literature, supports; early-phase only, no completed pivotal readout"
+  "summary": "Ranked repurposing signals for bupropion:\n\n1. attention deficit hyperactivity disorder — strong RCT-level literature, supports; Phase 3 completed\n2. cocaine dependence — strong literature, mixed direction; Phase 2/Phase 3 completed (no standalone Phase 3)\n3. mood disorder — moderate literature, supports; early-phase only, no completed pivotal readout\n\nEvidence gate exclusions: fibromyalgia, schizophrenia, methamphetamine dependence, drug dependence, alcohol dependence, back pain, eating disorder, bipolar disorder, multiple sclerosis, parkinson disease, diabetic neuropathy, obesity, depressive disorder"
 }

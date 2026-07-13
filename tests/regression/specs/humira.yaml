@@ -1,6 +1,6 @@
 # Humira (adalimumab) regression spec.
 #
-# Authored against gold_standard/humira_2026-07-10_21-08-16.json. Each assertion
+# Authored against gold_standard/humira_2026-07-13_16-21-58.json. Each assertion
 # encodes a domain-meaningful invariant a regression must NOT flip. Anchors are
 # chosen to be STABLE across runs.
 #

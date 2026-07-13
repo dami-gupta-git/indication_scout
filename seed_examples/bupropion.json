@@ -87,7 +87,7 @@
         "target_function": "Mediates sodium- and chloride-dependent transport of norepinephrine (also known as noradrenaline), the primary signaling neurotransmitter in the autonomic sympathetic nervous system. Is responsible for norepinephrine re-uptake and clearance from the synaptic cleft, thus playing a crucial role in norepinephrine inactivation and homeostasis. Can also mediate sodium- and chloride-dependent transport of dopamine.."
       }
     ],
-    "summary": "Bupropion acts primarily as an inhibitor of the dopamine transporter (DAT/SLC6A3) and the norepinephrine transporter (NET/SLC6A2), making these two targets the core of its pharmacology. Both targets converge strongly on **attention deficit hyperactivity disorder (ADHD)** (SLC6A3 overall=0.647; SLC6A2 overall=0.631) and **major depressive disorder** (SLC6A3 overall=0.629; SLC6A2 overall=0.621), consistent with bupropion's approved indications and its well-established clinical efficacy in both conditions. SLC6A3 additionally shows high-confidence genetic associations with rare movement disorders (infantile dystonia-parkinsonism and dopamine transporter deficiency syndrome, overall ~0.75–0.80), suggesting that DAT modulation could be explored in these orphan neurological conditions. Beyond its approved uses, the DAT target also surfaces **obesity** (overall=0.610) and **Alzheimer's disease** (overall=0.554) as potential repurposing opportunities, while the NET target flags **orthostatic intolerance** (overall=0.558) and **alcohol use disorder** (overall=0.311), pointing to possible utility in autonomic and addiction-related indications."
+    "summary": "Bupropion acts primarily by inhibiting the Dopamine Transporter (SLC6A3) and the Norepinephrine Transporter (SLC6A2), blocking reuptake of dopamine and norepinephrine respectively. Both targets converge strongly on **attention deficit hyperactivity disorder (ADHD)** (SLC6A3: 0.647; SLC6A2: 0.631) and **major depressive disorder** (SLC6A3: 0.629; SLC6A2: 0.621), consistent with bupropion's approved indications and its well-established antidepressant and ADHD-related use. SLC6A3 additionally shows high-confidence genetic associations with rare dopamine transporter deficiency syndromes (infantile dystonia-parkinsonism, overall ~0.75–0.80) and notable clinical/literature links to **obesity** (0.610) and **Alzheimer's disease** (0.554), pointing to potential repurposing opportunities in weight management (already partially explored with bupropion/naltrexone combinations) and neurodegeneration. SLC6A2 uniquely flags **orthostatic intolerance** (0.558) via genetic association, suggesting bupropion's noradrenergic mechanism could be relevant in autonomic disorders, and also surfaces alcohol drinking (0.311), aligning with emerging interest in bupropion for addiction-related conditions."
   },
   "disease_findings": [
     {
@@ -1460,19 +1460,20 @@
           }
         ],
         "evidence_summary": {
-          "summary": "Multiple randomized, controlled trials demonstrate that bupropion is effective for treating ADHD in both children and adults. In adults, bupropion SR produced a 42% reduction in ADHD symptoms versus 24% for placebo (PMID: 11156812), and bupropion XL responders (53%) significantly exceeded placebo responders (31%) with an effect size of 0.6 (PMID: 15820237). In pediatric populations, bupropion showed significant treatment effects on hyperactivity and conduct problems compared to placebo (PMID: 8885585) and produced equivalent improvement to methylphenidate on multiple outcome measures in a double-blind crossover trial (PMID: 7775360). The evidence supports repurposing bupropion for ADHD.",
+          "summary": "Multiple randomized, controlled trials demonstrate that bupropion is effective for treating ADHD. In adults, bupropion SR produced a 42% reduction in ADHD symptoms versus 24% for placebo (PMID: 11156812), and bupropion XL showed a 53% responder rate versus 31% for placebo with an effect size of 0.6 (PMID: 15820237). In children, a multisite double-blind trial found significant treatment effects on hyperactivity and conduct problems (PMID: 8885585), and a crossover trial found bupropion equivalent to methylphenidate in overall ADHD efficacy (PMID: 7775360). PMID 17685748 was excluded as it studied bupropion for smoking prevention in ADHD patients, not for treating ADHD itself.",
           "study_count": 4,
           "strength": "strong",
           "direction": "supports",
           "evidence_basis": "drug_specific",
           "is_observational": false,
+          "is_animal_only": false,
           "key_findings": [
-            "In a 6-week double-blind, placebo-controlled RCT in adults with DSM-IV ADHD, bupropion SR (up to 200 mg b.i.d.) produced a 42% reduction in ADHD symptoms versus 24% for placebo, with 76% of bupropion-treated subjects responding versus 37% on placebo (PMID: 11156812).",
-            "In a multisite, 8-week placebo-controlled trial of bupropion XL (up to 450 mg/day) in 162 adults with ADHD, 53% of bupropion XL-treated patients were responders versus 31% on placebo (p=.004), with a treatment effect size of 0.6 on the ADHD Rating Scale (PMID: 15820237).",
-            "Bupropion XL provided sustained benefit throughout the day compared with placebo (morning p=.033, afternoon p=.004, evening p=.024) and was well tolerated with a low rate of drug-related discontinuation (5%) (PMID: 15820237).",
-            "In a four-center, double-blind, placebo-controlled trial in children aged 6–12 with ADDH, bupropion (3–6 mg/kg/day) showed significant treatment effects on conduct problems and hyperactivity on teacher ratings as early as day 3, and on parent ratings at day 28 (PMID: 8885585).",
-            "Significant treatment effects were also found on the Continuous Performance Test and memory retrieval test in children treated with bupropion versus placebo (PMID: 8885585).",
-            "In a double-blind crossover trial in 15 ADHD subjects aged 7–17, bupropion and methylphenidate both produced significantly greater improvement (p<.001) and did not differ from each other on the Iowa-Conners Teacher's Rating Scale, Clinical Global Impression Scale, Continuous Performance Test, and other measures (PMID: 7775360)."
+            "In a 6-week double-blind, placebo-controlled RCT in adults with DSM-IV ADHD, bupropion SR produced a 42% reduction in ADHD symptoms versus 24% for placebo, with 76% of bupropion-treated subjects achieving ≥30% symptom reduction compared to 37% on placebo (PMID: 11156812).",
+            "In a multisite 8-week placebo-controlled trial of bupropion XL (up to 450 mg/day) in 162 adults with ADHD, 53% of bupropion XL-treated patients were responders versus 31% on placebo (p=.004), with a treatment effect size of 0.6 on the ADHD Rating Scale (PMID: 15820237).",
+            "Bupropion XL provided sustained benefit throughout the day compared with placebo (morning p=.033, afternoon p=.004, evening p=.024) and was well tolerated with a 5% drug-related discontinuation rate (PMID: 15820237).",
+            "In a multisite double-blind, placebo-controlled trial in children aged 6–12 with ADDH, bupropion (3–6 mg/kg/day) showed significant treatment effects on hyperactivity and conduct problems on teacher ratings as early as day 3, and on parent ratings at day 28 (PMID: 8885585).",
+            "In a double-blind crossover trial in 15 subjects aged 7–17 with ADHD, bupropion and methylphenidate both produced significantly greater improvement (p<.001) on the Iowa-Conners Teacher's Rating Scale and did not differ in overall efficacy (PMID: 7775360).",
+            "The crossover trial also found equivalent improvement for bupropion and methylphenidate on the Clinical Global Impression Scale, Continuous Performance Test, and cognitive measures including the Rey Auditory-Verbal Learning Test (PMID: 7775360)."
           ],
           "supporting_pmids": [
             "11156812",
@@ -1492,7 +1493,7 @@
           ],
           "neutral_pmids": []
         },
-        "summary": "Bupropion shows strong evidence supporting its use in attention deficit hyperactivity disorder (ADHD), based on synthesized PubMed literature. The drug's dopamine and norepinephrine reuptake inhibition mechanisms align well with the catecholaminergic dysregulation underlying ADHD. Multiple retrieved abstracts support clinical benefit across pediatric and adult populations, with bupropion demonstrating improvements in core ADHD symptoms including inattention and hyperactivity/impulsivity. The evidence base includes comparative and controlled study designs. Overall, the literature retrieved in this run indicates a strong, supportive signal for bupropion as a viable repurposing candidate or alternative pharmacotherapy in ADHD."
+        "summary": "Strong evidence supports bupropion repurposing for ADHD based on retrieved abstracts."
       },
       "clinical_trials": {
         "search": {
@@ -2671,20 +2672,20 @@
             "bvf-033"
           ]
         },
-        "summary": "Four trials have examined bupropion in attention-deficit hyperactivity disorder (ADHD). NCT00048360 is a completed Phase 3 study titled 'Attention-Deficit Hyperactivity Disorder (ADHD) Study With Adults,' evaluating bupropion in an adult ADHD population. NCT00061087 is a completed Phase 2/Phase 3 trial titled 'Treatment of Adult Attention Deficit Hyperactivity Disorder (ADHD) in Methadone Patients - 1,' which assessed bupropion in adults with co-occurring ADHD and methadone maintenance treatment. NCT00936299 is a completed Phase 4 study titled 'Bupropion for ADHD in Adolescents With Substance Use Disorder,' focusing on an adolescent population with comorbid substance use disorder. NCT01270555 is a completed interventional study (Not Applicable phase designation) titled 'Efficacy Of Bupropion For Attention Deficit Hyperactivity Disorder (ADHD) In Adults,' further examining efficacy in adult ADHD. No trials in this set are currently active or ongoing.",
+        "summary": "Bupropion has been evaluated across multiple trials for attention-deficit hyperactivity disorder (ADHD). A completed Phase 3 trial (NCT00048360) examined bupropion in adults with ADHD. A completed Phase 2/Phase 3 trial (NCT00061087) investigated treatment of adult ADHD in patients on methadone maintenance. A completed Phase 4 trial (NCT00936299) assessed bupropion for ADHD in adolescents with comorbid substance use disorder. An additional completed study (NCT01270555, Not Applicable phase designation) evaluated the efficacy of bupropion for ADHD in adults. One early-phase trial (NCT04553263) was withdrawn before initiation due to the study never being started, and is not informative about the program's direction.",
         "closure": "live",
-        "closure_reason": "No Phase 3 trial was terminated for safety or benefit:risk reasons, and no literature reports a definitive efficacy failure for bupropion in ADHD; the absence of a commercial filing for an off-patent drug does not constitute closure.",
+        "closure_reason": "No Phase 3 trial was terminated for safety or benefit-risk reasons, and no literature reports efficacy failure for this indication.",
         "relevant_nct_ids": [
           "NCT00048360",
           "NCT00061087",
           "NCT00936299",
-          "NCT01270555"
+          "NCT01270555",
+          "NCT04553263"
         ],
         "contaminated_nct_ids": [
-          "NCT04553263",
           "NCT00330434"
         ],
-        "relevance_reasoning": "NCT00048360, NCT00061087, NCT00936299, and NCT01270555 all study bupropion as the experimental intervention directly for ADHD (with or without comorbidities), making them relevant repurposing evidence. NCT04553263 targets stimulant use disorder relapse prevention (a distinct condition), and NCT00330434 is a pharmacokinetic/metabolism study of ethanol and genetic polymorphisms on bupropion — neither is designed to evaluate bupropion's efficacy in ADHD itself.",
+        "relevance_reasoning": "All trials with bupropion as the studied agent targeting ADHD symptoms are classified as relevant — ADHD is not an FDA-approved indication for bupropion (approved only for MDD, SAD, and nicotine dependence), so all ADHD trials represent genuine repurposing evidence. NCT00330434 is contaminated because bupropion appears only as a pharmacokinetic probe to study ethanol and genetic effects on its metabolism, not as a therapeutic agent for ADHD; ADHD is merely part of the study population descriptor and the trial is not designed to evaluate bupropion's efficacy for ADHD.",
         "signals": {
           "highest_completed_phase": "Phase 4",
           "has_completed_phase3": true,
@@ -2707,12 +2708,12 @@
       "blurb": {
         "stage": "Phase 3 completed for this indication",
         "literature": "strong, supports, RCT-backed / controlled",
-        "blocker": "Phase 3 completed but no active programs are currently running for this indication",
+        "blocker": "No trials currently recruiting; development is not actively progressing for this indication.",
         "active_programs": "None active",
-        "key_risk": "Clinical development has concluded without an approval pathway, leaving the hypothesis without forward momentum",
-        "verdict": "Tested, status unconfirmed",
+        "key_risk": "Without an active program, the strong clinical evidence may not translate into regulatory submission or approval.",
+        "verdict": "Tested, not actively progressing",
         "watch": "",
-        "prose": "This hypothesis has been rigorously evaluated through controlled trials and a completed Phase 3, with strong RCT-backed literature supporting the underlying rationale. However, no programs are currently active for this indication, and the drug holds no approval relationship here, leaving the ultimate disposition of the evidence base unresolved."
+        "prose": "This hypothesis is well-supported by a robust body of evidence including randomized controlled trials, and a completed late-stage trial confirms the hypothesis has been rigorously evaluated. However, no trials are currently active and the drug holds no approval for this indication, leaving the clinical work without a clear forward path at this time."
       }
     },
     {
@@ -3499,19 +3500,19 @@
           }
         ],
         "evidence_summary": {
-          "summary": "Multiple controlled trials and studies have examined bupropion for cocaine dependence, yielding inconsistent results. A randomized double-blind placebo-controlled trial found no statistically significant differences between bupropion and placebo on cocaine use outcomes when combined with cognitive behavioral therapy (PMID: 18551884), and bupropion was not more effective than placebo for cocaine abstinence in opioid-dependent patients on buprenorphine (PMID: 18612883). However, a 25-week placebo-controlled trial found that combining bupropion with contingency management significantly reduced cocaine-positive urine samples compared to contingency management with placebo (PMID: 16461866), a small open-label add-on study in bipolar patients with comorbid cocaine dependence showed improvement in Drug Abuse Screening Test scores with bupropion (PMID: 24434527), and an experimental within-subject study found that acute bupropion pre-treatment reduced choice of cocaine versus money, though it also enhanced positive subjective effects of cocaine (PMID: 22168398).",
+          "summary": "Multiple clinical trials have examined bupropion for cocaine dependence, yielding inconsistent results. A randomized double-blind placebo-controlled trial found no significant differences between bupropion and placebo on cocaine use outcomes when combined with cognitive behavioral therapy (PMID: 18551884), and bupropion was not more effective than placebo for cocaine abstinence in opioid-dependent patients on buprenorphine (PMID: 18612883). However, a 25-week placebo-controlled trial suggested that combining bupropion with contingency management significantly reduced cocaine-positive urine samples compared to contingency management with placebo (PMID: 16461866), a small open-label study found improvement in drug abuse screening scores with bupropion add-on therapy in bipolar patients with comorbid cocaine dependence (PMID: 24434527), and an experimental within-subject study showed acute bupropion reduced preference for cocaine versus money while also enhancing some positive subjective effects of cocaine (PMID: 22168398).",
           "study_count": 5,
           "strength": "strong",
           "direction": "mixed",
           "evidence_basis": "drug_specific",
           "is_observational": false,
+          "is_animal_only": false,
           "key_findings": [
             "A randomized double-blind placebo-controlled trial (N=70) found no statistically significant differences between bupropion and placebo in urine drug screen results, treatment retention, cocaine craving, or depressive symptoms when combined with cognitive behavioral therapy (PMID: 18551884).",
-            "In a 25-week placebo-controlled RCT (N=106), the combination of contingency management and bupropion 300 mg/d significantly decreased the proportion of cocaine-positive urine samples during weeks 3–13 relative to week 3 (P<0.001), whereas contingency management with placebo showed a significant increase in cocaine use during the same period (PMID: 16461866).",
-            "In a within-subject placebo-controlled experiment (N=8), acute bupropion pre-treatment (100 or 200 mg) reduced choice of 45 mg intranasal cocaine versus money compared to 0 mg bupropion, but also consistently enhanced positive subject-rated effects of cocaine (PMID: 22168398).",
-            "In a small open-label randomized study (N=12) of depressed bipolar I patients with comorbid cocaine dependence, bupropion add-on therapy was associated with improvement in Drug Abuse Screening Test scores compared to the comparison group after 4 weeks (PMID: 24434527).",
-            "In a double-blind placebo-controlled trial (N=40) of opioid-dependent smokers on buprenorphine, bupropion 300 mg/day was not more effective than placebo for cocaine abstinence, and treatment retention was significantly lower in the bupropion group (58%) versus placebo (90%) (PMID: 18612883).",
-            "Bupropion add-on therapy in depressed bipolar I patients with comorbid cocaine dependence did not produce a significant increase in Young Mania Rating Scale scores over 4 weeks (PMID: 24434527)."
+            "In a 25-week placebo-controlled RCT (N=106), the group receiving both contingency management and bupropion showed a significant decrease in cocaine-positive urine samples during weeks 3-13, whereas the contingency management plus placebo group showed a significant increase in cocaine use during the same period (PMID: 16461866).",
+            "In a double-blind placebo-controlled trial of opioid-dependent smokers on buprenorphine (N=40), bupropion was not more effective than placebo for abstinence from cocaine, and treatment retention was significantly lower in the bupropion group (58%) versus placebo (90%) (PMID: 18612883).",
+            "In a small open-label randomized study of 12 depressed bipolar I patients with comorbid cocaine dependence, bupropion add-on therapy was associated with improvement in Drug Abuse Screening Test scores compared to the comparison group after 4 weeks (PMID: 24434527).",
+            "In a within-subject placebo-controlled experiment (N=8), acute bupropion pre-treatment reduced the number of choices for 45 mg intranasal cocaine versus money (from 5/6 to 3.13-4/6 choices) but also consistently enhanced positive subject-rated effects of cocaine (PMID: 22168398)."
           ],
           "supporting_pmids": [
             "24434527",
@@ -3532,7 +3533,7 @@
           "contaminated_pmids": [],
           "neutral_pmids": []
         },
-        "summary": "Evidence strength: strong, direction: mixed"
+        "summary": "Bupropion for cocaine dependence: strong but mixed evidence across retrieved abstracts."
       },
       "clinical_trials": {
         "search": {
@@ -4569,20 +4570,20 @@
             "bvf-033"
           ]
         },
-        "summary": "Clinical investigation of bupropion for cocaine dependence includes a completed Phase 2/Phase 3 trial (NCT02111798, 'Bupropion-Enhanced Contingency Management (CM) for Cocaine Dependence'), which evaluated bupropion in combination with contingency management as a behavioral reinforcement strategy in patients with cocaine dependence. An earlier Phase 1 study (NCT00000276, 'Dopamine Reuptake Inhibitors of Cocaine Abuse - 1') was terminated, though the record does not indicate this termination was driven by safety or benefit-risk concerns.",
+        "summary": "Clinical development of bupropion for cocaine dependence/abuse spans several studies. NCT00227812 (Phase 2, completed) examined integrated treatment for cocaine and comorbid mood disorders. The most advanced study, NCT02111798 (Phase 2/Phase 3, completed), evaluated bupropion-enhanced contingency management for cocaine dependence, representing the program's highest level of evidence. An additional completed study, NCT00000268 (Not Applicable phase designation, completed), investigated cocaine abuse in the context of attention deficit disorder. One early-stage trial, NCT00000276 (Phase 1), was terminated — this study examined dopamine reuptake inhibitors in cocaine abuse, though no safety or benefit:risk concern was cited as the reason for its stop. No trials are currently active for this indication.",
         "closure": "live",
-        "closure_reason": "No Phase 3 termination for safety or efficacy failure has been identified, and the absence of a commercial filing for an off-patent drug does not constitute program closure.",
+        "closure_reason": "No relevant Phase 3 termination for safety or efficacy failure has been recorded, and the absence of an approval for this indication in an off-patent drug does not constitute closure.",
         "relevant_nct_ids": [
+          "NCT00227812",
           "NCT02111798",
+          "NCT00000268",
           "NCT00000276"
         ],
         "contaminated_nct_ids": [
           "NCT01077024",
-          "NCT00227812",
-          "NCT00061087",
-          "NCT00000268"
+          "NCT00061087"
         ],
-        "relevance_reasoning": "Only NCT02111798 and NCT00000276 study bupropion as the experimental agent directly targeting cocaine dependence/abuse; the remaining four trials are contaminated because they either target an FDA-approved indication of bupropion (smoking cessation in NCT01077024; MDD co-listed in NCT00227812) or use cocaine-dependent patients as the population while treating a distinct condition (ADHD in NCT00061087 and NCT00000268).",
+        "relevance_reasoning": "Bupropion is the studied agent in NCT00227812, NCT02111798, NCT00000268, and NCT00000276, all of which directly target cocaine dependence/abuse as the primary indication — a non-approved repurposing context. NCT01077024 is contaminated because the studied intervention is a generic smoking-cessation treatment bundle (an approved bupropion indication) and bupropion is not the specific studied agent. NCT00061087 is contaminated because the trial's therapeutic intent is ADHD treatment (a distinct disease), not cocaine dependence, even though cocaine-related disorder appears as a co-listed mesh term.",
         "signals": {
           "highest_completed_phase": "Phase 2/Phase 3",
           "has_completed_phase3": true,
@@ -4602,12 +4603,12 @@
       "blurb": {
         "stage": "Phase 2/Phase 3 completed for this indication (no standalone Phase 3)",
         "literature": "strong, mixed, RCT-backed / controlled",
-        "blocker": "No trials currently recruiting; development is not actively progressing for this indication.",
+        "blocker": "No trials currently recruiting; development is not actively progressing at this time.",
         "active_programs": "None active",
-        "key_risk": "Mixed RCT evidence may be insufficient to attract a sponsor willing to pursue regulatory submission.",
+        "key_risk": "Mixed RCT evidence may be insufficient to drive renewed investment or regulatory pursuit without a clear efficacy signal.",
         "verdict": "Tested, status unconfirmed",
         "watch": "",
-        "prose": "This hypothesis has been substantively studied, with six registered trials and a body of controlled, RCT-backed literature that is strong but yields mixed results. No trials are currently active, and the candidate carries no approval relationship to this indication, leaving the clinical program in an uncertain holding state despite meaningful prior investigation."
+        "prose": "This hypothesis has been substantively studied across multiple controlled trials, including randomized evidence, yielding a mixed but non-trivial literature base. No trials are currently active, and with no relationship to an approved indication, the path forward remains undefined rather than closed."
       }
     },
     {
@@ -5536,16 +5537,17 @@
           }
         ],
         "evidence_summary": {
-          "summary": "The evidence supports repurposing bupropion for mood disorders beyond its approved indications, specifically for bipolar and schizoaffective disorders. An open trial found that bupropion maintained 11 patients with bipolar or schizoaffective disorder for 1 year or more with little or no relapse and few side effects (PMID: 2856918). A pharmacokinetic study in inpatients with mood disorders noted that bupropion may be less likely than other antidepressants to cause switches into mania and rapid cycling, suggesting utility in bipolar disorder, though it also identified a clinically significant drug interaction with carbamazepine that markedly reduces bupropion exposure (PMID: 8830063). Abstracts studying bupropion specifically for MDD (PMID: 31301615, 25124683) and healthy volunteers (PMID: 12826985) were excluded as contaminated under the approved-indication exclusion or non-patient-population rules.",
+          "summary": "The evidence supports repurposing bupropion for mood disorders beyond its approved indications, specifically for bipolar and schizoaffective disorders. An open trial found that bupropion maintained 11 patients with bipolar or schizoaffective disorder for 1 year or more with little or no relapse and few side effects (PMID: 2856918). A pharmacokinetic study in inpatients with mood disorders noted that bupropion may be less likely than other antidepressants to cause switches into mania and rapid cycling, suggesting utility in bipolar disorder, though it also identified a clinically significant drug interaction with carbamazepine that markedly reduces bupropion exposure (PMID: 8830063).",
           "study_count": 2,
           "strength": "moderate",
           "direction": "supports",
           "evidence_basis": "drug_specific",
           "is_observational": true,
+          "is_animal_only": false,
           "key_findings": [
-            "In an open trial of 11 patients with bipolar or schizoaffective disorder, most of whom had been intolerant of or showed minimal improvement on lithium, neuroleptics, or antidepressants, all patients maintained on bupropion alone or in combination with low-dose neuroleptics or anxiolytics for 1 year or more showed little or no relapse and few side effects (PMID: 2856918).",
+            "In an open trial of 11 patients with bipolar or schizoaffective disorder (most intolerant of or minimally improved on lithium, neuroleptics, or antidepressants), bupropion alone or combined with low-dose neuroleptics or anxiolytics produced little or no relapse over 1 year or more with few side effects (PMID: 2856918).",
             "Bupropion was noted to be potentially less likely than other antidepressants to cause switches into mania and rapid cycling, suggesting utility in bipolar disorder (PMID: 8830063).",
-            "Carbamazepine markedly decreased bupropion peak concentrations by 87% and 24-hour AUC by 90% in inpatients with mood disorders, indicating a clinically significant drug interaction when combining bupropion with this mood-stabilizing anticonvulsant (PMID: 8830063).",
+            "Carbamazepine co-administration in inpatients with mood disorders decreased bupropion peak concentrations by 87% and 24-hour AUC by 90%, representing a clinically important drug interaction relevant to combination therapy in mood disorders (PMID: 8830063).",
             "Valproate did not significantly affect bupropion concentrations in inpatients with mood disorders, suggesting it may be a safer combination partner than carbamazepine (PMID: 8830063)."
           ],
           "supporting_pmids": [
@@ -5565,7 +5567,7 @@
             "8830063"
           ]
         },
-        "summary": "Bupropion shows moderate evidence supporting its use in mood disorders, based on synthesis of top-ranked PubMed abstracts retrieved across 9 targeted queries (848 PMIDs fetched, top semantic similarity: 0.72)."
+        "summary": "Bupropion shows moderate evidence supporting its use in mood disorders, based on synthesized PubMed literature."
       },
       "clinical_trials": {
         "search": {
@@ -6792,6 +6794,40 @@
               "references": []
             },
             {
+              "nct_id": "NCT00001478",
+              "title": "Effects of Drugs on Cerebral Blood Flow in Patients With Mood Disorders",
+              "brief_summary": "Positron Emission Tomography (PET) is a technique used to investigate the functional activity of the brain. The PET technique allows doctors to study the normal biochemical and metabolic processes of the central nervous system of normal individuals and patients with neurologic illnesses without physical / structural damage to the brain.\n\nWhen a region of the brain is active, it uses more fuel in the form of oxygen and sugar (glucose). As the brain uses more fuel it produces more waste products, carbon dioxide and water. Blood carries fuel to the brain and waste products away from the brain. As brain activity increases blood flow to and from the area of activity increases also. Knowing these facts, researchers can use radioactive chemicals (H215O) and PET scans to observe what areas of the brain are receiving more blood flow.\n\nPatients diagnosed with mood disorders and healthy volunteers will receive positron emission tomographic (PET) scans with H215O while doing simple tasks. Patients will continue to receive scans while in different mood states and while taking different medications. Patients eligible for this study will be participating in other research studies measuring other clinical and biochemical parameters (mood and anxiety ratings, medication responses, and psychological test results). Information gathered from H215O PET scans measuring blood flow to specific brain areas will be compared to the data gathered from other studies.\n\nObjectives of this study are;\n\n1. To determine differences in blood flow to the brain of patients with mood disorders compared to healthy volunteers.\n2. To determine differences in blood flow to the brain of patients with subtype mood disorders (such as unipolar versus bipolar) compared to healthy volunteers.\n\n2\\. To determine changes in blood flow to the brain of patients with mood disorders who experience spontaneous changes in symptoms\n\n3\\. To determine changes in blood flow to the brain of patients with mood disorders who receive various kinds of therapy (medication, transcranial magnetic stimulation, etc.)\n\n4\\. To determine if blood flow to specific areas of the brain can be used to predict how patients will respond to certain types of therapy\n\n5\\. To compare blood flow changes with various other clinical and biochemical parameters.",
+              "phase": "Not Applicable",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Healthy",
+                "Mood Disorders"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D019964",
+                  "term": "Mood Disorders"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D001523",
+                  "term": "Mental Disorders"
+                }
+              ],
+              "interventions": [],
+              "sponsor": "National Institute of Mental Health (NIMH)",
+              "enrollment": 170,
+              "start_date": "1994-10",
+              "completion_date": "2001-01",
+              "primary_outcomes": [],
+              "references": [
+                "2610821",
+                "6334502"
+              ]
+            },
+            {
               "nct_id": "NCT00742573",
               "title": "Incorporating Patient Treatment Choice to Improve Treatment Retention in Depressed Hispanics",
               "brief_summary": "This study will determine whether combination treatment driven by patient choice is better than standardized medication treatment at retaining and improving Hispanic patients with major depressive disorder.",
@@ -6849,40 +6885,6 @@
               ],
               "references": [
                 "30343455"
-              ]
-            },
-            {
-              "nct_id": "NCT00001478",
-              "title": "Effects of Drugs on Cerebral Blood Flow in Patients With Mood Disorders",
-              "brief_summary": "Positron Emission Tomography (PET) is a technique used to investigate the functional activity of the brain. The PET technique allows doctors to study the normal biochemical and metabolic processes of the central nervous system of normal individuals and patients with neurologic illnesses without physical / structural damage to the brain.\n\nWhen a region of the brain is active, it uses more fuel in the form of oxygen and sugar (glucose). As the brain uses more fuel it produces more waste products, carbon dioxide and water. Blood carries fuel to the brain and waste products away from the brain. As brain activity increases blood flow to and from the area of activity increases also. Knowing these facts, researchers can use radioactive chemicals (H215O) and PET scans to observe what areas of the brain are receiving more blood flow.\n\nPatients diagnosed with mood disorders and healthy volunteers will receive positron emission tomographic (PET) scans with H215O while doing simple tasks. Patients will continue to receive scans while in different mood states and while taking different medications. Patients eligible for this study will be participating in other research studies measuring other clinical and biochemical parameters (mood and anxiety ratings, medication responses, and psychological test results). Information gathered from H215O PET scans measuring blood flow to specific brain areas will be compared to the data gathered from other studies.\n\nObjectives of this study are;\n\n1. To determine differences in blood flow to the brain of patients with mood disorders compared to healthy volunteers.\n2. To determine differences in blood flow to the brain of patients with subtype mood disorders (such as unipolar versus bipolar) compared to healthy volunteers.\n\n2\\. To determine changes in blood flow to the brain of patients with mood disorders who experience spontaneous changes in symptoms\n\n3\\. To determine changes in blood flow to the brain of patients with mood disorders who receive various kinds of therapy (medication, transcranial magnetic stimulation, etc.)\n\n4\\. To determine if blood flow to specific areas of the brain can be used to predict how patients will respond to certain types of therapy\n\n5\\. To compare blood flow changes with various other clinical and biochemical parameters.",
-              "phase": "Not Applicable",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "Healthy",
-                "Mood Disorders"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D019964",
-                  "term": "Mood Disorders"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D001523",
-                  "term": "Mental Disorders"
-                }
-              ],
-              "interventions": [],
-              "sponsor": "National Institute of Mental Health (NIMH)",
-              "enrollment": 170,
-              "start_date": "1994-10",
-              "completion_date": "2001-01",
-              "primary_outcomes": [],
-              "references": [
-                "2610821",
-                "6334502"
               ]
             },
             {
@@ -7266,12 +7268,12 @@
           "NCT00046241",
           "NCT01407094",
           "NCT00069459",
-          "NCT00742573",
           "NCT00001478",
+          "NCT00742573",
           "NCT00616915",
           "NCT03993457"
         ],
-        "relevance_reasoning": "The vast majority of trials study bupropion for its FDA-approved indications (MDD or SAD), making them contaminated. The single relevant trial (STEP-BD, NCT00012558) studies bupropion as one of several agents for bipolar disorder, which is a mood disorder subtype that is NOT an approved indication for bupropion. NCT00001478 is contaminated under TEST 0 as no drugs are listed and bupropion is not identifiable as the studied agent.",
+        "relevance_reasoning": "The vast majority of trials study bupropion specifically for MDD or SAD — both FDA-approved indications — making them contaminated under TEST 1. NCT00001478 lists no drug interventions (drugs: none), so bupropion is not the studied agent (TEST 0 contamination). NCT00742573 studies a psychotherapy-driven algorithm (IPT-B vs. TMA antidepressants) in MDD patients, where bupropion is not the specific studied agent. NCT00012558 (STEP-BD) is the sole trial genuinely targeting a broader mood disorder context (bipolar disorder), where bupropion is one of several agents studied in a non-approved indication; however, bipolar disorder is a distinct sibling condition to MDD/SAD and not itself an approved indication for bupropion, making it relevant as a repurposing signal.",
         "signals": {
           "highest_completed_phase": "Not Applicable",
           "has_completed_phase3": false,
@@ -7294,7 +7296,7 @@
         "key_risk": "Overlapping indication boundary may prevent regulators from recognizing a distinct approvable claim separate from the related approved use.",
         "verdict": "Tested, status unconfirmed",
         "watch": "",
-        "prose": "Nine registered trials establish that this hypothesis has been actively studied, and moderate observational literature lends biological plausibility to the rationale. No trial is currently recruiting, and the blurred boundary with a related approved indication makes it difficult to isolate a clear, standalone evidentiary package for this broader disease context."
+        "prose": "Nine registered trials establish that this hypothesis has been actively studied, and moderate observational literature provides supportive biological context, though no pivotal readout has been completed. No trials are currently recruiting, and the blurred boundary with a related approved indication makes it difficult to isolate the evidentiary case for this broader disease target on its own terms."
       }
     }
   ],
@@ -7303,5 +7305,5 @@
     "cocaine dependence",
     "mood disorder"
   ],
-  "summary": "Ranked repurposing signals for bupropion:\n\n1. attention deficit hyperactivity disorder — strong RCT-level evidence, supports; Phase 3 completed\n2. cocaine dependence — strong literature, mixed direction; Phase 2/Phase 3 completed (Phase 2-scale, no standalone Phase 3)\n3. mood disorder — moderate exploratory literature, supports; early-phase only, no completed pivotal readout\n\nEvidence gate exclusions: fibromyalgia, schizophrenia, methamphetamine dependence, drug dependence, alcohol dependence, back pain, eating disorder, bipolar disorder, multiple sclerosis, parkinson disease, diabetic neuropathy, obesity, depressive disorder"
+  "summary": "Ranked repurposing signals for bupropion:\n\n1. attention deficit hyperactivity disorder — strong RCT-level literature, supports; Phase 3 completed\n2. cocaine dependence — strong literature, mixed direction; Phase 2/Phase 3 completed (no standalone Phase 3)\n3. mood disorder — moderate literature, supports; early-phase only, no completed pivotal readout\n\nEvidence gate exclusions: fibromyalgia, schizophrenia, methamphetamine dependence, drug dependence, alcohol dependence, back pain, eating disorder, bipolar disorder, multiple sclerosis, parkinson disease, diabetic neuropathy, obesity, depressive disorder"
 }

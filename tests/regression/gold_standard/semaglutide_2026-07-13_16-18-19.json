@@ -75,7 +75,7 @@
         "target_function": "G-protein coupled receptor for glucagon-like peptide 1 (GLP- 1). Ligand binding triggers activation of a signaling cascade that leads to the activation of adenylyl cyclase and increased intracellular cAMP levels. Plays a role in regulating insulin secretion in response to GLP-1.."
       }
     ],
-    "summary": "Semaglutide acts exclusively as a GLP-1 receptor (GLP1R) agonist, making GLP1R the sole but highly consequential pharmacological target. GLP1R shows its strongest disease associations with type 2 diabetes mellitus (overall score 0.767) and obesity (0.721), both supported by robust clinical, genetic, and literature evidence — fully consistent with semaglutide's approved indications. Beyond its established uses, GLP1R associations with non-alcoholic fatty liver disease/NASH (0.429/0.362) and Alzheimer's disease (0.368) — the latter driven by strong literature and emerging clinical signals — highlight compelling repurposing opportunities, with GLP-1 receptor agonists already under active investigation for both metabolic liver disease and neurodegeneration. Additional associations with hypertension and gestational diabetes further suggest that semaglutide's cardio-metabolic benefits may extend into broader vascular and pregnancy-related contexts."
+    "summary": "Semaglutide acts exclusively as a GLP-1 receptor (GLP1R) agonist, making GLP1R the sole but highly consequential pharmacological target. GLP1R shows its strongest disease associations with type 2 diabetes mellitus (overall score 0.767) and obesity (0.721), both supported by robust clinical, genetic, and literature evidence — perfectly aligned with semaglutide's approved indications. Beyond its established uses, GLP1R is also meaningfully associated with non-alcoholic fatty liver disease/NASH (scores ~0.36–0.43), hypertension (0.482), and notably Alzheimer's disease (0.368, driven by strong literature and emerging clinical evidence), highlighting active repurposing interest in metabolic liver disease and neurodegeneration. The breadth of GLP1R's disease associations suggests that semaglutide's therapeutic potential may extend well beyond glycemic control and weight management into cardiovascular-metabolic and neurodegenerative conditions."
   },
   "disease_findings": [
     {
@@ -1097,7 +1097,7 @@
             "41144928"
           ]
         },
-        "summary": "Semaglutide in Type 1 Diabetes Mellitus — Evidence synthesis complete. Moderate strength, direction supports repurposing."
+        "summary": "Semaglutide in type 1 diabetes mellitus: moderate evidence supporting potential repurposing, based on synthesized PubMed abstracts."
       },
       "clinical_trials": {
         "search": {
@@ -3520,7 +3520,7 @@
             "wegovy"
           ]
         },
-        "summary": "Semaglutide has an extensive and active clinical trial program in Type 1 diabetes spanning multiple phases. Among completed studies, the Phase 2/Phase 3 trial NCT05205928 ('Weekly Subcutaneous Semaglutide as Adjunct to Closed-loop Therapy in Type 1 Diabetes Care') has finished, as has the Phase 2 study NCT05537233 ('ADJUnct Semaglutide Treatment in Type 1 Diabetes'), the Phase 4 study NCT05857085 ('Novel Therapeutics and Endothelial Dysfunction in T1DM Patients'), and the device/behavioral study NCT05390307 ('Obesity Treatment to Improve Diabetes'). On the active side, three Phase 3 trials are currently recruiting: NCT06082063 ('Multifactorial Intervention to Reduce Cardiovascular Disease in Type 1 Diabetes'), NCT05819138 ('Type 1 Diabetes Impacts of Semaglutide on Cardiovascular Outcomes'), and NCT06894784 ('A Clinical Trial to Evaluate The Effects of Semaglutide and Empagliflozin Combined to Automated Insulin Delivery on Diabetes Control in Adults Living With Type 1 Diabetes'). A fourth Phase 3 trial, NCT06909006 ('Semaglutide Treatment in Type 1 Diabetes'), is not yet recruiting. Two Phase 2/Phase 3 trials are also ongoing: NCT03899402 ('Triple Therapy in T1DM'), which is active but no longer recruiting, and NCT06387199 ('Alleviating Carbohydrate Counting for Patients with Type-1 Diabetes Using a Closed Loop System with Weekly Subcutaneous Semaglutide'), which is recruiting. Additional earlier-phase work includes a recruiting Phase 2 study of semaglutide for diabetic kidney disease in Type 1 diabetes (NCT05822609), a Phase 1/Phase 2 study of semaglutide with degludec in early Type 1 diabetes (NCT06057077, status unknown), a Phase 1 combination study with NNC0194-0499 (NCT07087795, active not recruiting), a recruiting Early Phase 1 study examining GLP-1 receptor agonist impact in Stage 2 Type 1 diabetes alongside teplizumab (NCT06338553), a not-yet-recruiting Phase 2 study in Stage 1 Type 1 diabetes (NCT07430332), and a not-yet-recruiting Phase 2 study combining semaglutide with Shingrix for beta-cell preservation in recent-onset Type 1 diabetes (NCT07614412).",
+        "summary": "Semaglutide has an extensive and active clinical trial program in Type 1 Diabetes spanning multiple phases. Among completed studies, the Phase 2 ADJUNCT Semaglutide Treatment in Type 1 Diabetes trial (NCT05537233) and the completed Phase 2/Phase 3 weekly subcutaneous semaglutide as adjunct to closed-loop therapy study (NCT05205928) have both concluded, providing earlier-phase evidence in this population. A completed Phase 4 study examining novel therapeutics and endothelial dysfunction in T1DM patients (NCT05857085) and a completed Not Applicable-phase obesity treatment trial (NCT05390307) round out the finished work.\n\nThe active Phase 3 program is substantial. NCT06082063 is a recruiting Phase 3 trial evaluating a multifactorial intervention to reduce cardiovascular disease in Type 1 Diabetes. NCT05819138, also actively recruiting, is a Phase 3 study of the impacts of semaglutide on cardiovascular outcomes in Type 1 Diabetes. NCT06894784 is a recruiting Phase 3 clinical trial evaluating the effects of semaglutide and empagliflozin combined with automated insulin delivery on diabetes control in adults with Type 1 Diabetes. NCT06909006 is a Phase 3 trial of semaglutide treatment in Type 1 Diabetes that is not yet recruiting. Two Phase 2/Phase 3 trials are also active: NCT03899402 (Triple Therapy in T1DM), which is active but no longer recruiting, and NCT06387199, a recruiting study alleviating carbohydrate counting in Type 1 Diabetes patients using a closed-loop system with weekly subcutaneous semaglutide.\n\nAdditional earlier-phase work continues in parallel, including a recruiting Phase 2 trial of semaglutide for diabetic kidney disease in Type 1 Diabetes (NCT05822609), a recruiting Early Phase 1 study of GLP-1Ra impact on metabolic outcomes in Stage 2 T1DM with teplizumab (NCT06338553), a Phase 1/Phase 2 study of semaglutide with degludec basal-bolus insulin in early Type 1 Diabetes (NCT06057077, status unknown), a not-yet-recruiting Phase 2 SHIELD-T1D trial combining Shingrix and GLP-1 agonist for beta-cell preservation in recent-onset Type 1 Diabetes (NCT07614412), and a not-yet-recruiting Phase 2 study of GLP-1 RA for Stage 1 Type 1 Diabetes (NCT07430332).",
         "closure": "live",
         "closure_reason": "Multiple Phase 3 and Phase 2/Phase 3 trials are actively recruiting or ongoing with no evidence of termination for safety or efficacy failure.",
         "relevant_nct_ids": [
@@ -3529,7 +3529,6 @@
           "NCT06909006",
           "NCT06057077",
           "NCT05537233",
-          "NCT07087795",
           "NCT05857085",
           "NCT03899402",
           "NCT05390307",
@@ -3541,8 +3540,10 @@
           "NCT06338553",
           "NCT07430332"
         ],
-        "contaminated_nct_ids": [],
-        "relevance_reasoning": "Type 1 diabetes mellitus is a distinct disease from semaglutide's approved indications (type 2 diabetes mellitus, obesity, MASH, CKD, cardiovascular outcomes), and is not a narrower subtype of any of them. All 16 trials across search and completed scopes study semaglutide as the experimental agent in T1DM patients (glycemic control, cardiovascular outcomes, kidney disease, beta-cell preservation, adjunct to closed-loop therapy), making every trial relevant to this repurposing hypothesis. No terminated trials were found.",
+        "contaminated_nct_ids": [
+          "NCT07087795"
+        ],
+        "relevance_reasoning": "Type 1 diabetes mellitus is a distinct disease from semaglutide's approved indications (type 2 diabetes, obesity, MASH, CKD, CV outcomes), so all trials studying semaglutide in T1D patients are relevant repurposing evidence. NCT07087795 is contaminated because the primary studied agent is NNC0194-0499 (a novel compound), with semaglutide serving only as a combination/comparator arm.",
         "signals": {
           "highest_completed_phase": "Phase 4",
           "has_completed_phase3": true,
@@ -3573,7 +3574,7 @@
         "active_programs": "3 Phase 3 active (NCT06082063, NCT05819138, NCT06894784); 1 Phase 3 not yet recruiting (NCT06909006); 2 Phase 2/Phase 3 active (NCT03899402, NCT06387199)",
         "key_risk": "Late-stage trials may fail to demonstrate sufficient efficacy or safety to support a new indication",
         "verdict": "Maturing, awaiting readout",
-        "watch": "NCT06082063, NCT06909006 — ongoing Phase 3 trials",
+        "watch": "NCT06082063, NCT06909006 — active Phase 3 trials",
         "prose": "This hypothesis is in active late-stage clinical investigation, with multiple ongoing trials and additional programs in the pipeline, reflecting sustained and broad development commitment. Moderate RCT-backed literature supports the biological rationale, and the field now awaits definitive readout data to determine whether the evidence base can anchor a regulatory submission for this indication."
       }
     },
@@ -4455,14 +4456,14 @@
           ],
           "neutral_pmids": []
         },
-        "summary": "The pipeline retrieved 777 PubMed abstracts and semantic re-ranking identified 5 topically relevant results (top cosine similarity: 0.77). Despite reasonable retrieval, the synthesizer returned an evidence strength of \"none\" and no directional signal, indicating that the retrieved abstracts did not yield sufficient structured evidence to support or refute semaglutide repurposing for non-alcoholic fatty liver disease within this run. This reflects the limits of the retrieved abstract set, not a definitive conclusion about the broader literature."
+        "summary": "The pipeline completed successfully for semaglutide in non-alcoholic fatty liver disease. Despite strong query generation (8 queries), a large abstract pool (777 PMIDs), and reasonable semantic similarity (top score: 0.77), the synthesizer returned an evidence strength of \"none\" with no directional signal. This indicates that the top-ranked abstracts retrieved did not contain sufficient extractable evidence — such as outcome data, mechanistic findings, or clinical observations — to support or refute the repurposing hypothesis within the scope of this retrieval run."
       },
       "clinical_trials": {
         "search": {
           "total_count": 23,
           "by_status": {
             "RECRUITING": 3,
-            "ACTIVE_NOT_RECRUITING": 3,
+            "ACTIVE_NOT_RECRUITING": 2,
             "WITHDRAWN": 0,
             "UNKNOWN": 3
           },
@@ -4956,10 +4957,10 @@
             },
             {
               "nct_id": "NCT04639414",
-              "title": "Combined Active Treatment in Type 2 Diabetes with NASH",
+              "title": "Combined Active Treatment in Type 2 Diabetes With NASH",
               "brief_summary": "The aim of this multicentre, prospective, placebo-controlled, double-blind, randomized, 3-arm parallel group, interventional study is to assess for the first time the effects of either a combined therapy with the antihyperglycemic drugs semaglutide and empagliflozin or empagliflozin monotherapy compared to placebo as potential treatments for non-alcoholic steatohepatitis (NASH) in patients with type 2 diabetes.",
               "phase": "Phase 4",
-              "overall_status": "ACTIVE_NOT_RECRUITING",
+              "overall_status": "COMPLETED",
               "why_stopped": null,
               "indications": [
                 "Type 2 Diabetes",
@@ -5493,7 +5494,7 @@
                 }
               ],
               "sponsor": "National Institute of Diabetes and Digestive and Kidney Diseases (NIDDK)",
-              "enrollment": 84,
+              "enrollment": 104,
               "start_date": "2019-07-24",
               "completion_date": "2026-08-31",
               "primary_outcomes": [
@@ -5627,6 +5628,120 @@
               ]
             },
             {
+              "nct_id": "NCT03919929",
+              "title": "Treating PCOS With Semaglutide vs Active Lifestyle Intervention",
+              "brief_summary": "Girls with obesity and polycystic ovarian syndrome will receive either glucagon like peptide-1 receptor agonist therapy or a dietary intervention for 12 weeks to decrease the metabolic syndrome, in particular to lower hepatic fat and improve insulin sensitivity.",
+              "phase": "Phase 2/Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "PCOS",
+                "Adolescent Obesity",
+                "NAFLD"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D063766",
+                  "term": "Pediatric Obesity"
+                },
+                {
+                  "id": "D065626",
+                  "term": "Non-alcoholic Fatty Liver Disease"
+                },
+                {
+                  "id": "D007333",
+                  "term": "Insulin Resistance"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D009765",
+                  "term": "Obesity"
+                },
+                {
+                  "id": "D050177",
+                  "term": "Overweight"
+                },
+                {
+                  "id": "D044343",
+                  "term": "Overnutrition"
+                },
+                {
+                  "id": "D009748",
+                  "term": "Nutrition Disorders"
+                },
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D001835",
+                  "term": "Body Weight"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                },
+                {
+                  "id": "D005234",
+                  "term": "Fatty Liver"
+                },
+                {
+                  "id": "D008107",
+                  "term": "Liver Diseases"
+                },
+                {
+                  "id": "D004066",
+                  "term": "Digestive System Diseases"
+                },
+                {
+                  "id": "D006946",
+                  "term": "Hyperinsulinism"
+                },
+                {
+                  "id": "D044882",
+                  "term": "Glucose Metabolism Disorders"
+                },
+                {
+                  "id": "D008659",
+                  "term": "Metabolic Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Semaglutide 3mg and 7mg [Rybelsus]",
+                  "description": "Once daily oral tablet of semaglutide for 4 months"
+                },
+                {
+                  "intervention_type": "Other",
+                  "intervention_name": "Weight loss diet",
+                  "description": "Prescribed weight loss diet to match weight loss in Drug arm"
+                }
+              ],
+              "sponsor": "University of Colorado, Denver",
+              "enrollment": 60,
+              "start_date": "2019-05-03",
+              "completion_date": "2023-10-03",
+              "primary_outcomes": [
+                {
+                  "measure": "Change in Hepatic Fat Fraction",
+                  "time_frame": "Baseline and 12 weeks"
+                },
+                {
+                  "measure": "Change in Weight",
+                  "time_frame": "Baseline and 12 weeks"
+                }
+              ],
+              "references": [
+                "42014131"
+              ]
+            },
+            {
               "nct_id": "NCT05067621",
               "title": "Semaglutide Effects in Obese Youth With Prediabetes/New Onset Type 2 Diabetes and Metabolic Dysfunction-Associated Steatotic Liver Disease",
               "brief_summary": "The purpose of this study is to understand the role of GLP-1 in the pathogenesis of T2D in youth and explore their potential salutary effects and ability to delay the progressive loss of ß-cell function and reduce hepatic steatosis in youth with prediabetes/new onset T2D and NAFLD.",
@@ -5754,120 +5869,6 @@
                 }
               ],
               "references": []
-            },
-            {
-              "nct_id": "NCT03919929",
-              "title": "Treating PCOS With Semaglutide vs Active Lifestyle Intervention",
-              "brief_summary": "Girls with obesity and polycystic ovarian syndrome will receive either glucagon like peptide-1 receptor agonist therapy or a dietary intervention for 12 weeks to decrease the metabolic syndrome, in particular to lower hepatic fat and improve insulin sensitivity.",
-              "phase": "Phase 2/Phase 3",
-              "overall_status": "COMPLETED",
-              "why_stopped": null,
-              "indications": [
-                "PCOS",
-                "Adolescent Obesity",
-                "NAFLD"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D063766",
-                  "term": "Pediatric Obesity"
-                },
-                {
-                  "id": "D065626",
-                  "term": "Non-alcoholic Fatty Liver Disease"
-                },
-                {
-                  "id": "D007333",
-                  "term": "Insulin Resistance"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D009765",
-                  "term": "Obesity"
-                },
-                {
-                  "id": "D050177",
-                  "term": "Overweight"
-                },
-                {
-                  "id": "D044343",
-                  "term": "Overnutrition"
-                },
-                {
-                  "id": "D009748",
-                  "term": "Nutrition Disorders"
-                },
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D001835",
-                  "term": "Body Weight"
-                },
-                {
-                  "id": "D012816",
-                  "term": "Signs and Symptoms"
-                },
-                {
-                  "id": "D013568",
-                  "term": "Pathological Conditions, Signs and Symptoms"
-                },
-                {
-                  "id": "D005234",
-                  "term": "Fatty Liver"
-                },
-                {
-                  "id": "D008107",
-                  "term": "Liver Diseases"
-                },
-                {
-                  "id": "D004066",
-                  "term": "Digestive System Diseases"
-                },
-                {
-                  "id": "D006946",
-                  "term": "Hyperinsulinism"
-                },
-                {
-                  "id": "D044882",
-                  "term": "Glucose Metabolism Disorders"
-                },
-                {
-                  "id": "D008659",
-                  "term": "Metabolic Diseases"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "Semaglutide 3mg and 7mg [Rybelsus]",
-                  "description": "Once daily oral tablet of semaglutide for 4 months"
-                },
-                {
-                  "intervention_type": "Other",
-                  "intervention_name": "Weight loss diet",
-                  "description": "Prescribed weight loss diet to match weight loss in Drug arm"
-                }
-              ],
-              "sponsor": "University of Colorado, Denver",
-              "enrollment": 60,
-              "start_date": "2019-05-03",
-              "completion_date": "2023-10-03",
-              "primary_outcomes": [
-                {
-                  "measure": "Change in Hepatic Fat Fraction",
-                  "time_frame": "Baseline and 12 weeks"
-                },
-                {
-                  "measure": "Change in Weight",
-                  "time_frame": "Baseline and 12 weeks"
-                }
-              ],
-              "references": [
-                "42014131"
-              ]
             },
             {
               "nct_id": "NCT05195944",
@@ -6192,89 +6193,6 @@
               "references": []
             },
             {
-              "nct_id": "NCT05751720",
-              "title": "Effect on Non-Alcoholic Fatty Liver Disease in Patients With Type 2 Diabetes Mellitus With Gastric Inhibitory Polypeptide/Glucagon Like Peptide-1 Analogue",
-              "brief_summary": "Obesity and type 2 Diabetes Mellitus prevalence has doubled in the last 30 years and nearly one fifth of UAE population has Type 2 Diabetes while more than quarter has obesity.\n\nNon-alcoholic fatty liver disease is present in more than 30% of patients with type 2 diabetes and in \\> 50% patient with obesity\n\n20% of patients with Non-alcoholic fatty liver disease progress to develop non-alcoholic steatohepatitis which can lead to liver failure and hepatocellular carcinoma.\n\nThis study aims to use GLP-1 analogue to see effects on liver fat deposition after six months of treatment\n\nThere is no current randomised study on treatment of non-alcoholic steatohepatitis in United Arab Emirates population; so once completed this will the first study.\n\nThis study will pave the way for developing a treatment pathway for patients with non-alcoholic fatty liver disease.",
-              "phase": "Phase 1/Phase 2",
-              "overall_status": "UNKNOWN",
-              "why_stopped": null,
-              "indications": [
-                "Non-Alcoholic Fatty Liver Disease",
-                "Non-alcoholic Steatohepatitis",
-                "Type 2 Diabetes",
-                "Liver Fat"
-              ],
-              "mesh_conditions": [
-                {
-                  "id": "D065626",
-                  "term": "Non-alcoholic Fatty Liver Disease"
-                },
-                {
-                  "id": "D003924",
-                  "term": "Diabetes Mellitus, Type 2"
-                },
-                {
-                  "id": "D005234",
-                  "term": "Fatty Liver"
-                }
-              ],
-              "mesh_ancestors": [
-                {
-                  "id": "D008107",
-                  "term": "Liver Diseases"
-                },
-                {
-                  "id": "D004066",
-                  "term": "Digestive System Diseases"
-                },
-                {
-                  "id": "D003920",
-                  "term": "Diabetes Mellitus"
-                },
-                {
-                  "id": "D044882",
-                  "term": "Glucose Metabolism Disorders"
-                },
-                {
-                  "id": "D008659",
-                  "term": "Metabolic Diseases"
-                },
-                {
-                  "id": "D009750",
-                  "term": "Nutritional and Metabolic Diseases"
-                },
-                {
-                  "id": "D004700",
-                  "term": "Endocrine System Diseases"
-                }
-              ],
-              "interventions": [
-                {
-                  "intervention_type": "Drug",
-                  "intervention_name": "GIP/GLP-1a",
-                  "description": "The group will receive GLP-1 analogues (subcutaneous Tirzepatide). The dose of Tirzepatide is 0.25 mg once weekly for 4 weeks then 0.5 mg once weekly."
-                }
-              ],
-              "sponsor": "Dr Adnan Agha",
-              "enrollment": 30,
-              "start_date": "2023-10-01",
-              "completion_date": "2024-10",
-              "primary_outcomes": [
-                {
-                  "measure": "change in liver stiffness in terms of kPa",
-                  "time_frame": "12 months"
-                },
-                {
-                  "measure": "Change in Liver fat quantification",
-                  "time_frame": "12 months"
-                }
-              ],
-              "references": [
-                "26677985",
-                "27017224"
-              ]
-            },
-            {
               "nct_id": "NCT07570810",
               "title": "Efficacy, Safety, and Tolerability of CS0159 Combined With Semaglutide in MAFLD Patients With Obesity and T2DM",
               "brief_summary": "This is an exploratory study evaluating CS0159 in combination with Semaglutide in metabolic dysfunction-associated fatty liver disease (MAFLD) patients with obesity and type 2 diabetes (T2DM).",
@@ -6390,11 +6308,94 @@
                 }
               ],
               "references": []
+            },
+            {
+              "nct_id": "NCT05751720",
+              "title": "Effect on Non-Alcoholic Fatty Liver Disease in Patients With Type 2 Diabetes Mellitus With Gastric Inhibitory Polypeptide/Glucagon Like Peptide-1 Analogue",
+              "brief_summary": "Obesity and type 2 Diabetes Mellitus prevalence has doubled in the last 30 years and nearly one fifth of UAE population has Type 2 Diabetes while more than quarter has obesity.\n\nNon-alcoholic fatty liver disease is present in more than 30% of patients with type 2 diabetes and in \\> 50% patient with obesity\n\n20% of patients with Non-alcoholic fatty liver disease progress to develop non-alcoholic steatohepatitis which can lead to liver failure and hepatocellular carcinoma.\n\nThis study aims to use GLP-1 analogue to see effects on liver fat deposition after six months of treatment\n\nThere is no current randomised study on treatment of non-alcoholic steatohepatitis in United Arab Emirates population; so once completed this will the first study.\n\nThis study will pave the way for developing a treatment pathway for patients with non-alcoholic fatty liver disease.",
+              "phase": "Phase 1/Phase 2",
+              "overall_status": "UNKNOWN",
+              "why_stopped": null,
+              "indications": [
+                "Non-Alcoholic Fatty Liver Disease",
+                "Non-alcoholic Steatohepatitis",
+                "Type 2 Diabetes",
+                "Liver Fat"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D065626",
+                  "term": "Non-alcoholic Fatty Liver Disease"
+                },
+                {
+                  "id": "D003924",
+                  "term": "Diabetes Mellitus, Type 2"
+                },
+                {
+                  "id": "D005234",
+                  "term": "Fatty Liver"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D008107",
+                  "term": "Liver Diseases"
+                },
+                {
+                  "id": "D004066",
+                  "term": "Digestive System Diseases"
+                },
+                {
+                  "id": "D003920",
+                  "term": "Diabetes Mellitus"
+                },
+                {
+                  "id": "D044882",
+                  "term": "Glucose Metabolism Disorders"
+                },
+                {
+                  "id": "D008659",
+                  "term": "Metabolic Diseases"
+                },
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D004700",
+                  "term": "Endocrine System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "GIP/GLP-1a",
+                  "description": "The group will receive GLP-1 analogues (subcutaneous Tirzepatide). The dose of Tirzepatide is 0.25 mg once weekly for 4 weeks then 0.5 mg once weekly."
+                }
+              ],
+              "sponsor": "Dr Adnan Agha",
+              "enrollment": 30,
+              "start_date": "2023-10-01",
+              "completion_date": "2024-10",
+              "primary_outcomes": [
+                {
+                  "measure": "change in liver stiffness in terms of kPa",
+                  "time_frame": "12 months"
+                },
+                {
+                  "measure": "Change in Liver fat quantification",
+                  "time_frame": "12 months"
+                }
+              ],
+              "references": [
+                "26677985",
+                "27017224"
+              ]
             }
           ]
         },
         "completed": {
-          "total_count": 12,
+          "total_count": 13,
           "trials": [
             {
               "nct_id": "NCT05016882",
@@ -6667,6 +6668,91 @@
                 "37328931",
                 "33039693"
               ]
+            },
+            {
+              "nct_id": "NCT04639414",
+              "title": "Combined Active Treatment in Type 2 Diabetes With NASH",
+              "brief_summary": "The aim of this multicentre, prospective, placebo-controlled, double-blind, randomized, 3-arm parallel group, interventional study is to assess for the first time the effects of either a combined therapy with the antihyperglycemic drugs semaglutide and empagliflozin or empagliflozin monotherapy compared to placebo as potential treatments for non-alcoholic steatohepatitis (NASH) in patients with type 2 diabetes.",
+              "phase": "Phase 4",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Type 2 Diabetes",
+                "Non-alcoholic Steatohepatitis (NASH)",
+                "Non-alcoholic Fatty Liver Disease (NAFLD)"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D003924",
+                  "term": "Diabetes Mellitus, Type 2"
+                },
+                {
+                  "id": "D065626",
+                  "term": "Non-alcoholic Fatty Liver Disease"
+                },
+                {
+                  "id": "D005234",
+                  "term": "Fatty Liver"
+                },
+                {
+                  "id": "D003920",
+                  "term": "Diabetes Mellitus"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D044882",
+                  "term": "Glucose Metabolism Disorders"
+                },
+                {
+                  "id": "D008659",
+                  "term": "Metabolic Diseases"
+                },
+                {
+                  "id": "D009750",
+                  "term": "Nutritional and Metabolic Diseases"
+                },
+                {
+                  "id": "D004700",
+                  "term": "Endocrine System Diseases"
+                },
+                {
+                  "id": "D008107",
+                  "term": "Liver Diseases"
+                },
+                {
+                  "id": "D004066",
+                  "term": "Digestive System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Empagliflozin 10mg oral tablet / Semaglutide 1mg pen injector",
+                  "description": "Measurement of the effect of the combined treatment with semaglutide 1mg/week and empagliflozin 10 mg/d compared to matching placebo after 48-week treatment."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Empagliflozin 10mg oral tablet and placebo pen injector matching semaglutide",
+                  "description": "Measurement of the effect of empagliflozin monotherapy 10mg/d compared to matching placebo after 48-week treatment."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo matching empagliflozin and placebo pen injector matching semaglutide",
+                  "description": "Measurement of the effect of the combined treatment with semaglutide 1mg/week and empagliflozin 10 mg/d OR empagliflozin monotherapy 10mg/d compared to matching placebo after 48-week treatment."
+                }
+              ],
+              "sponsor": "German Diabetes Center",
+              "enrollment": 192,
+              "start_date": "2021-03-26",
+              "completion_date": "2025-01-31",
+              "primary_outcomes": [
+                {
+                  "measure": "Histological resolution of NASH without worsening of fibrosis",
+                  "time_frame": "from baseline to 48 weeks"
+                }
+              ],
+              "references": []
             },
             {
               "nct_id": "NCT05813249",
@@ -7756,18 +7842,17 @@
             "wegovy"
           ]
         },
-        "summary": "Semaglutide has been evaluated across multiple phases of clinical investigation in nonalcoholic/metabolic fatty liver disease. At the foundational level, a completed Phase 1 study (NCT03357380, 'A Study on How Semaglutide Works on Early Stages of Scar Tissue in the Liver Assessed by Pictures of the Liver') characterized its early mechanistic effects on hepatic fibrosis. Building on this, two Phase 2 trials have completed: NCT04216589 ('The SLIM LIVER Study'), which examined semaglutide in NAFLD in the context of metabolic syndrome with insulin resistance and elevated cardiovascular risk, and a Phase 4 study NCT05813249 ('Semaglutide in Nonalcoholic Fatty Liver Disease') that has also completed. A second Phase 2 study, NCT06005012, examining semaglutide in real-world fibrosis due to NAFLD in obesity and type 2 diabetes, carries an unknown current status. On the active side, NCT03884075 ('NAFLD HEROES') is a Phase 2 trial currently recruiting to assess hepatic glucose response and the effect of semaglutide in NAFLD. NCT05067621 is an active, non-recruiting Phase 2 study evaluating semaglutide effects in obese youth with prediabetes or new-onset type 2 diabetes and metabolic dysfunction-associated steatotic liver disease. NCT06374875 ('Fibrosis Lessens After Metabolic Surgery') is a recruiting Phase 4 trial examining fibrosis outcomes in a surgical context that includes semaglutide. Finally, NCT07570810, a not-yet-recruiting study of not-applicable phase, will assess the efficacy, safety, and tolerability of CS0159 combined with semaglutide in MAFLD patients with obesity and type 2 diabetes.",
+        "summary": "Semaglutide has been evaluated across multiple studies in nonalcoholic fatty liver disease (NAFLD)/metabolic dysfunction-associated steatotic liver disease (MASLD). At the early mechanistic level, a completed Phase 1 study (NCT03357380) examined how semaglutide acts on early-stage hepatic fibrosis using liver imaging. Two Phase 2 trials have been completed: NCT04216589 (the SLIM LIVER Study), which investigated semaglutide in NAFLD in the context of metabolic syndrome, insulin resistance, elevated hepatic lipids, and cardiovascular risk; and a Phase 4 study (NCT05813249) titled 'Semaglutide in Nonalcoholic Fatty Liver Disease,' which has also completed. Two studies have an unknown current status: NCT05779644, a not-applicable-phase trial examining GLP-1 receptor agonist effects on body weight, metabolism, and fat distribution in overweight/obese patients with type 2 diabetes; and NCT06005012, a Phase 2 real-world study of semaglutide for NAFLD-related fibrosis in obesity and type 2 diabetes. Two non-pivotal Phase 2 trials remain active: NCT03884075 (NAFLD HEROES), which is actively recruiting and examines the hepatic response to oral glucose and the effect of semaglutide in NAFLD; and NCT05067621, which is active but no longer recruiting and evaluates semaglutide effects in obese youth with prediabetes or new-onset type 2 diabetes and metabolic dysfunction-associated steatotic liver disease.",
         "closure": "live",
-        "closure_reason": "Multiple Phase 2 and Phase 4 trials remain actively recruiting or ongoing, and no relevant trial has been terminated for safety or benefit-risk reasons.",
+        "closure_reason": "Two Phase 2 trials remain actively ongoing with no evidence of a safety-driven or efficacy-driven termination for this indication.",
         "relevant_nct_ids": [
+          "NCT05779644",
           "NCT05813249",
-          "NCT06374875",
           "NCT06005012",
           "NCT03884075",
           "NCT03357380",
           "NCT05067621",
-          "NCT04216589",
-          "NCT07570810"
+          "NCT04216589"
         ],
         "contaminated_nct_ids": [
           "NCT04822181",
@@ -7775,18 +7860,19 @@
           "NCT04971785",
           "NCT05877547",
           "NCT02970942",
-          "NCT05779644",
           "NCT04639414",
           "NCT04944992",
+          "NCT06374875",
           "NCT03987074",
           "NCT03987451",
           "NCT03919929",
           "NCT05195944",
           "NCT05766709",
           "NCT05424003",
-          "NCT05751720"
+          "NCT05751720",
+          "NCT07570810"
         ],
-        "relevance_reasoning": "Semaglutide is FDA-approved for MASH/NASH (non-alcoholic steatohepatitis), so any trial whose primary condition is NASH/MASH or steatohepatitis is contaminated under TEST 1 (approved subtype). Trials studying semaglutide in the broader NAFLD/simple steatosis context — including NAFLD with fibrosis not specifically framed as NASH, NAFLD in HIV patients, NAFLD in pediatric obesity, and NAFLD with cirrhosis sequelae — are classified as relevant as they address the broader parent indication not yet approved. Trials where semaglutide is a comparator arm for a different investigational drug (efinopegdutide, NNC0194-0499) are contaminated under TEST 0 (wrong studied drug), and trials co-listing T2DM as the primary target with NAFLD as a comorbidity population are contaminated under TEST 2.",
+        "relevance_reasoning": "Trials studying semaglutide specifically in NASH/MASH (or NASH cirrhosis) are contaminated because NASH/non-alcoholic steatohepatitis is an FDA-approved indication for semaglutide — a narrower subtype of the broad NAFLD umbrella (TEST 1). Trials where semaglutide serves only as an active comparator for another drug (e.g. efinopegdutide) are contaminated under TEST 0. Trials studying semaglutide in broad NAFLD (hepatic steatosis, early fibrosis, fat deposition) without restricting to NASH — including in special populations (HIV, youth, obese/T2DM with NAFLD) — are classified as relevant repurposing evidence for the broader NAFLD umbrella indication not yet covered by the NASH approval.",
         "signals": {
           "highest_completed_phase": "Phase 4",
           "has_completed_phase3": false,
@@ -7798,18 +7884,18 @@
           "phase3_terminated_for_cause": false,
           "terminated_phase3_nct_ids": [],
           "dev_stage": "completed_phase2",
-          "active_programs": "No pivotal program active; 4 non-pivotal active (NCT06374875, NCT03884075, NCT05067621, NCT07570810)"
+          "active_programs": "No pivotal program active; 2 non-pivotal active (NCT03884075, NCT05067621)"
         }
       },
       "blurb": {
         "stage": "Phase 2 completed for this indication, no Phase 3",
         "literature": "evidence is for an already-approved sub-indication (not repurposing)",
         "blocker": "No pivotal program is currently active; development has not advanced beyond mid-stage for this indication.",
-        "active_programs": "No pivotal program active; 4 non-pivotal active (NCT06374875, NCT03884075, NCT05067621, NCT07570810)",
-        "key_risk": "Entanglement with the overlapping approved related indication may obscure whether any trial evidence is genuinely attributable to this broader candidate indication.",
+        "active_programs": "No pivotal program active; 2 non-pivotal active (NCT03884075, NCT05067621)",
+        "key_risk": "The overlapping approved indication blurs the evidence base, making it difficult to isolate efficacy and safety signals specific to this broader candidate indication.",
         "verdict": "Live but bottlenecked",
         "watch": "",
-        "prose": "The hypothesis has been meaningfully studied, with 23 registry trials on record and four non-pivotal programs still active, signaling sustained investigational interest rather than abandonment. However, because this candidate indication overlaps an approved related use and no approved indication covers it directly, the evidentiary picture remains difficult to disentangle and no pivotal program is currently driving it toward a regulatory decision."
+        "prose": "The hypothesis has been meaningfully tested, with 23 registry trials on record and two non-pivotal studies still active, signaling continued investigational interest rather than abandonment. However, because this candidate indication overlaps an approved related use and no pivotal program is running, the evidence base remains entangled and the path to a dedicated regulatory milestone is unclear."
       }
     },
     {
@@ -8474,7 +8560,7 @@
           ],
           "neutral_pmids": []
         },
-        "summary": "The synthesizer returned an evidence strength of \"none\" and direction of \"none\" for semaglutide in Parkinson's disease, despite retrieving 566 PubMed abstracts and achieving a reasonable top semantic similarity of 0.75. This indicates that the top-ranked abstracts, when synthesized, did not yield sufficient structured evidence to support or refute the repurposing hypothesis based on the retrieved literature in this run."
+        "summary": "The full pipeline was executed for semaglutide in Parkinson's disease. Despite retrieving 566 PubMed abstracts and achieving a reasonable top semantic similarity score (0.75), the synthesizer returned an evidence strength of \"none\" with no directional signal. This indicates that the retrieved abstracts, while topically adjacent, did not contain sufficient direct evidence to support or refute the repurposing hypothesis of semaglutide for Parkinson's disease based on the current PubMed literature cache."
       },
       "clinical_trials": {
         "search": {
@@ -8994,7 +9080,7 @@
           "NCT03659682"
         ],
         "contaminated_nct_ids": [],
-        "relevance_reasoning": "NCT03659682 directly studies semaglutide (a GLP-1 receptor agonist) as the experimental intervention in Parkinson's disease patients, and Parkinson's disease is not among semaglutide's FDA-approved indications, making this a genuine repurposing signal. No contamination from approved indications applies.",
+        "relevance_reasoning": "NCT03659682 explicitly studies semaglutide as the experimental intervention for idiopathic Parkinson's disease, testing its neuroprotective and anti-inflammatory properties — a clear repurposing hypothesis. Parkinson's disease is not among semaglutide's FDA-approved indications, so no contamination applies.",
         "signals": {
           "highest_completed_phase": null,
           "has_completed_phase3": false,
@@ -9016,7 +9102,7 @@
         "active_programs": "None active; 1 on record with unknown status (NCT03659682)",
         "key_risk": "Evidence base is class-level only, with no direct clinical data supporting this specific drug in this indication",
         "verdict": "Tested, status unconfirmed",
-        "watch": "NCT03899402",
+        "watch": "",
         "prose": "The hypothesis has been explored in at least one registered trial, though whether that program remains active or has concluded is not confirmed. Supporting evidence is indirect, drawn from class-level signals rather than data specific to this drug, leaving the clinical case materially unresolved."
       }
     }
@@ -9026,5 +9112,5 @@
     "non-alcoholic fatty liver disease",
     "parkinson disease"
   ],
-  "summary": "Ranked repurposing signals for semaglutide:\n\n1. type 1 diabetes mellitus — moderate literature signal, supports; Active Phase 3 development on record (NCT06082063, NCT06909006, NCT03899402, NCT05819138, NCT06894784, NCT06387199)\n2. non-alcoholic fatty liver disease — no drug-specific literature (class-level signal; MASH/NASH approved separately); Phase 2 completed, no Phase 3 on record\n3. parkinson disease — no drug-specific literature (566 PMIDs, basis class-level/no direct evidence); early-phase only, no completed pivotal readout\n\nEvidence gate exclusions: nutritional disorder, cardiovascular disease, coronary artery disease, polycystic ovary syndrome, ischemic stroke, alcohol dependence, prediabetes syndrome, cocaine use disorder, renal insufficiency, diabetes mellitus, hypertension, hyperlipidemia"
+  "summary": "Ranked repurposing signals for semaglutide:\n\n1. type 1 diabetes mellitus — moderate literature signal, supports; active Phase 3 development on record\n2. non-alcoholic fatty liver disease — no drug-specific literature strength; Phase 2 completed, no Phase 3 on record\n3. parkinson disease — no drug-specific literature strength; early-phase only, no completed pivotal readout"
 }

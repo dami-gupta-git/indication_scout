@@ -124,6 +124,55 @@ async def test_get_trial(clinical_trials_client):
     )
 
 
+@pytest.mark.parametrize(
+    "nct_id, drug, title, summary_head, summary_names_drug",
+    [
+        (
+            "NCT01347008",
+            "Sildenafil citrate",
+            "Effect of Sildenafil on the Microcirculatory Blood Flow and Endothelial Progenitor Cells in Systemic Sclerosis",
+            "Early phases of systemic sclerosis",
+            "sildenafil citrate",
+        ),
+        (
+            "NCT02111798",
+            "Bupropion XL",
+            "Bupropion-Enhanced Contingency Management (CM) for Cocaine Dependence",
+            "This project will examine effects of bupropion",
+            "bupropion",
+        ),
+    ],
+    ids=["sildenafil_raynaud", "bupropion_cocaine"],
+)
+async def test_get_trial_summary_supports_test0(
+    clinical_trials_client,
+    nct_id,
+    drug,
+    title,
+    summary_head,
+    summary_names_drug,
+):
+    """The summary-based TEST 0 gate replaced the arm-role signal.
+
+    For single-drug trials the registry mislabels as ACTIVE_COMPARATOR, the gate must
+    still identify the drug as the studied agent. It does so from brief_summary +
+    interventions, so this asserts that data is actually present and names the drug:
+      - brief_summary is populated and its text names the studied drug, and
+      - the drug appears in the interventions list.
+    Both trials were wrongly demoted to contaminated under the old arm-role rule.
+    """
+    trial = await clinical_trials_client.get_trial(nct_id)
+
+    assert trial.nct_id == nct_id
+    assert trial.title == title
+    assert trial.brief_summary is not None
+    assert trial.brief_summary.startswith(summary_head)
+    assert summary_names_drug in trial.brief_summary.lower()
+
+    intervention_names = [i.intervention_name for i in trial.interventions]
+    assert drug in intervention_names
+
+
 async def test_search_trials_nash_trial_fields(clinical_trials_client):
     """Verify all Trial fields (including MeSH ancestors) for NCT04971785.
 

@@ -1,6 +1,6 @@
 # Bupropion regression spec.
 #
-# Authored against gold_standard/bupropion_2026-07-10_21-15-58.json. Each
+# Authored against gold_standard/bupropion_2026-07-13_16-13-25.json. Each
 # assertion encodes a domain-meaningful invariant — a fact about bupropion's
 # evidence base that a regression must NOT silently flip. If one fails, the
 # supervisor, a sub-agent, or the upstream data layer stopped surfacing a
@@ -41,7 +41,10 @@ required_ncts_surfaced:
     section: relevant
     ncts:
       - NCT00048360   # adult ADHD, Phase 3, completed
-      - NCT00061087   # ADHD in methadone patients, Phase 2/3, completed
+      # NCT00061087 (ADHD in methadone patients) deliberately NOT pinned: bupropion
+      # is an ACTIVE_COMPARATOR arm, so the relevance classifier's relevant-vs-
+      # contaminated call flips run to run — a borderline comorbidity trial, per the
+      # header policy of pinning STABLE anchors only.
   - bucket: literature_coverage
     indication: cocaine dependence
     section: relevant

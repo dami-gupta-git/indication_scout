@@ -1,0 +1,4164 @@
+{
+  "drug_name": "baricitinib",
+  "candidate_diseases": [
+    "psoriasis",
+    "systemic lupus erythematosus",
+    "polycythemia vera",
+    "myelofibrosis",
+    "ulcerative colitis",
+    "kidney disease",
+    "myeloproliferative disorder",
+    "graft versus host disease",
+    "dermatomyositis",
+    "crohn's disease",
+    "psoriatic arthritis",
+    "hidradenitis suppurativa",
+    "liver disease",
+    "primary myelofibrosis",
+    "eczematoid dermatitis"
+  ],
+  "mechanism": {
+    "drug_targets": {
+      "JAK1": "ENSG00000162434",
+      "JAK2": "ENSG00000096968"
+    },
+    "mechanisms_of_action": [
+      {
+        "mechanism_of_action": "Tyrosine-protein kinase JAK1 inhibitor",
+        "action_type": "INHIBITOR",
+        "target_ids": [
+          "ENSG00000162434"
+        ],
+        "target_symbols": [
+          "JAK1"
+        ]
+      },
+      {
+        "mechanism_of_action": "Tyrosine-protein kinase JAK2 inhibitor",
+        "action_type": "INHIBITOR",
+        "target_ids": [
+          "ENSG00000096968"
+        ],
+        "target_symbols": [
+          "JAK2"
+        ]
+      }
+    ],
+    "candidates": [
+      {
+        "target_symbol": "JAK2",
+        "action_type": "INHIBITOR",
+        "disease_name": "primary myelofibrosis",
+        "disease_id": "EFO_0002430",
+        "disease_description": "Myelofibrosis with myeloid metaplasia is a myeloproliferative disease with annual incidence of approximately 1 case per 100,000 individuals and age at diagnosis around 60 (an increased prevalence is noted in Ashkenazi Jews). Clinical manifestations depend on the type of blood cell affected and may include anemia, pallor, splenomegaly, hypermetabolic state, petechiae, ecchymosis, bleeding, lymphadenopathy, hepatomegaly, portal hypertension.",
+        "target_function": "Non-receptor tyrosine kinase involved in various processes such as cell growth, development, differentiation or histone modifications. Mediates essential signaling events in both innate and adaptive immunity. In the cytoplasm, plays a pivotal role in signal transduction via its association with type I receptors such as growth hormone (GHR), prolactin (PRLR), leptin (LEPR), erythropoietin (EPOR), thrombopoietin receptor (MPL/TPOR); or type II receptors including IFN- alpha, IFN-beta, IFN-gamma and multiple interleukins. Following ligand- binding to cell surface receptors, phosphorylates specific tyrosine residues on the cytoplasmic tails of the receptor, creating docking sites for STATs proteins. Subsequently, phosphorylates the STATs proteins once they are recruited to the receptor. Phosphorylated STATs then form homodimer or heterodimers and translocate to the nucleus to activate gene transcription. For example, cell stimulation with erythropoietin (EPO) during erythropoiesis leads to JAK2 autophosphorylation, activation, and its association with erythropoietin receptor (EPOR) that becomes phosphorylated in its cytoplasmic domain. Then, STAT5 (STAT5A or STAT5B) is recruited, phosphorylated and activated by JAK2. Once activated, dimerized STAT5 translocates into the nucleus and promotes the transcription of several essential genes involved in the modulation of erythropoiesis. Part of a signaling cascade that is activated by increased cellular retinol and that leads to the activation of STAT5 (STAT5A or STAT5B). In addition, JAK2 mediates angiotensin-2-induced ARHGEF1 phosphorylation. Plays a role in cell cycle by phosphorylating CDKN1B. Cooperates with TEC through reciprocal phosphorylation to mediate cytokine-driven activation of FOS transcription. In the nucleus, plays a key role in chromatin by specifically mediating phosphorylation of 'Tyr-41' of histone H3 (H3Y41ph), a specific tag that promotes exclusion of CBX5 (HP1 alpha) from chromatin. Up-regulates the potassium voltage- gated channel activity of KCNA3.."
+      },
+      {
+        "target_symbol": "JAK2",
+        "action_type": "INHIBITOR",
+        "disease_name": "myelofibrosis",
+        "disease_id": "MONDO_0044903",
+        "disease_description": "A partial or complete replacement of the bone marrow stroma by fibrous tissue. It can be a primary bone marrow lesion as part of the chronic myeloproliferative disorders (chronic idiopathic myelofibrosis), a manifestation of acute myeloid leukemia (acute panmyelosis with myelofibrosis), or a secondary phenomenon due to bone marrow involvement by a metastatic tumor (e.g., metastatic breast carcinoma). --2003",
+        "target_function": "Non-receptor tyrosine kinase involved in various processes such as cell growth, development, differentiation or histone modifications. Mediates essential signaling events in both innate and adaptive immunity. In the cytoplasm, plays a pivotal role in signal transduction via its association with type I receptors such as growth hormone (GHR), prolactin (PRLR), leptin (LEPR), erythropoietin (EPOR), thrombopoietin receptor (MPL/TPOR); or type II receptors including IFN- alpha, IFN-beta, IFN-gamma and multiple interleukins. Following ligand- binding to cell surface receptors, phosphorylates specific tyrosine residues on the cytoplasmic tails of the receptor, creating docking sites for STATs proteins. Subsequently, phosphorylates the STATs proteins once they are recruited to the receptor. Phosphorylated STATs then form homodimer or heterodimers and translocate to the nucleus to activate gene transcription. For example, cell stimulation with erythropoietin (EPO) during erythropoiesis leads to JAK2 autophosphorylation, activation, and its association with erythropoietin receptor (EPOR) that becomes phosphorylated in its cytoplasmic domain. Then, STAT5 (STAT5A or STAT5B) is recruited, phosphorylated and activated by JAK2. Once activated, dimerized STAT5 translocates into the nucleus and promotes the transcription of several essential genes involved in the modulation of erythropoiesis. Part of a signaling cascade that is activated by increased cellular retinol and that leads to the activation of STAT5 (STAT5A or STAT5B). In addition, JAK2 mediates angiotensin-2-induced ARHGEF1 phosphorylation. Plays a role in cell cycle by phosphorylating CDKN1B. Cooperates with TEC through reciprocal phosphorylation to mediate cytokine-driven activation of FOS transcription. In the nucleus, plays a key role in chromatin by specifically mediating phosphorylation of 'Tyr-41' of histone H3 (H3Y41ph), a specific tag that promotes exclusion of CBX5 (HP1 alpha) from chromatin. Up-regulates the potassium voltage- gated channel activity of KCNA3.."
+      },
+      {
+        "target_symbol": "JAK2",
+        "action_type": "INHIBITOR",
+        "disease_name": "myeloproliferative disorder",
+        "disease_id": "EFO_0004251",
+        "disease_description": "A clonal hematopoietic stem cell disorder, characterized by proliferation in the bone marrow of one or more of the myeloid (i.e., granulocytic, erythroid, megakaryocytic, and mast cell) lineages. It is primarily a neoplasm of adults. (WHO 2008)",
+        "target_function": "Non-receptor tyrosine kinase involved in various processes such as cell growth, development, differentiation or histone modifications. Mediates essential signaling events in both innate and adaptive immunity. In the cytoplasm, plays a pivotal role in signal transduction via its association with type I receptors such as growth hormone (GHR), prolactin (PRLR), leptin (LEPR), erythropoietin (EPOR), thrombopoietin receptor (MPL/TPOR); or type II receptors including IFN- alpha, IFN-beta, IFN-gamma and multiple interleukins. Following ligand- binding to cell surface receptors, phosphorylates specific tyrosine residues on the cytoplasmic tails of the receptor, creating docking sites for STATs proteins. Subsequently, phosphorylates the STATs proteins once they are recruited to the receptor. Phosphorylated STATs then form homodimer or heterodimers and translocate to the nucleus to activate gene transcription. For example, cell stimulation with erythropoietin (EPO) during erythropoiesis leads to JAK2 autophosphorylation, activation, and its association with erythropoietin receptor (EPOR) that becomes phosphorylated in its cytoplasmic domain. Then, STAT5 (STAT5A or STAT5B) is recruited, phosphorylated and activated by JAK2. Once activated, dimerized STAT5 translocates into the nucleus and promotes the transcription of several essential genes involved in the modulation of erythropoiesis. Part of a signaling cascade that is activated by increased cellular retinol and that leads to the activation of STAT5 (STAT5A or STAT5B). In addition, JAK2 mediates angiotensin-2-induced ARHGEF1 phosphorylation. Plays a role in cell cycle by phosphorylating CDKN1B. Cooperates with TEC through reciprocal phosphorylation to mediate cytokine-driven activation of FOS transcription. In the nucleus, plays a key role in chromatin by specifically mediating phosphorylation of 'Tyr-41' of histone H3 (H3Y41ph), a specific tag that promotes exclusion of CBX5 (HP1 alpha) from chromatin. Up-regulates the potassium voltage- gated channel activity of KCNA3.."
+      },
+      {
+        "target_symbol": "JAK2",
+        "action_type": "INHIBITOR",
+        "disease_name": "ulcerative colitis",
+        "disease_id": "EFO_0000729",
+        "disease_description": "An inflammatory bowel disease involving the mucosal surface of the large intestine and rectum. It may present with an acute or slow onset and follows an intermittent or continuous course. Signs and symptoms include abdominal pain, diarrhea, fever, weight loss, and intestinal hemorrhage.",
+        "target_function": "Non-receptor tyrosine kinase involved in various processes such as cell growth, development, differentiation or histone modifications. Mediates essential signaling events in both innate and adaptive immunity. In the cytoplasm, plays a pivotal role in signal transduction via its association with type I receptors such as growth hormone (GHR), prolactin (PRLR), leptin (LEPR), erythropoietin (EPOR), thrombopoietin receptor (MPL/TPOR); or type II receptors including IFN- alpha, IFN-beta, IFN-gamma and multiple interleukins. Following ligand- binding to cell surface receptors, phosphorylates specific tyrosine residues on the cytoplasmic tails of the receptor, creating docking sites for STATs proteins. Subsequently, phosphorylates the STATs proteins once they are recruited to the receptor. Phosphorylated STATs then form homodimer or heterodimers and translocate to the nucleus to activate gene transcription. For example, cell stimulation with erythropoietin (EPO) during erythropoiesis leads to JAK2 autophosphorylation, activation, and its association with erythropoietin receptor (EPOR) that becomes phosphorylated in its cytoplasmic domain. Then, STAT5 (STAT5A or STAT5B) is recruited, phosphorylated and activated by JAK2. Once activated, dimerized STAT5 translocates into the nucleus and promotes the transcription of several essential genes involved in the modulation of erythropoiesis. Part of a signaling cascade that is activated by increased cellular retinol and that leads to the activation of STAT5 (STAT5A or STAT5B). In addition, JAK2 mediates angiotensin-2-induced ARHGEF1 phosphorylation. Plays a role in cell cycle by phosphorylating CDKN1B. Cooperates with TEC through reciprocal phosphorylation to mediate cytokine-driven activation of FOS transcription. In the nucleus, plays a key role in chromatin by specifically mediating phosphorylation of 'Tyr-41' of histone H3 (H3Y41ph), a specific tag that promotes exclusion of CBX5 (HP1 alpha) from chromatin. Up-regulates the potassium voltage- gated channel activity of KCNA3.."
+      },
+      {
+        "target_symbol": "JAK1",
+        "action_type": "INHIBITOR",
+        "disease_name": "eczematoid dermatitis",
+        "disease_id": "HP_0000964",
+        "disease_description": "Eczema is a form of dermatitis that is characterized by scaly, pruritic, erythematous lesions located on flexural surfaces.",
+        "target_function": "Tyrosine kinase of the non-receptor type, involved in the IFN-alpha/beta/gamma signal pathway. Kinase partner for the interleukin (IL)-2 receptor as well as interleukin (IL)-10 receptor. Kinase partner for the type I interferon receptor IFNAR2. In response to interferon-binding to IFNAR1-IFNAR2 heterodimer, phosphorylates and activates its binding partner IFNAR2, creating docking sites for STAT proteins. Directly phosphorylates STAT proteins but also activates STAT signaling through the transactivation of other JAK kinases associated with signaling receptors.."
+      }
+    ],
+    "summary": "Baricitinib is a dual inhibitor of JAK1 and JAK2, two tyrosine kinases central to cytokine signaling. JAK1 inhibition is most strongly associated with rheumatoid arthritis (overall score 0.687, with high clinical evidence), autoinflammatory/immune dysregulation disorders, COVID-19, and psoriasis — consistent with baricitinib's approved indications and its emergency-use authorization for COVID-19. JAK2 inhibition reveals a distinct and complementary disease landscape dominated by myeloproliferative neoplasms: polycythemia vera (0.800), primary myelofibrosis (0.746), myeloproliferative disorders (0.724), and essential thrombocythemia (0.633), all supported by strong somatic mutation, genetic, and clinical evidence — suggesting repurposing potential in hematologic malignancies where JAK2 gain-of-function mutations (e.g., JAK2 V617F) are drivers. Additionally, both targets converge on neoplasm and ulcerative colitis associations, pointing to broader oncology and inflammatory bowel disease repurposing opportunities worth investigating."
+  },
+  "disease_findings": [
+    {
+      "disease": "systemic lupus erythematosus",
+      "source": "competitor",
+      "approval_relationship": "none",
+      "literature": {
+        "search_results": [
+          "baricitinib AND \"Lupus Erythematosus, Systemic\"",
+          "JAK inhibitors AND connective tissue",
+          "Janus kinase inhibitors AND \"Lupus Erythematosus, Systemic\"",
+          "JAK1 inhibition AND connective tissue",
+          "JAK2 inhibition AND \"Lupus Erythematosus, Systemic\"",
+          "JAK1 AND \"Lupus Erythematosus, Systemic\"",
+          "JAK2 AND \"Lupus Erythematosus, Systemic\"",
+          "Olumiant AND \"Lupus Erythematosus, Systemic\"",
+          "INCB028050 AND \"Lupus Erythematosus, Systemic\""
+        ],
+        "pmids": [
+          "40931063",
+          "38299618",
+          "37138867",
+          "36848919",
+          "36848918",
+          "30987474",
+          "37432406",
+          "37581759",
+          "30712894",
+          "32206866",
+          "30462559",
+          "37853751",
+          "39383302",
+          "37279150",
+          "38730460",
+          "30043741",
+          "32002918",
+          "37950554",
+          "40305472",
+          "38375760",
+          "30712893",
+          "37604638",
+          "30043749",
+          "32134201",
+          "34497607",
+          "35578304",
+          "31025748",
+          "36261300",
+          "31443172",
+          "36202589",
+          "39666590",
+          "42170175",
+          "33037080",
+          "34747511",
+          "42055851",
+          "38084660",
+          "38124732",
+          "32641647",
+          "41194923",
+          "31900301",
+          "33640999",
+          "38918174",
+          "40328613",
+          "32534202",
+          "41392616",
+          "32375179",
+          "35833272",
+          "39560632",
+          "30605161",
+          "32222877",
+          "40488905",
+          "33789011",
+          "39201463",
+          "37171669",
+          "28825716",
+          "26578790",
+          "35209781",
+          "39501878",
+          "36015084",
+          "38571280",
+          "31163474",
+          "42320040",
+          "40077690",
+          "26972840",
+          "40640953",
+          "38797048",
+          "37161741",
+          "41161909",
+          "39542560",
+          "37667873",
+          "33972054",
+          "39461505",
+          "35563259",
+          "37365840",
+          "41321638",
+          "31486093",
+          "35278019",
+          "40368030",
+          "39685593",
+          "35771255",
+          "26579471",
+          "28159704",
+          "41009491",
+          "41524339",
+          "38231227",
+          "39618915",
+          "32338187",
+          "41081534",
+          "36652549",
+          "35504889",
+          "31024205",
+          "35273387",
+          "36595872",
+          "22087578",
+          "40642072",
+          "41112262",
+          "25700648",
+          "29470611",
+          "37137672",
+          "37630981",
+          "34586102",
+          "30318935",
+          "37468313",
+          "37643592",
+          "19328245",
+          "41183930",
+          "30215638",
+          "36877237",
+          "31970549",
+          "33782965",
+          "24424064",
+          "38576023",
+          "33795715",
+          "33984571",
+          "37335850",
+          "31719581",
+          "39235110",
+          "39149821",
+          "41682640",
+          "35431950",
+          "30110639",
+          "39392514",
+          "35598846",
+          "11684869",
+          "39990206",
+          "29787752",
+          "11409888",
+          "15837947",
+          "35056087",
+          "37464974",
+          "41496005",
+          "34902115",
+          "30893514",
+          "35784360",
+          "24648112",
+          "41483259",
+          "19280937",
+          "35943798",
+          "39191432",
+          "34118090",
+          "34321087",
+          "36794552",
+          "42278571",
+          "39132968",
+          "41388589",
+          "33719170",
+          "21069731",
+          "29934048",
+          "24473905",
+          "34924117",
+          "38864137",
+          "23300886",
+          "27667148",
+          "34610571",
+          "38044048",
+          "41533941",
+          "29074274",
+          "41580242",
+          "31940860",
+          "25016057",
+          "16619044",
+          "27879577",
+          "28968875",
+          "34313812",
+          "30765261",
+          "34482701",
+          "37884945",
+          "23103818",
+          "29465351",
+          "29924019",
+          "28810263",
+          "29559840",
+          "36226796",
+          "17208315",
+          "19728324",
+          "22943205",
+          "34112214",
+          "27456942",
+          "33164088",
+          "30862449",
+          "27727017",
+          "28173844",
+          "28770707",
+          "31448075",
+          "25989537",
+          "41307399",
+          "11683410",
+          "16331681",
+          "33662027",
+          "15979922",
+          "41259203",
+          "18021255",
+          "31053871",
+          "7760844",
+          "30585203",
+          "15048924",
+          "27032768",
+          "26936086",
+          "30965327",
+          "15772123",
+          "24375540",
+          "14985328",
+          "41685503",
+          "12602946",
+          "38031699",
+          "37140884",
+          "38923871",
+          "36702700",
+          "36649877",
+          "34244988",
+          "37678618",
+          "38467779",
+          "39058514",
+          "36233087",
+          "37753834",
+          "34099646",
+          "29108825",
+          "38914753",
+          "39439798",
+          "36935014",
+          "40829888",
+          "35138987",
+          "42108277",
+          "31401343",
+          "39740929",
+          "39136836",
+          "42123548",
+          "35059768",
+          "39710929",
+          "38871479",
+          "41212291",
+          "40405395",
+          "39479952",
+          "23158694",
+          "39058837",
+          "22209716",
+          "37188961",
+          "41931696",
+          "35238764",
+          "39118350",
+          "34075576",
+          "33830700",
+          "31005902",
+          "22512630",
+          "27055521",
+          "33907323",
+          "27429362",
+          "41167611",
+          "37782163",
+          "33059530",
+          "35595246",
+          "33712286",
+          "25724932",
+          "40289864",
+          "30572141",
+          "34394075",
+          "41979813",
+          "33936080",
+          "39337564",
+          "33380521",
+          "25959715",
+          "41638262",
+          "30443754",
+          "21980035",
+          "42119610",
+          "33874983",
+          "41243342",
+          "29475858",
+          "33523540",
+          "32325142",
+          "32598760",
+          "38820228",
+          "28830352",
+          "32357246",
+          "32977027",
+          "28620948",
+          "32471903",
+          "28629905",
+          "20623549",
+          "32503857",
+          "39862617",
+          "40604704",
+          "21472337",
+          "35850052",
+          "26936678",
+          "39879833",
+          "38151137",
+          "37625164",
+          "31327757",
+          "38348966",
+          "25864718",
+          "26041698",
+          "17024100",
+          "31040267",
+          "41540693",
+          "15585682",
+          "37419296",
+          "39563376",
+          "39241387",
+          "40370257",
+          "31129432",
+          "37382269",
+          "39117826",
+          "38271512",
+          "38908373",
+          "41442501",
+          "39939342",
+          "37903189",
+          "38597437",
+          "37640261",
+          "17062437",
+          "22859983",
+          "36260817",
+          "34340046",
+          "35791960",
+          "35151645",
+          "32515653",
+          "11721695",
+          "37797401",
+          "25947293",
+          "24737344",
+          "14984024",
+          "40312552",
+          "31760539",
+          "39208266",
+          "12848992",
+          "33446493",
+          "38417019",
+          "40194603",
+          "11721698",
+          "31790472",
+          "30642862",
+          "28177455",
+          "23054011",
+          "36822800",
+          "38935935",
+          "40923363",
+          "41928431",
+          "21300624",
+          "40884723",
+          "20578590"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "36848918",
+            "title": "Baricitinib for systemic lupus erythematosus: a double-blind, randomised, placebo-controlled, phase 3 trial (SLE-BRAVE-I).",
+            "abstract": "BACKGROUND: Baricitinib is an oral selective inhibitor of Janus kinase 1 and 2 approved for the treatment of rheumatoid arthritis, atopic dermatitis, and alopecia areata. In a 24-week phase 2 study in patients with systemic lupus erythematosus (SLE), baricitinib 4 mg significantly improved SLE disease activity compared with placebo. The objective of this trial was to evaluate the efficacy and safety of baricitinib in patients with active SLE in a 52-week phase 3 study. METHODS: In a multicentre, double-blind, randomised, placebo-controlled, parallel-group, phase 3 study, SLE-BRAVE-I, patients (aged ≥18 years) with active SLE receiving stable background therapy were randomly assigned 1:1:1 to baricitinib 4 mg, 2 mg, or placebo once daily for 52 weeks with standard of care. Glucocorticoid tapering was encouraged but not required per protocol. The primary endpoint was the proportion of patients reaching an SLE Responder Index (SRI)-4 response at week 52 in the baricitinib 4 mg treatment group compared with placebo. The primary endpoint was assessed by logistic regression analysis with baseline disease activity, baseline corticosteroid dose, region, and treatment group in the model. Efficacy analyses were done on a modified intention-to-treat population, comprising all participants who were randomly assigned and received at least one dose of investigational product. Safety analyses were done on all randomly assigned participants who received at least one dose of investigational product and who did not discontinue from the study for the reason of lost to follow-up at the first post-baseline visit. This study is registered with ClinicalTrials.gov, NCT03616912. FINDINGS: 760 participants were randomly assigned and received at least one dose of baricitinib 4 mg (n=252), baricitinib 2 mg (n=255), or placebo (n=253). A significantly greater proportion of participants who received baricitinib 4 mg (142 [57%]; odds ratio 1·57 [95% CI 1·09 to 2·27]; difference with placebo 10·8 [2·0 to 19·6]; p=0·016), but not baricitinib 2 mg (126 [50%]; 1·14 [0·79 to 1·65]; 3·9 [-4·9 to 12·6]; p=0·47), reached SRI-4 response compared with placebo (116 [46%]). There were no significant differences between the proportions of participants in either baricitinib group reaching any of the major secondary endpoints compared with placebo, including glucocorticoid tapering and time to first severe flare. 26 (10%) participants receiving baricitinib 4 mg had serious adverse events, 24 (9%) participants receiving baricitinib 2 mg, and 18 (7%) participants receiving placebo. The safety profile of baricitinib in participants with SLE was consistent with the known baricitinib safety profile. INTERPRETATION: The primary endpoint in this study was met for the 4 mg baricitinib group. However, key secondary endpoints were not. No new safety signals were observed. FUNDING: Eli Lilly and Company.",
+            "similarity": 0.7859788338187808,
+            "pubtype": [
+              "Randomized Controlled Trial",
+              "Multicenter Study",
+              "Clinical Trial, Phase III",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "36848919",
+            "title": "Baricitinib for systemic lupus erythematosus: a double-blind, randomised, placebo-controlled, phase 3 trial (SLE-BRAVE-II).",
+            "abstract": "BACKGROUND: Baricitinib is an oral selective inhibitor of Janus kinase 1 and 2 approved for the treatment of rheumatoid arthritis, atopic dermatitis, and alopecia areata. In a 24-week phase 2 study in patients with systemic lupus erythematosus (SLE), baricitinib 4 mg significantly improved SLE disease activity compared with placebo. In this Article, we report the evaluation of efficacy and safety of baricitinib in patients with SLE in a 52-week phase 3 study. METHODS: In this phase 3 double-blind, randomised, placebo-controlled study, SLE-BRAVE-II, patients (aged ≥18 years) with active SLE receiving stable background therapy were randomly assigned 1:1:1 to baricitinib 4 mg, baricitinib 2 mg, or placebo once daily for 52 weeks. The primary endpoint was the proportion of patients with an SLE Responder Index (SRI)-4 response at week 52 in the baricitinib 4 mg treatment group compared with placebo. Glucocorticoid tapering was encouraged but not required per protocol. The primary endpoint was assessed by logistic regression analysis with baseline disease activity, baseline corticosteroid dose, region, and treatment group in the model. Efficacy analyses were done on an intention-to-treat population, comprising all participants who were randomly assigned and received at least one dose of investigational product and who did not discontinue from the study for the reason of lost to follow-up at the first post-baseline visit. Safety analyses were done on all randomly assigned participants who received at least one dose of investigational product and who did not discontinue. This study is registered with ClinicalTrials.gov, NCT03616964, and is complete. FINDINGS: A total of 775 patients were randomly assigned and received at least one dose of baricitinib 4 mg (n=258), baricitinib 2 mg (n=261), or placebo (n=256). There was no difference in the primary efficacy outcome of the proportion of SRI-4 responders at week 52 between participants who received baricitinib 4mg (121 [47%]; odds ratio 1·07 [95% CI 0·75 to 1·53]; difference with placebo 1·5 [95% CI -7·1 to 10·2]), 2 mg (120 [46%]; 1·05 [0·73 to 1·50]; 0·8 [-7·9 to 9·4]) and placebo (116 [46%]). None of the major secondary endpoints, including glucocorticoid tapering and time to first severe flare, were met. Serious adverse events were observed in 29 (11%) participants in the baricitinib 4 mg group, 35 (13%) in the baricitinib 2 mg group, and 22 (9%) in the placebo group. The safety profile of baricitinib in patients with SLE was consistent with the known baricitinib safety profile. INTERPRETATION: Although phase 2 data suggested baricitinib as a potential treatment for patients with SLE, which was supported in SLE-BRAVE-I, this result was not replicated in SLE-BRAVE-II. No new safety signals were observed. FUNDING: Eli Lilly and Company.",
+            "similarity": 0.7846808999467021,
+            "pubtype": [
+              "Randomized Controlled Trial",
+              "Clinical Trial, Phase III",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "30043749",
+            "title": "Baricitinib for systemic lupus erythematosus: a double-blind, randomised, placebo-controlled, phase 2 trial.",
+            "abstract": "BACKGROUND: Patients with systemic lupus erythematosus have substantial unmet medical need. Baricitinib is an oral selective Janus kinase (JAK)1 and JAK2 inhibitor that we hypothesised might have therapeutic benefit in patients with systemic lupus erythematosus. METHODS: In this double-blind, multicentre, randomised, placebo-controlled, 24-week phase 2 study, patients were recruited from 78 centres in 11 countries. Eligible patients were aged 18 years or older, had a diagnosis of systemic lupus erythematosus, and had active disease involving skin or joints. We randomly assigned patients (1:1:1) to receive once-daily baricitinib 2 mg, baricitinib 4 mg, or placebo for 24 weeks. The primary endpoint was the proportion of patients achieving resolution of arthritis or rash at week 24, as defined by Systemic Lupus Erythematosus Disease Activity Index-2000 (SLEDAI-2K). Efficacy and safety analyses included all patients who received at least one dose of study drug. This study is registered with ClinicalTrials.gov, number NCT02708095. FINDINGS: Between March 24, 2016, and April 27, 2017, 314 patients were randomly assigned to receive placebo (n=105), baricitinib 2 mg (n=105), or baricitinib 4 mg (n=104). At week 24, resolution of SLEDAI-2K arthritis or rash was achieved by 70 (67%) of 104 patients receiving baricitinib 4 mg (odds ratio [OR] vs placebo 1·8, 95% CI 1·0-3·3; p=0·0414) and 61 (58%) of 105 patients receiving baricitinib 2 mg (OR 1·3, 0·7-2·3; p=0·39). Adverse events were reported in 68 (65%) patients in the placebo group, 75 (71%) patients in the baricitinib 2 mg group, and 76 (73%) patients in the baricitinib 4 mg group. Serious adverse events were reported in ten (10%) patients receiving baricitinib 4 mg, 11 (10%) receiving baricitinib 2 mg, and five (5%) receiving placebo; no deaths were reported. Serious infections were reported in six (6%) patients with baricitinib 4 mg, two (2%) with baricitinib 2 mg, and one (1%) with placebo. INTERPRETATION: The baricitinib 4 mg dose, but not the 2 mg dose, significantly improved the signs and symptoms of active systemic lupus erythematosus in patients who were not adequately controlled despite standard of care therapy, with a safety profile consistent with previous studies of baricitinib. This study provides the foundation for future phase 3 trials of JAK1/2 inhibition with baricitinib as a new potential oral therapy for systemic lupus erythematosus. FUNDING: Eli Lilly and Company.",
+            "similarity": 0.762658412402241,
+            "pubtype": [
+              "Clinical Trial, Phase II",
+              "Journal Article",
+              "Multicenter Study",
+              "Randomized Controlled Trial",
+              "Research Support, N.I.H., Extramural"
+            ]
+          },
+          {
+            "pmid": "37604638",
+            "title": "Safety profile of baricitinib in patients with systemic lupus erythematosus: an integrated analysis.",
+            "abstract": "OBJECTIVES: To assess the safety of the oral Janus kinase inhibitor baricitinib in adult patients with systemic lupus erythematosus (SLE) receiving stable background therapy. Topics of special interest included infections and cardiovascular and thromboembolic events. METHODS: This analysis included integrated safety data from three randomised, placebo-controlled studies (one phase 2 and two phase 3) and one long-term extension study. Data are reported in three data sets: placebo-controlled, extended exposure and all-baricitinib. Outcomes include treatment-emergent adverse events (AEs), AEs of special interest and abnormal laboratory changes. Proportions of patients with events and incidence rates (IRs) were calculated. RESULTS: A total of 1655 patients received baricitinib for up to 3.5 years (median duration 473 days). With baricitinib 4 mg, baricitinib 2 mg and placebo, respectively, 50.8%, 50.7% and 49.0% of patients reported at least one infection and 4.4%, 3.4% and 1.9% of patients had a serious infection. The most common treatment-emergent infections included urinary tract infection, COVID-19, upper respiratory tract infection and nasopharyngitis. Herpes zoster was more common with baricitinib 4 mg (4.7%) vs baricitinib 2 mg (2.7%) and placebo (2.8%). Among baricitinib-4 mg, 2 mg and placebo-treated patients, respectively, 4 (IR=0.9), 1 (IR=0.2) and 0 experienced at least one positively adjudicated major adverse cardiovascular event, and 0, 3 (IR=0.6) and 2 (IR=0.4) reported at least one positively adjudicated venous thromboembolism. CONCLUSIONS: The results of this integrated safety analysis in patients with SLE are not substantially different to the established safety profile of baricitinib. No increased venous thromboembolism was found.",
+            "similarity": 0.7423351943646337,
+            "pubtype": [
+              "Randomized Controlled Trial",
+              "Clinical Trial, Phase II",
+              "Clinical Trial, Phase III",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "35578304",
+            "title": "Baricitinib decreases anti-dsDNA in patients with systemic lupus erythematosus: results from a phase II double-blind, randomized, placebo-controlled trial.",
+            "abstract": "BACKGROUND: Patients with systemic lupus erythematosus (SLE) have substantial unmet medical need. Baricitinib is a Janus kinase (JAK)1 and 2 inhibitor that was shown to have therapeutic benefit in patients with SLE in a phase II clinical trial. The purpose of this study was to evaluate the median change from baseline in conventional serologic biomarkers in subgroups and the overall population of baricitinib-treated patients with SLE, and the SLE Responder Index-4 (SRI-4) response by normalization of anti-dsDNA. METHODS: Data were assessed from the phase II trial I4V-MC-JAHH (NCT02708095). The median change from baseline in anti-dsDNA, IgG, and other conventional serologic markers was evaluated over time in patients who had elevated levels of markers at baseline, and in all patients for IgG. Median change from baseline for baricitinib treatments were compared with placebo. Among patients who were anti-dsDNA positive at baseline, SRI-4 responder rate was compared for those who stayed positive or achieved normal levels by week 24. RESULTS: Significant decreases of anti-dsDNA antibodies were observed in response to baricitinib 2 mg and 4 mg compared to placebo beginning at weeks 2 (baricitinib 2 mg = - 14.3 IU/mL, placebo = 0.1 IU/mL) and 4 (baricitinib 4 mg = - 17.9 IU/mL, placebo = 0.02 IU/mL), respectively, continuing through week 24 (baricitinib 2 mg = - 29.6 IU/mL, baricitinib 4 mg = - 15.1 IU/mL, placebo=3.0 IU/mL). Significant reductions from baseline of IgG levels were found for baricitinib 4 mg-treated patients compared to placebo at weeks 12 (baricitinib 4 mg = - 0.65 g/L, placebo = 0.09 g/L) and 24 (baricitinib 4 mg = - 0.60 g/L, placebo = - 0.04 g/L). For patients who were anti-dsDNA positive at baseline, no relationship between achieving SRI-4 responder and normalization of anti-dsDNA was observed by week 24. CONCLUSIONS: Baricitinib treatment resulted in a rapid and sustained significant decrease in anti-dsDNA antibodies compared to placebo among those with positive anti-dsDNA antibodies at baseline, as well as a significant decrease in IgG levels in the 4 mg group at weeks 12 and 24. These data suggest that baricitinib may influence B cell activity in SLE. Further studies are needed to evaluate if reductions in anti-dsDNA levels with baricitinib treatment reflect the impact of baricitinib on B cell activity. TRIAL REGISTRATION: NCT02708095 .",
+            "similarity": 0.698839029216485,
+            "pubtype": [
+              "Clinical Trial, Phase II",
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "Baricitinib has been evaluated in one phase 2 and two phase 3 randomized, double-blind, placebo-controlled trials in patients with active SLE. The phase 2 trial showed that baricitinib 4 mg significantly improved signs and symptoms of SLE compared to placebo (PMID: 30043749), and SLE-BRAVE-I (phase 3) met its primary endpoint of SRI-4 response at week 52 for the 4 mg dose but failed to meet key secondary endpoints (PMID: 36848918). However, SLE-BRAVE-II (phase 3) failed to replicate this finding, with no significant difference in SRI-4 response between baricitinib 4 mg, 2 mg, and placebo (PMID: 36848919), yielding an overall mixed picture; the integrated safety analysis across all three trials and a long-term extension study found no new safety signals and no increased venous thromboembolism risk (PMID: 37604638).",
+          "study_count": 5,
+          "strength": "strong",
+          "direction": "mixed",
+          "evidence_basis": "drug_specific",
+          "is_observational": false,
+          "is_animal_only": false,
+          "key_findings": [
+            "In the phase 2 trial, baricitinib 4 mg achieved resolution of SLEDAI-2K arthritis or rash in 67% of patients vs placebo (OR 1.8, 95% CI 1.0–3.3; p=0.0414) at week 24 (PMID: 30043749).",
+            "In SLE-BRAVE-I (phase 3), baricitinib 4 mg achieved SRI-4 response in 57% of patients vs 46% on placebo (OR 1.57, 95% CI 1.09–2.27; p=0.016), meeting the primary endpoint, but no major secondary endpoints were met (PMID: 36848918).",
+            "In SLE-BRAVE-II (phase 3), baricitinib 4 mg achieved SRI-4 response in 47% of patients vs 46% on placebo (OR 1.07, 95% CI 0.75–1.53), failing to meet the primary endpoint or any major secondary endpoints (PMID: 36848919).",
+            "Baricitinib 2 mg and 4 mg produced significant decreases in anti-dsDNA antibodies compared to placebo beginning at weeks 2 and 4, respectively, sustained through week 24 in the phase 2 trial (PMID: 35578304).",
+            "Baricitinib 4 mg produced significant reductions in IgG levels compared to placebo at weeks 12 and 24 in the phase 2 trial, suggesting an effect on B cell activity (PMID: 35578304).",
+            "In an integrated safety analysis across one phase 2, two phase 3, and one long-term extension study (up to 3.5 years, n=1655), serious infections occurred in 4.4% and 3.4% of baricitinib 4 mg and 2 mg patients vs 1.9% on placebo; no increased venous thromboembolism was observed with baricitinib (PMID: 37604638).",
+            "Herpes zoster was more common with baricitinib 4 mg (4.7%) compared to baricitinib 2 mg (2.7%) and placebo (2.8%) in the integrated safety analysis (PMID: 37604638).",
+            "The safety profile of baricitinib in SLE patients was consistent with the known baricitinib safety profile across all studies, with no new safety signals identified (PMID: 36848918, PMID: 36848919, PMID: 37604638)."
+          ],
+          "supporting_pmids": [
+            "36848918",
+            "30043749"
+          ],
+          "contradicting_pmids": [
+            "36848918",
+            "36848919"
+          ],
+          "relevant_pmids": [
+            "36848918",
+            "36848919",
+            "30043749",
+            "37604638",
+            "35578304"
+          ],
+          "contaminated_pmids": [],
+          "neutral_pmids": [
+            "37604638",
+            "35578304"
+          ]
+        },
+        "summary": "Baricitinib in systemic lupus erythematosus: strong but mixed evidence from retrieved abstracts."
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 5,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 1
+          },
+          "trials": [
+            {
+              "nct_id": "NCT03843125",
+              "title": "A Study of Baricitinib in Participants With Systemic Lupus Erythematosus (SLE)",
+              "brief_summary": "The reason for this long term study is to see how safe and effective the study drug known as baricitinib is in participants with systemic lupus erythematosus (SLE) who have completed the final treatment visit of study I4V-MC-JAHZ (NCT03616912) or study I4V-MC-JAIA (NCT03616964).",
+              "phase": "Phase 3",
+              "overall_status": "TERMINATED",
+              "why_stopped": "Study terminated due to insufficient evidence to support a positive benefit: risk profile. Safety findings were consistent with previously published OLUMIANT data",
+              "indications": [
+                "Systemic Lupus Erythematosus"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally."
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 1147,
+              "start_date": "2019-09-09",
+              "completion_date": "2022-04-01",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants With Treatment-Emergent Adverse Events (TEAEs)",
+                  "time_frame": "Week 134"
+                },
+                {
+                  "measure": "Percentage of Participants With Adverse Events of Special Interest (AESIs)",
+                  "time_frame": "Week 134"
+                },
+                {
+                  "measure": "Percentage of Participants With Serious Adverse Events (SAEs)",
+                  "time_frame": "Week 134"
+                },
+                {
+                  "measure": "Percentage of Participants With Temporary Investigational Product Interruptions",
+                  "time_frame": "Week 134"
+                },
+                {
+                  "measure": "Percentage of Participants With Permanent Investigational Product Discontinuations",
+                  "time_frame": "Week 134"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT03616912",
+              "title": "A Study of Baricitinib (LY3009104) in Participants With Systemic Lupus Erythematosus",
+              "brief_summary": "The reason for this study is to see how effective and safe the study drug known as baricitinib is in participants with systemic lupus erythematosus (SLE).",
+              "phase": "Phase 3",
+              "overall_status": "TERMINATED",
+              "why_stopped": "Study terminated due to insufficient evidence to support a positive benefit: risk profile in systemic lupus erythematosus patients.",
+              "indications": [
+                "Systemic Lupus Erythematosus"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally."
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 830,
+              "start_date": "2018-08-02",
+              "completion_date": "2021-11-01",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants Achieving a Systemic Lupus Erythematosus Responder Index 4 (SRI-4) Response (4 mg Baricitinib)",
+                  "time_frame": "Week 52"
+                }
+              ],
+              "references": [
+                "40305472",
+                "36848918",
+                "33687069"
+              ]
+            },
+            {
+              "nct_id": "NCT03616964",
+              "title": "A Study of Baricitinib in Participants With Systemic Lupus Erythematosus (SLE-BRAVE II)",
+              "brief_summary": "The reason for this study is to see how effective and safe the study drug known as baricitinib is in participants with systemic lupus erythematosus (SLE).",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Systemic Lupus Erythematosus"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally"
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 778,
+              "start_date": "2018-08-02",
+              "completion_date": "2021-09-24",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants Achieving a Systemic Lupus Erythematosus Responder Index 4 (SRI-4) Response (4 mg Baricitinib)",
+                  "time_frame": "Week 52"
+                }
+              ],
+              "references": [
+                "40305472",
+                "36848919",
+                "33687069"
+              ]
+            },
+            {
+              "nct_id": "NCT02708095",
+              "title": "A Study of Baricitinib (LY3009104) in Participants With Systemic Lupus Erythematosus (SLE)",
+              "brief_summary": "The main purpose of this study is to evaluate the efficacy and safety of the study drug known as baricitinib in participants with systemic lupus erythematosus.",
+              "phase": "Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Systemic Lupus Erythematosus"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally"
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 314,
+              "start_date": "2016-03-24",
+              "completion_date": "2017-10-12",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants Who Achieve Remission of Arthritis and/or Rash Defined by the Systemic Lupus Erythematosus Disease Activity Index 2000 (SLEDAI-2K)",
+                  "time_frame": "Week 24"
+                }
+              ],
+              "references": [
+                "35609978",
+                "35578304",
+                "33687069",
+                "30043749"
+              ]
+            },
+            {
+              "nct_id": "NCT05686746",
+              "title": "Use of Baricitenib to Maintain of Remission",
+              "brief_summary": "Baricitinib a selective Janus kinase (JAK) inhibitors 1\\&2 have been recognized as a potential therapeutic option in systemic lupus (SLE), also known Baricitinib, a JAK inhibitor, has demonstrated efficacy and safety in the treatment of dermatitis and arthritis 1 ; however, no JAK inhibitor studies have been conducted in lupus nephritis (LN) maintain remission to date.",
+              "phase": "Phase 2/Phase 3",
+              "overall_status": "UNKNOWN",
+              "why_stopped": null,
+              "indications": [
+                "Lupus or SLE",
+                "Nephritis"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                },
+                {
+                  "id": "D009393",
+                  "term": "Nephritis"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                },
+                {
+                  "id": "D007674",
+                  "term": "Kidney Diseases"
+                },
+                {
+                  "id": "D014570",
+                  "term": "Urologic Diseases"
+                },
+                {
+                  "id": "D052776",
+                  "term": "Female Urogenital Diseases"
+                },
+                {
+                  "id": "D005261",
+                  "term": "Female Urogenital Diseases and Pregnancy Complications"
+                },
+                {
+                  "id": "D000091642",
+                  "term": "Urogenital Diseases"
+                },
+                {
+                  "id": "D052801",
+                  "term": "Male Urogenital Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib 4 MG",
+                  "description": "4 mg oral daily"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib 2 MG",
+                  "description": "2 mg oral daily"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "MMF",
+                  "description": "1000 mg oral daily"
+                }
+              ],
+              "sponsor": "Assiut University",
+              "enrollment": 80,
+              "start_date": "2022-06-01",
+              "completion_date": "2023-06-01",
+              "primary_outcomes": [
+                {
+                  "measure": "proteins creatinine ratio",
+                  "time_frame": "3 months"
+                },
+                {
+                  "measure": "proteins creatinine ratio",
+                  "time_frame": "6 months"
+                },
+                {
+                  "measure": "proteins creatinine ratio",
+                  "time_frame": "1 year"
+                }
+              ],
+              "references": []
+            }
+          ]
+        },
+        "completed": {
+          "total_count": 2,
+          "trials": [
+            {
+              "nct_id": "NCT03616964",
+              "title": "A Study of Baricitinib in Participants With Systemic Lupus Erythematosus (SLE-BRAVE II)",
+              "brief_summary": "The reason for this study is to see how effective and safe the study drug known as baricitinib is in participants with systemic lupus erythematosus (SLE).",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Systemic Lupus Erythematosus"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally"
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 778,
+              "start_date": "2018-08-02",
+              "completion_date": "2021-09-24",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants Achieving a Systemic Lupus Erythematosus Responder Index 4 (SRI-4) Response (4 mg Baricitinib)",
+                  "time_frame": "Week 52"
+                }
+              ],
+              "references": [
+                "40305472",
+                "36848919",
+                "33687069"
+              ]
+            },
+            {
+              "nct_id": "NCT02708095",
+              "title": "A Study of Baricitinib (LY3009104) in Participants With Systemic Lupus Erythematosus (SLE)",
+              "brief_summary": "The main purpose of this study is to evaluate the efficacy and safety of the study drug known as baricitinib in participants with systemic lupus erythematosus.",
+              "phase": "Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Systemic Lupus Erythematosus"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally"
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 314,
+              "start_date": "2016-03-24",
+              "completion_date": "2017-10-12",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants Who Achieve Remission of Arthritis and/or Rash Defined by the Systemic Lupus Erythematosus Disease Activity Index 2000 (SLEDAI-2K)",
+                  "time_frame": "Week 24"
+                }
+              ],
+              "references": [
+                "35609978",
+                "35578304",
+                "33687069",
+                "30043749"
+              ]
+            }
+          ]
+        },
+        "terminated": {
+          "total_count": 2,
+          "trials": [
+            {
+              "nct_id": "NCT03843125",
+              "title": "A Study of Baricitinib in Participants With Systemic Lupus Erythematosus (SLE)",
+              "brief_summary": "The reason for this long term study is to see how safe and effective the study drug known as baricitinib is in participants with systemic lupus erythematosus (SLE) who have completed the final treatment visit of study I4V-MC-JAHZ (NCT03616912) or study I4V-MC-JAIA (NCT03616964).",
+              "phase": "Phase 3",
+              "overall_status": "TERMINATED",
+              "why_stopped": "Study terminated due to insufficient evidence to support a positive benefit: risk profile. Safety findings were consistent with previously published OLUMIANT data",
+              "indications": [
+                "Systemic Lupus Erythematosus"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally."
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 1147,
+              "start_date": "2019-09-09",
+              "completion_date": "2022-04-01",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants With Treatment-Emergent Adverse Events (TEAEs)",
+                  "time_frame": "Week 134"
+                },
+                {
+                  "measure": "Percentage of Participants With Adverse Events of Special Interest (AESIs)",
+                  "time_frame": "Week 134"
+                },
+                {
+                  "measure": "Percentage of Participants With Serious Adverse Events (SAEs)",
+                  "time_frame": "Week 134"
+                },
+                {
+                  "measure": "Percentage of Participants With Temporary Investigational Product Interruptions",
+                  "time_frame": "Week 134"
+                },
+                {
+                  "measure": "Percentage of Participants With Permanent Investigational Product Discontinuations",
+                  "time_frame": "Week 134"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT03616912",
+              "title": "A Study of Baricitinib (LY3009104) in Participants With Systemic Lupus Erythematosus",
+              "brief_summary": "The reason for this study is to see how effective and safe the study drug known as baricitinib is in participants with systemic lupus erythematosus (SLE).",
+              "phase": "Phase 3",
+              "overall_status": "TERMINATED",
+              "why_stopped": "Study terminated due to insufficient evidence to support a positive benefit: risk profile in systemic lupus erythematosus patients.",
+              "indications": [
+                "Systemic Lupus Erythematosus"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally."
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 830,
+              "start_date": "2018-08-02",
+              "completion_date": "2021-11-01",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants Achieving a Systemic Lupus Erythematosus Responder Index 4 (SRI-4) Response (4 mg Baricitinib)",
+                  "time_frame": "Week 52"
+                }
+              ],
+              "references": [
+                "40305472",
+                "36848918",
+                "33687069"
+              ]
+            }
+          ]
+        },
+        "landscape": {
+          "total_trial_count": 1140,
+          "competitors": [
+            {
+              "sponsor": "Instituto de Investigación Marqués de Valdecilla",
+              "drug_name": "High-intensity lipid-lowering therapy",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 1944,
+              "most_recent_start": "2026-04-22"
+            },
+            {
+              "sponsor": "Chinese SLE Treatment And Research Group",
+              "drug_name": "Firsekibart",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 15,
+              "most_recent_start": "2026-04-15"
+            },
+            {
+              "sponsor": "Bristol-Myers Squibb",
+              "drug_name": "BMS-986165",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 35,
+              "most_recent_start": "2026-02-24"
+            },
+            {
+              "sponsor": "AstraZeneca",
+              "drug_name": "Anifrolumab",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 245,
+              "most_recent_start": "2026-04-13"
+            },
+            {
+              "sponsor": "Beijing Mabworks Biotech Co., Ltd.",
+              "drug_name": "MIL62",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 316,
+              "most_recent_start": "2026-04-10"
+            },
+            {
+              "sponsor": "EMD Serono Research & Development Institute, Inc.",
+              "drug_name": "Enpatoran",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 2,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 404,
+              "most_recent_start": "2026-04-01"
+            },
+            {
+              "sponsor": "Janssen Research & Development, LLC",
+              "drug_name": "Nipocalimab",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 600,
+              "most_recent_start": "2026-03-05"
+            },
+            {
+              "sponsor": "Chinese SLE Treatment And Research Group",
+              "drug_name": "Sirolimus",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2/Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 164,
+              "most_recent_start": "2026-06-07"
+            },
+            {
+              "sponsor": "Fate Therapeutics",
+              "drug_name": "FT819",
+              "drug_type": "Biological",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 53,
+              "most_recent_start": "2026-07-01"
+            },
+            {
+              "sponsor": "Hoffmann-La Roche",
+              "drug_name": "Mosunetuzumab",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 30,
+              "most_recent_start": "2026-05-25"
+            }
+          ],
+          "phase_distribution": {
+            "Phase 1": 17,
+            "Early Phase 1": 9,
+            "Phase 2": 9,
+            "Phase 1/Phase 2": 3,
+            "Phase 2/Phase 3": 1,
+            "Phase 4": 3,
+            "Phase 3": 5
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT06752876",
+              "sponsor": "Caribou Biosciences, Inc.",
+              "drug": "CB-010",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07649265",
+              "sponsor": "Otsuka Pharmaceutical Development & Commercialization, Inc.",
+              "drug": "HBM7020",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07107659",
+              "sponsor": "Hospital for Special Surgery, New York",
+              "drug": "ONT01 is a small molecule CD11b modulator.",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07544225",
+              "sponsor": "Gustave Roussy, Cancer Campus, Grand Paris",
+              "drug": "anti-CD19 CAR-T cells",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07629583",
+              "sponsor": "Genentech, Inc.",
+              "drug": "Cevostamab",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07570862",
+              "sponsor": "Fate Therapeutics",
+              "drug": "FT819",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06708845",
+              "sponsor": "Miltenyi Biomedicine GmbH",
+              "drug": "zamtocabtagene autoleucel",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06935474",
+              "sponsor": "AbelZeta Inc.",
+              "drug": "C-CAR168",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07490275",
+              "sponsor": "Institute of Hematology & Blood Diseases Hospital, China",
+              "drug": "Allogeneic CD19/BCMA-targeted CAR-γδT cell injection",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06984341",
+              "sponsor": "Genentech, Inc.",
+              "drug": "P-CD19CD20-ALLO1 Cells",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07657793",
+              "sponsor": "Chinese SLE Treatment And Research Group",
+              "drug": "Sirolimus",
+              "phase": "Phase 2/Phase 3"
+            },
+            {
+              "nct_id": "NCT07607964",
+              "sponsor": "AbbVie",
+              "drug": "ABBV-519",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07617740",
+              "sponsor": "Peking University People's Hospital",
+              "drug": "IASO207 Injection",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07598396",
+              "sponsor": "Hoffmann-La Roche",
+              "drug": "Mosunetuzumab",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07225543",
+              "sponsor": "Vanderbilt University Medical Center",
+              "drug": "2-HOBA acetate (2-Hydroxybenzlamine acetate)",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07512947",
+              "sponsor": "Union Hospital, Tongji Medical College, Huazhong University of Science and Technology",
+              "drug": "YKST02",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07596680",
+              "sponsor": "Nanjing Bioheng Biotech Co., Ltd.",
+              "drug": "RD06-05 CAR-T Cell Injection",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07483346",
+              "sponsor": "Shanghai IASO Biotechnology Co., Ltd",
+              "drug": "IASO-782 injection",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07523282",
+              "sponsor": "Shenzhen MagicRNA Biotechnology Co., Ltd",
+              "drug": "HN2302 Injection",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07611747",
+              "sponsor": "Instituto de Investigación Marqués de Valdecilla",
+              "drug": "High-intensity lipid-lowering therapy",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07409181",
+              "sponsor": "Boehringer Ingelheim",
+              "drug": "BI 3000202",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07583030",
+              "sponsor": "Union Hospital, Tongji Medical College, Huazhong University of Science and Technology",
+              "drug": "LVIVO-TaVec400 product",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07381465",
+              "sponsor": "Chinese SLE Treatment And Research Group",
+              "drug": "Firsekibart",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07430306",
+              "sponsor": "AstraZeneca",
+              "drug": "Anifrolumab",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07405970",
+              "sponsor": "Beijing Mabworks Biotech Co., Ltd.",
+              "drug": "MIL62",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07629596",
+              "sponsor": "Circunited BioPharma (Shenzhen) Co., Ltd.",
+              "drug": "Arnovie101 Infusion Intravenous",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07299422",
+              "sponsor": "Guangdong Hengrui Pharmaceutical Co., Ltd",
+              "drug": "SHR-2173 Injection",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07355218",
+              "sponsor": "EMD Serono Research & Development Institute, Inc.",
+              "drug": "Enpatoran",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07516639",
+              "sponsor": "SUNHO（China）BioPharmaceutical CO., Ltd.",
+              "drug": "ISH0613 for injection",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07538154",
+              "sponsor": "Sinocelltech Ltd.",
+              "drug": "SCTC21C",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07509892",
+              "sponsor": "Chia Tai Tianqing Pharmaceutical Group Co., Ltd.",
+              "drug": "TQH3906 capsule",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07515014",
+              "sponsor": "Eisai Co., Ltd.",
+              "drug": "E6742",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07447986",
+              "sponsor": "Hangzhou Sumgen Biotech Co., Ltd.",
+              "drug": "SG301 SC Injection",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07526350",
+              "sponsor": "Shanghai Changzheng Hospital",
+              "drug": "MTS109",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07490041",
+              "sponsor": "The Children's Hospital of Zhejiang University School of Medicine",
+              "drug": "KN5601",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07219563",
+              "sponsor": "Icahn School of Medicine at Mount Sinai",
+              "drug": "Alnuctamab",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07332481",
+              "sponsor": "EMD Serono Research & Development Institute, Inc.",
+              "drug": "Enpatoran",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07408908",
+              "sponsor": "Xiamen Amoytop Biotech Co., Ltd.",
+              "drug": "ACT100 Injection",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07438496",
+              "sponsor": "Janssen Research & Development, LLC",
+              "drug": "Nipocalimab",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07523542",
+              "sponsor": "Beijing Biotech",
+              "drug": "Autologous anti-CD19 CAR-T cells, intravenous single infusion at protocol-defined dose level (1 x 10^6 or 3 x 10^6 CAR-positive viable T cells/kg).",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07432334",
+              "sponsor": "Vinmec Research Institute of Stem Cell and Gene Technology",
+              "drug": "Autologous CD19-Targeted CAR-T Cells",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07439029",
+              "sponsor": "Children's Hospital of Fudan University",
+              "drug": "YTS109 cell",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07410377",
+              "sponsor": "The Affiliated Hospital of Xuzhou Medical University",
+              "drug": "UCAR-T cells",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT05029336",
+              "sponsor": "Stephan Grupp MD PhD",
+              "drug": "Depletion of CD3/CD19 in an autologous stem cell transplant",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06875960",
+              "sponsor": "Bristol-Myers Squibb",
+              "drug": "BMS-986165",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07246096",
+              "sponsor": "Changhai Hospital",
+              "drug": "anti-CD19/BCMA U CAR T cells",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07363590",
+              "sponsor": "Merck Sharp & Dohme LLC",
+              "drug": "MK-1045",
+              "phase": "Phase 1"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "baricitinib",
+            "3jw",
+            "baricitinib (incb028050)",
+            "baricitinib (ly3009104)",
+            "baricitinib phosphate",
+            "baricitinib phosphate salt",
+            "incb-028050",
+            "incb028050",
+            "incb-28050",
+            "ly-3009104",
+            "ly3009104",
+            "olumiant"
+          ]
+        },
+        "summary": "Baricitinib has been evaluated in systemic lupus erythematosus (SLE) across a substantial clinical program spanning Phase 2 and Phase 3. A completed Phase 2 study (NCT02708095) established early evidence in SLE patients. Two large Phase 3 trials followed: SLE-BRAVE II (NCT03616964) completed successfully, while a companion Phase 3 study (NCT03843125) and another Phase 3 trial (NCT03616912) were both terminated due to insufficient evidence to support a positive benefit:risk profile in SLE patients — with safety findings described as consistent with previously published baricitinib data. An additional Phase 2/Phase 3 study (NCT05686746), titled 'Use of Baricitinib to Maintain Remission,' has an unknown current status.",
+        "closure": "closed",
+        "closure_reason": "Two Phase 3 trials were explicitly terminated due to insufficient evidence to support a positive benefit:risk profile in SLE, representing a genuine efficacy/benefit:risk failure for this indication.",
+        "relevant_nct_ids": [
+          "NCT03843125",
+          "NCT03616912",
+          "NCT03616964",
+          "NCT02708095",
+          "NCT05686746"
+        ],
+        "contaminated_nct_ids": [],
+        "relevance_reasoning": "All five trials study baricitinib as the experimental agent directly in systemic lupus erythematosus (or lupus nephritis, a narrower non-approved subtype that rolls up). SLE is not among baricitinib's FDA-approved indications (RA, COVID-19, alopecia areata), so none are contaminated by an approved indication.",
+        "signals": {
+          "highest_completed_phase": "Phase 3",
+          "has_completed_phase3": true,
+          "completed_phase3_nct_ids": [
+            "NCT03616964"
+          ],
+          "has_completed_pure_phase3": true,
+          "completed_pure_phase3_nct_ids": [
+            "NCT03616964"
+          ],
+          "has_active_phase3": false,
+          "active_phase3_nct_ids": [],
+          "phase3_terminated_for_cause": true,
+          "terminated_phase3_nct_ids": [
+            "NCT03843125",
+            "NCT03616912"
+          ],
+          "dev_stage": "completed_phase3",
+          "active_programs": "None active; 1 on record with unknown status (NCT05686746)"
+        }
+      },
+      "blurb": {
+        "stage": "Phase 3 completed for this indication",
+        "literature": "strong, mixed, RCT-backed / controlled",
+        "blocker": "No trials currently recruiting; one trial (NCT05686746) has unconfirmed status.",
+        "active_programs": "None active; 1 on record with unknown status (NCT05686746)",
+        "key_risk": "Mixed RCT-backed evidence may not resolve into a consistent efficacy signal sufficient to drive further development.",
+        "verdict": "Tested, status unconfirmed",
+        "watch": "",
+        "prose": "This hypothesis has been substantively studied, reaching a completed Phase 3 and accumulating a body of controlled literature that is strong but mixed in its conclusions. No trials are currently active, and the trajectory of the one trial with unknown status remains unconfirmed, leaving the overall program in an ambiguous holding position rather than a clear advance or close."
+      }
+    },
+    {
+      "disease": "psoriasis",
+      "source": "competitor",
+      "approval_relationship": "none",
+      "literature": {
+        "search_results": [
+          "baricitinib AND \"Psoriasis\"",
+          "JAK inhibitors AND skin",
+          "Janus kinase inhibitors AND skin inflammation",
+          "JAK1 inhibition AND \"Psoriasis\"",
+          "JAK2 inhibition AND \"Psoriasis\"",
+          "JAK1 JAK2 AND \"Psoriasis\"",
+          "Olumiant AND \"Psoriasis\"",
+          "INCB028050 AND \"Psoriasis\"",
+          "LY3009104 AND \"Psoriasis\""
+        ],
+        "pmids": [
+          "39201826",
+          "35608188",
+          "38216005",
+          "41296263",
+          "37247942",
+          "32052886",
+          "36790724",
+          "28139263",
+          "40252783",
+          "37624925",
+          "38796267",
+          "39432739",
+          "35293977",
+          "35920701",
+          "40541282",
+          "33158881",
+          "35848689",
+          "38207170",
+          "26923915",
+          "41863823",
+          "34043988",
+          "38444845",
+          "39458616",
+          "35330989",
+          "37304255",
+          "38763966",
+          "37556530",
+          "33628569",
+          "39878832",
+          "38895380",
+          "35183936",
+          "38904749",
+          "40888388",
+          "33870531",
+          "41327887",
+          "33403021",
+          "30914699",
+          "30433838",
+          "38577056",
+          "38727633",
+          "29171774",
+          "31699450",
+          "28891341",
+          "31926171",
+          "37833617",
+          "31447673",
+          "41491444",
+          "32209886",
+          "33766063",
+          "28765121",
+          "34640327",
+          "41953903",
+          "32192366",
+          "32519223",
+          "30959214",
+          "41830903",
+          "41744512",
+          "39895048",
+          "33174384",
+          "38439732",
+          "29249252",
+          "30527218",
+          "41301837",
+          "26800231",
+          "36264400",
+          "40592184",
+          "28169015",
+          "40974167",
+          "32163530",
+          "36946306",
+          "38841959",
+          "35280877",
+          "40192965",
+          "28646393",
+          "34275303",
+          "30293437",
+          "40042725",
+          "35081305",
+          "36754102",
+          "37333515",
+          "38034798",
+          "41751266",
+          "40176112",
+          "38918174",
+          "34248953",
+          "32676568",
+          "34600033",
+          "34471993",
+          "31930807",
+          "40861474",
+          "32015973",
+          "33188136",
+          "37614317",
+          "39076971",
+          "41160040",
+          "37708254",
+          "34962052",
+          "41700696",
+          "41192435",
+          "39715989",
+          "28024126",
+          "34530431",
+          "39015397",
+          "35966849",
+          "41599117",
+          "37811701",
+          "41761435",
+          "26852717",
+          "39012398",
+          "41909533",
+          "40791758",
+          "34437922",
+          "35997540",
+          "37910098",
+          "38576610",
+          "36715849",
+          "39202657",
+          "32096671",
+          "39567266",
+          "40996476",
+          "40368249",
+          "39251770",
+          "35659132",
+          "29104284",
+          "40689675",
+          "37609754",
+          "39225949",
+          "38527764",
+          "38186219",
+          "40488905",
+          "34868078",
+          "39415009",
+          "37606849",
+          "38345154",
+          "38982032",
+          "34815171",
+          "33423161",
+          "40521676",
+          "37343285",
+          "39053611",
+          "38705825",
+          "37923366",
+          "35944611",
+          "31649667",
+          "38625661",
+          "36860609",
+          "36708316",
+          "31849996",
+          "40176741",
+          "37109759",
+          "37597261",
+          "40620171",
+          "30696569",
+          "38031699",
+          "39939222",
+          "34180156",
+          "32545945",
+          "35766013",
+          "39008325",
+          "40383540",
+          "39405929",
+          "40433365",
+          "41226626",
+          "37490213",
+          "35609174",
+          "40855389",
+          "37331618",
+          "33930196",
+          "38896602",
+          "33258553",
+          "36789757",
+          "38443119",
+          "40008630",
+          "39541169",
+          "40287866",
+          "41178404",
+          "39218446",
+          "32166597",
+          "35168456",
+          "40928432",
+          "40378883",
+          "41303888",
+          "30536048",
+          "40678986",
+          "40428884",
+          "38007359",
+          "39136388",
+          "39087440",
+          "40192197",
+          "38698175",
+          "40157596",
+          "40572744",
+          "38528257",
+          "30703333",
+          "41459541",
+          "41474006",
+          "37343845",
+          "33713527",
+          "39748084",
+          "37339501",
+          "40051127",
+          "37492565",
+          "39859036",
+          "39293796",
+          "39812280",
+          "36691705",
+          "29466675",
+          "39737640",
+          "39924470",
+          "37609730",
+          "41508837",
+          "38900897",
+          "33017108",
+          "39212722",
+          "37606843",
+          "30806709",
+          "34637367",
+          "32464150",
+          "40631910",
+          "36995320",
+          "38294793",
+          "41556641",
+          "39480594",
+          "37925520",
+          "34909801",
+          "38008602",
+          "32166932",
+          "40381666",
+          "39030889",
+          "41504972",
+          "29999544",
+          "34423443",
+          "39003114",
+          "39241741",
+          "28994166",
+          "40366436",
+          "35278019",
+          "34410205",
+          "40505791",
+          "34563217",
+          "40237436",
+          "35717838",
+          "36642402",
+          "38299575",
+          "41597476",
+          "36203601",
+          "41557935",
+          "31921209",
+          "32677122",
+          "38610078",
+          "39361691",
+          "36657024",
+          "37678618",
+          "39031274",
+          "34173094",
+          "28423239",
+          "39666160",
+          "39367521",
+          "35710462",
+          "33929045",
+          "38442462",
+          "38941080",
+          "30850043",
+          "38670231",
+          "32776305",
+          "40985984",
+          "40682379",
+          "40577521",
+          "39713946",
+          "37243340",
+          "29487960",
+          "39704810",
+          "34358529",
+          "37399557",
+          "32969750",
+          "39415349",
+          "35504889",
+          "39188724",
+          "39920358",
+          "30611103",
+          "39741367",
+          "41489415",
+          "36736457",
+          "41117150",
+          "40686709",
+          "34089720",
+          "40299058",
+          "36440703",
+          "37194577",
+          "38150881",
+          "35752494",
+          "37106040",
+          "35008464",
+          "40832814",
+          "39888096",
+          "31855085",
+          "40836559",
+          "39636193",
+          "41394855",
+          "33555459",
+          "38022501",
+          "30642204",
+          "38108679",
+          "36569854",
+          "37230920",
+          "38724797",
+          "37943240",
+          "40317496",
+          "39250758",
+          "39097196",
+          "40562170",
+          "39707640",
+          "39672377",
+          "38464512",
+          "34023008",
+          "40875187",
+          "39382676",
+          "34807428",
+          "38216802",
+          "35084738",
+          "35878738",
+          "38724790",
+          "31860736",
+          "35703351",
+          "39986987",
+          "39918093",
+          "31740978",
+          "40900410",
+          "37527229",
+          "31786154",
+          "40751489",
+          "38138551",
+          "33484582",
+          "41841670",
+          "37453538",
+          "36735987",
+          "36999560",
+          "40305055",
+          "33823765",
+          "29772037",
+          "41187729",
+          "39105881",
+          "37235767",
+          "34030992",
+          "38164871",
+          "37074513",
+          "34374027",
+          "37410552",
+          "32463149",
+          "34462967",
+          "34625142",
+          "35608635",
+          "39522957",
+          "35377276",
+          "40952332",
+          "36800199",
+          "39992967",
+          "40861471",
+          "34455413",
+          "35796377",
+          "38512115",
+          "38051858",
+          "40317605",
+          "41239921",
+          "34392600",
+          "40485322",
+          "34023009",
+          "40794004",
+          "38699956",
+          "36207461",
+          "32219519",
+          "37820425",
+          "40011984",
+          "37075180",
+          "38888681",
+          "41171808",
+          "37707560",
+          "35818735",
+          "40407924",
+          "36001310",
+          "41247178",
+          "40059465",
+          "41285205",
+          "39546129",
+          "38632138",
+          "36130766",
+          "34758685",
+          "41493926",
+          "30622297",
+          "37415328",
+          "35701182",
+          "35358602",
+          "41160034",
+          "42209112",
+          "32530345",
+          "36280001",
+          "39145899",
+          "37254967",
+          "38971182",
+          "30466683",
+          "29248518",
+          "29929604",
+          "41285203",
+          "41652292",
+          "33430628",
+          "38100043",
+          "36412059",
+          "38248914",
+          "41403117",
+          "40096745",
+          "37087470",
+          "40721284",
+          "34023007",
+          "37968918",
+          "37339609",
+          "38926932",
+          "38564385",
+          "38072127",
+          "40346694",
+          "36130639",
+          "39793717",
+          "30357932",
+          "34767869",
+          "25156366",
+          "39093663",
+          "39447537",
+          "21677670",
+          "35305973",
+          "35121555",
+          "38858762",
+          "42167491",
+          "31972249",
+          "30113844",
+          "24883332",
+          "20506062",
+          "33113249",
+          "37863021",
+          "34314383",
+          "40360089",
+          "41243171",
+          "33761599",
+          "39843435",
+          "40702395",
+          "38431923",
+          "25226283",
+          "40850201",
+          "40037425",
+          "40879286",
+          "40677538",
+          "36519621",
+          "41341579",
+          "29556726",
+          "34371735",
+          "35213752",
+          "39757860",
+          "30621465",
+          "22281165",
+          "36774328",
+          "41053500",
+          "30894513",
+          "30252456",
+          "37298195",
+          "37845748",
+          "41447846",
+          "31386778",
+          "42202148",
+          "27711196",
+          "25552479",
+          "42237357",
+          "36838711",
+          "35413417",
+          "31497193",
+          "20130595",
+          "35693820",
+          "23317159",
+          "40968516",
+          "41523413",
+          "32994772",
+          "26123031",
+          "30581877",
+          "41393061",
+          "12603854",
+          "41939841",
+          "40200906",
+          "31836457",
+          "41785726",
+          "41408331",
+          "42275779",
+          "36501124",
+          "39335596",
+          "39167035",
+          "33735868",
+          "31881484",
+          "40158831",
+          "39293712",
+          "36178125",
+          "40945031",
+          "22209716",
+          "40532325",
+          "40461662",
+          "42174671",
+          "38342155",
+          "39305848",
+          "25954276",
+          "34008239",
+          "39149101",
+          "37539258",
+          "39504627",
+          "30776356",
+          "37915324",
+          "10454200",
+          "33986690",
+          "42306466",
+          "28830649",
+          "24521871",
+          "19342680",
+          "42235429",
+          "22684457",
+          "21433155",
+          "22339472",
+          "38467779",
+          "37132187",
+          "21892841",
+          "27856658",
+          "37558928",
+          "33814980",
+          "23614738",
+          "25027606",
+          "32527540",
+          "25704750",
+          "24326545",
+          "23384668",
+          "17255201",
+          "27774581"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "26800231",
+            "title": "A randomized phase 2b trial of baricitinib, an oral Janus kinase (JAK) 1/JAK2 inhibitor, in patients with moderate-to-severe psoriasis.",
+            "abstract": "BACKGROUND: Plaque psoriasis is a chronic and often debilitating skin disorder and proinflammatory cytokines are known to play a key role in the disease process. OBJECTIVES: To evaluate the safety and efficacy of baricitinib, an oral Janus kinase (JAK) 1/JAK2 inhibitor, in patients with moderate-to-severe psoriasis in a randomized, double-blind, placebo-controlled, dose-ranging phase 2b study. METHODS: Patients were randomized (n = 271) to receive placebo or oral baricitinib at 2, 4, 8 or 10 mg once daily for 12 weeks (Part A). Dose adjustment for 12 additional weeks was based on percentage improvement in the Psoriasis Area and Severity Index (PASI) score. The primary end point was Psoriasis Area and Severity Index (PASI) 75% (PASI-75) at 12 weeks for North American patients (n = 238); secondary end points were safety and efficacy measures in the entire population. RESULTS: At week 12, more North American patients in the 8-mg (43%) and 10-mg (54%) baricitinib groups than in placebo group (17%; P < 0·05) achieved PASI-75. All baricitinib-treated groups had greater mean changes from baseline in their PASI scores (P < 0·05) at 12 weeks and (except 2 mg) had higher rates of PASI-50 than the placebo group; statistically significant PASI-90 responses were achieved in the 8-mg and 10-mg groups at 8 and 12 weeks. More than 81% of PASI-75 responders maintained their scores through 24 weeks. During Part A, study discontinuations due to adverse events (AEs) were 0%, 0%, 2·8%, 6·3% and 5·8% and treatment-emergent AE rates were 44%, 50%, 47%, 58% and 64% for placebo and 2-, 4-, 8- and 10-mg baricitinib groups, respectively. No opportunistic infections were observed in any treatment group. Dose-dependent changes in laboratory values were observed. CONCLUSIONS: Patients with moderate-to-severe psoriasis treated with baricitinib for 12 weeks achieved significant improvements in PASI-75.",
+            "similarity": 0.6837212950994497,
+            "pubtype": [
+              "Clinical Trial, Phase II",
+              "Journal Article",
+              "Multicenter Study",
+              "Randomized Controlled Trial"
+            ]
+          },
+          {
+            "pmid": "34767869",
+            "title": "Molecular and clinical effects of selective tyrosine kinase 2 inhibition with deucravacitinib in psoriasis.",
+            "abstract": "BACKGROUND: Psoriasis, a chronic inflammatory disease dependent on the IL-23/TH17 pathway, is initiated through plasmacytoid dendritic cell activation and type I IFN induction in the skin. Deucravacitinib, a selective tyrosine kinase 2 (TYK2) inhibitor, blocks IL-23, IL-12, and type I IFN signaling in cellular assays. OBJECTIVE: We investigated changes in IL-23/TH17 and type I IFN pathway biomarkers and gene responses as well as measures of selectivity for TYK2 over Janus kinases (JAKs) 1-3 in patients with moderate to severe psoriasis receiving deucravacitinib. METHODS: Deucravacitinib was evaluated in a randomized, placebo-controlled, dose-ranging trial. Biopsy samples from nonlesional (day 1) and lesional skin (days 1, 15, and 85) were assessed for changes in IL-23/IL-12 and type I IFN pathway biomarkers by quantitative reverse-transcription polymerase chain reaction, RNA sequencing, and immunohistochemistry. Laboratory markers were measured in blood. Percentage change from baseline in Psoriasis Area and Severity Index (PASI) score was assessed. RESULTS: IL-23 pathway biomarkers in lesional skin returned toward nonlesional levels dose-dependently with deucravacitinib. IFN and IL-12 pathway genes were normalized. Markers of keratinocyte dysregulation, keratin-16, and β-defensin genes approached nonlesional levels with effective doses. Select laboratory parameters affected by JAK1-3 inhibition were not affected by deucravacitinib. Greater improvements in PASI scores, correlated with biomarker changes, were seen with the highest doses of deucravacitinib versus lower doses or placebo. CONCLUSION: Robust clinical efficacy with deucravacitinib treatment was associated with decreases in IL-23/TH17 and IFN pathway biomarkers. The lack of effect seen on biomarkers specific to JAK1-3 inhibition supports selectivity of deucravacitinib for TYK2; larger confirmatory studies are needed.",
+            "similarity": 0.5978810315954132,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "36999560",
+            "title": "Efficacy and safety of baricitinib in combination with topical corticosteroids in paediatric patients with moderate-to-severe atopic dermatitis with an inadequate response to topical corticosteroids: results from a phase III, randomized, double-blind, placebo-controlled study (BREEZE-AD PEDS).",
+            "abstract": "BACKGROUND: Baricitinib, an oral selective Janus kinase (JAK)1/JAK2 inhibitor, is approved in many countries for moderate-to-severe atopic dermatitis (AD) in adults who are candidates for systemic therapy. OBJECTIVES: To evaluate the efficacy and safety of three doses of baricitinib in combination with low-to-moderate potency topical corticosteroids in paediatric patients with moderate-to-severe AD. METHODS: Patients (aged 2 to < 18 years) were randomized (1 : 1 : 1 : 1) to once-daily baricitinib low dose (1 mg equivalent), medium dose (2 mg equivalent), high dose (4 mg equivalent) or placebo for 16 weeks. The primary endpoint was the proportion of patients achieving a validated Investigator Global Assessment® (vIGA-AD) of 0/1 with a ≥ 2-point improvement at week 16. Key secondary endpoints included the proportions of patients achieving ≥ 75% and ≥ 90% improvement in the Eczema Area and Severity Index (EASI-75 and EASI-90, respectively), ≥ 75% improvement in the SCORing Atopic Dermatitis (SCORAD 75), mean change from baseline in EASI score and proportion of patients achieving a 4-point improvement in the Itch Numeric Rating scale (NRS) for patients aged ≥ 10 years. Primary and key secondary efficacy analyses were conducted on the intent-to-treat population and adjusted for multiplicity. Safety analyses included all randomized patients who received ≥ 1 dose of study treatment. RESULTS: A total of 483 patients were randomized (mean age 12 years). The baricitinib 4 mg equivalent achieved a statistically significant (P < 0.05) improvement vs. placebo on all 16-week endpoints (vIGA 0/1 with ≥ 2-point improvement, EASI-75, EASI-90, SCORAD 75, mean change in EASI score and Itch NRS 4-point improvement for patients aged ≥ 10 years). Improvement (P < 0.05, non-multiplicity adjusted) was also observed for baricitinib 4 mg equivalent vs. placebo in the ability to fall asleep and in reduction of topical corticosteroid use. Few patients discontinued due to adverse events (1.6% for placebo and 0.6% for those treated with baricitinib). There were no deaths, venous thromboembolic events, arterial thrombotic events, major adverse cardiovascular events, malignancies, gastrointestinal perforations or opportunistic infections seen. CONCLUSIONS: The results indicate that baricitinib offers a potential therapeutic option with a favourable benefit-risk profile for paediatric patients with moderate-to-severe AD who are candidates for systemic therapies.",
+            "similarity": 0.5897608035192113,
+            "pubtype": [
+              "Randomized Controlled Trial",
+              "Clinical Trial, Phase III",
+              "Journal Article"
+            ]
+          },
+          {
+            "pmid": "22281165",
+            "title": "Preliminary clinical activity of a topical JAK1/2 inhibitor in the treatment of psoriasis.",
+            "abstract": "BACKGROUND: Janus-associated kinases (JAKs) are involved in signal transduction from a variety of cytokines implicated in the pathogenesis of psoriasis, including interleukin (IL)-12, IL-23, and interferon-γ. INCB018424, a small molecule inhibitor of JAK1 and JAK2, inhibits cytokine-induced JAK/signal transducers and activators of transcription signaling and the resultant production of inflammatory proteins (eg, IL-17). OBJECTIVE: We sought to demonstrate proof of concept in patients with stable plaque psoriasis. METHODS: Patients were dosed with vehicle, 0.5% or 1.0% INCB018424 phosphate cream once a day or 1.5% twice a day for 28 days. Additional groups included two active comparators (calcipotriene 0.005% cream or betamethasone dipropionate 0.05% cream). RESULTS: Both the 1% and the 1.5% cream improved lesion thickness, erythema, and scaling and reduced lesion area compared with placebo. A composite lesion score decreased by greater than 50% with the efficacious doses of INCB018424 compared with 32% for vehicle controls. Topical application of INCB018424 was well tolerated with few mild adverse events noted. Mean plasma concentrations of INCB018424 after topical application of 0.5% to 1.5% cream were in the low nanomolar range, representing a fraction (<1%) of the half maximal inhibitory concentration (IC(50)) in whole blood for inhibition of cytokine-stimulated signal transducers and activators of transcription-3 phosphorylation. LIMITATIONS: This study was limited by the relatively short study duration and small sample size. CONCLUSION: Topical INCB018424 is safe, is well tolerated, and exhibits clinical activity in the topical treatment of psoriasis.",
+            "similarity": 0.5741535737933802,
+            "pubtype": [
+              "Comparative Study",
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "31972249",
+            "title": "Molecular and Cellular Responses to the TYK2/JAK1 Inhibitor PF-06700841 Reveal Reduction of Skin Inflammation in Plaque Psoriasis.",
+            "abstract": "The IL-23/T helper type 17 cell axis is a target for psoriasis. The TYK2/Janus kinase 1 inhibitor PF-06700841 will directly suppress TYK2-dependent IL-12 and IL-23 signaling and Janus kinase 1-dependent signaling in cells expressing these signaling molecules, including T cells and keratinocytes. This clinical study sought to define the inflammatory gene and cellular pathways through which PF-06700841 improves the clinical manifestations of psoriasis. Patients (n = 30) with moderate-to-severe psoriasis were randomized to once-daily 30 mg (n = 14) or 100 mg (n = 7) PF-06700841 or placebo (n = 9) for 28 days. Biopsies were taken from nonlesional and lesional skin at baseline and weeks 2 and 4. Changes in the psoriasis transcriptome and genes induced by IL-17 in keratinocytes were evaluated with microarray profiling and reverse transcriptase-PCR. Reductions in IL-17A, IL-17F, and IL-12B mRNA were observed as early as 2 weeks and approximately 70% normalization of lesional gene expression after 4 weeks. Immunohistochemistry showed significant decreases in markers of keratinocyte activation, epidermal thickness, KRT16 and Ki-67 expression, and immune cell infiltrates CD3+/CD8+ (T cells) and CD11c (dendritic cells) after 2 weeks of treatment, corresponding with improvement in histologic score. PF-06700841 improves clinical symptoms of chronic plaque psoriasis by inhibition of proinflammatory cytokines that require TYK2 and Janus kinase 1 for signal transduction.",
+            "similarity": 0.5335697763275912,
+            "pubtype": [
+              "Clinical Trial, Phase I",
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "A randomized, double-blind, placebo-controlled phase 2b trial evaluated baricitinib in patients with moderate-to-severe psoriasis and found that the 8 mg and 10 mg doses achieved statistically significant PASI-75 responses at 12 weeks compared to placebo (PMID: 26800231). Significant PASI-90 responses were also achieved in the 8 mg and 10 mg groups, and more than 81% of PASI-75 responders maintained their scores through 24 weeks (PMID: 26800231). The evidence supports the potential repurposing of baricitinib for psoriasis, though this is based on a single phase 2b dose-ranging study.",
+          "study_count": 1,
+          "strength": "moderate",
+          "direction": "supports",
+          "evidence_basis": "drug_specific",
+          "is_observational": false,
+          "is_animal_only": false,
+          "key_findings": [
+            "At week 12, 43% of patients in the 8 mg baricitinib group and 54% in the 10 mg group achieved PASI-75, compared to 17% in the placebo group (P < 0.05) among North American patients (PMID: 26800231).",
+            "Statistically significant PASI-90 responses were achieved in the 8 mg and 10 mg baricitinib groups at 8 and 12 weeks (PMID: 26800231).",
+            "More than 81% of PASI-75 responders maintained their scores through 24 weeks of treatment (PMID: 26800231).",
+            "All baricitinib-treated groups had greater mean changes from baseline in PASI scores (P < 0.05) at 12 weeks compared to placebo (PMID: 26800231).",
+            "No opportunistic infections were observed in any treatment group; dose-dependent changes in laboratory values were noted (PMID: 26800231)."
+          ],
+          "supporting_pmids": [
+            "26800231"
+          ],
+          "contradicting_pmids": [],
+          "relevant_pmids": [
+            "26800231"
+          ],
+          "contaminated_pmids": [
+            "34767869",
+            "36999560",
+            "22281165",
+            "31972249"
+          ],
+          "neutral_pmids": []
+        },
+        "summary": "Moderate evidence supports baricitinib repurposing in psoriasis."
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 2,
+          "by_status": {
+            "RECRUITING": 1,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 0
+          },
+          "trials": [
+            {
+              "nct_id": "NCT03358693",
+              "title": "Molecular Signatures in Inflammatory Skin Disease",
+              "brief_summary": "This pilot project intends to examine the utility of a systems medicine approach to identify regulatory networks and their perturbation in psoriasis and atopic dermatitis, and to obtain a comprehensive perspective on disease and disease control by integrating and modelling data across multiple cellular levels and time following specific blockade of single pathophysiological factors through use of licensed biologics during routine care as systems biology challenge. To this end, ultra-deep phenotyping and prospective molecular characterization in short time-intervals and different disease equilibrium states will be carried out in targeted small sets of patients. The different layers and types of clinical and molecular information will then be integrated (integrative personal omics profiling iPOP) for generating insights into disease pathways and for extraction of molecular signatures that correspond to clinical severity scores. It will provide a good starting point for planning future trials aimed at identifying biological patterns useful for guiding targeted treatment.",
+              "phase": "Not Applicable",
+              "overall_status": "RECRUITING",
+              "why_stopped": null,
+              "indications": [
+                "Atopic Dermatitis",
+                "Psoriasis"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D003876",
+                  "term": "Dermatitis, Atopic"
+                },
+                {
+                  "id": "D011565",
+                  "term": "Psoriasis"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D012873",
+                  "term": "Skin Diseases, Genetic"
+                },
+                {
+                  "id": "D030342",
+                  "term": "Genetic Diseases, Inborn"
+                },
+                {
+                  "id": "D009358",
+                  "term": "Congenital, Hereditary, and Neonatal Diseases and Abnormalities"
+                },
+                {
+                  "id": "D003872",
+                  "term": "Dermatitis"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017443",
+                  "term": "Skin Diseases, Eczematous"
+                },
+                {
+                  "id": "D006969",
+                  "term": "Hypersensitivity, Immediate"
+                },
+                {
+                  "id": "D006967",
+                  "term": "Hypersensitivity"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                },
+                {
+                  "id": "D017444",
+                  "term": "Skin Diseases, Papulosquamous"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Anti-TNF",
+                  "description": "Subject receives anti-TNF antibodies open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Anti-IL12/23",
+                  "description": "Subject receives anti-IL12/23 antibodies open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Anti-IL17",
+                  "description": "Subject receives anti-IL17 antibodies open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Dupilumab",
+                  "description": "Subject receives Dupilumab open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Anti-IL23",
+                  "description": "Subject receives anti-IL23 antibodies open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Subject receives Baricitinib open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Abrocitinib",
+                  "description": "Subject receives Abrocitinib open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Upadacitinib",
+                  "description": "Subject receives Upadacitinib open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Tralokinumab",
+                  "description": "Subject receives Tralokinumab open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Lebrikizumab",
+                  "description": "Subject receives Lebrikizumab open-label as per guidelines"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Nemolizumab",
+                  "description": "Subject receives Nemolizumab open-label as per guidelines"
+                }
+              ],
+              "sponsor": "Prof. Dr. Stephan Weidinger",
+              "enrollment": 300,
+              "start_date": "2017-01-20",
+              "completion_date": "2028-12-31",
+              "primary_outcomes": [
+                {
+                  "measure": "Changes of molecular profiles over time",
+                  "time_frame": "Baseline and week 2, week 4, week 12, week 52"
+                },
+                {
+                  "measure": "Changes of molecular profiles associated with disease severity/remission",
+                  "time_frame": "Baseline and week 2, week 4, week 12, week 52"
+                },
+                {
+                  "measure": "Changes of molecular profiles associated with treatment",
+                  "time_frame": "Baseline and week 2, week 4, week 12, week 52"
+                },
+                {
+                  "measure": "Changes of molecular profiles associated with treatment response",
+                  "time_frame": "Baseline and week 2, week 4, week 12, week 52"
+                }
+              ],
+              "references": []
+            },
+            {
+              "nct_id": "NCT01490632",
+              "title": "A Phase 2b Study of Baricitinib in Participants With Moderate to Severe Psoriasis",
+              "brief_summary": "This is a dose-ranging study designed to investigate the efficacy and safety of Baricitinib in the treatment of participants with moderate to severe, chronic plaque psoriasis as assessed by the Psoriasis Area and Severity Index (PASI) score and routine safety assessments.",
+              "phase": "Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Psoriasis",
+                "Skin Diseases",
+                "Skin Diseases, Papulosquamous"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D011565",
+                  "term": "Psoriasis"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D017444",
+                  "term": "Skin Diseases, Papulosquamous"
+                },
+                {
+                  "id": "D008224",
+                  "term": "Lymphoma, Follicular"
+                },
+                {
+                  "id": "D058225",
+                  "term": "Plaque, Amyloid"
+                },
+                {
+                  "id": "D000092122",
+                  "term": "Bronchiolitis Obliterans Syndrome"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D008228",
+                  "term": "Lymphoma, Non-Hodgkin"
+                },
+                {
+                  "id": "D008223",
+                  "term": "Lymphoma"
+                },
+                {
+                  "id": "D009370",
+                  "term": "Neoplasms by Histologic Type"
+                },
+                {
+                  "id": "D009369",
+                  "term": "Neoplasms"
+                },
+                {
+                  "id": "D008232",
+                  "term": "Lymphoproliferative Disorders"
+                },
+                {
+                  "id": "D008206",
+                  "term": "Lymphatic Diseases"
+                },
+                {
+                  "id": "D006425",
+                  "term": "Hemic and Lymphatic Diseases"
+                },
+                {
+                  "id": "D007160",
+                  "term": "Immunoproliferative Disorders"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                },
+                {
+                  "id": "D020763",
+                  "term": "Pathological Conditions, Anatomical"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                },
+                {
+                  "id": "D000092124",
+                  "term": "Organizing Pneumonia"
+                },
+                {
+                  "id": "D001989",
+                  "term": "Bronchiolitis Obliterans"
+                },
+                {
+                  "id": "D001988",
+                  "term": "Bronchiolitis"
+                },
+                {
+                  "id": "D001991",
+                  "term": "Bronchitis"
+                },
+                {
+                  "id": "D001982",
+                  "term": "Bronchial Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                },
+                {
+                  "id": "D008173",
+                  "term": "Lung Diseases, Obstructive"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D006086",
+                  "term": "Graft vs Host Disease"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally"
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 271,
+              "start_date": "2011-12",
+              "completion_date": "2012-12",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants Achieving Psoriasis Area and Severity Index Score ≥75% (PASI 75) Improvement (Efficacy of Baricitinib in Participants With Moderate to Severe Plaque Psoriasis. Measure: Psoriasis Area and Severity Index [PASI])",
+                  "time_frame": "Week 12"
+                }
+              ],
+              "references": []
+            }
+          ]
+        },
+        "completed": {
+          "total_count": 1,
+          "trials": [
+            {
+              "nct_id": "NCT01490632",
+              "title": "A Phase 2b Study of Baricitinib in Participants With Moderate to Severe Psoriasis",
+              "brief_summary": "This is a dose-ranging study designed to investigate the efficacy and safety of Baricitinib in the treatment of participants with moderate to severe, chronic plaque psoriasis as assessed by the Psoriasis Area and Severity Index (PASI) score and routine safety assessments.",
+              "phase": "Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Psoriasis",
+                "Skin Diseases",
+                "Skin Diseases, Papulosquamous"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D011565",
+                  "term": "Psoriasis"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D017444",
+                  "term": "Skin Diseases, Papulosquamous"
+                },
+                {
+                  "id": "D008224",
+                  "term": "Lymphoma, Follicular"
+                },
+                {
+                  "id": "D058225",
+                  "term": "Plaque, Amyloid"
+                },
+                {
+                  "id": "D000092122",
+                  "term": "Bronchiolitis Obliterans Syndrome"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D008228",
+                  "term": "Lymphoma, Non-Hodgkin"
+                },
+                {
+                  "id": "D008223",
+                  "term": "Lymphoma"
+                },
+                {
+                  "id": "D009370",
+                  "term": "Neoplasms by Histologic Type"
+                },
+                {
+                  "id": "D009369",
+                  "term": "Neoplasms"
+                },
+                {
+                  "id": "D008232",
+                  "term": "Lymphoproliferative Disorders"
+                },
+                {
+                  "id": "D008206",
+                  "term": "Lymphatic Diseases"
+                },
+                {
+                  "id": "D006425",
+                  "term": "Hemic and Lymphatic Diseases"
+                },
+                {
+                  "id": "D007160",
+                  "term": "Immunoproliferative Disorders"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                },
+                {
+                  "id": "D020763",
+                  "term": "Pathological Conditions, Anatomical"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                },
+                {
+                  "id": "D000092124",
+                  "term": "Organizing Pneumonia"
+                },
+                {
+                  "id": "D001989",
+                  "term": "Bronchiolitis Obliterans"
+                },
+                {
+                  "id": "D001988",
+                  "term": "Bronchiolitis"
+                },
+                {
+                  "id": "D001991",
+                  "term": "Bronchitis"
+                },
+                {
+                  "id": "D001982",
+                  "term": "Bronchial Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                },
+                {
+                  "id": "D008173",
+                  "term": "Lung Diseases, Obstructive"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D006086",
+                  "term": "Graft vs Host Disease"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Administered orally"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Baricitinib",
+                  "description": "Administered orally"
+                }
+              ],
+              "sponsor": "Eli Lilly and Company",
+              "enrollment": 271,
+              "start_date": "2011-12",
+              "completion_date": "2012-12",
+              "primary_outcomes": [
+                {
+                  "measure": "Percentage of Participants Achieving Psoriasis Area and Severity Index Score ≥75% (PASI 75) Improvement (Efficacy of Baricitinib in Participants With Moderate to Severe Plaque Psoriasis. Measure: Psoriasis Area and Severity Index [PASI])",
+                  "time_frame": "Week 12"
+                }
+              ],
+              "references": []
+            }
+          ]
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 1434,
+          "competitors": [
+            {
+              "sponsor": "Pakistan Institute of Medical Sciences",
+              "drug_name": "Betamethasone Dipropionate 0.05% Cream",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 120,
+              "most_recent_start": "2026-08-01"
+            },
+            {
+              "sponsor": "University of California, San Francisco",
+              "drug_name": "Triamcinolone",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 10,
+              "most_recent_start": "2026-08-01"
+            },
+            {
+              "sponsor": "University of California, San Francisco",
+              "drug_name": "Sodium chloride tablets",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 50,
+              "most_recent_start": "2026-06-22"
+            },
+            {
+              "sponsor": "Janssen Research & Development, LLC",
+              "drug_name": "Guselkumab",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 10,
+              "most_recent_start": "2026-06-15"
+            },
+            {
+              "sponsor": "Union Hospital, Tongji Medical College, Huazhong University of Science and Technology",
+              "drug_name": "Secukinumab 300mg s.c.",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 186,
+              "most_recent_start": "2026-06"
+            },
+            {
+              "sponsor": "Zarmeen Khawar",
+              "drug_name": "Apremilast",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 80,
+              "most_recent_start": "2026-05-14"
+            },
+            {
+              "sponsor": "First Hospital of China Medical University",
+              "drug_name": "Xeligekimab Injection",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 10,
+              "most_recent_start": "2026-03"
+            },
+            {
+              "sponsor": "Cairo University",
+              "drug_name": "Methotrexate",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 40,
+              "most_recent_start": "2026-02-01"
+            },
+            {
+              "sponsor": "Hospital Universitario Dr. Jose E. Gonzalez",
+              "drug_name": "Semaglutide (Rybelsus®)",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 62,
+              "most_recent_start": "2026-01-15"
+            },
+            {
+              "sponsor": "Taichung Veterans General Hospital",
+              "drug_name": "biologics treatment",
+              "drug_type": "Biological",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 50,
+              "most_recent_start": "2025-07-29"
+            }
+          ],
+          "phase_distribution": {
+            "Phase 4": 11,
+            "Phase 1": 10,
+            "Phase 1/Phase 2": 1,
+            "Phase 2": 11,
+            "Phase 3": 10,
+            "Early Phase 1": 3,
+            "Phase 2/Phase 3": 2
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT07635043",
+              "sponsor": "Pakistan Institute of Medical Sciences",
+              "drug": "Betamethasone Dipropionate 0.05% Cream",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07352566",
+              "sponsor": "University of California, San Francisco",
+              "drug": "Triamcinolone",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07487831",
+              "sponsor": "University of California, San Francisco",
+              "drug": "Sodium chloride tablets",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07654751",
+              "sponsor": "Janssen Research & Development, LLC",
+              "drug": "Guselkumab",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07485764",
+              "sponsor": "Union Hospital, Tongji Medical College, Huazhong University of Science and Technology",
+              "drug": "Secukinumab 300mg s.c.",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07455578",
+              "sponsor": "Seismic Therapeutic AU Pty Ltd",
+              "drug": "S-4321",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07623486",
+              "sponsor": "Haisco Pharmaceutical Group Co., Ltd.",
+              "drug": "HSK44459 Cream",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07432386",
+              "sponsor": "Zarmeen Khawar",
+              "drug": "Apremilast",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07489885",
+              "sponsor": "InventisBio Co., Ltd",
+              "drug": "D-2570 Tablet",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07530367",
+              "sponsor": "Second Affiliated Hospital, School of Medicine, Zhejiang University",
+              "drug": "Tofacitinib",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07314060",
+              "sponsor": "Chia Tai Tianqing Pharmaceutical Group Co., Ltd.",
+              "drug": "TQH2929 Injections",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07503652",
+              "sponsor": "First Hospital of China Medical University",
+              "drug": "Xeligekimab Injection",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT06723171",
+              "sponsor": "Io Therapeutics",
+              "drug": "IRX4204",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07362017",
+              "sponsor": "Vanda Pharmaceuticals",
+              "drug": "Ponesimod",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07432815",
+              "sponsor": "Cairo University",
+              "drug": "Methotrexate",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07426120",
+              "sponsor": "Psoriasis Research Institute of Guangzhou",
+              "drug": "Total coumarin (TC) cream",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07401992",
+              "sponsor": "Hospital Universitario Dr. Jose E. Gonzalez",
+              "drug": "Semaglutide (Rybelsus®)",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07254325",
+              "sponsor": "Taizhou Mabtech Pharmaceutical Co.,Ltd",
+              "drug": "Secukinumab 150mg s.c.",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07194200",
+              "sponsor": "Shenzhen People's Hospital",
+              "drug": "Lactobacillus plantarum",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07340216",
+              "sponsor": "Arcutis Biotherapeutics, Inc.",
+              "drug": "ARQ-154 Foam 0.3%",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07265284",
+              "sponsor": "Innovent Biopharmaceutical Technology (Hangzhou) Co., LTD.",
+              "drug": "IBI112",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT06979453",
+              "sponsor": "Bristol-Myers Squibb",
+              "drug": "Deucravacitinib",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07258745",
+              "sponsor": "Chong Kun Dang Pharmaceutical",
+              "drug": "SKYRIZI",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07219420",
+              "sponsor": "UCB Biopharma SRL",
+              "drug": "Bimekizumab",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT06620692",
+              "sponsor": "Xantho Biotechnology Co., LTD",
+              "drug": "5% GM-XANTHO [GM-XAN003]",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07204639",
+              "sponsor": "Clarent Biopharma, Inc.",
+              "drug": "RAP103 400mg single dose",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07150988",
+              "sponsor": "Haisco Pharmaceutical Group Co., Ltd.",
+              "drug": "HSK44459 dose level 1",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07013201",
+              "sponsor": "LEO Pharma",
+              "drug": "Delgocitinib cream",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07261306",
+              "sponsor": "Lahore General Hospital",
+              "drug": "Methotrexate",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07233291",
+              "sponsor": "Ahmed Ibrahim",
+              "drug": "Oral roflumilast",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07078695",
+              "sponsor": "Atridia Pty Ltd.",
+              "drug": "SHR-1139 Injection",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07169019",
+              "sponsor": "Alexandria University",
+              "drug": "Probiotics and methotrexate",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07149792",
+              "sponsor": "Taichung Veterans General Hospital",
+              "drug": "biologics treatment",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT06742333",
+              "sponsor": "Centre Hospitalier Universitaire de Nice",
+              "drug": "Bimekizumab",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06982352",
+              "sponsor": "LAPIX Therapeutics Inc.",
+              "drug": "LPX-TI641",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06863493",
+              "sponsor": "SFA Therapeutics",
+              "drug": "SFA002",
+              "phase": "Phase 2/Phase 3"
+            },
+            {
+              "nct_id": "NCT05601492",
+              "sponsor": "Wake Forest University Health Sciences",
+              "drug": "Otezla - Standard Care",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT06643260",
+              "sponsor": "Can-Fite BioPharma",
+              "drug": "piclidenoson",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07181343",
+              "sponsor": "Hansoh BioMedical R&D Company",
+              "drug": "HS-10374 tablets",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07033234",
+              "sponsor": "Jiangsu Hansoh Pharmaceutical Co., Ltd.",
+              "drug": "HS-20118",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06846710",
+              "sponsor": "Jiangsu Hansoh Pharmaceutical Co., Ltd.",
+              "drug": "HS-20118",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06374979",
+              "sponsor": "Second Affiliated Hospital, School of Medicine, Zhejiang University",
+              "drug": "Ixekizumab",
+              "phase": "Phase 2/Phase 3"
+            },
+            {
+              "nct_id": "NCT06982196",
+              "sponsor": "Xijing Hospital",
+              "drug": "Sulodexide",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT06926582",
+              "sponsor": "Hansoh BioMedical R&D Company",
+              "drug": "HS-10374 6mg tablets",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06937060",
+              "sponsor": "The University of Hong Kong",
+              "drug": "semaglutide",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT06857942",
+              "sponsor": "Eli Lilly and Company",
+              "drug": "Tirzepatide",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT06846541",
+              "sponsor": "Alumis Inc",
+              "drug": "Open-Label Envudeucitinib",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT05725876",
+              "sponsor": "University Medical Center Groningen",
+              "drug": "Ustekinumab",
+              "phase": "Phase 1"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "baricitinib",
+            "3jw",
+            "baricitinib (incb028050)",
+            "baricitinib (ly3009104)",
+            "baricitinib phosphate",
+            "baricitinib phosphate salt",
+            "incb-028050",
+            "incb028050",
+            "incb-28050",
+            "ly-3009104",
+            "ly3009104",
+            "olumiant"
+          ]
+        },
+        "summary": "One Phase 2 trial is on record for baricitinib in moderate-to-severe psoriasis: NCT01490632, a completed Phase 2b study titled 'A Phase 2b Study of Baricitinib in Participants With Moderate to Severe Psoriasis.' This randomized study evaluated baricitinib across dose levels in adults with moderate-to-severe disease and has been fully completed with results available.",
+        "closure": "unknown",
+        "closure_reason": "The Phase 2b trial completed without a reported safety or efficacy failure, but no further development activity is currently on record, leaving the ultimate disposition of this program unclear.",
+        "relevant_nct_ids": [
+          "NCT01490632"
+        ],
+        "contaminated_nct_ids": [
+          "NCT03358693"
+        ],
+        "relevance_reasoning": "NCT01490632 is directly studying baricitinib as the experimental agent in moderate-to-severe plaque psoriasis, which is not an FDA-approved indication for baricitinib, making it fully relevant. NCT03358693 is a systems biology observational study using licensed biologics (anti-TNF, anti-IL17, dupilumab, etc.) as mechanistic probes — baricitinib is not the studied drug — so it is contaminated under TEST 0.",
+        "signals": {
+          "highest_completed_phase": "Phase 2",
+          "has_completed_phase3": false,
+          "completed_phase3_nct_ids": [],
+          "has_completed_pure_phase3": false,
+          "completed_pure_phase3_nct_ids": [],
+          "has_active_phase3": false,
+          "active_phase3_nct_ids": [],
+          "phase3_terminated_for_cause": false,
+          "terminated_phase3_nct_ids": [],
+          "dev_stage": "completed_phase2",
+          "active_programs": "None active"
+        }
+      },
+      "blurb": {
+        "stage": "Phase 2 completed for this indication, no Phase 3",
+        "literature": "moderate, supports, RCT-backed / controlled",
+        "blocker": "No trials currently recruiting; development has not advanced beyond the completed stage",
+        "active_programs": "None active",
+        "key_risk": "Absence of active programs may leave the RCT-backed signal without a clear path to further validation",
+        "verdict": "Live but bottlenecked",
+        "watch": "",
+        "prose": "The hypothesis has been formally tested in controlled trials and is supported by a moderate body of RCT-backed literature, establishing meaningful clinical signal. However, with no trials currently active and no relationship to an approved indication, the evidence base sits without an ongoing program to carry it forward."
+      }
+    },
+    {
+      "disease": "polycythemia vera",
+      "source": "competitor",
+      "approval_relationship": "none",
+      "literature": {
+        "search_results": [
+          "baricitinib AND \"Polycythemia Vera\"",
+          "JAK inhibitors AND bone marrow",
+          "Janus-associated kinase inhibitors AND bone marrow",
+          "JAK1 inhibition AND \"Polycythemia Vera\"",
+          "JAK2 inhibition AND \"Polycythemia Vera\"",
+          "JAK1 AND JAK2 AND \"Polycythemia Vera\"",
+          "Olumiant AND \"Polycythemia Vera\"",
+          "INCB028050 AND \"Polycythemia Vera\""
+        ],
+        "pmids": [
+          "30433838",
+          "35878738",
+          "30877063",
+          "31862477",
+          "27473820",
+          "37294921",
+          "33992887",
+          "31816725",
+          "39798984",
+          "36416738",
+          "38900864",
+          "32320566",
+          "36332787",
+          "37568631",
+          "36709073",
+          "38230747",
+          "24756798",
+          "40062529",
+          "32354563",
+          "41520673",
+          "28791654",
+          "40065169",
+          "40476413",
+          "37548363",
+          "38623844",
+          "30069628",
+          "40791602",
+          "37935260",
+          "36780103",
+          "40640953",
+          "41812252",
+          "39670187",
+          "28619982",
+          "37500063",
+          "39281381",
+          "37517413",
+          "35802878",
+          "27358897",
+          "36534936",
+          "34903489",
+          "37395943",
+          "34531878",
+          "40009501",
+          "20541703",
+          "35182376",
+          "32628819",
+          "30343328",
+          "36891574",
+          "36305377",
+          "35984598",
+          "33423161",
+          "28395559",
+          "23432430",
+          "33641874",
+          "39434124",
+          "40317385",
+          "35388118",
+          "19393837",
+          "35941354",
+          "31235520",
+          "27109105",
+          "31549971",
+          "37667873",
+          "33925695",
+          "40476514",
+          "38936745",
+          "41444442",
+          "28159736",
+          "36651066",
+          "41142635",
+          "37203407",
+          "32198525",
+          "40569692",
+          "35603634",
+          "25915176",
+          "34383713",
+          "40784090",
+          "29480036",
+          "40904272",
+          "40192154",
+          "20335016",
+          "28571503",
+          "39951613",
+          "28043820",
+          "26402166",
+          "36130301",
+          "25043171",
+          "26182311",
+          "32903304",
+          "31511492",
+          "23990704",
+          "39385638",
+          "40466943",
+          "35526994",
+          "25520049",
+          "23391649",
+          "37404252",
+          "28499938",
+          "21200024",
+          "35153006",
+          "31921209",
+          "38073183",
+          "30675650",
+          "39189872",
+          "25515354",
+          "38966064",
+          "38201581",
+          "31311586",
+          "37341682",
+          "31097698",
+          "31591147",
+          "31723730",
+          "40701402",
+          "30044759",
+          "35873000",
+          "29665657",
+          "39604120",
+          "25501025",
+          "41552919",
+          "27209535",
+          "33844952",
+          "35337171",
+          "29277359",
+          "41391946",
+          "39358153",
+          "18788932",
+          "29973454",
+          "40454401",
+          "31817171",
+          "15352986",
+          "28405618",
+          "22796437",
+          "30925843",
+          "33472356",
+          "29899113",
+          "35326392",
+          "34852713",
+          "28832353",
+          "32647323",
+          "30213875",
+          "25330439",
+          "29972985",
+          "24280282",
+          "26623653",
+          "34269100",
+          "34957926",
+          "35159362",
+          "22469781",
+          "26032813",
+          "28513593",
+          "36864712",
+          "34840087",
+          "29645296",
+          "25757677",
+          "25189730",
+          "37081809",
+          "25572172",
+          "38406514",
+          "39190097",
+          "26032812",
+          "41793151",
+          "35288649",
+          "22991927",
+          "38939943",
+          "40582709",
+          "24145153",
+          "24084971",
+          "23186315",
+          "40517544",
+          "25860512",
+          "41348045",
+          "22339244",
+          "26748484",
+          "23594368",
+          "24888274",
+          "32199764",
+          "19474434",
+          "28398275",
+          "34187325",
+          "22904308",
+          "39748084",
+          "21521147",
+          "24598114",
+          "23385614",
+          "34775887",
+          "37352275",
+          "38319731",
+          "39802534",
+          "22279053",
+          "35221248",
+          "23415024",
+          "29327708",
+          "34741118",
+          "33083863",
+          "31227936",
+          "17124066",
+          "24213371",
+          "27002108",
+          "33050168",
+          "27665024",
+          "37647853",
+          "27017614",
+          "26841017",
+          "26537527",
+          "37914245",
+          "33076714",
+          "24238036",
+          "41039701",
+          "25586607",
+          "36959157",
+          "37325871",
+          "34138638",
+          "42133107",
+          "37799360",
+          "35606043",
+          "21300928",
+          "20130243",
+          "39188724",
+          "33114733",
+          "37343285",
+          "34324169",
+          "41537484",
+          "41487987",
+          "31833567",
+          "19295546",
+          "31719581",
+          "20506062",
+          "29399328",
+          "34867980",
+          "41164159",
+          "39091915",
+          "27774822",
+          "16904848",
+          "24290217",
+          "24766055",
+          "26362333",
+          "34206393",
+          "29134817",
+          "27774824",
+          "38295283",
+          "21527517",
+          "20934482",
+          "30571852",
+          "23317159",
+          "31725895",
+          "26375873",
+          "25976292",
+          "19887489",
+          "23382981",
+          "21766300",
+          "22829185",
+          "41104584",
+          "27033437",
+          "31516686",
+          "20194236",
+          "20587663",
+          "41091148",
+          "27048338",
+          "26569516",
+          "36700179",
+          "36856520",
+          "25577686",
+          "35008095",
+          "19327411",
+          "18394555",
+          "32669286",
+          "41372120",
+          "40468940",
+          "38440831",
+          "30287855",
+          "17178722",
+          "16977569",
+          "16603627",
+          "17533047",
+          "32552220",
+          "16673274",
+          "18059484",
+          "22583424",
+          "24351780",
+          "21804321",
+          "16384930",
+          "26975864",
+          "37771602",
+          "25116182",
+          "17976517",
+          "33539024",
+          "30967632",
+          "23735588",
+          "24404189",
+          "25486953",
+          "22623993",
+          "37939664",
+          "35082276",
+          "21127942",
+          "20160166",
+          "32296029",
+          "29644531",
+          "37639050",
+          "35397744",
+          "26176817",
+          "21080242",
+          "26134021",
+          "19778862",
+          "17412890",
+          "34140953",
+          "27784744",
+          "21042281",
+          "20008249",
+          "17581608",
+          "20087176",
+          "21245760",
+          "20008298",
+          "35162937",
+          "25696867",
+          "25472969",
+          "23386690",
+          "40764668",
+          "17906464",
+          "18394554",
+          "22408262",
+          "27249739",
+          "17713553",
+          "25583084",
+          "22872685",
+          "22507800",
+          "19445582",
+          "34749590",
+          "24069563",
+          "40569101",
+          "20372971",
+          "37095207",
+          "30025280",
+          "37093433",
+          "19707323",
+          "36999639",
+          "42311686",
+          "33664283",
+          "42282795",
+          "19109573",
+          "23570380",
+          "21062242",
+          "29519804",
+          "31728053",
+          "25768401",
+          "26489695",
+          "31560729",
+          "30717771",
+          "23929215",
+          "27473563",
+          "22065597",
+          "24252366",
+          "22278747",
+          "18245540",
+          "37233774",
+          "20852385",
+          "22170483",
+          "24860972",
+          "23926298",
+          "42005175",
+          "18079739",
+          "21860433",
+          "19413997",
+          "18482053",
+          "22916261",
+          "21247487",
+          "16834459",
+          "21887333",
+          "34396051",
+          "21653937",
+          "28533538",
+          "23160466",
+          "25912019",
+          "24903629",
+          "21138246",
+          "19657484",
+          "34400417",
+          "18024651",
+          "21512135",
+          "28057739",
+          "20667821",
+          "23556090",
+          "18326042",
+          "23701016",
+          "32326377",
+          "21599574",
+          "24280934",
+          "17541402",
+          "27185380",
+          "22411871",
+          "23758082",
+          "20656333",
+          "40109858",
+          "20663870",
+          "18723478",
+          "21151131",
+          "19857967",
+          "23560534",
+          "18775810",
+          "24524202",
+          "16684963",
+          "25288776",
+          "19387466",
+          "42211688",
+          "20445018",
+          "18671703",
+          "24105986",
+          "24666646",
+          "23863895",
+          "18717827",
+          "16263414",
+          "23556072",
+          "20203004",
+          "23573950",
+          "42078583",
+          "40246933",
+          "41902804",
+          "37989928",
+          "29515238",
+          "30114348",
+          "39377511",
+          "16239216",
+          "27729820",
+          "21823028",
+          "30679326",
+          "24258498",
+          "28622623",
+          "36566109",
+          "20843246",
+          "23459451",
+          "38156903",
+          "28760302",
+          "21892841",
+          "25980454",
+          "28028027",
+          "32153201",
+          "23264594",
+          "30590943",
+          "34648874",
+          "27796129",
+          "31778911",
+          "36319575",
+          "42310931",
+          "25870379",
+          "28674362",
+          "26552452",
+          "28956263",
+          "39046815",
+          "27884974",
+          "28500170",
+          "19290934",
+          "31360077",
+          "25644746",
+          "28673391",
+          "18297515",
+          "22830345",
+          "26433906",
+          "27774820",
+          "29150886",
+          "32595481",
+          "22852872",
+          "27570458",
+          "28193568",
+          "29472557",
+          "34068690",
+          "24081976",
+          "31683831",
+          "23391678",
+          "28277287",
+          "37793873",
+          "21079613",
+          "23556073",
+          "30997748",
+          "42118306",
+          "30978308",
+          "25193869",
+          "26316485",
+          "22362131",
+          "27916398",
+          "24056820",
+          "22474318",
+          "24754420",
+          "33911570",
+          "28794380",
+          "22034658",
+          "29340760",
+          "39814384"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "28193568",
+            "title": "Markers of iron deficiency in patients with polycythemia vera receiving ruxolitinib or best available therapy.",
+            "abstract": "Polycythemia vera (PV) is characterized by erythropoiesis and JAK2-activating mutations, with increased risks of morbidity and mortality. Most patients with PV are iron deficient, and treatment often includes hematocrit control with phlebotomy, which may exacerbate iron deficiency-associated complications. The phase 3 RESPONSE trial evaluated the JAK1/JAK2 inhibitor ruxolitinib (n=110) versus best available therapy (BAT; n=112) in patients with PV who were hydroxyurea-resistant/intolerant. Ruxolitinib was superior to BAT for hematocrit control, reduction in splenomegaly, and blood count normalization. This exploratory analysis, the first to evaluate iron status in a prospective study of patients with PV, investigated ruxolitinib effects on 7 serum iron markers and iron deficiency-related patient-reported outcomes (PRO). Among patients with evidence of baseline iron deficiency, ruxolitinib was associated with normalization of iron marker levels, compared with lesser improvement with BAT. Iron levels remained stable in ruxolitinib patients with normal iron levels at baseline. Regardless of baseline iron status, treatment with ruxolitinib was associated with improvements in concentration problems, cognitive function, dizziness, fatigue, headaches, and inactivity, although improvements were generally greater among patients with baseline iron deficiency. The improvements in iron deficiency markers and PROs observed with ruxolitinib are suggestive of clinical benefits that warrant further exploration.",
+            "similarity": 0.6367562013334152,
+            "pubtype": [
+              "Clinical Trial, Phase III",
+              "Journal Article",
+              "Randomized Controlled Trial"
+            ]
+          },
+          {
+            "pmid": "28622623",
+            "title": "A phase 2 study of momelotinib, a potent JAK1 and JAK2 inhibitor, in patients with polycythemia vera or essential thrombocythemia.",
+            "abstract": "Momelotinib is a potent inhibitor of JAK1 and JAK2 that demonstrated efficacy in patients with primary and secondary myelofibrosis. This phase 2, open-label, randomized study evaluated the efficacy and safety of oral once-daily momelotinib (100mg and 200mg) for the treatment of polycythemia vera (PV) and essential thrombocythemia (ET). The primary endpoint for PV was overall response rate (ORR), defined as the proportion of patients with hematocrit <45%, white blood cell count <10×109/L, platelet count ≤400×109/L, and resolution of palpable splenomegaly, each lasting ≥4 weeks. The definition of ORR for ET excluded the hematocrit component. A total of 39 patients (28 PV, 11 ET) were enrolled, with 28 patients receiving ≥12 weeks of treatment. The study was terminated due to limited efficacy. Two patients (ORR 5.1%) met the primary efficacy endpoint (both PV 200mg). Predose plasma levels of momelotinib were stable over time. A total of 31 (79.5%) patients experienced momelotinib-related adverse events (AEs), the most frequent being headache (23.1%), dizziness (18.0%), somnolence (15.4%), nausea (15.4%), and fatigue (15.4%). Three patients experienced serious AEs (7.7%), with 1 considered related to momelotinib (dyspnea). Peripheral neuropathy occurred in 7 (17.9%) patients (4 PV, 3 ET).",
+            "similarity": 0.600974288706073,
+            "pubtype": [
+              "Clinical Trial, Phase II",
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "40065169",
+            "title": "Pelabresib plus ruxolitinib for JAK inhibitor-naive myelofibrosis: a randomized phase 3 trial.",
+            "abstract": "Janus kinase (JAK) inhibitors provide limited depth and durability of response in myelofibrosis. We evaluated pelabresib-a bromodomain and extraterminal domain (BET) inhibitor-plus ruxolitinib (a JAK inhibitor) compared with placebo plus ruxolitinib as first-line therapy. In this phase 3 study (MANIFEST-2), JAK inhibitor-naive patients with myelofibrosis were randomized 1:1 to pelabresib 125 mg once daily (QD; 50-175 mg QD permitted) for 14 days followed by a 7-day break (21-day cycle), or to placebo in combination with ruxolitinib 10 or 15 mg twice daily (BID; 5 mg QD-25 mg BID permitted). Primary endpoint was reduction in spleen volume of ≥35% from baseline at week 24. Key secondary endpoints were absolute change in total symptom score (TSS) and TSS50 response (≥50% reduction in TSS from baseline at week 24). The primary endpoint was met in 65.9% of patients randomized to pelabresib-ruxolitinib (n = 214) versus 35.2% to placebo-ruxolitinib (n = 216) (difference, 30.4%; 95% confidence interval (CI), 21.6, 39.3; P < 0.001). Absolute change in TSS was -15.99 versus -14.05 (difference, -1.94; 95% CI, -3.92, 0.04; P = 0.0545) and TSS50 was achieved in 52.3% versus 46.3% (difference, 6.0%; 95 CI, -3.5, 15.5) with pelabresib-ruxolitinib versus placebo-ruxolitinib. Exploratory analyses of proinflammatory cytokine amounts and bone marrow morphology showed greater improvement with the combination. Thrombocytopenia and anemia were the most common treatment-emergent adverse events, occurring in 52.8% (13.2% grade ≥3) versus 37.4% (6.1% grade ≥3) and 44.8% (23.1% grade ≥3) versus 55.1% (36.5% grade ≥3), respectively. Pelabresib in combination with ruxolitinib is well tolerated, improves signs of underlying myelofibrosis pathobiology and provides substantial clinical benefit over standard-of-care JAK inhibitor monotherapy. ClinicalTrials.gov identifier: NCT04603495 .",
+            "similarity": 0.5851575950001462,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Clinical Trial, Phase III",
+              "Multicenter Study"
+            ]
+          },
+          {
+            "pmid": "23701016",
+            "title": "Phase II trial of panobinostat, an oral pan-deacetylase inhibitor in patients with primary myelofibrosis, post-essential thrombocythaemia, and post-polycythaemia vera myelofibrosis.",
+            "abstract": "Myelofibrosis (MF) is a Philadelphia chromosome-negative stem cell myeloproliferative neoplasm (MPN) associated with cytopenias, splenomegaly, constitutional symptoms, and poor prognosis. MF patients commonly express JAK2 V617F mutation and activation of Janus kinase (JAK)/signal transducer and activator of transcription (STAT) signalling. Agents targeting the JAK/STAT pathway have demonstrated efficacy in patients with MF. This study evaluated panobinostat, a pan-deacetylase inhibitor that depletes JAK2 V617F levels and JAK/STAT signalling in MPN cells, in patients with primary MF, post-essential thrombocythaemia MF, and post-polycythaemia vera MF. Patients received panobinostat 40 mg administered three times per week. Dose reductions were permitted for toxicities. The primary endpoint was response rate at 6 months using International Working Group for Myelofibrosis Research and Treatment (IWG-MRT) consensus criteria. Analyses of peripheral blood cells from treated patients revealed that panobinostat inhibited JAK/STAT signalling, decreased inflammatory cytokine levels, and decreased JAK2 V617F allelic burden. However, panobinostat was poorly tolerated at the dose and schedule evaluated, and only 16 of 35 patients completed ≥2 cycles of treatment. One patient (3%) achieved an IWG-MRT response. Common adverse events were thrombocytopenia (71.4%) and diarrhoea (80.0%). Although molecular correlative analyses suggested that panobinostat inhibits key intracellular targets, limited clinical activity was observed because of poor tolerance.",
+            "similarity": 0.6283795309194307,
+            "pubtype": [
+              "Clinical Trial, Phase II",
+              "Journal Article",
+              "Multicenter Study",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "17581608",
+            "title": "A phase II trial of tipifarnib in myelofibrosis: primary, post-polycythemia vera and post-essential thrombocythemia.",
+            "abstract": "Patients with primary myelofibrosis (PMF) or post-polycythemia vera or post-essential thrombocythemia myelofibrosis (post-PV/ET MF) have limited therapeutic options. The farnesyltransferase-inhibitor tipifarnib inhibits in vitro proliferation of myeloid progenitors from such patients. In the current phase II clinical trial, single-agent oral tipifarnib (300 mg twice daily x 21 of 28 days) was given to 34 symptomatic patients with either PMF (n=28) or post-PV/ET MF (n=6). Median time to discontinuation of protocol therapy was 4.6 months; reasons for early termination (n=19; 56%) included disease progression (21%) and adverse drug effects (18%). Toxicities (>/=grade 3) included myelosuppression (n=16), neuropathy (n=2), fatigue (n=1), rash (n=1) and hyponatremia (n=1). Response rate was 33% for hepatosplenomegaly and 38% for transfusion-requiring anemia. No favorable changes occurred in bone marrow fibrosis, angiogenesis or cytogenetic status. Pre- and post-treatment patient sample analysis for in vitro myeloid colony growth revealed substantial reduction in the latter. Clinical response did not correlate with either degree of colony growth, measurable decrease in quantitative JAK2(V617F) levels or tipifarnib IC(50) values (median 11.8 nM) seen in pretreatment samples. The current study indicates both in vitro and in vivo tipifarnib activity in PMF and post-PV/ET MF.",
+            "similarity": 0.6256083702357559,
+            "pubtype": [
+              "Clinical Trial, Phase II",
+              "Journal Article",
+              "Research Support, N.I.H., Extramural"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "None of the five provided abstracts contain evidence for baricitinib treating polycythemia vera. All abstracts concern different drugs (ruxolitinib, momelotinib, pelabresib, panobinostat, tipifarnib) studied in myeloproliferative neoplasms including polycythemia vera or myelofibrosis; baricitinib is not mentioned in any abstract. There is therefore no relevant evidence to assess the repurposing of baricitinib for polycythemia vera from the provided literature.",
+          "study_count": 0,
+          "strength": "none",
+          "direction": "none",
+          "evidence_basis": "none",
+          "is_observational": null,
+          "is_animal_only": null,
+          "key_findings": [],
+          "supporting_pmids": [],
+          "contradicting_pmids": [],
+          "relevant_pmids": [],
+          "contaminated_pmids": [
+            "28193568",
+            "28622623",
+            "40065169",
+            "23701016",
+            "17581608"
+          ],
+          "neutral_pmids": []
+        },
+        "summary": "The full pipeline was executed for baricitinib in polycythemia vera. Despite retrieving 486 PubMed abstracts via 8 targeted queries and re-ranking them semantically (top cosine similarity: 0.64), the synthesizer returned an evidence strength of \"none\" with no directional signal. The retrieved literature did not yield sufficient abstracts directly linking baricitinib to polycythemia vera to support a repurposing hypothesis based on the available PubMed evidence at this time."
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 0,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 0
+          },
+          "trials": []
+        },
+        "completed": {
+          "total_count": 0,
+          "trials": []
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 268,
+          "competitors": [
+            {
+              "sponsor": "PharmaEssentia",
+              "drug_name": "Ropeginterferon alfa-2b",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 2,
+              "statuses": [
+                "NOT_YET_RECRUITING",
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 119,
+              "most_recent_start": "2026-02-01"
+            },
+            {
+              "sponsor": "Novartis Pharmaceuticals",
+              "drug_name": "Hydroxyurea",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "TERMINATED"
+              ],
+              "total_enrollment": 76,
+              "most_recent_start": "2023-07-28"
+            },
+            {
+              "sponsor": "Ono Pharmaceutical Co., Ltd.",
+              "drug_name": "Sapablursen",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 250,
+              "most_recent_start": "2026-05-25"
+            },
+            {
+              "sponsor": "Merck Sharp & Dohme LLC",
+              "drug_name": "Bomedemstat",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 400,
+              "most_recent_start": "2024-05-23"
+            },
+            {
+              "sponsor": "Italfarmaco",
+              "drug_name": "Givinostat",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 220,
+              "most_recent_start": "2024-03-26"
+            },
+            {
+              "sponsor": "Protagonist Therapeutics, Inc.",
+              "drug_name": "Open-label rusfertide",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 46,
+              "most_recent_start": "2024-01-22"
+            },
+            {
+              "sponsor": "PharmaEssentia Japan K.K.",
+              "drug_name": "P1101",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 2,
+              "statuses": [
+                "COMPLETED"
+              ],
+              "total_enrollment": 50,
+              "most_recent_start": "2023-10-17"
+            },
+            {
+              "sponsor": "PharmaEssentia",
+              "drug_name": "P1101 (Ropeginterferon alfa-2b-njft)",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 111,
+              "most_recent_start": "2022-10-26"
+            },
+            {
+              "sponsor": "University Hospital, Brest",
+              "drug_name": "Direct Oral Anticoagulants",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 1308,
+              "most_recent_start": "2022-07-13"
+            },
+            {
+              "sponsor": "Protagonist Therapeutics, Inc.",
+              "drug_name": "Placebo",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 293,
+              "most_recent_start": "2022-04-01"
+            }
+          ],
+          "phase_distribution": {
+            "Phase 2": 21,
+            "Phase 3": 10,
+            "Phase 1": 12,
+            "Phase 4": 2,
+            "Phase 1/Phase 2": 4
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT07648030",
+              "sponsor": "Takeda",
+              "drug": "Rusfertide",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07429266",
+              "sponsor": "Ono Pharmaceutical Co., Ltd.",
+              "drug": "Sapablursen",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07529951",
+              "sponsor": "Eilean Therapeutics",
+              "drug": "ZE74-0282",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07441694",
+              "sponsor": "Incyte Corporation",
+              "drug": "INCA036978",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07469891",
+              "sponsor": "Prelude Therapeutics",
+              "drug": "PRT12396",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06290765",
+              "sponsor": "PharmaEssentia",
+              "drug": "Ropeginterferon alfa-2b",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07232290",
+              "sponsor": "Chengdu Zenitar Biomedical Technology Co., Ltd",
+              "drug": "Flonoltinib 75mg",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06661915",
+              "sponsor": "National Cancer Institute (NCI)",
+              "drug": "Decitabine and Cedazuridine",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06985147",
+              "sponsor": "Disc Medicine, Inc",
+              "drug": "DISC-3405",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07012109",
+              "sponsor": "BeBetter Med Inc",
+              "drug": "BEBT-507 Injection",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06541249",
+              "sponsor": "Icahn School of Medicine at Mount Sinai",
+              "drug": "Methotrexate (MTX)",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06378437",
+              "sponsor": "Hangzhou GluBio Pharmaceutical Co., Ltd.",
+              "drug": "GLB-001",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06351631",
+              "sponsor": "Merck Sharp & Dohme LLC",
+              "drug": "Bomedemstat",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT06218628",
+              "sponsor": "Fox Chase Cancer Center",
+              "drug": "Talazoparib",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06093672",
+              "sponsor": "Italfarmaco",
+              "drug": "Givinostat",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT06752746",
+              "sponsor": "Mabwell (Shanghai) Bioscience Co., Ltd.",
+              "drug": "9MW3011",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06063486",
+              "sponsor": "University of Southern California",
+              "drug": "Placebo Administration",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06033586",
+              "sponsor": "Protagonist Therapeutics, Inc.",
+              "drug": "Open-label rusfertide",
+              "phase": "Phase 3"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "baricitinib",
+            "3jw",
+            "baricitinib (incb028050)",
+            "baricitinib (ly3009104)",
+            "baricitinib phosphate",
+            "baricitinib phosphate salt",
+            "incb-028050",
+            "incb028050",
+            "incb-28050",
+            "ly-3009104",
+            "ly3009104",
+            "olumiant"
+          ]
+        },
+        "summary": "",
+        "closure": "unknown",
+        "closure_reason": "",
+        "relevant_nct_ids": [],
+        "contaminated_nct_ids": [],
+        "relevance_reasoning": "No trials of baricitinib in polycythemia vera were found in any scope (search, completed, or terminated), so there are no trials to classify. Baricitinib is not FDA-approved for polycythemia vera.",
+        "signals": {
+          "highest_completed_phase": null,
+          "has_completed_phase3": false,
+          "completed_phase3_nct_ids": [],
+          "has_completed_pure_phase3": false,
+          "completed_pure_phase3_nct_ids": [],
+          "has_active_phase3": false,
+          "active_phase3_nct_ids": [],
+          "phase3_terminated_for_cause": false,
+          "terminated_phase3_nct_ids": [],
+          "dev_stage": "untested",
+          "active_programs": "None active"
+        }
+      },
+      "blurb": null
+    }
+  ],
+  "top_diseases": [
+    "systemic lupus erythematosus",
+    "psoriasis"
+  ],
+  "summary": "Ranked repurposing signals for baricitinib:\n\n1. systemic lupus erythematosus — strong RCT-level evidence, mixed direction; Phase 3 completed (terminated for cause), no approval\n2. psoriasis — moderate exploratory literature, supports; Phase 2 completed, no Phase 3 on record\n\nEvidence gate exclusions: polycythemia vera"
+}
