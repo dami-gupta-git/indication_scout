@@ -58,7 +58,7 @@ indication_scout/
 │   │   ├── job_store.py           # In-memory async-job model + polling (backs POST/GET /api/analyses)
 │   │   └── progress.py            # Pipeline phase definitions + `emit_progress`
 │   ├── sqlalchemy/                # ORM models (pubmed_abstracts with pgvector)
-│   └── utils/                     # cache.py (shared file cache), wandb_utils.py
+│   └── utils/                     # cache.py (shared file cache)
 ├── tests/                         # Test suite
 │   ├── unit/                      # Unit tests (no network)
 │   ├── integration/               # Integration tests (hits real APIs)
@@ -847,7 +847,6 @@ Settings:
     anthropic_api_key: str = ""
     ncbi_api_key: str = ""
     openfda_api_key: str = ""
-    wandb_api_key: str = ""
 
     # LLM
     llm_model: str = "claude-sonnet-4-6"

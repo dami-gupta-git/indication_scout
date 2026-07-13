@@ -31,7 +31,6 @@ cache_test/
 .DS_Store
 
 # Experiment + report output that does not belong in the image
-src/indication_scout/runners/wandb/
 snapshots/
 reports/
 test_reports/

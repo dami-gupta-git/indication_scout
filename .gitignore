@@ -97,7 +97,6 @@ session_bak/
 !.claude/
 
 src/indication_scout/runners/
-wandb/
 *.docx
 tests/eval.py
 

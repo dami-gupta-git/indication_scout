@@ -253,7 +253,7 @@ src/indication_scout/
 ├── prompts/         # LLM prompt templates (supervisor, literature, clinical_trials, synthesize, synthesize_holdout, pmid_direction, expand_search_terms, extract_fda_approvals, extract_fda_approval_single, list_label_indications, extract_organ_term, merge_diseases, normalize_disease, normalize_disease_batch)
 ├── regression/      # Snapshot regression harness (diff.py, harness.py) — backs `scout diff-report`
 ├── report/          # Report formatting (format_report.py) — turns SupervisorOutput into the final markdown report
-├── runners/         # Pipeline runners (rag_runner.py) and exploration scripts (pubmed_runner.py); wandb/ logs
+├── runners/         # Pipeline runners (rag_runner.py) and exploration scripts (pubmed_runner.py)
 ├── services/        # Business logic -- LLM calls (llm.py, including parse_llm_response), embeddings (embeddings.py), disease normalization + MeSH resolver (disease_helper.py: llm_normalize_disease, normalize_for_pubmed, resolve_mesh_id), PubMed query building (pubmed_query.py), FDA approval extraction (approval_check.py), RAG pipeline (retrieval.py -- fetch_and_cache, semantic_search, synthesize), dev-stage judge (dev_stage.py), interpretive judge (judge_interpretive.py), shared CLI/API entry point (analysis_runner.py), async job store (job_store.py), progress events (progress.py)
 ├── sqlalchemy/      # SQLAlchemy ORM models (pubmed_abstracts with pgvector embedding)
 ├── utils/           # Shared file-based cache utility (cache_key, cache_get, cache_set)

@@ -7,7 +7,6 @@ import logging
 import time
 from pathlib import Path
 
-import wandb
 from sqlalchemy.orm import Session
 
 from indication_scout.models.model_drug_profile import DrugProfile
@@ -19,7 +18,6 @@ _settings = get_settings()
 from indication_scout.db.session import get_db
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.retrieval import RetrievalService
-from indication_scout.utils.wandb_utils import wandb_run
 
 logger = logging.getLogger(__name__)
 
@@ -87,7 +85,6 @@ async def _process_disease(
     return disease, evidence
 
 
-# @wandb_run(project="indication-scout")
 async def run_rag(
     drug_name: str, db: Session, cache_dir: Path = DEFAULT_CACHE_DIR
 ) -> dict[str, EvidenceSummary]:
@@ -144,10 +141,6 @@ async def run_rag(
     pairs = await asyncio.gather(*[_bounded(disease) for disease in top_15])
 
     results: dict[str, EvidenceSummary] = dict(pairs)
-
-    # searches_table = wandb.Table(columns=["drug", "disease", "avg_similarity"]) if wandb.run else None
-    # if wandb.run and searches_table is not None:
-    #     wandb.log({"searches": searches_table})
 
     ranking = {"strong": 3, "moderate": 2, "weak": 1, "none": 0}
     # contradicts ranks below all non-contradicts regardless of strength (negative signal).
