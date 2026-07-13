@@ -261,7 +261,9 @@ def test_fmt_clinical_trials_renders_why_excluded_note():
     out = ClinicalTrialsOutput(
         completed=CompletedTrialsResult(
             total_count=10,
-            trials=[Trial(nct_id="NCT00055874", title="Imatinib in CML", phase="Phase 3")],
+            trials=[
+                Trial(nct_id="NCT00055874", title="Imatinib in CML", phase="Phase 3")
+            ],
         ),
         contaminated_nct_ids=["NCT00055874"],
         relevance_reasoning="Imatinib is approved for CML, so CML trials are the approved "

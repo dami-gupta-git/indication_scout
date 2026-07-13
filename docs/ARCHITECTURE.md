@@ -80,7 +80,7 @@ indication_scout/
 | Services | **Complete** | `llm.py`, `embeddings.py`, `disease_helper.py`, `pubmed_query.py`, `approval_check.py`, `retrieval.py` (build_drug_profile, expand_search_terms, extract_organ_term, fetch_new_abstracts, embed_abstracts, fetch_and_cache, semantic_search, synthesize, get_drug_competitors) |
 | Agents | **Complete** | Supervisor + literature, clinical_trials, mechanism sub-agents — all built on the custom gated ReAct loop (`agents/_react_loop.py`). `BaseAgent` ABC still exists in `agents/base.py` but is unused. |
 | API | **Complete** | FastAPI app: `/health` plus async `analyses` (POST/GET/report.md/DELETE), `drilldown`, and `examples` routers (in `api/routes/`); CORS + visitor/bot logging; serves the built React frontend in prod |
-| CLI | **Complete** | `scout find` (run pipeline), `scout render` (re-render saved JSON), `scout diff-report` (diff two JSON snapshots) — in `cli/cli.py` |
+| CLI | **Complete** | `scout find` (run pipeline), `scout investigate` (run pipeline on a fixed drug+disease pair, no candidate discovery), `scout render` (re-render saved JSON), `scout diff-report` (diff two JSON snapshots) — in `cli/cli.py` |
 
 ---
 
@@ -903,6 +903,7 @@ Settings:
 
 ```bash
 scout find -d <drug> [--out-dir DIR] [--no-write] [--date-before YYYY-MM-DD]
+scout investigate -d <drug> -i <indication> [--out-dir DIR] [--no-write]
 scout render -i <payload.json> [--out-dir DIR] [--no-write]
 scout diff-report <golden.json> <current.json>
 ```

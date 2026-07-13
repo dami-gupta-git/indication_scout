@@ -93,7 +93,9 @@ class CandidateFindings(BaseModel):
     """Per-candidate findings aggregated by the supervisor."""
 
     disease: str
-    source: Literal["competitor", "mechanism", "both"] = "competitor"
+    # "" is the CLI pair-runner's honest value — a user-specified pair is neither competitor- nor mechanism-sourced.
+    # The supervisor path never sets "" (defaults to "competitor" and is always assigned a real source).
+    source: Literal["", "competitor", "mechanism", "both"] = "competitor"
     approval_relationship: Literal["contaminated", "combination_only", "none"] = Field(
         default="none",
         description=(

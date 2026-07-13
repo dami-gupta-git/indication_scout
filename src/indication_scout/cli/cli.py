@@ -4,6 +4,7 @@ Exposes the `scout` command declared in `pyproject.toml` under `[project.scripts
 
 Usage:
     scout find -d <drug> [--out-dir DIR] [--no-write]
+    scout investigate -d <drug> -i <indication> [--out-dir DIR] [--no-write]
     scout render -i <payload.json> [--out-dir DIR] [--no-write]
 """
 
@@ -89,6 +90,33 @@ async def _run_for_drug(
         shutdown_tracing()
 
 
+async def _run_for_pair(drug: str, disease: str, out_dir: Path, write: bool) -> None:
+    # Imports deferred until after _load_env() runs in main() (base_client.py reads settings at import time).
+    from indication_scout.helpers.drug_helpers import normalize_drug_name
+    from indication_scout.services.analysis_runner import run_pair_analysis
+    from indication_scout.tracing import setup_tracing, shutdown_tracing
+
+    setup_tracing()
+    try:
+        drug = normalize_drug_name(drug)
+        logger.info("Starting pair %s x %s", drug, disease)
+        _, report_md = await run_pair_analysis(drug, disease)
+
+        if not write:
+            click.echo(report_md)
+            return
+
+        out_dir.mkdir(parents=True, exist_ok=True)
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        disease_slug = disease.lower().replace(" ", "_")
+        md_path = out_dir / f"{drug}_{disease_slug}_{timestamp}.md"
+        md_path.write_text(report_md, encoding="utf-8")
+        logger.info("Finished pair %s x %s -> %s", drug, disease, md_path)
+        click.echo(f"Report:    {md_path}")
+    finally:
+        shutdown_tracing()
+
+
 @click.group()
 @click.option("-v", "--verbose", is_flag=True, help="Enable debug logging.")
 def cli(verbose: bool) -> None:
@@ -143,6 +171,46 @@ def find(
         )
     cutoff = date_before.date() if date_before is not None else None
     asyncio.run(_run_for_drug(drug, out_dir, write=not no_write, date_before=cutoff))
+
+
+@cli.command()
+@click.option(
+    "-d",
+    "--drug",
+    required=True,
+    help="Drug name to investigate.",
+)
+@click.option(
+    "-i",
+    "--indication",
+    "disease",
+    required=True,
+    help="Disease/indication to investigate for the drug.",
+)
+@click.option(
+    "--out-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=DEFAULT_OUT_DIR,
+    show_default=True,
+    help="Directory to write the report into.",
+)
+@click.option(
+    "--no-write",
+    is_flag=True,
+    help="Print the markdown report to stdout instead of writing to disk.",
+)
+def investigate(drug: str, disease: str, out_dir: Path, no_write: bool) -> None:
+    """Run the pipeline on a fixed DRUG + INDICATION pair (no candidate discovery).
+
+    Skips competitor/mechanism-based disease surfacing and ranking: investigates the given pair
+    directly (mechanism MoA + literature + clinical trials) and renders the same report as `find`.
+    CLI-only.
+    """
+    if "ANTHROPIC_API_KEY" not in os.environ:
+        raise click.ClickException(
+            "ANTHROPIC_API_KEY is not set. Add it to your .env or environment."
+        )
+    asyncio.run(_run_for_pair(drug, disease, out_dir, write=not no_write))
 
 
 @cli.command()

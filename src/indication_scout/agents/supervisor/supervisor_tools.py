@@ -21,19 +21,11 @@ from indication_scout.agents.supervisor.candidate_dedup import (
 )
 from indication_scout.config import get_settings
 from indication_scout.constants import SUPERVISOR_MIN_PMIDS_NO_TRIALS
-from indication_scout.data_sources.chembl import (
-    ChEMBLClient,
-    get_all_drug_names,
-    resolve_drug_name,
-)
-from indication_scout.data_sources.fda import FDAClient
 from indication_scout.data_sources.open_targets import OpenTargetsClient
-from indication_scout.helpers.drug_helpers import normalize_drug_name
+from indication_scout.helpers.drug_helpers import normalize_drug_name, seed_drug_intake
 from indication_scout.services.approval_check import (
     get_approved_indications,
     get_fda_approved_disease_mapping,
-    list_approved_indications_at,
-    list_approved_indications_from_labels,
 )
 from indication_scout.services.dev_stage import DEV_STAGE_PHRASE, dev_stage_phrase
 from indication_scout.services.judge_interpretive import judge_interpretive
@@ -79,7 +71,11 @@ def _literature_oneliner(es) -> str:
         design = (
             "RCT-backed / controlled"
             if es.is_observational is False
-            else "observational" if es.is_observational is True else "undetermined design"
+            else (
+                "observational"
+                if es.is_observational is True
+                else "undetermined design"
+            )
         )
     direction = es.direction if es.direction and es.direction != "none" else ""
     parts = [es.strength or "none"]
@@ -347,73 +343,24 @@ def build_supervisor_tools(
 
     async def _find_candidates_impl(drug_name: str) -> tuple[str, list[str]]:
         drug_name = normalize_drug_name(drug_name)
-        chembl_id = await resolve_drug_name(drug_name, svc.cache_dir)
+
+        # Drug-level intake: resolve the drug and gather aliases, first_approval, and the drug's own FDA-approved
+        # indications. Extracted into the shared seed_drug_intake helper (also used by the CLI pair-runner). The
+        # approved-DROP filter over competitor diseases (below) is NOT part of this and stays here.
+        intake = await seed_drug_intake(
+            drug_name, svc.cache_dir, date_before=date_before
+        )
+        chembl_id = intake.chembl_id
         competitors = await svc.get_drug_competitors(chembl_id, date_before=date_before)
         diseases = list(competitors.keys())
 
-        # Drug-level intake: populate the shared store with aliases and any
-        # FDA-approved indications discovered during the candidate filter.
         entry = _ensure_drug_entry(drug_name)
-        try:
-            entry["drug_aliases"] = await get_all_drug_names(chembl_id, svc.cache_dir)
-        except Exception as e:
-            logger.warning(
-                "find_candidates: get_all_drug_names failed for %s: %s", chembl_id, e
-            )
-
-        # Fetch first_approval (year first approved anywhere) so the clinical_trials sub-agent's closure judgment can tell an
-        # old/generic drug (no new NDA expected) from a genuine negative. Stays None on failure — never defaulted to a year
-        # (CLAUDE.md no-fallback).
-        try:
-            async with ChEMBLClient(cache_dir=svc.cache_dir) as chembl_client:
-                molecule = await chembl_client.get_molecule(chembl_id)
-            entry["first_approval"] = molecule.first_approval
-        except Exception as e:
-            logger.warning(
-                "find_candidates: get_molecule(first_approval) failed for %s: %s",
-                chembl_id,
-                e,
-            )
-
-        # Seed approved_indications from the drug's own FDA label, independent of any candidate list. Without this, an
-        # approved indication absent from OpenTargets competitor diseases (e.g. semaglutide × MASH) never reaches the
-        # briefing and the supervisor can't reason about subset/superset relationships against it.
-        #
-        # When date_before is set, swap the live openFDA path for the hardcoded approvals table — the live path leaks today's
-        # approvals past the cutoff. Drugs not in the table return [] and approval reasoning is silently disabled for that
-        # cutoff run.
-        seed_aliases = entry["drug_aliases"] or [drug_name]
-        try:
-            if date_before is not None:
-                seeded = list_approved_indications_at(drug_name, date_before)
-            else:
-                async with FDAClient(cache_dir=svc.cache_dir) as fda_client:
-                    label_texts = await fda_client.get_all_label_indications(
-                        seed_aliases
-                    )
-                seeded = await list_approved_indications_from_labels(
-                    label_texts=label_texts,
-                    cache_dir=svc.cache_dir,
-                )
-            if seeded:
-                existing = {
-                    ind.lower().strip() for ind in entry["approved_indications"]
-                }
-                for ind in seeded:
-                    if ind.lower().strip() not in existing:
-                        entry["approved_indications"].append(ind)
-                # logger.warning(
-                #     "[TOOL] find_candidates seeded %d approved indication(s) from %s: %s",
-                #     len(seeded),
-                #     "hardcoded table" if date_before is not None else "label",
-                #     seeded,
-                # )
-        except Exception as e:
-            logger.warning(
-                "find_candidates: approved-indication seed failed for %s: %s",
-                drug_name,
-                e,
-            )
+        entry["drug_aliases"] = intake.aliases
+        entry["first_approval"] = intake.first_approval
+        existing = {ind.lower().strip() for ind in entry["approved_indications"]}
+        for ind in intake.approved_indications:
+            if ind.lower().strip() not in existing:
+                entry["approved_indications"].append(ind)
 
         # Drop competitor diseases already approved for this drug. Same swap as above: hardcoded table when date_before is
         # set, live FDA otherwise.
@@ -1670,7 +1617,8 @@ def build_supervisor_tools(
         def _repair_stage_clause(disease_text: str, line: str, context: str) -> str:
             """Replace a false 'no program / Phase 4 only' stage clause in `line` with the authoritative dev_stage phrase,
             when the matched disease's dev_stage asserts a real Phase 3 program. Used for BOTH the ranked summary line and
-            the demotion footer line — the same class of LLM-authored stage leak appears in both."""
+            the demotion footer line — the same class of LLM-authored stage leak appears in both.
+            """
             head_lower = disease_text.lower()
             # Match the disease by longest containing key (same strategy as ranked lines).
             matched_key = next(
@@ -1723,6 +1671,7 @@ def build_supervisor_tools(
             r"(?P<rest>\s+for\s+.+?:?\s*)$",
             re.IGNORECASE,
         )
+
         # RANK ORDER = `validated` (the critic-reviewed blurbs), never the LLM's summary-line order. The LLM's ranked lines
         # are used ONLY for their per-disease tail text (which the report formatter discards anyway when it splices the blurb
         # in) — their sequence is discarded. We rebuild the ranked block by iterating `validated` in order and pulling each

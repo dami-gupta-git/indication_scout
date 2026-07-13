@@ -10,6 +10,8 @@ IndicationScout is an agentic drug repurposing system. A drug name goes in; coor
 
 IndicationScout pulls **live evidence** from multiple biomedical databases at query time — no static knowledge base, no precomputed answers. For each candidate indication it gathers current trial activity, recent literature, mechanistic associations, and regulatory status, then synthesizes them into a single repurposing report that characterizes the *state of the hypothesis* (live, stalled, niche, untested, post-readout-and-stuck) per disease.
 
+> For a plain-language reference on what every report field, verdict, and label means — and the exact rule behind each (e.g. what "Closed signal" is, how Evidence "strong" is decided) — see [GLOSSARY.md](GLOSSARY.md).
+
 A **Supervisor** agent orchestrates three specialist sub-agents:
 
 - **Literature agent** — Queries PubMed via EUtils, then runs a RAG pipeline: fetch abstracts, embed with BioLORD-2023, semantic search, and LLM-based synthesis of evidence for each candidate disease.
@@ -125,8 +127,19 @@ scout find -d "metformin"                          # writes <drug>_<timestamp>.m
 scout find -d "metformin" --out-dir reports/       # custom markdown output directory
 scout find -d "metformin" --no-write               # print the markdown report to stdout (JSON payload is still saved to ./test_reports)
 scout find -d "metformin" --date-before 2020-01-01 # temporal holdout: only evidence dated before the cutoff (see Temporal Holdout below)
+scout investigate -d "metformin" -i "alzheimer disease"  # run the pipeline on a fixed drug+disease pair (skips candidate discovery)
 scout --help
 ```
+
+#### Fixed pair (`investigate`)
+
+`scout investigate -d <drug> -i <indication>` runs the pipeline on a drug+disease pair you
+specify, skipping candidate discovery: no competitor or mechanism-surfaced diseases and no
+ranking. It still runs the mechanism (MoA), literature, and clinical-trials sub-agents for the
+pair and renders the same report as `find`. Useful for inspecting the literature and
+clinical-trial evidence for a hypothesis that Open Targets would not surface as a candidate.
+CLI-only; report is written to `./snapshots` (or `--out-dir`), and `--no-write` prints to stdout.
+No JSON payload is saved, so `scout render` is not available for these runs.
 
 #### Temporal holdout (`--date-before`)
 
