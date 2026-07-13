@@ -30,14 +30,32 @@ TEST_REPORTS_DIR = _PROJECT_ROOT / "test_reports"
 _TIMESTAMP_FMT = "%Y-%m-%d_%H-%M-%S"
 
 
+def _is_holdout(path: Path) -> bool:
+    """True if the payload is a holdout report (date_before set in the JSON body).
+
+    The body field is authoritative; the _holdout_ filename tag is only a hint.
+    Unreadable/invalid JSON is treated as holdout (excluded) so a broken payload
+    is never seeded.
+    """
+    try:
+        return json.loads(path.read_text()).get("date_before") is not None
+    except Exception:  # noqa: BLE001 — never seed a payload we can't confirm is production
+        logger.warning("Could not read %s to check holdout status; excluding", path.name)
+        return True
+
+
 def _latest_report(drug: str) -> tuple[Path, float] | None:
-    """Return (path, capture_epoch) for the newest test_reports payload, or None.
+    """Return (path, capture_epoch) for the newest non-holdout test_reports payload, or None.
 
     The capture epoch is parsed from the filename timestamp (naive local time),
-    matching what seed_reports/examples expect in captured_at.json.
+    matching what seed_reports/examples expect in captured_at.json. Holdout
+    reports are excluded — only production runs seed examples.
     """
     latest: tuple[Path, float] | None = None
     for path in TEST_REPORTS_DIR.glob(f"{drug}_*.json"):
+        if _is_holdout(path):
+            logger.info("Skipping holdout report %s", path.name)
+            continue
         stamp = path.stem[len(drug) + 1 :]  # strip "{drug}_"
         try:
             epoch = datetime.strptime(stamp, _TIMESTAMP_FMT).timestamp()
@@ -50,9 +68,12 @@ def _latest_report(drug: str) -> tuple[Path, float] | None:
 
 
 def _all_report_drugs() -> list[str]:
-    """Return every distinct drug with a parseable test_reports payload, sorted."""
+    """Return every distinct drug with a parseable, non-holdout test_reports payload, sorted."""
     drugs: set[str] = set()
     for path in TEST_REPORTS_DIR.glob("*.json"):
+        if _is_holdout(path):
+            logger.info("Skipping holdout report %s", path.name)
+            continue
         stem = path.stem
         sep = stem.rfind("_", 0, stem.rfind("_"))  # split before the date_time stamp
         if sep == -1:
