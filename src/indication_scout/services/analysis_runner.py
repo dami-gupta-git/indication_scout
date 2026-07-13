@@ -81,6 +81,7 @@ async def run_pair_analysis(
     from indication_scout.agents.supervisor.supervisor_tools import _literature_oneliner
     from indication_scout.helpers.drug_helpers import seed_drug_intake
     from indication_scout.services.approval_check import (
+        get_approved_indications,
         get_fda_approved_disease_mapping,
     )
     from indication_scout.services.dev_stage import dev_stage_phrase
@@ -156,15 +157,32 @@ async def run_pair_analysis(
         # relationship so the blurb judge reasons on-label instead of as if novel (e.g. metformin × type 2 diabetes). Maps to
         # CandidateFindings.approval_relationship, which has no "approved" member: an "approved" pair carries no relationship
         # tag ("none") but its matched approved_indication is threaded to the judge below.
-        fda_mapping = await get_fda_approved_disease_mapping(
-            drug_name=drug,
-            candidate_diseases=[disease_name],
-            cache_dir=DEFAULT_CACHE_DIR,
-        )
-        fda_label = fda_mapping.get(disease_name, "none")
-        approval_relationship = (
-            fda_label if fda_label in ("contaminated", "combination_only") else "none"
-        )
+        #
+        # Holdout swap (mirrors find_candidates): the live openFDA path leaks post-cutoff approvals, so under date_before use
+        # the hardcoded approvals table (get_approved_indications, gated on as_of). That table only tells us approved-or-not —
+        # it does NOT carry the finer contaminated / combination_only labels — so in holdout the relationship collapses to
+        # "none" (the Literal has no "approved" member); an approved pair still gets its approved_indication threaded to the
+        # judge below.
+        if date_before is not None:
+            approved_at = await get_approved_indications(
+                drug_name=drug,
+                candidate_diseases=[disease_name],
+                as_of=date_before,
+            )
+            fda_label = "approved" if disease_name in approved_at else "none"
+            approval_relationship = "none"
+        else:
+            fda_mapping = await get_fda_approved_disease_mapping(
+                drug_name=drug,
+                candidate_diseases=[disease_name],
+                cache_dir=DEFAULT_CACHE_DIR,
+            )
+            fda_label = fda_mapping.get(disease_name, "none")
+            approval_relationship = (
+                fda_label
+                if fda_label in ("contaminated", "combination_only")
+                else "none"
+            )
 
         # Build the per-candidate blurb the report card renders. Replicates finalize_supervisor's enrich pass for a single
         # pair: the deterministic fields (stage / active_programs / literature) come straight from the trial signals and the
@@ -305,6 +323,7 @@ async def run_analysis(
             drug,
             get_auto_findings=get_auto_findings,
             get_approval_labels=get_approval_labels,
+            date_before=date_before,
         )
         total = time.perf_counter() - _t0
         # External-API breakdown: how much of the run was spent awaiting HTTP responses

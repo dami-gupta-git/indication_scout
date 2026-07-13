@@ -124,6 +124,7 @@ async def run_supervisor_agent(
     drug_name: str,
     get_auto_findings=None,
     get_approval_labels=None,
+    date_before: date | None = None,
 ) -> SupervisorOutput:
     """Invoke the supervisor and assemble a SupervisorOutput from the run.
 
@@ -367,4 +368,5 @@ async def run_supervisor_agent(
         disease_findings=disease_findings,
         top_diseases=top_diseases,
         summary=summary,
+        date_before=date_before,
     )

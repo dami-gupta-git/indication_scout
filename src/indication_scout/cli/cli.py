@@ -63,13 +63,14 @@ async def _run_for_drug(
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
         # Persist the SupervisorOutput payload so the report can be re-rendered later
-        # via `scout render` without re-running the pipeline. Skip for holdout runs.
-        if date_before is None:
-            TEST_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-            payload_path = TEST_REPORTS_DIR / f"{drug}_{timestamp}.json"
-            payload_path.write_text(output.model_dump_json(indent=2), encoding="utf-8")
-            logger.info("Saved payload -> %s", payload_path)
-            click.echo(f"Payload:   {payload_path}")
+        # via `scout render` without re-running the pipeline. Holdout runs carry a
+        # _holdout_<cutoff> filename tag and a populated date_before field.
+        TEST_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+        payload_tag = f"_holdout_{date_before.isoformat()}" if date_before else ""
+        payload_path = TEST_REPORTS_DIR / f"{drug}{payload_tag}_{timestamp}.json"
+        payload_path.write_text(output.model_dump_json(indent=2), encoding="utf-8")
+        logger.info("Saved payload -> %s", payload_path)
+        click.echo(f"Payload:   {payload_path}")
 
         if not write:
             click.echo(report_md)
@@ -90,7 +91,13 @@ async def _run_for_drug(
         shutdown_tracing()
 
 
-async def _run_for_pair(drug: str, disease: str, out_dir: Path, write: bool) -> None:
+async def _run_for_pair(
+    drug: str,
+    disease: str,
+    out_dir: Path,
+    write: bool,
+    date_before: date | None = None,
+) -> None:
     # Imports deferred until after _load_env() runs in main() (base_client.py reads settings at import time).
     from indication_scout.helpers.drug_helpers import normalize_drug_name
     from indication_scout.services.analysis_runner import run_pair_analysis
@@ -99,17 +106,25 @@ async def _run_for_pair(drug: str, disease: str, out_dir: Path, write: bool) -> 
     setup_tracing()
     try:
         drug = normalize_drug_name(drug)
-        logger.info("Starting pair %s x %s", drug, disease)
-        _, report_md = await run_pair_analysis(drug, disease)
+        logger.info(
+            "Starting pair %s x %s (date_before=%s)", drug, disease, date_before
+        )
+        _, report_md = await run_pair_analysis(drug, disease, date_before=date_before)
 
         if not write:
             click.echo(report_md)
             return
 
-        out_dir.mkdir(parents=True, exist_ok=True)
+        # Holdout runs mirror `find`: write under snapshots/holdouts/, tag the filename, and prepend a banner.
+        write_dir = out_dir / "holdouts" if date_before else out_dir
+        write_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         disease_slug = disease.lower().replace(" ", "_")
-        md_path = out_dir / f"{drug}_{disease_slug}_{timestamp}.md"
+        cutoff_tag = f"_holdout_{date_before.isoformat()}" if date_before else ""
+        md_path = write_dir / f"{drug}_{disease_slug}{cutoff_tag}_{timestamp}.md"
+        if date_before is not None:
+            banner = f"> **HOLDOUT** — date_before={date_before.isoformat()}\n\n"
+            report_md = banner + report_md
         md_path.write_text(report_md, encoding="utf-8")
         logger.info("Finished pair %s x %s -> %s", drug, disease, md_path)
         click.echo(f"Report:    {md_path}")
@@ -199,7 +214,24 @@ def find(
     is_flag=True,
     help="Print the markdown report to stdout instead of writing to disk.",
 )
-def investigate(drug: str, disease: str, out_dir: Path, no_write: bool) -> None:
+@click.option(
+    "--date-before",
+    "date_before",
+    type=click.DateTime(formats=["%Y-%m-%d"]),
+    default=None,
+    help=(
+        "Temporal cutoff (YYYY-MM-DD). PubMed and ClinicalTrials.gov queries are restricted to "
+        "records dated strictly before this date; FDA approvals use the pre-cutoff table. "
+        "Mechanism (OpenTargets) data has no date filter and is always current."
+    ),
+)
+def investigate(
+    drug: str,
+    disease: str,
+    out_dir: Path,
+    no_write: bool,
+    date_before: datetime | None,
+) -> None:
     """Run the pipeline on a fixed DRUG + INDICATION pair (no candidate discovery).
 
     Skips competitor/mechanism-based disease surfacing and ranking: investigates the given pair
@@ -210,7 +242,10 @@ def investigate(drug: str, disease: str, out_dir: Path, no_write: bool) -> None:
         raise click.ClickException(
             "ANTHROPIC_API_KEY is not set. Add it to your .env or environment."
         )
-    asyncio.run(_run_for_pair(drug, disease, out_dir, write=not no_write))
+    cutoff = date_before.date() if date_before is not None else None
+    asyncio.run(
+        _run_for_pair(drug, disease, out_dir, write=not no_write, date_before=cutoff)
+    )
 
 
 @cli.command()

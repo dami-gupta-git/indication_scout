@@ -1,5 +1,6 @@
 """Structured output from the supervisor agent."""
 
+from datetime import date
 from typing import Literal
 
 from pydantic import BaseModel, Field, model_validator
@@ -148,4 +149,11 @@ class SupervisorOutput(BaseModel):
     summary: str = Field(
         default="",
         description="Supervisor's narrative summary of the most promising candidates.",
+    )
+    date_before: date | None = Field(
+        default=None,
+        description=(
+            "Holdout cutoff date if this was a holdout run; None for a normal "
+            "(production) run."
+        ),
     )
