@@ -7,7 +7,7 @@ No orchestration touch — the runner calls the existing blocking `run_analysis`
 import asyncio
 import logging
 
-from fastapi import APIRouter, HTTPException, Response, status
+from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import PlainTextResponse
 
 from indication_scout.api.schemas.analyses import (
@@ -64,9 +64,16 @@ async def _execute(job: Job) -> None:
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
-async def create_analysis(req: AnalysisRequest) -> AnalysisCreatedResponse:
+async def create_analysis(req: AnalysisRequest, request: Request) -> AnalysisCreatedResponse:
     """Launch a background analysis; return its job id immediately."""
     drug = normalize_drug_name(req.drug_name)
+    forwarded = request.headers.get("x-forwarded-for")
+    client_ip = (
+        forwarded.split(",")[0].strip()
+        if forwarded
+        else (request.client.host if request.client else "unknown")
+    )
+    logger.warning("[VISITOR-LOCATION] analysis requested for drug=%s from %s", drug, client_ip)
     # Fail fast: one quick Open Targets search confirms the drug exists before we spin up
     # a job. Seed-report drugs skip the check (they don't need OT resolution).
     if load_fresh_seed_report(drug) is None:
