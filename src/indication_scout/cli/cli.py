@@ -115,8 +115,12 @@ async def _run_for_pair(
             click.echo(report_md)
             return
 
-        # Holdout runs mirror `find`: write under snapshots/holdouts/, tag the filename, and prepend a banner.
-        write_dir = out_dir / "holdouts" if date_before else out_dir
+        # Pair (drug+disease) runs write under snapshots/with_disease/, or
+        # snapshots/holdouts/with_disease/ for holdout runs, tagging the filename and
+        # prepending a banner for holdouts.
+        write_dir = (
+            out_dir / "holdouts" / "with_disease" if date_before else out_dir / "with_disease"
+        )
         write_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
         disease_slug = disease.lower().replace(" ", "_")

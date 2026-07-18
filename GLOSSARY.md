@@ -42,7 +42,7 @@ The four top-band numbers:
 | Tile | What it counts |
 |---|---|
 | **Candidate diseases** | Every disease surfaced from OpenTargets, whether or not it was fully investigated. |
-| **Investigated** | How many candidates received full literature + clinical-trials analysis. Capped at **3** (`SUPERVISOR_INVESTIGATION_CAP`), so this is usually `min(3, Candidate diseases)`. |
+| **Investigated** | How many candidates received full literature + clinical-trials analysis. Capped at **3** (`settings.supervisor_investigation_cap`, set via the `SUPERVISOR_INVESTIGATION_CAP` env var), so this is usually `min(3, Candidate diseases)`. |
 | **Total trials** | Sum, across investigated diseases, of each disease's all-status trial count. |
 | **Total studies** | Sum, across investigated diseases, of each disease's graded PubMed abstract count. |
 
@@ -57,7 +57,7 @@ One row per genuine candidate disease (demoted / approval-only entries are dropp
 
 | Column | Meaning |
 |---|---|
-| **Rank** | 1-based position chosen by the supervisor (max 5 ranked). Matches the summary-card numbering. |
+| **Rank** | 1-based position chosen by the supervisor, capped at `settings.supervisor_candidate_cap` (15 by default). Matches the summary-card numbering. |
 | **Verdict** | The one-tag interpretive assessment of the hypothesis — see §4. |
 | **Evidence** | Literature evidence **strength** — a quantity/quality grade (`strong` / `moderate` / `weak` / `none`), independent of whether the evidence supports or contradicts the drug — see §5. |
 | **Trials** | Exact all-status count of trials matching this drug × this disease. |

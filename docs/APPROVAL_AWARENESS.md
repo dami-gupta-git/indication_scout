@@ -10,6 +10,22 @@ work — the labeling, the gates, the ranking, the rendering, and the tests.
 > downstream stage (trials, literature, dev-stage, ranking, rendering) consumes that label so the
 > approved part is excluded and only the genuine repurposing signal is surfaced and ranked.
 
+### Summary — Approval Awareness (docs/APPROVAL_AWARENESS.md)
+
+Documents how the system avoids presenting a drug's already-approved use as if it were a new repurposing discovery.
+
+The problem: a repurposing candidate is a broad disease (e.g. "chronic kidney disease"), but the drug may already be FDA-approved for a narrower slice of it (e.g. "diabetic kidney disease"). Trials/papers about that already-approved slice aren't real repurposing evidence — but a naive pipeline counts them anyway, inflating candidates that have zero genuine new signal.
+
+The fix: classify every candidate disease against the drug's FDA label, once, upstream, into one of four labels:
+
+approved — same disease or a narrower subtype/variant of what's approved → dropped entirely. Test: "would prescribing the drug for this candidate be within the existing FDA label?" If yes (it's just a finer-grained version of the approved condition, e.g. diabetic kidney disease under approved CKD), it's not new — drop it.
+none — a genuinely distinct disease, even if related (e.g. it can cause the approved condition, like polycystic kidney disease causing CKD, but isn't the same diagnosis) → kept and ranked as real evidence.
+combination_only — approved only as part of a combination product → demoted, not dropped.
+contaminated — a real repurposing target, but its trial/paper counts are polluted by data actually about the approved sibling/subtype → kept and ranked, but counts are flagged as unreliable.
+Why this matters: this same "is it the approved thing or a subtype (exclude) vs a distinct-but-related thing (keep)" logic is applied consistently at every downstream stage — trial relevance, literature relevance, development-stage tiering, and final ranking — so the report doesn't contradict itself (e.g. summary text and trial counts disagreeing about whether something is approved).
+
+Engineering pattern: only a small set of clinical-safety-critical rules are hardcoded in Python (e.g. "if evidence isn't drug-specific, cap the strength score"); everything else is left to LLM judgment, but fed these upstream labels so it can't re-derive or contradict them.
+
 ---
 
 ## 1. The problem

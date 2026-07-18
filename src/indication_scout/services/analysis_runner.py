@@ -252,6 +252,7 @@ async def run_pair_analysis(
             disease_findings=[findings],
             top_diseases=[disease_name],
             summary="",
+            is_investigate=True,
         )
         return output, format_report(output)
     finally:

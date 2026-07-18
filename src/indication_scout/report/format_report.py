@@ -429,9 +429,14 @@ def format_report(output: SupervisorOutput) -> str:
         "",
         "_Not for clinical use; for research purposes only_",
         "",
-        "_Candidates come from OpenTargets target–disease associations only; "
-        "off-target indications (e.g. duloxetine for pain) won't appear._",
-        "",
+    ]
+    if not output.is_investigate:
+        lines += [
+            "_Candidates come from OpenTargets target–disease associations only; "
+            "off-target indications (e.g. duloxetine for pain) won't appear._",
+            "",
+        ]
+    lines += [
         "---",
         "",
     ]

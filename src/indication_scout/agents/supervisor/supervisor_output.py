@@ -157,3 +157,10 @@ class SupervisorOutput(BaseModel):
             "(production) run."
         ),
     )
+    is_investigate: bool = Field(
+        default=False,
+        description=(
+            "True when the disease was user-specified via `scout investigate` "
+            "(pair mode); False for open-ended `scout find` candidate discovery."
+        ),
+    )
