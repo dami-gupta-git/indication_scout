@@ -344,6 +344,8 @@ def _make_lit(
     direction: str = "supports",
     is_observational: bool | None = None,
     is_animal_only: bool | None = None,
+    safety_summary: str = "",
+    indication_harm: bool = False,
 ) -> LiteratureOutput:
     return LiteratureOutput(
         pmids=[str(1000000 + i) for i in range(n_pmids)],
@@ -355,6 +357,8 @@ def _make_lit(
             is_animal_only=is_animal_only,
             summary="",
             key_findings=[],
+            safety_summary=safety_summary,
+            indication_harm=indication_harm,
         ),
     )
 
@@ -656,6 +660,89 @@ async def test_fact_critic_no_animal_note_when_human_or_undetermined():
         )
 
     assert "ANIMAL/in-vitro only" not in captured["prompt"]
+
+
+async def test_fact_critic_flags_indication_harm_literature():
+    """A pair whose literature has indication_harm=True (a harm reported for THIS indication) must
+    surface the terse safety clause in the critic FACT."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    allowed_diseases["arthritis"] = ("arthritis", "competitor")
+    findings_local["arthritis"] = {
+        "literature": _make_lit(
+            "strong",
+            2,
+            2,
+            direction="supports",
+            indication_harm=True,
+        ),
+        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+    }
+
+    captured: dict[str, str] = {}
+
+    async def _capture(prompt: str, system: str | None = None) -> str:
+        captured["prompt"] = prompt
+        return json.dumps(
+            {"ordering": "consistent", "blurbs": [{"disease": "arthritis", "prose": ""}]}
+        )
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=_capture,
+    ):
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": [{"disease": "arthritis", "prose": ""}]},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+
+    assert "safety signal reported for this indication" in captured["prompt"]
+
+
+async def test_fact_critic_no_safety_note_when_no_indication_harm():
+    """indication_harm=False must NOT add a safety clause; absence of a signal is not evidence the
+    drug is safe (and a drug-level safety_summary alone does not trigger it)."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    allowed_diseases["crmo"] = ("crmo", "competitor")
+    findings_local["crmo"] = {
+        "literature": _make_lit(
+            "weak",
+            2,
+            2,
+            direction="supports",
+            safety_summary="drug-level withdrawal (PMID: 111)",
+            indication_harm=False,
+        ),
+        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+    }
+
+    captured: dict[str, str] = {}
+
+    async def _capture(prompt: str, system: str | None = None) -> str:
+        captured["prompt"] = prompt
+        return json.dumps(
+            {"ordering": "consistent", "blurbs": [{"disease": "crmo", "prose": ""}]}
+        )
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=_capture,
+    ):
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": [{"disease": "crmo", "prose": ""}]},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+
+    assert "safety signal reported for this indication" not in captured["prompt"]
 
 
 async def test_finalize_keeps_observational_when_fact_is_true():
@@ -1128,3 +1215,35 @@ def test_literature_oneliner_animal_only_takes_precedence_over_observational():
 
 def test_literature_oneliner_none_summary_returns_none():
     assert _literature_oneliner(None) == "None"
+
+
+def test_literature_oneliner_indication_harm_appends_terse_flag():
+    """indication_harm=True (a harm reported for THIS indication) appends the terse flag. The flag
+    is driven by the disease-specific signal, NOT the drug-level safety_summary/severity."""
+    es = EvidenceSummary(
+        strength="strong",
+        direction="supports",
+        is_observational=False,
+        evidence_basis="drug_specific",
+        indication_harm=True,
+        indication_harm_summary="CV events in colorectal adenoma prevention (PMID: 15713943).",
+    )
+    assert (
+        _literature_oneliner(es)
+        == "strong, supports, RCT-backed / controlled, ⚠️ safety signal reported for this indication"
+    )
+
+
+def test_literature_oneliner_no_indication_harm_omits_flag():
+    """No indication-specific harm → NO flag, even when a DRUG-LEVEL safety_summary exists (the
+    drug-level 'WITHDRAWN' signal is deliberately not surfaced in the ranking one-liner)."""
+    es = EvidenceSummary(
+        strength="strong",
+        direction="supports",
+        is_observational=False,
+        evidence_basis="drug_specific",
+        safety_summary="Rofecoxib withdrawn 2004 for cardiovascular risk (PMID: 15713943).",
+        safety_severity="withdrawn",
+        indication_harm=False,
+    )
+    assert _literature_oneliner(es) == "strong, supports, RCT-backed / controlled"

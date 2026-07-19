@@ -64,6 +64,25 @@ def _title_case_disease(name: str) -> str:
     return " ".join(w[:1].upper() + w[1:] if w else w for w in name.split(" "))
 
 
+# Match "PMID: 12345678" / "PMID 12345678" / "PMIDs 123, 456" mentions in LLM prose and turn each
+# id into a clickable PubMed link, preserving surrounding punctuation.
+_PMID_INLINE = re.compile(r"\b(PMIDs?)[:\s]*((?:\d+)(?:\s*,\s*\d+)*)", re.IGNORECASE)
+
+
+def _linkify_pmids(text: str) -> str:
+    """Replace inline 'PMID: 12345' mentions in prose with clickable PubMed links."""
+
+    def _repl(m: re.Match) -> str:
+        label = m.group(1)
+        ids = [i.strip() for i in m.group(2).split(",") if i.strip()]
+        links = ", ".join(
+            f"[{i}](https://pubmed.ncbi.nlm.nih.gov/{i}/)" for i in ids
+        )
+        return f"{label}: {links}"
+
+    return _PMID_INLINE.sub(_repl, text)
+
+
 def _fmt_literature(lit: LiteratureOutput) -> str:
     lines: list[str] = []
 
@@ -115,6 +134,21 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
                 for pmid in es.neutral_pmids
             )
             lines.append(f"\n**Context (non-efficacy) PMIDs:** {pmid_links}")
+        # DISEASE-SPECIFIC safety only (the drug-wide blurb is rendered ONCE at the top of the
+        # report — see format_report). This flags a harm reported for THIS drug IN THIS
+        # indication's context (validated concrete question). Absent when the indication's safety
+        # literature is efficacy-only or empty — NOT "confirmed safe".
+        if es.indication_harm and es.indication_harm_summary:
+            lines.append(
+                f"\n⚠️ **Indication-specific safety:** "
+                f"{_linkify_pmids(es.indication_harm_summary)}"
+            )
+            if es.indication_harm_pmids:
+                pmid_links = ", ".join(
+                    f"[{pmid}](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)"
+                    for pmid in es.indication_harm_pmids
+                )
+                lines.append(f"\n**Indication-specific safety PMIDs:** {pmid_links}")
     else:
         lines.append("_No evidence summary available._")
 
@@ -477,6 +511,35 @@ def format_report(output: SupervisorOutput) -> str:
         "---",
         "",
     ]
+
+    # Drug-level safety — the drug-wide signal is ~identical across candidates, so collapse to the
+    # first non-empty and render ONCE here (not repeated per disease). Per-candidate DISEASE-SPECIFIC
+    # harm is rendered inside each Literature block. Prefer the pre-collapsed field if set, else
+    # pick-first from the findings.
+    drug_safety = output.drug_safety_summary
+    drug_safety_pmids = list(output.drug_safety_pmids)
+    if not drug_safety:
+        for f in output.disease_findings:
+            es = f.literature.evidence_summary if f.literature else None
+            if es is not None and es.safety_summary:
+                drug_safety = es.safety_summary
+                drug_safety_pmids = list(es.safety_pmids)
+                break
+    if drug_safety:
+        lines += ["## Drug Safety", ""]
+        lines.append(
+            "_Drug-wide safety signal — applies to the drug generally, not to any single "
+            "candidate indication below._"
+        )
+        lines.append("")
+        lines.append(f"**Safety:** {_linkify_pmids(drug_safety)}")
+        if drug_safety_pmids:
+            pmid_links = ", ".join(
+                f"[{pmid}](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)"
+                for pmid in drug_safety_pmids
+            )
+            lines.append(f"\n**Safety PMIDs:** {pmid_links}")
+        lines += ["", "---", ""]
 
     # Candidate diseases
     lines += ["## Diseases Considered", ""]

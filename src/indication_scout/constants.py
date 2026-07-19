@@ -312,6 +312,51 @@ OPENFDA_EMPTY_LABEL_TTL: int = 7 * 86400  # 7 days
 # cost). One TTL for both keeps the cache simple.
 PUBMED_PUBDATE_TTL: int = 30 * 86400  # 30 days
 
+# How many top FAERS adverse events (by log_likelihood_ratio) to include as the authoritative OT
+# signal in the summarize_safety prompt (production only).
+SAFETY_TOP_ADVERSE_EVENTS: int = 5
+
+# --- Adverse-event literature search (agents/literature/pubmed_ae.py) ------------------------
+# Disease-independent, drug-agnostic adverse-event PubMed query. Uses the drug's MeSH
+# "adverse effects" SUBHEADING as a MAJOR topic ([Majr]) — PubMed's own curated tag for "this
+# paper is primarily about this drug's harms" — so the pool is precise (no 500-cap saturation) and
+# catches specific-named signals (agranulocytosis, bladder cancer) without knowing the event name.
+# Holdout-clean: no drug-specific / future knowledge in the query itself.
+AE_MAJR_QUERY_TEMPLATE: str = '"{drug}/adverse effects"[Majr]'
+# Fallback when MeSH indexing is sparse (recent / less-studied drugs) and [Majr] returns < 3 hits.
+AE_FALLBACK_QUERY_TEMPLATE: str = (
+    '"{drug}"[tiab] AND ("adverse effects"[sh] OR toxicity[tiab] OR "adverse event*"[tiab])'
+)
+AE_FALLBACK_MIN_HITS: int = 3
+# Cap on PMIDs fetched for the AE query before citation reranking.
+AE_SEARCH_MAX_RESULTS: int = 500
+# How many top-cited AE abstracts to return (fed to summarize_safety).
+AE_TOP_CITED: int = 20
+
+# DISEASE-SCOPED AE query — for the disease-specific safety signal (is this drug unsafe FOR this
+# candidate indication, vs the drug-level [Majr] query above). Drug leg (nm/mh/tiab covers
+# newer/withdrawn/established/unindexed) AND an adverse-event vocabulary leg AND a disease leg
+# (mh/tiab, relying on PubMed Automatic Term Mapping — no per-disease synonym list). Recovers
+# indication-specific safety papers the drug-level pool misses (e.g. rofecoxib×colorectal → APPROVe).
+AE_DISEASE_DRUG_LEG: str = '("{drug}"[nm] OR "{drug}"[mh] OR "{drug}"[tiab])'
+AE_DISEASE_AE_LEG: str = (
+    '("chemically induced"[Subheading] OR "adverse effects"[Subheading] '
+    'OR "toxicity"[Subheading] OR "poisoning"[Subheading] '
+    'OR "adverse event*"[tiab] OR "adverse reaction*"[tiab] OR "adverse effect*"[tiab] '
+    'OR "side effect*"[tiab] OR toxicity[tiab] OR safety[tiab])'
+)
+AE_DISEASE_DISEASE_LEG: str = '("{disease}"[mh] OR "{disease}"[tiab])'
+
+# Europe PMC — used to rank AE literature by citation count. PubMed's relevance sort is
+# term-frequency-based and buries landmark safety papers whose abstract says "cardiovascular
+# events" rather than "toxicity" (e.g. the APPROVe trial that got rofecoxib withdrawn ranks
+# outside PubMed's top 300 despite 1,600+ citations). Europe PMC's citedByCount draws on a broader
+# citation graph than NCBI esummary's pmcrefcount (which is blank for exactly those papers).
+EUROPE_PMC_BASE_URL: str = "https://www.ebi.ac.uk/europepmc/webservices/rest"
+EUROPE_PMC_SEARCH_URL: str = f"{EUROPE_PMC_BASE_URL}/search"
+# Batch size for the EXT_ID:pmid OR-query citation lookup.
+EUROPE_PMC_CITATION_BATCH: int = 40
+
 # Curated per-drug list of candidate disease phrasings to short-circuit as
 # FDA-approved (return True without calling the LLM). Acts strictly as an
 # LLM backstop: only add candidate phrasings the LLM-against-label flow

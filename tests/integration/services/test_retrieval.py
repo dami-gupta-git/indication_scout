@@ -272,6 +272,118 @@ async def test_build_drug_profile(
     )
 
 
+@pytest.mark.parametrize(
+    "chembl_id, drug, expected_warning_types, expected_desc_keyword, expected_tox_class",
+    [
+        # Cerivastatin — withdrawn worldwide 2001 for rhabdomyolysis.
+        (
+            "CHEMBL1477",
+            "cerivastatin",
+            {"Withdrawn"},
+            "rhabdomyolysis",
+            "musculoskeletal toxicity",
+        ),
+        # Rofecoxib (Vioxx) — black box + withdrawn for cardiovascular events.
+        (
+            "CHEMBL122",
+            "rofecoxib",
+            {"Withdrawn", "Black Box Warning"},
+            "cardiovascular",
+            "cardiotoxicity",
+        ),
+        # Troglitazone — withdrawn for hepatotoxicity.
+        (
+            "CHEMBL408",
+            "troglitazone",
+            {"Withdrawn"},
+            "hepat",
+            "hepatotoxicity",
+        ),
+        # Thalidomide — black box (teratogenicity), also historically withdrawn.
+        (
+            "CHEMBL468",
+            "thalidomide",
+            {"Black Box Warning"},
+            "teratogenic",
+            "teratogenicity",
+        ),
+    ],
+)
+async def test_build_drug_profile_carries_opentargets_safety_signal(
+    svc, chembl_id, drug, expected_warning_types, expected_desc_keyword, expected_tox_class
+):
+    """build_drug_profile carries OpenTargets drugWarnings + adverseEvents onto the DrugProfile
+    (previously fetched then discarded). Each drug has a stable, curated OT withdrawal/black-box
+    signal asserted against real values."""
+    profile = await svc.build_drug_profile(chembl_id)
+
+    assert len(profile.drug_warnings) > 0, f"expected OT warnings for {drug}"
+    warning_types = {w.warning_type for w in profile.drug_warnings}
+    assert expected_warning_types.issubset(
+        warning_types
+    ), f"{drug}: expected {expected_warning_types}, got {warning_types}"
+    assert any(
+        expected_desc_keyword in (w.description or "").lower()
+        for w in profile.drug_warnings
+    ), f"{drug}: expected {expected_desc_keyword!r} in a warning description"
+    assert any(
+        (w.toxicity_class or "") == expected_tox_class for w in profile.drug_warnings
+    ), f"{drug}: expected toxicity_class {expected_tox_class!r}"
+
+    # FAERS adverse events present, each with a name and a log-likelihood-ratio signal.
+    assert len(profile.adverse_events) > 0, f"expected OT adverse events for {drug}"
+    ae = profile.adverse_events[0]
+    assert ae.name != ""
+    assert ae.log_likelihood_ratio is not None
+
+
+async def test_safety_search_fetches_drug_level_and_disease_scoped(svc):
+    """safety_search fetches the DRUG-LEVEL adverse-event pool ([Majr], citation-ranked) plus the
+    DISEASE-SCOPED pool, deduped. rofecoxib × colorectal cancer: the drug-wide pool surfaces the
+    landmark CV papers (APPROVe, PMID 15713943), and the disease-scoped query pulls colorectal-
+    context safety papers the drug-level pool alone misses."""
+    results = await svc.safety_search("CHEMBL122", disease="colorectal cancer")
+
+    assert len(results) > 0, "expected safety abstracts"
+    pmids = {r.pmid for r in results}
+    # APPROVe (the trial that got rofecoxib withdrawn) — a stable drug-level landmark.
+    assert "15713943" in pmids, f"expected APPROVe (15713943); got {sorted(pmids)[:10]}"
+
+
+async def test_summarize_safety_prod_reports_ot_signal_and_severity(svc):
+    """PRODUCTION summarize_safety returns a 3-tuple, states the OT-authoritative signal (rofecoxib
+    withdrawal / cardiovascular), cites only provided-pool PMIDs, and severity is 'withdrawn' from
+    the OT warning_type."""
+    profile = await svc.build_drug_profile("CHEMBL122")
+    abstracts = await svc.safety_search("CHEMBL122", disease="arthritis")
+
+    summary, pmids, severity = await svc.summarize_safety(
+        "CHEMBL122", "arthritis", profile, abstracts
+    )
+
+    assert summary != "", "expected a non-empty safety summary for rofecoxib"
+    assert "cardiovascular" in summary.lower() or "withdrawn" in summary.lower()
+    assert severity == "withdrawn"  # deterministic from OT Withdrawn warning
+    pool = {r.pmid for r in abstracts}
+    assert all(p in pool for p in pmids), f"cited PMIDs not in provenance pool: {pmids}"
+
+
+async def test_classify_indication_harm_true_for_colorectal(svc):
+    """classify_indication_harm returns True + cited PMIDs when the disease-scoped literature
+    reports a harm for the indication. rofecoxib × colorectal has the APPROVe CV signal in
+    adenoma-prevention dosing — a disease-context harm."""
+    abstracts = await svc.safety_search("CHEMBL122", disease="colorectal cancer")
+
+    harm, summary, pmids = await svc.classify_indication_harm(
+        "CHEMBL122", "colorectal cancer", abstracts
+    )
+
+    assert harm is True, "expected an indication-context harm for rofecoxib × colorectal"
+    assert summary != ""
+    pool = {r.pmid for r in abstracts}
+    assert all(p in pool for p in pmids), f"cited PMIDs not in provenance pool: {pmids}"
+
+
 # --- embed_abstracts ---
 
 # PMID 21133896: sildenafil + diabetic nephropathy — stable journal article with title and abstract.

@@ -164,3 +164,9 @@ class SupervisorOutput(BaseModel):
             "(pair mode); False for open-ended `scout find` candidate discovery."
         ),
     )
+    # Collapsed DRUG-LEVEL safety blurb (drug-wide, ~identical across candidates) — rendered ONCE
+    # at the top of the report. Built by format_report from the per-candidate EvidenceSummary
+    # safety_summary fields (pick-first non-empty). Per-candidate DISEASE-SPECIFIC harm stays on
+    # each finding.
+    drug_safety_summary: str = ""
+    drug_safety_pmids: list[str] = Field(default_factory=list)

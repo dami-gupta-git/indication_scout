@@ -337,6 +337,51 @@ language like the phrase above.
 
 ---
 
+## 10. Safety — the Drug Safety section & the indication-specific harm flag
+
+The report carries two **separate** safety surfaces. They answer different questions and are placed
+in different parts of the report, so keep them distinct.
+
+### Drug Safety (rendered once, at the top)
+
+A single **## Drug Safety** section above the disease list. It describes the drug's **drug-wide**
+safety signal — the one that is ~identical no matter which candidate indication you are reading — so
+it is collapsed to one blurb and shown once rather than repeated on every card. The heading is
+followed by the note *"Drug-wide safety signal — applies to the drug generally, not to any single
+candidate indication below."*
+
+- **Where the signal comes from.** In production, OpenTargets is the authoritative source: curated
+  **drug warnings** (black-box / withdrawal regulatory signals) plus the top **FAERS adverse events**
+  (pharmacovigilance, ranked by signal strength). The PubMed adverse-event literature supplies the
+  *provenance* (the cited PMIDs), it does not by itself decide the signal. The blurb prose is
+  LLM-authored from those facts.
+- **Severity** behind the signal is **deterministic** from the OpenTargets warning type: a
+  **withdrawn** drug outranks a **black-box** warning; an adverse-event signal with no formal warning
+  reads as **serious**. (In a temporal-holdout run OpenTargets is suppressed to avoid leaking
+  post-cutoff knowledge, so severity is instead read from the pre-cutoff literature and limited to
+  *serious / moderate / none* — never *withdrawn / black-box*, which are regulatory facts.)
+- **Absence is not "safe".** An empty Drug Safety section means OpenTargets had **no** warning or
+  significant adverse-event signal for the drug — it does **not** assert the drug is safe. When there
+  is no signal, the section is omitted entirely.
+
+### Indication-specific safety (per-candidate, on the Literature block)
+
+Distinct from the drug-wide blurb: this asks *does the safety literature report a harm for this drug
+**in this candidate indication's** context?* When it fires, the disease's Literature block carries a
+**⚠️ Indication-specific safety** line with a one-sentence reason and its own PMIDs.
+
+- It is **LLM-classified** from the disease-scoped adverse-event literature (e.g. rofecoxib ×
+  colorectal → the APPROVe cardiovascular signal). It is per-candidate, so a historical drug-wide
+  withdrawal is never mis-attributed to a specific disease.
+- Like the drug-wide section, **silence ≠ confirmed safe**: the flag is absent when the indication's
+  safety literature is efficacy-only or simply not present.
+
+A terse form of this flag (**⚠️ safety signal reported for this indication**) also rides along in the
+ranking one-liners the internal judges see — it is driven by the same per-candidate signal, never by
+the drug-level severity.
+
+---
+
 ## Deterministic vs LLM-authored — quick reference
 
 | Field | Source |
@@ -346,3 +391,6 @@ language like the phrase above.
 | Evidence strength | LLM grade, then **deterministic cap** to "none" if not drug-specific |
 | Stage *tier* selection | LLM, constrained by **deterministic floor** |
 | Verdict / Assessment tag, Constraint, Key risk, prose blurb | **LLM-authored** free text |
+| Drug Safety blurb prose | **LLM-authored** from OpenTargets warnings + FAERS events |
+| Drug-level safety **severity** (withdrawn / black-box / serious) | **Deterministic** from OpenTargets warning type (LLM-picked in holdout) |
+| Indication-specific harm flag (⚠️) | **LLM-classified** from disease-scoped safety literature |

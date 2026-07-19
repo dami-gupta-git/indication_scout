@@ -78,6 +78,11 @@
     {"disease": "psoriasis", "approved": "1972-12-31"},
     {"disease": "rheumatoid arthritis", "approved": "1988-12-31"}
   ],
+  "rofecoxib": [
+    {"disease": "osteoarthritis", "approved": "1999-05-20"},
+    {"disease": "acute pain", "approved": "1999-05-20"},
+    {"disease": "dysmenorrhea", "approved": "1999-05-20"}
+  ],
   "everolimus": [
     {"disease": "advanced renal cell carcinoma", "approved": "2009-03-30"},
     {"disease": "prevention of organ rejection in kidney transplant", "approved": "2010-04-22"},

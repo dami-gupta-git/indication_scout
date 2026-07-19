@@ -12,9 +12,11 @@ PMIDs retrieved during the run.
 LiteratureAgent.run()
     +-- build_literature_tools()  <-- wraps RetrievalService methods
     +-- LangChain ReAct agent (ChatAnthropic + tools)
+         +-- build_drug_profile(drug_name)
          +-- expand_search_terms(drug_name, disease_name)
          +-- fetch_and_cache(queries)
          +-- semantic_search(drug_name, disease_name, pmids)
+         +-- safety_search(drug_name, disease_name)   <-- drug-level + disease-specific safety
          +-- synthesize(drug_name, disease_name, abstracts)
     +-- _parse_result()  <-- extracts EvidenceSummary + PMIDs from message history
 ```
@@ -63,10 +65,12 @@ and a `RECURSION_LIMIT` of 10. The LLM model is `DEFAULT_LLM_MODEL` (`claude-son
 
 The system prompt instructs a fixed call sequence with no branching:
 
-1. `expand_search_terms` -- generate PubMed queries
-2. `fetch_and_cache` -- run queries, embed abstracts, store in pgvector
-3. `semantic_search` -- retrieve top-k abstracts by similarity
-4. `synthesize` -- produce structured EvidenceSummary
+1. `build_drug_profile` -- fetch drug/target/ATC + OpenTargets safety data
+2. `expand_search_terms` -- generate PubMed queries
+3. `fetch_and_cache` -- run queries, embed abstracts, store in pgvector
+4. `semantic_search` -- retrieve top-k abstracts by similarity
+5. `safety_search` -- drug-level + disease-specific safety (REQUIRED; see "Drug Safety" in ARCHITECTURE.md)
+6. `synthesize` -- produce structured EvidenceSummary (merges in the safety fields)
 
 If no evidence is found, `synthesize` is still called and returns `strength: "none"`.
 The agent ends with a plain-text confirmation that synthesis is complete.
@@ -105,6 +109,16 @@ restricted to the supplied PMIDs.
 
 Calls `RetrievalService.semantic_search()`.
 
+### `safety_search(drug_name, disease_name) -> EvidenceSummary`
+
+REQUIRED step. Produces a **two-tier** safety signal (full design in ARCHITECTURE.md → "Drug
+Safety"): a DRUG-LEVEL blurb (`RetrievalService.safety_search` + `summarize_safety`, OT-anchored in
+production / date-filtered literature in holdout, with `safety_severity`) and a DISEASE-SPECIFIC
+`indication_harm` classification (`classify_indication_harm`). Independent of the efficacy PMID pool
+— it runs its own citation-ranked adverse-event PubMed queries (`agents/literature/pubmed_ae.py`).
+The result populates the `safety_*` / `indication_harm*` fields, which `synthesize` merges into the
+final `EvidenceSummary`. Empty when there is no signal (never a fabricated "safe" verdict).
+
 ### `synthesize(drug_name, disease_name, abstracts) -> dict`
 
 Passes retrieved abstracts to the LLM and returns a structured `EvidenceSummary` via
@@ -136,18 +150,23 @@ If `synthesize` was never called (e.g., recursion limit hit), `evidence_summary`
 
 **File:** `models/model_evidence_summary.py`
 
+The authoritative field list (with the PMID buckets and the safety fields) is the tree in
+ARCHITECTURE.md → "EvidenceSummary". Efficacy fields: `summary`, `study_count`, `strength`,
+`direction`, `evidence_basis`, `is_observational`, `is_animal_only`, `key_findings`, and the PMID
+buckets. Safety fields (populated by `safety_search`, merged by `synthesize`):
+
 | Field | Type | Description |
 |---|---|---|
-| `summary` | `str` | Natural language synthesis of the evidence |
-| `study_count` | `int` | Number of studies assessed |
-| `study_types` | `list[str]` | Types of studies found (e.g., RCT, case report) |
-| `strength` | `Literal["strong", "moderate", "weak", "none"]` | Overall evidence strength |
-| `has_adverse_effects` | `bool` | Whether adverse effects were reported |
-| `key_findings` | `list[str]` | Summary bullet points |
-| `supporting_pmids` | `list[str]` | PMIDs supporting the findings |
+| `safety_summary` | `str` | Drug-level safety blurb (drug-wide) |
+| `safety_pmids` | `list[str]` | PMIDs cited in `safety_summary` |
+| `safety_severity` | `Literal["withdrawn","black_box","serious","moderate","none"]` | Drug-level severity |
+| `indication_harm` | `bool` | A harm reported for this drug in THIS indication |
+| `indication_harm_summary` | `str` | One-line disease-specific harm summary |
+| `indication_harm_pmids` | `list[str]` | PMIDs cited for the indication harm |
 
 Has the `coerce_nones` model validator. Also has a `coerce_pmids_to_str` field validator
-that converts any non-string PMID values to strings.
+that converts any non-string PMID values to strings (covers all PMID lists incl. `safety_pmids`,
+`indication_harm_pmids`).
 
 ### `DrugProfile`
 
@@ -155,7 +174,10 @@ that converts any non-string PMID values to strings.
 
 Flat LLM-facing projection of `RichDrugData`. Key fields: `name`, `synonyms`,
 `target_gene_symbols`, `mechanisms_of_action`, `atc_codes`, `atc_descriptions`, `drug_type`.
-Built upstream via `DrugProfile.from_rich_drug_data()` or `RetrievalService.build_drug_profile()`.
+Also carries the OpenTargets safety signal — `drug_warnings` (`list[DrugWarning]`, black-box /
+withdrawn) and `adverse_events` (`list[AdverseEvent]`, FAERS with `log_likelihood_ratio`) — used by
+`summarize_safety` as the authoritative drug-level signal in production. Built upstream via
+`DrugProfile.from_rich_drug_data()` or `RetrievalService.build_drug_profile()`.
 
 ---
 
@@ -163,10 +185,12 @@ Built upstream via `DrugProfile.from_rich_drug_data()` or `RetrievalService.buil
 
 | Component | Role |
 |-----------|------|
-| `RetrievalService` | Executes all four tool operations (query expansion, fetch, search, synthesis) |
-| `DrugProfile` | Provides drug context for query expansion |
+| `RetrievalService` | Executes all tool operations (query expansion, fetch, search, safety, synthesis) |
+| `DrugProfile` | Provides drug context for query expansion + the OT safety signal |
 | `EvidenceSummary` | Output model |
 | `SQLAlchemy Session` | pgvector DB access for abstract storage and retrieval |
+| `pubmed_ae.search_adverse_events` | Citation-ranked adverse-event PubMed retrieval (drug-level + disease-scoped) |
+| `EuropePMCClient` | Citation counts for ranking safety literature |
 | `BioLORD-2023` | Embedding model used by `fetch_and_cache` and `semantic_search` |
 
 ---

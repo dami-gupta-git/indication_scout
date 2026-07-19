@@ -16,6 +16,8 @@ def test_defaults_strength_and_direction_none():
     assert es.key_findings == []
     assert es.supporting_pmids == []
     assert es.contradicting_pmids == []
+    assert es.safety_summary == ""
+    assert es.safety_pmids == []
 
 
 @pytest.mark.parametrize("value", [True, False, None])
@@ -81,3 +83,40 @@ def test_missing_direction_in_old_cache_defaults_none():
     assert es.direction == "none"
     assert es.strength == "moderate"
     assert es.contradicting_pmids == []
+
+
+def test_safety_pmids_coerced_to_str():
+    es = EvidenceSummary(
+        safety_summary="Rofecoxib increased cardiovascular thrombotic events (PMID: 11696466).",
+        safety_pmids=[11696466],
+    )
+    assert es.safety_pmids == ["11696466"]
+
+
+def test_missing_safety_fields_in_old_cache_defaults_empty():
+    # Old cached JSON predates safety_search — no safety_* keys. Must default to ""/[]/False/"none"
+    # (no signal found), NOT be coerced to a fabricated "no concerns" claim.
+    old_cache = {
+        "summary": "supports (PMID: 12345678)",
+        "study_count": 3,
+        "strength": "moderate",
+        "supporting_pmids": ["12345678"],
+    }
+    es = EvidenceSummary(**old_cache)
+    assert es.safety_summary == ""
+    assert es.safety_pmids == []
+    assert es.safety_severity == "none"
+    assert es.indication_harm is False
+    assert es.indication_harm_summary == ""
+    assert es.indication_harm_pmids == []
+
+
+def test_indication_harm_fields_and_pmid_coercion():
+    es = EvidenceSummary(
+        indication_harm=True,
+        indication_harm_summary="CV events in colorectal adenoma prevention (PMID: 15713943).",
+        indication_harm_pmids=[15713943],
+    )
+    assert es.indication_harm is True
+    assert es.indication_harm_summary.startswith("CV events")
+    assert es.indication_harm_pmids == ["15713943"]

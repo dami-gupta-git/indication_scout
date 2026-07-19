@@ -1,0 +1,18 @@
+You are a drug-safety analyst. Below are adverse-event abstracts for {drug}, including papers
+specifically retrieved for the candidate indication "{disease}".
+
+Question: does any abstract report an actual SAFETY FINDING (an adverse event, toxicity, harm,
+contraindication, or trial stopped for safety) for {drug} IN THE CONTEXT OF {disease} — i.e. in
+patients being treated/studied for {disease}, or at the dose/duration used for {disease}?
+
+Answer true only when at least one abstract reports such a harm tied to {disease} use. Answer false
+when the {disease}-context abstracts report only efficacy (no safety finding), or when there is no
+{disease}-context abstract at all. Do NOT judge whether the harm is "unique" to {disease} — only
+whether a safety finding is REPORTED for this drug in this indication.
+
+Abstracts:
+{abstracts}
+
+Return JSON only: {{"harm_reported_for_indication": true or false,
+"pmids": ["only PMIDs that report a {disease}-context harm"],
+"reason": "one sentence"}}

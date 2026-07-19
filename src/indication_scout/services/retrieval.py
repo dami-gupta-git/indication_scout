@@ -13,10 +13,15 @@ from pydantic import BaseModel
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
+from typing import Any
+
 from typing_extensions import deprecated
 
 from indication_scout.config import get_settings
-from indication_scout.constants import CACHE_TTL
+from indication_scout.constants import (
+    CACHE_TTL,
+    SAFETY_TOP_ADVERSE_EVENTS,
+)
 from indication_scout.data_sources.chembl import ChEMBLClient, get_all_drug_names
 from indication_scout.data_sources.open_targets import (
     CompetitorRawData,
@@ -27,6 +32,7 @@ from indication_scout.services.disease_helper import (
     merge_duplicate_diseases,
 )
 from indication_scout.data_sources.pubmed import PubMedClient
+from indication_scout.agents.literature.pubmed_ae import search_adverse_events
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
@@ -996,6 +1002,256 @@ class RetrievalService:
         )
 
         return summary
+
+    async def safety_search(
+        self,
+        chembl_id: str,
+        date_before: date | None = None,
+        disease: str | None = None,
+    ) -> list[AbstractResult]:
+        """Fetch adverse-event abstracts (provenance for the safety summary), holdout-clean.
+
+        Delegates to `pubmed_ae.search_adverse_events`, ranked by Europe PMC citation count with
+        `date_before` honored by the underlying PubMed search. Fetches TWO pools and dedupes:
+          - DRUG-LEVEL ([Majr]) — the drug's drug-wide safety signal.
+          - DISEASE-SCOPED (when `disease` is set) — indication-specific safety papers the drug-level
+            pool misses (e.g. rofecoxib×colorectal → APPROVe).
+
+        Returns [] when there is no adverse-event literature (no fabrication).
+        """
+        pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
+
+        drug_level = await search_adverse_events(
+            pref_name, self.cache_dir, date_before=date_before
+        )
+        disease_scoped: list = []
+        if disease:
+            disease_scoped = await search_adverse_events(
+                pref_name, self.cache_dir, date_before=date_before, disease=disease
+            )
+
+        # Order-preserving dedup: drug-level first (drug-wide signal), then indication-specific.
+        by_pmid: dict[str, Any] = {}
+        for a in drug_level + disease_scoped:
+            by_pmid.setdefault(a.pmid, a)
+        return [
+            AbstractResult(
+                pmid=a.pmid,
+                title=a.title or "",
+                abstract=a.abstract or "",
+                similarity=0.0,
+            )
+            for a in by_pmid.values()
+        ]
+
+    async def summarize_safety(
+        self,
+        chembl_id: str,
+        disease: str,
+        drug_profile: DrugProfile,
+        safety_abstracts: list[AbstractResult],
+        date_before: date | None = None,
+    ) -> tuple[str, list[str], str]:
+        """Summarize the drug's safety signal for a candidate disease using an LLM.
+
+        PRODUCTION (date_before is None): OpenTargets warnings + top adverse events are the
+        AUTHORITATIVE signal (curated regulatory / FAERS data, stated as fact); `safety_abstracts`
+        are supporting PubMed provenance cited where they back a claim.
+
+        HOLDOUT (date_before set): the OT warnings/adverse-events are UNDATEABLE (OT has no date
+        API), so they would leak post-cutoff knowledge (e.g. a 2001 withdrawal in a pre-2001 run).
+        They are OMITTED; the summary is built ONLY from the date-filtered `safety_abstracts`.
+
+        Returns (safety_summary, safety_pmids, safety_severity). safety_severity drives the terse
+        ranking flag: production is DETERMINISTIC from the OT warning_type (withdrawn / black_box /
+        serious); holdout is LLM-picked from the pre-cutoff literature (serious / moderate / none).
+        Returns ("", [], "none") when there is no signal (no fabricated "no concerns found").
+        """
+        holdout = date_before is not None
+        if holdout:
+            warnings = []
+            top_aes = []
+        else:
+            warnings = drug_profile.drug_warnings
+            top_aes = sorted(
+                drug_profile.adverse_events,
+                key=lambda a: a.log_likelihood_ratio or 0.0,
+                reverse=True,
+            )[:SAFETY_TOP_ADVERSE_EVENTS]
+
+        # Nothing to ground a summary on → no safety summary. In production this means no OT signal;
+        # in holdout it means the date-filtered AE literature came back empty. Absence is not a
+        # fabricated "safe" verdict; downstream renders nothing.
+        if not warnings and not top_aes and not safety_abstracts:
+            return "", [], "none"
+
+        # PRODUCTION severity is deterministic from the OT warning_type (can't be wrong): Withdrawn
+        # outranks Black Box Warning; with an OT AE signal but no formal warning → "serious". In
+        # holdout there is no OT signal, so severity is deferred to the LLM (parsed below).
+        prod_severity = self._ot_warning_severity(warnings, top_aes)
+
+        cache_params = {
+            "chembl_id": chembl_id,
+            "disease": disease,
+            "warnings": sorted(
+                f"{w.warning_type}|{w.description or ''}|{w.toxicity_class or ''}"
+                for w in warnings
+            ),
+            "adverse_events": sorted(a.name for a in top_aes),
+            "pmids": sorted(r.pmid for r in safety_abstracts),
+            "date_before": date_before,
+            "llm_model": _settings.llm_model,
+        }
+        cached = cache_get("summarize_safety", cache_params, self.cache_dir)
+        if cached is not None:
+            return (
+                cached["safety_summary"],
+                cached["safety_pmids"],
+                cached.get("safety_severity", "none"),
+            )
+
+        pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
+
+        warnings_block = "\n".join(
+            f"- [{w.warning_type}] {w.description or ''}"
+            + (f" (toxicity class: {w.toxicity_class})" if w.toxicity_class else "")
+            + (f" (year: {w.year})" if w.year else "")
+            for w in warnings
+        ) or "(none)"
+        # count / log_likelihood_ratio are Optional on AdverseEvent — coerce to 0 for the prompt
+        # (mirrors the `or 0.0` in the sort above) so a null field can't crash the format string.
+        adverse_events_block = "\n".join(
+            f"- {a.name} (reports: {a.count or 0}, signal logLR: {(a.log_likelihood_ratio or 0.0):.1f})"
+            for a in top_aes
+        ) or "(none)"
+        abstracts_block = "\n\n".join(
+            f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
+            for r in safety_abstracts
+        ) or "(no supporting abstracts retrieved)"
+
+        template = (_PROMPTS_DIR / "summarize_safety.txt").read_text()
+        prompt = template.format(
+            drug_name=pref_name,
+            disease_name=disease,
+            warnings=warnings_block,
+            adverse_events=adverse_events_block,
+            abstracts=abstracts_block,
+        )
+
+        response = await query_llm(prompt)
+        data = parse_last_json_object(response)
+        if data is None:
+            logger.error(
+                "summarize_safety: could not parse a JSON object for %s / %s; returning no "
+                "safety summary. Response was: %s",
+                chembl_id,
+                disease,
+                response,
+            )
+            data = {"safety_summary": "", "safety_pmids": [], "safety_severity": "none"}
+
+        safety_summary = str(data.get("safety_summary") or "")
+        safety_pmids = [str(p) for p in (data.get("safety_pmids") or [])]
+
+        # Production: deterministic OT severity. Holdout: LLM-picked from the literature, clamped to
+        # the holdout-legal set (serious / moderate / none — never withdrawn/black_box, which are
+        # OT regulatory facts unavailable in holdout).
+        if holdout:
+            llm_sev = str(data.get("safety_severity") or "none").strip().lower()
+            safety_severity = (
+                llm_sev if llm_sev in ("serious", "moderate", "none") else "none"
+            )
+        else:
+            safety_severity = prod_severity
+        # An empty summary carries no signal, so force severity to none regardless of source.
+        if not safety_summary:
+            safety_severity = "none"
+
+        cache_set(
+            "summarize_safety",
+            cache_params,
+            {
+                "safety_summary": safety_summary,
+                "safety_pmids": safety_pmids,
+                "safety_severity": safety_severity,
+            },
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return safety_summary, safety_pmids, safety_severity
+
+    async def classify_indication_harm(
+        self,
+        chembl_id: str,
+        disease: str,
+        safety_abstracts: list[AbstractResult],
+    ) -> tuple[bool, str, list[str]]:
+        """Does the safety literature report a harm for this drug IN THIS INDICATION's context?
+
+        The CONCRETE question (validated in the disease_specific_safety harness to be reliable,
+        unlike the fuzzy "is the harm unique to the disease" framing which over-called): is there an
+        abstract reporting an adverse event / toxicity / trial-stopped-for-safety for the drug used
+        for `disease`. Returns (harm_reported, one_line_summary, pmids). ("", []) / False when the
+        indication's safety literature is efficacy-only or absent (NOT "confirmed safe"). Cached.
+        """
+        if not safety_abstracts:
+            return False, "", []
+
+        cache_params = {
+            "chembl_id": chembl_id,
+            "disease": disease,
+            "pmids": sorted(r.pmid for r in safety_abstracts),
+            "llm_model": _settings.llm_model,
+        }
+        cached = cache_get("classify_indication_harm", cache_params, self.cache_dir)
+        if cached is not None:
+            return (
+                cached["indication_harm"],
+                cached["indication_harm_summary"],
+                cached["indication_harm_pmids"],
+            )
+
+        pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
+        formatted = "\n\n".join(
+            f"PMID {r.pmid}: {r.title}. {(r.abstract or '')[:250]}"
+            for r in safety_abstracts
+        )
+        template = (_PROMPTS_DIR / "classify_indication_harm.txt").read_text()
+        prompt = template.format(
+            drug=pref_name, disease=disease, abstracts=formatted
+        )
+
+        response = await query_llm(prompt)
+        data = parse_last_json_object(response) or {}
+        harm = bool(data.get("harm_reported_for_indication"))
+        pmids = [str(p) for p in (data.get("pmids") or [])] if harm else []
+        summary = str(data.get("reason") or "") if harm else ""
+
+        cache_set(
+            "classify_indication_harm",
+            cache_params,
+            {
+                "indication_harm": harm,
+                "indication_harm_summary": summary,
+                "indication_harm_pmids": pmids,
+            },
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return harm, summary, pmids
+
+    @staticmethod
+    def _ot_warning_severity(warnings: list, top_aes: list) -> str:
+        """Deterministic production safety severity from OT warning_type. Withdrawn outranks Black
+        Box Warning; an OT adverse-event signal with no formal warning → 'serious'; else 'none'."""
+        types = {(w.warning_type or "").strip().lower() for w in warnings}
+        if "withdrawn" in types:
+            return "withdrawn"
+        if "black box warning" in types:
+            return "black_box"
+        if warnings or top_aes:
+            return "serious"
+        return "none"
 
     async def extract_organ_term(self, disease_name: str) -> str:
         """Return the primary organ or tissue for a disease name via a small LLM call."""

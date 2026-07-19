@@ -14,7 +14,7 @@ IndicationScout pulls **live evidence** from multiple biomedical databases at qu
 
 A **Supervisor** agent orchestrates three specialist sub-agents:
 
-- **Literature agent** — Queries PubMed via EUtils, then runs a RAG pipeline: fetch abstracts, embed with BioLORD-2023, semantic search, and LLM-based synthesis of evidence for each candidate disease.
+- **Literature agent** — Queries PubMed via EUtils, then runs a RAG pipeline: fetch abstracts, embed with BioLORD-2023, semantic search, and LLM-based synthesis of evidence for each candidate disease. It also runs a dedicated **safety pass**: a separate adverse-event PubMed search (the drug's MeSH "adverse effects" major-topic query, plus a disease-scoped query) ranked by Europe PMC citation count so landmark safety papers aren't buried by term-frequency relevance. In production the OpenTargets curated drug warnings (black-box / withdrawal) and top FAERS adverse events are the authoritative signal, with the PubMed abstracts as cited provenance; in a temporal holdout those undateable OpenTargets signals are suppressed and the summary is built only from pre-cutoff literature. This yields a **drug-wide safety summary** (with a deterministic severity — withdrawn / black-box / serious) rendered once at the top of the report, plus a per-candidate **indication-specific harm** flag when the disease-scoped literature reports a harm for the drug in that indication (e.g. rofecoxib × colorectal → the APPROVe cardiovascular signal).
 - **Clinical Trials agent** — Queries ClinicalTrials.gov v2 (REST) per drug × indication pair: all-status search (whitespace verdict + per-status counts), completed-trial query (with Phase 3 count), terminated-trial query (with `why_stopped` text classified into safety / efficacy / business / enrollment / unknown categories at the tool layer, falling back to the raw `why_stopped` text when no keyword matches), competitive landscape for the indication, and an FDA-label approval check (the candidate is still investigated fully even when the drug is already approved — the approval status is recorded for the supervisor rather than short-circuiting the analysis). Indications are resolved to a MeSH descriptor via NCBI E-utilities and the resolved preferred term is fed to CT.gov's server-side `AREA[ConditionMeshTerm]"<term>"` filter — so e.g. "hypertension" trials aren't mixed in with unrelated free-text matches like glaucoma. (Known bug: `AREA[ConditionMeshTerm]` also matches on MeSH ancestors, so a parent term like "hypertension" can still pull in pulmonary-hypertension trials; the post-filter fix is not yet implemented.)
 - **Mechanism agent** — Queries Open Targets target-level data (GraphQL) to retrieve disease associations with evidence scores and Reactome pathway annotations.
 
@@ -29,6 +29,7 @@ Data sources:
 - Open Targets (GraphQL) — drug targets, disease associations, competitor drugs
 - ClinicalTrials.gov (REST v2) — trial search, whitespace detection, competitive landscape
 - PubMed (NCBI EUtils) — literature retrieval and abstract indexing
+- Europe PMC (REST) — citation counts used to rank adverse-event literature for the safety pass
 - NCBI MeSH (E-utilities) — indication → MeSH descriptor resolution for the clinical-trials server-side `AREA[ConditionMeshTerm]` filter
 - ChEMBL — molecule metadata and ATC classifications
 - openFDA — drug labels for FDA-approval extraction
@@ -238,12 +239,12 @@ src/indication_scout/
 │   ├── _trial_formatting.py # Shared trial formatting helpers
 │   ├── _trial_signals.py   # Deterministic trial FACTS (highest completed phase, Phase-3-terminated-for-cause)
 │   ├── supervisor/         # Supervisor agent (orchestrates sub-agents) — supervisor_agent.py, supervisor_tools.py, supervisor_output.py
-│   ├── literature/         # Literature agent (PubMed RAG) — literature_agent.py, literature_tools.py, literature_output.py
+│   ├── literature/         # Literature agent (PubMed RAG) — literature_agent.py, literature_tools.py, literature_output.py, pubmed_ae.py (adverse-event search for the safety pass)
 │   ├── clinical_trials/    # Clinical Trials agent (ClinicalTrials.gov + MeSH descriptor filter) — clinical_trials_agent.py, clinical_trials_tools.py, clinical_trials_output.py
 │   └── mechanism/          # Mechanism agent (Open Targets targets) — mechanism_agent.py, mechanism_tools.py, mechanism_output.py, mechanism_candidates.py, mechanism_row_builder.py, ot_score.py
 ├── api/             # FastAPI application (main.py, routes/, schemas/) — /health + async analyses routes (POST/GET/report.md/DELETE), drill-down routes, and example-cache routes; serves the built React frontend in prod
 ├── cli/             # Click-based CLI (cli.py) — exposes the `scout` command
-├── data_sources/    # Async API clients (OpenTargets, ClinicalTrials.gov, PubMed, ChEMBL, FDA, DrugBank stub)
+├── data_sources/    # Async API clients (OpenTargets, ClinicalTrials.gov, PubMed, Europe PMC, ChEMBL, FDA, DrugBank stub)
 ├── db/              # SQLAlchemy session factory and declarative base
 ├── helpers/         # Utility functions (drug name normalization)
 ├── markers.py       # Code review exclusion markers (@no_review decorator)
@@ -251,7 +252,7 @@ src/indication_scout/
 │   ├── trial_risk/         # Trial-risk model (data.py, features.py, literature.py, score.py, train.py, inspect.py)
 │   └── success_classifier/ # Trial-success classifier (features.py, labels.py)
 ├── models/          # Pydantic data contracts (model_open_targets, model_clinical_trials, model_pubmed_abstract, model_chembl, model_drug_profile, model_evidence_summary)
-├── prompts/         # LLM prompt templates (supervisor, literature, clinical_trials, synthesize, synthesize_holdout, pmid_direction, expand_search_terms, extract_fda_approvals, extract_fda_approval_single, list_label_indications, extract_organ_term, merge_diseases, normalize_disease, normalize_disease_batch)
+├── prompts/         # LLM prompt templates (supervisor, literature, clinical_trials, synthesize, synthesize_holdout, summarize_safety, classify_indication_harm, pmid_direction, expand_search_terms, extract_fda_approvals, extract_fda_approval_single, list_label_indications, extract_organ_term, merge_diseases, normalize_disease, normalize_disease_batch)
 ├── regression/      # Snapshot regression harness (diff.py, harness.py) — backs `scout diff-report`
 ├── report/          # Report formatting (format_report.py) — turns SupervisorOutput into the final markdown report
 ├── runners/         # Pipeline runners (rag_runner.py) and exploration scripts (pubmed_runner.py)

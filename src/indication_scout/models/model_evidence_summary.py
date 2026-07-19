@@ -47,6 +47,27 @@ class EvidenceSummary(BaseModel):
     # the narrative as context, but are in NEITHER supporting nor contradicting. Surfaced so a reader
     # can see why a cited PMID is in neither list (rather than appearing dropped).
     neutral_pmids: list[str] = []
+    # Populated by a SEPARATE safety-focused search+summarize pass (services/retrieval.py
+    # RetrievalService.safety_search / summarize_safety) — reranks the SAME PMID pool by
+    # relevance to adverse events/safety rather than efficacy. "" / [] means no abstract in the
+    # safety-reranked pool contained safety-relevant content (not "drug is safe").
+    # DRUG-LEVEL safety blurb — the drug's drug-wide safety signal (~identical across candidates;
+    # the supervisor collapses these into one shown once at the top of the report). "" = no signal.
+    safety_summary: str = ""
+    safety_pmids: list[str] = []
+    # Severity of the DRUG-LEVEL safety signal. Production: deterministic from OT warning_type
+    # (withdrawn / black_box, else serious when an OT AE signal exists). Holdout (OT suppressed):
+    # LLM-picked from pre-cutoff literature (serious / moderate). "none" = no signal.
+    safety_severity: Literal[
+        "withdrawn", "black_box", "serious", "moderate", "none"
+    ] = "none"
+    # DISEASE-SPECIFIC safety — whether the disease-scoped literature reports a harm for THIS drug
+    # IN THIS INDICATION's context (validated concrete question, not the fuzzy "unique to disease").
+    # Drives the per-candidate report/table flag. False when the indication's safety literature is
+    # efficacy-only or absent (NOT "confirmed safe").
+    indication_harm: bool = False
+    indication_harm_summary: str = ""
+    indication_harm_pmids: list[str] = []
 
     @field_validator(
         "supporting_pmids",
@@ -54,6 +75,8 @@ class EvidenceSummary(BaseModel):
         "relevant_pmids",
         "contaminated_pmids",
         "neutral_pmids",
+        "safety_pmids",
+        "indication_harm_pmids",
         mode="before",
     )
     @classmethod

@@ -38,7 +38,9 @@
       "WebFetch(domain:www.ebi.ac.uk)",
       "Bash(/Users/dgupta/code/portfolio/IndicationScout/indication_scout/session_2026-02-28_18-46.md:*)",
       "Bash(git -C /Users/dgupta/code/portfolio/IndicationScout/indication_scout status --short .claude/)",
-      "mcp__railway__list_services"
+      "mcp__railway__list_services",
+      "Skill(code-review)",
+      "Skill(code-review:*)"
     ],
     "deny": [],
     "ask": [],

@@ -253,10 +253,15 @@ async def test_synthesize(db_session_truncating, test_cache_dir):
     # for a drug_specific basis); the quantity grade drifts strong<->moderate run-to-run.
     assert evidence.strength in _EXPECTED_STRENGTHS
     assert evidence.study_count >= _EXPECTED_MIN_STUDY_COUNT
-    # The core NASH RCTs must be CITED — supporting OR contradicting; which list a given trial
-    # lands in is LLM judgment that varies run-to-run (e.g. 36934740 is the cirrhosis trial that
-    # FAILED its endpoint). Only assert they were surfaced, not their list membership.
-    cited = set(evidence.supporting_pmids) | set(evidence.contradicting_pmids)
+    # The core NASH RCTs must be CITED — supporting, contradicting, OR neutral; which list a given
+    # trial lands in is LLM judgment that varies run-to-run (e.g. 36934740 is the cirrhosis trial
+    # that FAILED its endpoint; 37328931 is a quality-of-life readout that pmid_direction may set
+    # neutral). Only assert they were surfaced, not their list membership.
+    cited = (
+        set(evidence.supporting_pmids)
+        | set(evidence.contradicting_pmids)
+        | set(evidence.neutral_pmids)
+    )
     assert _EXPECTED_CITED_PMIDS.issubset(cited)
     assert "33185364" in evidence.supporting_pmids  # positive NEJM RCT — unambiguous supporter
     assert len(evidence.key_findings) >= 2
@@ -264,6 +269,43 @@ async def test_synthesize(db_session_truncating, test_cache_dir):
     # The tool's content string leads with the strength and may append more (e.g. ", direction:
     # mixed") — assert the strength is reported, not an exact equality on the whole string.
     assert msg.content.startswith(f"Evidence strength: {evidence.strength}")
+
+
+async def test_safety_search(db_session_truncating, test_cache_dir):
+    """safety_search produces BOTH the drug-level safety blurb (OT signal + citation-ranked
+    adverse-event literature) AND the disease-specific indication_harm classification. Builds the
+    drug profile on the fly if the store has none.
+
+    Semaglutide's stable OT signal: FAERS top adverse events include pancreatitis; the drug-level
+    summary is grounded and cited."""
+    svc = RetrievalService(test_cache_dir)
+    tools = _tool_map(_build_tools(svc, db_session_truncating))
+
+    msg = await tools["safety_search"].ainvoke(
+        _tc("safety_search", drug_name=_DRUG, disease_name=_DISEASE)
+    )
+
+    evidence: EvidenceSummary = msg.artifact
+    assert isinstance(evidence, EvidenceSummary)
+    # DRUG-LEVEL: real OT signal for semaglutide → non-empty, grounded, cited, severity set. The
+    # summary is disease-flavored (NASH), so assert grounding (cited + severity), not a fixed term.
+    assert evidence.safety_summary != ""
+    assert len(evidence.safety_pmids) > 0
+    assert all(p.isdigit() for p in evidence.safety_pmids)
+    # Every cited drug-level PMID appears in the summary text (grounded, not fabricated).
+    assert all(p in evidence.safety_summary for p in evidence.safety_pmids)
+    assert evidence.safety_severity in (
+        "withdrawn",
+        "black_box",
+        "serious",
+        "moderate",
+    )
+    # DISEASE-SPECIFIC: indication_harm is a bool; when True it carries a summary + cited PMIDs.
+    assert isinstance(evidence.indication_harm, bool)
+    if evidence.indication_harm:
+        assert evidence.indication_harm_summary != ""
+        assert all(p.isdigit() for p in evidence.indication_harm_pmids)
+    assert msg.content.startswith("Safety signal")
 
 
 async def test_finalize_analysis(db_session_truncating, test_cache_dir):

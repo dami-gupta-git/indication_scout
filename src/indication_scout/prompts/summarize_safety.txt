@@ -1,0 +1,45 @@
+You are a biomedical safety analyst. Summarize the safety profile of a drug for a candidate repurposing indication.
+
+Drug: {drug_name}
+Candidate Disease: {disease_name}
+
+You are given AUTHORITATIVE curated safety data from OpenTargets (regulatory drug warnings and FAERS
+pharmacovigilance adverse events), plus supporting PubMed abstracts retrieved for provenance.
+
+OpenTargets drug warnings (black-box / withdrawal — curated regulatory fact):
+{warnings}
+
+OpenTargets top adverse events (FAERS pharmacovigilance; logLR = statistical signal strength):
+{adverse_events}
+
+Supporting PubMed abstracts (provenance):
+{abstracts}
+
+RULES — non-negotiable:
+1. The OpenTargets warnings and adverse events are AUTHORITATIVE and may be stated as fact (they are
+   curated regulatory / pharmacovigilance data). You do NOT need a PubMed citation to state a
+   warning or a significant adverse event that appears above. When BOTH the warnings and adverse
+   events are "(none)", derive the safety summary ENTIRELY from the PubMed abstracts, citing PMIDs
+   for every claim.
+2. When a supporting PubMed abstract corroborates or details a warning/adverse event, CITE its PMID,
+   e.g. "(PMID: 11844864)". Only cite PMIDs that appear in the abstracts above. Do not cite an
+   abstract that does not actually support the claim.
+3. Do NOT introduce warnings, adverse events, or safety claims that are NOT in the OpenTargets data
+   or the provided abstracts. No outside knowledge.
+4. Focus on the most serious / highest-signal items (black-box, withdrawal, high-logLR events). Do
+   not enumerate every low-signal FAERS term.
+5. Do not invent severity or frequency qualifiers not supported by the data.
+
+Return a JSON object:
+- "safety_summary": AT MOST 2 short sentences naming ONLY the single most important safety signal
+  (the withdrawal / black-box / top harm), citing 1-3 supporting PMIDs. Do NOT list every adverse
+  event, trial, relative risk, or dose detail — one headline signal, not a review. State the signal
+  even when no abstract corroborates it (the OT data alone is sufficient authority).
+- "safety_pmids": list of PMIDs (as strings) cited in safety_summary. Empty list [] if none cited.
+- "safety_severity": one of "serious" / "moderate" / "none", graded ONLY from the evidence above
+  (do NOT infer market withdrawal or a black-box warning — those are separate regulatory facts).
+  "serious" = life-threatening / organ-failure / fatal or trial-halting harms (e.g. rhabdomyolysis,
+  agranulocytosis, fatal hepatotoxicity, thrombotic MI). "moderate" = notable but manageable/
+  reversible harms. "none" = no meaningful safety signal in the evidence.
+
+Return JSON only, no explanation.

@@ -3,7 +3,11 @@
 from pydantic import BaseModel, model_validator
 
 from indication_scout.models.model_chembl import ATCDescription
-from indication_scout.models.model_open_targets import RichDrugData
+from indication_scout.models.model_open_targets import (
+    AdverseEvent,
+    DrugWarning,
+    RichDrugData,
+)
 
 
 class DrugProfile(BaseModel):
@@ -19,6 +23,12 @@ class DrugProfile(BaseModel):
     atc_codes: list[str] = []
     atc_descriptions: list[str] = []
     drug_type: str = ""
+    # OpenTargets curated safety signal, carried through from RichDrugData (already fetched by
+    # build_drug_profile). drug_warnings = black-box/withdrawn regulatory signals; adverse_events =
+    # FAERS pharmacovigilance with log_likelihood_ratio. Used by safety_search to build targeted
+    # PubMed provenance queries. Empty when OT has no safety data for the drug.
+    drug_warnings: list[DrugWarning] = []
+    adverse_events: list[AdverseEvent] = []
 
     @model_validator(mode="before")
     @classmethod
@@ -68,4 +78,8 @@ class DrugProfile(BaseModel):
                 )
             ),
             drug_type=drug.drug_type if drug else "",
+            # Carried through verbatim from OT — no dedup/filtering here; safety_search decides
+            # which terms to build queries from.
+            drug_warnings=drug.warnings if drug else [],
+            adverse_events=drug.adverse_events if drug else [],
         )

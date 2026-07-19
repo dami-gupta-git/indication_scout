@@ -46,6 +46,23 @@ _DEV_STAGE_PHRASE = DEV_STAGE_PHRASE
 _dev_stage_phrase = dev_stage_phrase
 
 
+# Terse safety flag for the ranking blurbs / critic facts. Driven by the DISEASE-SPECIFIC
+# `indication_harm` (a harm reported for THIS drug IN THIS candidate indication — the grounded,
+# validated signal), NOT the drug-level severity. The drug-level "WITHDRAWN" severity is
+# deliberately NOT surfaced here: a historical drug-level withdrawal (e.g. thalidomide, withdrawn
+# 1961 but re-approved / in active myeloma trials) was mis-attributed by the ranking LLM as
+# foreclosing the specific disease. `indication_harm` is per-candidate, so it cannot mis-attribute.
+_INDICATION_HARM_FLAG = "⚠️ safety signal reported for this indication"
+
+
+def _safety_flag(es) -> str:
+    """Terse safety flag: fires only when a disease-specific harm was reported for this candidate
+    indication (EvidenceSummary.indication_harm). "" otherwise (no signal ≠ confirmed safe)."""
+    if es is None or not getattr(es, "indication_harm", False):
+        return ""
+    return _INDICATION_HARM_FLAG
+
+
 def _literature_oneliner(es) -> str:
     """Deterministic one-line literature summary from the typed EvidenceSummary fields (strength, direction,
     study design) — NOT free LLM prose. Fed to judge_interpretive and used to overwrite the blurb's `literature`
@@ -82,6 +99,11 @@ def _literature_oneliner(es) -> str:
     if direction:
         parts.append(direction)
     parts.append(design)
+    # Terse severity-aware safety flag only — the full safety_summary text is reserved for the
+    # rendered report (format_report.py), not repeated across every internal LLM call.
+    flag = _safety_flag(es)
+    if flag:
+        parts.append(flag)
     return ", ".join(parts)
 
 
@@ -688,10 +710,14 @@ def build_supervisor_tools(
             if output.evidence_summary
             else "none"
         )
+        # Terse flag only (per project decision to start terse across all internal LLM-facing
+        # sites) — full safety_summary text is reserved for the rendered report.
+        safety_flag = _safety_flag(output.evidence_summary)
+        safety_note = f", {safety_flag}" if safety_flag else ""
         header = (
             f"Literature for {drug_name} × {disease_name}: "
             f"{len(output.pmids)} PMIDs, strength={strength}, direction={direction}, "
-            f"study_design={design}, evidence_basis={basis}."
+            f"study_design={design}, evidence_basis={basis}{safety_note}."
         )
         # Build supervisor-facing summary deterministically from EvidenceSummary so adverse-signal language reaches the
         # supervisor verbatim with no LLM rewrite in between.
@@ -1100,6 +1126,10 @@ def build_supervisor_tools(
                 if lit_artifact and lit_artifact.evidence_summary
                 else None
             )
+            # Terse severity-aware safety flag ("" = no signal, NOT confirmed-safe).
+            safety_flag = _safety_flag(
+                lit_artifact.evidence_summary if lit_artifact else None
+            )
             n_total = (
                 ct_artifact.search.total_count
                 if ct_artifact and ct_artifact.search
@@ -1142,6 +1172,7 @@ def build_supervisor_tools(
                 "literature_direction": direction,
                 "literature_pmids": n_pmids,
                 "literature_is_animal_only": is_animal_only,
+                "literature_safety_flag": safety_flag,
                 "trials_total": n_total,
                 "trials_completed": n_completed,
                 "trials_terminated": n_terminated,
@@ -1223,11 +1254,14 @@ def build_supervisor_tools(
                 if a.get("literature_is_animal_only") is True
                 else ""
             )
+            # Terse severity-aware safety flag ("" = no signal, NOT confirmed-safe).
+            _sflag = a.get("literature_safety_flag") or ""
+            safety_note = f"; {_sflag}" if _sflag else ""
             lines.append(
                 f"  - {a['disease']}: literature {a['literature_strength']}{dir_note}, "
                 f"{a['literature_pmids']} PMIDs; trials {a['trials_total']} total, "
                 f"{a['trials_completed']} completed, {a['trials_terminated']} terminated; "
-                f"relevant highest phase {phase}{term_note}{stage_note}{withdrawn_note}{animal_note}"
+                f"relevant highest phase {phase}{term_note}{stage_note}{withdrawn_note}{animal_note}{safety_note}"
             )
         return "\n".join(lines), artifacts
 
@@ -1285,6 +1319,12 @@ def build_supervisor_tools(
                     "; supporting literature is ANIMAL/in-vitro only (no human data — "
                     "not clinical evidence)"
                 )
+            # Terse safety clause — "" means no safety-relevant abstract was found in the
+            # safety-reranked pool, NOT that the drug is confirmed safe, so silence is correct
+            # when there is no signal.
+            _sflag = _safety_flag(lit.evidence_summary if lit else None)
+            if _sflag:
+                fact += f"; literature: {_sflag} (see report for detail)"
             lines.append(
                 f"{i}. {disease} | FACT: {fact} | verdict: {verdict or '—'} | "
                 f"literature: {literature or '—'} | blocker: {blocker or '—'}"

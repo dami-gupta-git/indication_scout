@@ -53,6 +53,18 @@ EVIDENCE = EvidenceSummary(
     summary="Moderate evidence supports metformin in colorectal cancer based on 2 RCTs.",
 )
 
+SAFETY_ABSTRACTS = [
+    AbstractResult(
+        pmid="111", title="Metformin lactic acidosis risk", abstract="Study C.", similarity=0.7
+    ),
+]
+
+SAFETY_SUMMARY = "Metformin carries a lactic acidosis risk in renal impairment (PMID: 111)."
+SAFETY_PMIDS = ["111"]
+SAFETY_SEVERITY = "serious"
+HARM_SUMMARY = "Lactic acidosis reported in T2D patients (PMID: 111)."
+HARM_PMIDS = ["111"]
+
 
 def _make_svc() -> MagicMock:
     svc = MagicMock()
@@ -61,7 +73,16 @@ def _make_svc() -> MagicMock:
     svc.expand_search_terms = AsyncMock(return_value=SEARCH_TERMS)
     svc.fetch_and_cache = AsyncMock(return_value=PMIDS)
     svc.semantic_search = AsyncMock(return_value=SEMANTIC_RESULTS)
-    svc.synthesize = AsyncMock(return_value=EVIDENCE)
+    svc.safety_search = AsyncMock(return_value=SAFETY_ABSTRACTS)
+    svc.summarize_safety = AsyncMock(
+        return_value=(SAFETY_SUMMARY, SAFETY_PMIDS, SAFETY_SEVERITY)
+    )
+    svc.classify_indication_harm = AsyncMock(
+        return_value=(True, HARM_SUMMARY, HARM_PMIDS)
+    )
+    # Fresh copy per call — the synthesize tool mutates the returned EvidenceSummary (merges in the
+    # safety fields), so a shared module-level constant would leak state across tests.
+    svc.synthesize = AsyncMock(side_effect=lambda *a, **k: EVIDENCE.model_copy())
     return svc
 
 
@@ -324,6 +345,107 @@ async def test_semantic_search_returns_empty_when_no_pmids():
 
 
 # ------------------------------------------------------------------
+# safety_search
+# ------------------------------------------------------------------
+
+
+async def test_safety_search_fetches_summarizes_and_classifies():
+    """safety_search: builds/uses the drug profile, calls svc.safety_search(chembl_id, date_before,
+    disease), svc.summarize_safety (drug-level 3-tuple), and svc.classify_indication_harm
+    (disease-specific), returning an EvidenceSummary carrying BOTH."""
+    svc = _make_svc()
+    tools = build_literature_tools(svc=svc, db=MagicMock())
+    tool_map = {t.name: t for t in tools}
+    with _patch_resolve():
+        await tool_map["build_drug_profile"].ainvoke(
+            ToolCall(
+                name="build_drug_profile",
+                args={"drug_name": "metformin"},
+                id="tc_pre",
+                type="tool_call",
+            )
+        )
+        svc.build_drug_profile.reset_mock()
+
+        msg = await tool_map["safety_search"].ainvoke(
+            ToolCall(
+                name="safety_search",
+                args={"drug_name": "metformin", "disease_name": "colorectal cancer"},
+                id="tc_safety1",
+                type="tool_call",
+            )
+        )
+
+    svc.build_drug_profile.assert_not_awaited()  # profile came from the store
+    svc.safety_search.assert_awaited_once_with(
+        CHEMBL_ID, date_before=None, disease="colorectal cancer"
+    )
+    svc.summarize_safety.assert_awaited_once_with(
+        CHEMBL_ID, "colorectal cancer", DRUG_PROFILE, SAFETY_ABSTRACTS, date_before=None
+    )
+    svc.classify_indication_harm.assert_awaited_once_with(
+        CHEMBL_ID, "colorectal cancer", SAFETY_ABSTRACTS
+    )
+
+    es = msg.artifact
+    assert isinstance(es, EvidenceSummary)
+    # Drug-level fields.
+    assert es.safety_summary == SAFETY_SUMMARY
+    assert es.safety_pmids == SAFETY_PMIDS
+    assert es.safety_severity == SAFETY_SEVERITY
+    # Disease-specific fields.
+    assert es.indication_harm is True
+    assert es.indication_harm_summary == HARM_SUMMARY
+    assert es.indication_harm_pmids == HARM_PMIDS
+    assert "Safety signal" in msg.content
+    assert "Indication-specific harm" in msg.content
+
+
+async def test_safety_search_builds_profile_when_store_empty():
+    """safety_search builds the drug profile on the fly when the store has none."""
+    svc = _make_svc()
+    tool_map = _build(svc)
+
+    with _patch_resolve():
+        msg = await tool_map["safety_search"].ainvoke(
+            ToolCall(
+                name="safety_search",
+                args={"drug_name": "metformin", "disease_name": "colorectal cancer"},
+                id="tc_safety2",
+                type="tool_call",
+            )
+        )
+
+    svc.build_drug_profile.assert_awaited_once_with(CHEMBL_ID)
+    svc.safety_search.assert_awaited_once_with(
+        CHEMBL_ID, date_before=None, disease="colorectal cancer"
+    )
+    assert msg.artifact.safety_summary == SAFETY_SUMMARY
+
+
+async def test_safety_search_no_signal_content_is_explicit():
+    """No drug-level signal AND no indication harm → content says so explicitly."""
+    svc = _make_svc()
+    svc.summarize_safety = AsyncMock(return_value=("", [], "none"))
+    svc.classify_indication_harm = AsyncMock(return_value=(False, "", []))
+    tool_map = _build(svc)
+    with _patch_resolve():
+        msg = await tool_map["safety_search"].ainvoke(
+            ToolCall(
+                name="safety_search",
+                args={"drug_name": "metformin", "disease_name": "colorectal cancer"},
+                id="tc_safety3",
+                type="tool_call",
+            )
+        )
+
+    assert msg.artifact.safety_summary == ""
+    assert msg.artifact.safety_pmids == []
+    assert msg.artifact.indication_harm is False
+    assert "No safety signal found" in msg.content
+
+
+# ------------------------------------------------------------------
 # finalize_analysis
 # ------------------------------------------------------------------
 
@@ -353,11 +475,12 @@ async def test_finalize_analysis_stores_summary_and_returns_artifact():
 
 
 async def test_synthesize_reads_abstracts_from_store_and_returns_evidence():
-    """synthesize reads abstracts written by semantic_search and returns EvidenceSummary."""
+    """synthesize reads abstracts written by semantic_search, merges in safety_search's result
+    (called first in the chain), and returns one EvidenceSummary carrying both."""
     svc = _make_svc()
     tools = build_literature_tools(svc=svc, db=MagicMock())
     tool_map = {t.name: t for t in tools}
-    # Populate store through the full chain
+    # Populate store through the full chain, including safety_search
     with _patch_resolve():
         await tool_map["expand_search_terms"].ainvoke(
             ToolCall(
@@ -383,6 +506,14 @@ async def test_synthesize_reads_abstracts_from_store_and_returns_evidence():
                 type="tool_call",
             )
         )
+        await tool_map["safety_search"].ainvoke(
+            ToolCall(
+                name="safety_search",
+                args={"drug_name": "metformin", "disease_name": "colorectal cancer"},
+                id="tc_pre4",
+                type="tool_call",
+            )
+        )
 
         msg = await tool_map["synthesize"].ainvoke(
             ToolCall(
@@ -405,4 +536,57 @@ async def test_synthesize_reads_abstracts_from_store_and_returns_evidence():
         msg.artifact.summary
         == "Moderate evidence supports metformin in colorectal cancer based on 2 RCTs."
     )
+    assert msg.artifact.safety_summary == SAFETY_SUMMARY
+    assert msg.artifact.safety_pmids == SAFETY_PMIDS
+    assert msg.artifact.indication_harm is True
+    assert msg.artifact.indication_harm_summary == HARM_SUMMARY
     assert "moderate" in msg.content
+
+
+async def test_synthesize_defaults_safety_fields_when_safety_search_skipped():
+    """If the ReAct agent skips safety_search (should not happen — it's a REQUIRED step per
+    literature.txt — but must not crash), synthesize's EvidenceSummary defaults to ""/[] rather
+    than fabricating a safety verdict."""
+    svc = _make_svc()
+    tools = build_literature_tools(svc=svc, db=MagicMock())
+    tool_map = {t.name: t for t in tools}
+    with _patch_resolve():
+        await tool_map["expand_search_terms"].ainvoke(
+            ToolCall(
+                name="expand_search_terms",
+                args={"drug_name": "metformin", "disease_name": "colorectal cancer"},
+                id="tc_pre1",
+                type="tool_call",
+            )
+        )
+        await tool_map["fetch_and_cache"].ainvoke(
+            ToolCall(
+                name="fetch_and_cache",
+                args={"drug_name": "metformin"},
+                id="tc_pre2",
+                type="tool_call",
+            )
+        )
+        await tool_map["semantic_search"].ainvoke(
+            ToolCall(
+                name="semantic_search",
+                args={"drug_name": "metformin", "disease_name": "colorectal cancer"},
+                id="tc_pre3",
+                type="tool_call",
+            )
+        )
+        # safety_search deliberately NOT called here.
+
+        msg = await tool_map["synthesize"].ainvoke(
+            ToolCall(
+                name="synthesize",
+                args={"drug_name": "metformin", "disease_name": "colorectal cancer"},
+                id="tc9",
+                type="tool_call",
+            )
+        )
+
+    assert msg.artifact.safety_summary == ""
+    assert msg.artifact.safety_pmids == []
+    assert msg.artifact.indication_harm is False
+    assert msg.artifact.indication_harm_pmids == []

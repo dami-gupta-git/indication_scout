@@ -174,7 +174,7 @@ agents/<name>/
 
 | Agent | Tools | Output |
 |-------|-------|--------|
-| **Literature** | `build_drug_profile`, `expand_search_terms`, `fetch_and_cache`, `semantic_search`, `synthesize`, `finalize_analysis` | `LiteratureOutput` |
+| **Literature** | `build_drug_profile`, `expand_search_terms`, `fetch_and_cache`, `semantic_search`, `safety_search`, `synthesize`, `finalize_analysis` | `LiteratureOutput` |
 | **Clinical Trials** | `check_fda_approval`, `search_trials`, `get_completed`, `get_terminated`, `get_landscape`, `finalize_analysis` | `ClinicalTrialsOutput` |
 | **Mechanism** | `get_drug`, `get_target_associations`, `finalize_analysis` | `MechanismOutput` |
 
@@ -820,8 +820,76 @@ EvidenceSummary
  |-- contradicting_pmids: list[str] = []     # contradicting + mixed
  |-- relevant_pmids: list[str] = []          # graded this-drug-this-disease evidence
  |-- contaminated_pmids: list[str] = []      # excluded (wrong drug/disease or approved sub-indication)
- +-- neutral_pmids: list[str] = []           # relevant but no efficacy result (PK/safety/mechanism)
+ |-- neutral_pmids: list[str] = []           # relevant but no efficacy result (PK/safety/mechanism)
+ |   # --- Safety (populated by the safety_search tool; see "Drug Safety" below) ---
+ |-- safety_summary: str = ""                # DRUG-LEVEL safety blurb (drug-wide; ~identical per candidate)
+ |-- safety_pmids: list[str] = []            # PMIDs cited in safety_summary
+ |-- safety_severity: "withdrawn" | "black_box" | "serious" | "moderate" | "none" = "none"
+ |-- indication_harm: bool = False           # DISEASE-SPECIFIC: a harm reported for THIS drug IN THIS indication
+ |-- indication_harm_summary: str = ""
+ +-- indication_harm_pmids: list[str] = []
 ```
+
+---
+
+## Drug Safety
+
+The literature agent's `safety_search` tool produces a **two-tier** safety signal per drug-disease
+pair, merged into `EvidenceSummary` (fields above) by `synthesize` and rendered by
+`report/format_report.py`.
+
+### Retrieval — `agents/literature/pubmed_ae.py::search_adverse_events`
+
+Two query modes, both **citation-ranked** (not PubMed relevance) and **holdout-clean** (drug/disease
+names + generic MeSH tags only, no future knowledge):
+
+- **Drug-level** (`disease=None`): `"{drug}/adverse effects"[Majr]` — PubMed's curated "primarily
+  about this drug's harms" major-topic tag. Precise (no 500-cap saturation); catches specific-named
+  signals (agranulocytosis, bladder cancer) without knowing the event name. Falls back to a
+  title/abstract query when MeSH indexing is sparse (`< AE_FALLBACK_MIN_HITS`).
+- **Disease-scoped** (`disease` set): drug leg `AND` adverse-event vocabulary leg `AND` disease leg —
+  recovers indication-specific safety papers the drug-level pool misses (e.g. rofecoxib × colorectal
+  → the APPROVe trial). Query legs are `constants.py::AE_DISEASE_*`.
+
+Ranking uses `EuropePMCClient.fetch_citation_counts` (`data_sources/europe_pmc.py`): PubMed's
+term-frequency relevance sort buries landmark safety papers (APPROVe ranks outside PubMed's top 300
+for a toxicity query despite 1,600+ citations); Europe PMC's `citedByCount` draws on a broader
+citation graph than NCBI esummary's (blank) `pmcrefcount`. Holdout also applies the
+`_filter_pmids_by_date` `sortpubdate` post-guard (PubMed's `maxdate` trusts the unreliable `pdat`).
+
+`RetrievalService.safety_search` fetches BOTH pools (drug-level + disease-scoped) and dedupes
+drug-level-first.
+
+### Summarization
+
+- **Drug-level** — `RetrievalService.summarize_safety` (returns `(summary, pmids, severity)`).
+  PRODUCTION: OpenTargets `drugWarnings` + top FAERS `adverseEvents` are the AUTHORITATIVE signal
+  (curated regulatory / pharmacovigilance data, stated as fact); the fetched abstracts are cited
+  provenance. `safety_severity` is DETERMINISTIC from the OT `warning_type` (Withdrawn / Black Box /
+  else serious). HOLDOUT (`date_before` set): OT warnings/AEs are UNDATEABLE (OT has no date API), so
+  they are OMITTED to avoid leaking post-cutoff knowledge; the summary is built ONLY from the
+  date-filtered literature and severity is LLM-picked (serious / moderate / none).
+- **Disease-specific** — `RetrievalService.classify_indication_harm` (returns
+  `(harm, summary, pmids)`). The CONCRETE, validated question: does the disease-scoped literature
+  report a harm for the drug IN THIS indication's context? (The fuzzy "is the harm *unique* to the
+  disease" framing over-called and was rejected.) Prompt: `prompts/classify_indication_harm.txt`.
+
+Absent-signal cases return empty (`""`/`[]`/`False`/`"none"`) — never a fabricated "no concerns
+found." OT safety data is drug-level: its warning `efoTerm` names the HARM, not the indication, so
+it alone cannot answer the disease-specific question — hence the disease-scoped literature pass.
+
+### Report rendering & ranking
+
+- The DRUG-LEVEL blurb is collapsed (pick-first non-empty across candidates) and rendered ONCE in a
+  top-level `## Drug Safety` section.
+- The DISEASE-SPECIFIC signal renders per candidate: a `⚠️ **Indication-specific safety:**` block in
+  the Literature section, and a `⚠️ safety signal reported for this indication` flag in the Summary
+  table (via `supervisor_tools._safety_flag`, keyed on `indication_harm`).
+- The flag reaches the ranking critic's FACT block, so the LLM weighs it (it can demote a flagged
+  candidate below a comparable unflagged one — no hard rule). The drug-level `withdrawn` severity is
+  deliberately NOT surfaced as a ranking flag: a historical drug-level withdrawal (e.g. thalidomide)
+  was mis-attributed by the LLM as foreclosing each specific disease; `indication_harm` is
+  per-candidate and cannot mis-attribute.
 
 ---
 

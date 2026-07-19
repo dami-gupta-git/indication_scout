@@ -1441,6 +1441,288 @@ async def test_synthesize_missing_verdicts_treats_all_contaminated(svc):
     assert result.contaminated_pmids == ["11111111", "22222222"]
 
 
+# --- safety_search (delegates to pubmed_ae.search_adverse_events: drug-level + disease-scoped) ---
+
+
+def _safety_abs(pmid, title):
+    from indication_scout.models.model_pubmed_abstract import PubmedAbstract
+    return PubmedAbstract(pmid=pmid, title=title, abstract="body")
+
+
+async def test_safety_search_fetches_and_dedupes_both_pools(svc):
+    """safety_search fetches the DRUG-LEVEL pool and (when disease given) the DISEASE-SCOPED pool,
+    deduped drug-level-first, as AbstractResults."""
+    calls = []
+
+    async def fake_search(pref, cache_dir, date_before=None, disease=None):
+        calls.append(disease)
+        if disease is None:
+            return [_safety_abs("111", "drug-wide"), _safety_abs("222", "shared")]
+        return [_safety_abs("222", "shared"), _safety_abs("333", "disease-only")]
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["rofecoxib"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.search_adverse_events",
+            new=fake_search,
+        ),
+    ):
+        result = await svc.safety_search("CHEMBL122", disease="colorectal cancer")
+
+    # One drug-level call (disease=None) + one disease-scoped call.
+    assert calls == [None, "colorectal cancer"]
+    # Deduped, drug-level first: 111, 222 (shared, kept once), 333.
+    assert [r.pmid for r in result] == ["111", "222", "333"]
+    assert result[0].title == "drug-wide"
+
+
+async def test_safety_search_drug_level_only_when_no_disease(svc):
+    """With no disease, safety_search runs only the drug-level pool (one call)."""
+    calls = []
+
+    async def fake_search(pref, cache_dir, date_before=None, disease=None):
+        calls.append(disease)
+        return [_safety_abs("111", "x")]
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["rofecoxib"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.search_adverse_events",
+            new=fake_search,
+        ),
+    ):
+        result = await svc.safety_search("CHEMBL122")
+
+    assert calls == [None]
+    assert [r.pmid for r in result] == ["111"]
+
+
+# --- summarize_safety (OT signal in prod; date-filtered lit in holdout; returns 3-tuple) ---
+
+_SAFETY_ABSTRACTS = [
+    AbstractResult(
+        pmid="11696466",
+        title="Cardiovascular thrombotic events in trials of rofecoxib.",
+        abstract="Rofecoxib increased cardiovascular thrombotic events versus placebo.",
+        similarity=0.0,
+    ),
+]
+
+_SAMPLE_SAFETY_LLM_RESPONSE = json.dumps(
+    {
+        "safety_summary": "Rofecoxib withdrawn for cardiovascular events (PMID: 11696466).",
+        "safety_pmids": ["11696466"],
+        "safety_severity": "serious",
+    }
+)
+
+
+def _safety_profile() -> DrugProfile:
+    from indication_scout.models.model_open_targets import AdverseEvent, DrugWarning
+
+    return DrugProfile(
+        chembl_id="CHEMBL122",
+        drug_warnings=[
+            DrugWarning(
+                warning_type="Withdrawn",
+                description="Increased risk of cardiovascular events",
+                toxicity_class="cardiotoxicity",
+                year=2004,
+            ),
+        ],
+        adverse_events=[
+            AdverseEvent(name="myocardial infarction", count=100, log_likelihood_ratio=8913.0),
+        ],
+    )
+
+
+async def test_summarize_safety_prod_uses_ot_signal_and_severity(svc):
+    """Production: OT warnings/AEs in the prompt; severity is DETERMINISTIC from warning_type
+    (Withdrawn -> 'withdrawn'), overriding the LLM's field. Returns a 3-tuple."""
+    captured = {}
+
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return _SAMPLE_SAFETY_LLM_RESPONSE
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["rofecoxib"]),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+    ):
+        summary, pmids, severity = await svc.summarize_safety(
+            "CHEMBL122", "arthritis", _safety_profile(), _SAFETY_ABSTRACTS
+        )
+
+    assert "Withdrawn" in captured["prompt"]
+    assert "myocardial infarction" in captured["prompt"]
+    assert "PMID: 11696466" in captured["prompt"]
+    assert summary == "Rofecoxib withdrawn for cardiovascular events (PMID: 11696466)."
+    assert pmids == ["11696466"]
+    assert severity == "withdrawn"  # deterministic from OT, not the LLM's "serious"
+
+
+async def test_summarize_safety_holdout_omits_ot_signal(svc):
+    """Holdout (date_before set): OT warnings/AEs are OMITTED from the prompt (undateable → would
+    leak); severity is LLM-picked, clamped to serious/moderate/none."""
+    from datetime import date
+
+    captured = {}
+
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return _SAMPLE_SAFETY_LLM_RESPONSE
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["rofecoxib"]),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+    ):
+        summary, pmids, severity = await svc.summarize_safety(
+            "CHEMBL122",
+            "arthritis",
+            _safety_profile(),
+            _SAFETY_ABSTRACTS,
+            date_before=date(2003, 1, 1),
+        )
+
+    # OT warning text is NOT in the prompt (suppressed in holdout).
+    assert "Withdrawn" not in captured["prompt"]
+    assert "myocardial infarction" not in captured["prompt"]
+    # LLM severity used (clamped set), NOT the OT-derived "withdrawn".
+    assert severity == "serious"
+
+
+async def test_summarize_safety_no_signal_returns_empty_triple(svc):
+    """No OT signal AND no abstracts -> ("", [], "none") with NO LLM call (no fabrication)."""
+    with patch(
+        "indication_scout.services.retrieval.query_llm",
+        new=AsyncMock(side_effect=AssertionError("query_llm must not be called")),
+    ):
+        summary, pmids, severity = await svc.summarize_safety(
+            "CHEMBL999", "arthritis", DrugProfile(chembl_id="CHEMBL999"), []
+        )
+
+    assert summary == ""
+    assert pmids == []
+    assert severity == "none"
+
+
+async def test_summarize_safety_handles_null_adverse_event_fields(svc):
+    """Regression: an OT AdverseEvent with null count / log_likelihood_ratio must not crash the
+    prompt's format string (the ':.1f' would raise TypeError on None)."""
+    from indication_scout.models.model_open_targets import AdverseEvent, DrugWarning
+
+    profile = DrugProfile(
+        chembl_id="CHEMBL122",
+        drug_warnings=[DrugWarning(warning_type="Black Box Warning")],
+        adverse_events=[AdverseEvent(name="hepatotoxicity", count=None, log_likelihood_ratio=None)],
+    )
+    captured = {}
+
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return json.dumps(
+            {"safety_summary": "x (PMID: 1)", "safety_pmids": ["1"], "safety_severity": "serious"}
+        )
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["rofecoxib"]),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+    ):
+        summary, pmids, severity = await svc.summarize_safety(
+            "CHEMBL122", "arthritis", profile, _SAFETY_ABSTRACTS
+        )
+
+    # No crash; null fields coerced to 0 in the prompt.
+    assert "hepatotoxicity (reports: 0, signal logLR: 0.0)" in captured["prompt"]
+    assert severity == "black_box"
+
+
+# --- classify_indication_harm (the validated concrete disease-specific question) ---
+
+
+async def test_classify_indication_harm_parses_true(svc):
+    """A harm reported for the indication -> (True, reason, pmids)."""
+    resp = json.dumps(
+        {
+            "harm_reported_for_indication": True,
+            "pmids": ["15713943"],
+            "reason": "APPROVe found CV events in colorectal adenoma prevention.",
+        }
+    )
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["rofecoxib"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=resp),
+        ),
+    ):
+        harm, summary, pmids = await svc.classify_indication_harm(
+            "CHEMBL122", "colorectal cancer", _SAFETY_ABSTRACTS
+        )
+
+    assert harm is True
+    assert summary == "APPROVe found CV events in colorectal adenoma prevention."
+    assert pmids == ["15713943"]
+
+
+async def test_classify_indication_harm_false_clears_summary_and_pmids(svc):
+    """harm=False -> summary/pmids forced empty (no dangling reason/citations)."""
+    resp = json.dumps(
+        {"harm_reported_for_indication": False, "pmids": ["999"], "reason": "efficacy only"}
+    )
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["rofecoxib"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=resp),
+        ),
+    ):
+        harm, summary, pmids = await svc.classify_indication_harm(
+            "CHEMBL122", "migraine", _SAFETY_ABSTRACTS
+        )
+
+    assert harm is False
+    assert summary == ""
+    assert pmids == []
+
+
+async def test_classify_indication_harm_empty_abstracts_no_llm(svc):
+    """No abstracts -> (False, "", []) with NO LLM call."""
+    with patch(
+        "indication_scout.services.retrieval.query_llm",
+        new=AsyncMock(side_effect=AssertionError("query_llm must not be called")),
+    ):
+        harm, summary, pmids = await svc.classify_indication_harm(
+            "CHEMBL122", "colorectal cancer", []
+        )
+
+    assert harm is False
+    assert summary == ""
+    assert pmids == []
+
+
+
 # --- get_drug_competitors ---
 
 

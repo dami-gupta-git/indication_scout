@@ -73,7 +73,7 @@ async def create_analysis(req: AnalysisRequest, request: Request) -> AnalysisCre
         if forwarded
         else (request.client.host if request.client else "unknown")
     )
-    logger.warning("[VISITOR-LOCATION] ******ANALYSIS REQUESTED FOR DRUG=%s FROM %s", drug, client_ip,"******")
+    logger.warning("[VISITOR-LOCATION] ******ANALYSIS REQUESTED FOR DRUG=%s FROM %s******", drug, client_ip)
     # Fail fast: one quick Open Targets search confirms the drug exists before we spin up
     # a job. Seed-report drugs skip the check (they don't need OT resolution).
     if load_fresh_seed_report(drug) is None:

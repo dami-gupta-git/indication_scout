@@ -123,10 +123,13 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
     assert output.evidence_summary.evidence_basis == "drug_specific"
     assert output.evidence_summary.strength in {"strong", "moderate"}
     assert output.evidence_summary.study_count >= 2
-    # The core NASH RCTs must be CITED — in supporting OR contradicting (list membership is
-    # LLM-variable; see _EXPECTED_CITED_PMIDS). 33185364 (positive NEJM RCT) must support.
-    cited = set(output.evidence_summary.supporting_pmids) | set(
-        output.evidence_summary.contradicting_pmids
+    # The core NASH RCTs must be CITED — in supporting, contradicting, OR neutral (list membership
+    # is LLM-variable; see _EXPECTED_CITED_PMIDS; e.g. 37328931 is a quality-of-life readout that
+    # pmid_direction may set neutral). 33185364 (positive NEJM RCT) must support.
+    cited = (
+        set(output.evidence_summary.supporting_pmids)
+        | set(output.evidence_summary.contradicting_pmids)
+        | set(output.evidence_summary.neutral_pmids)
     )
     assert _EXPECTED_CITED_PMIDS.issubset(cited)
     assert "33185364" in output.evidence_summary.supporting_pmids
@@ -149,6 +152,6 @@ async def test_random_literature_agent(db_session_truncating, test_cache_dir):
         date_before=_CUTOFF,
     )
     test_cache_dir="abc"
-    output = await run_literature_agent(agent, "ketamine", "Major Depressive Disorder")
+    output = await run_literature_agent(agent, "Rofecoxib", "arthritis")
 
     assert isinstance(output, LiteratureOutput)

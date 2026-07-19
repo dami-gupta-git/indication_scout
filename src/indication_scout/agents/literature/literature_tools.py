@@ -125,6 +125,55 @@ def build_literature_tools(
         return f"Found {len(results)} abstracts (top sim: {top:.2f})", results
 
     @tool(response_format="content_and_artifact")
+    async def safety_search(
+        drug_name: str, disease_name: str
+    ) -> tuple[str, EvidenceSummary]:
+        """Summarize the drug's safety signal from its adverse-event literature (PubMed, ranked by
+        citation count), anchored on OpenTargets warnings/adverse-events as ground truth in
+        production. Uses the drug profile (builds one if needed). REQUIRED step — call before
+        synthesize."""
+        chembl_id = await _get_chembl(drug_name)
+        drug_profile = store.get("drug_profile") or await svc.build_drug_profile(
+            chembl_id
+        )
+        store["drug_profile"] = drug_profile
+        safety_abstracts = await svc.safety_search(
+            chembl_id, date_before=date_before, disease=disease_name
+        )
+        safety_summary, safety_pmids, safety_severity = await svc.summarize_safety(
+            chembl_id,
+            disease_name,
+            drug_profile,
+            safety_abstracts,
+            date_before=date_before,
+        )
+        # Disease-specific: does the safety literature report a harm for THIS indication?
+        harm, harm_summary, harm_pmids = await svc.classify_indication_harm(
+            chembl_id, disease_name, safety_abstracts
+        )
+        store["safety_summary"] = safety_summary
+        store["safety_pmids"] = safety_pmids
+        store["safety_severity"] = safety_severity
+        store["indication_harm"] = harm
+        store["indication_harm_summary"] = harm_summary
+        store["indication_harm_pmids"] = harm_pmids
+        content = (
+            f"Safety signal ({safety_severity}): {safety_summary}"
+            if safety_summary
+            else "No safety signal found for this drug."
+        )
+        if harm:
+            content += f" | Indication-specific harm reported: {harm_summary}"
+        return content, EvidenceSummary(
+            safety_summary=safety_summary,
+            safety_pmids=safety_pmids,
+            safety_severity=safety_severity,
+            indication_harm=harm,
+            indication_harm_summary=harm_summary,
+            indication_harm_pmids=harm_pmids,
+        )
+
+    @tool(response_format="content_and_artifact")
     async def synthesize(
         drug_name: str, disease_name: str
     ) -> tuple[str, EvidenceSummary]:
@@ -138,6 +187,19 @@ def build_literature_tools(
             abstracts,
             approved_indications=approved_indications,
         )
+        # Merge in the safety pass's result (see safety_search) — ONLY if safety_search has already
+        # run and populated the store. safety_search is REQUIRED-before-synthesize by the prompt,
+        # but the LLM controls ordering and could batch synthesize first; overwriting with defaults
+        # in that case would silently drop a real withdrawn/harm signal that safety_search populates
+        # afterward. "safety_summary" in store is the presence marker (set by safety_search even
+        # when the value is "" for a no-signal drug). EvidenceSummary's own defaults stand otherwise.
+        if "safety_summary" in store:
+            evidence.safety_summary = store["safety_summary"]
+            evidence.safety_pmids = store.get("safety_pmids", [])
+            evidence.safety_severity = store.get("safety_severity", "none")
+            evidence.indication_harm = store.get("indication_harm", False)
+            evidence.indication_harm_summary = store.get("indication_harm_summary", "")
+            evidence.indication_harm_pmids = store.get("indication_harm_pmids", [])
         # logger.warning(
         #     "[TIMING] synthesize %s: %.1fs", disease_name, time.perf_counter() - _t0
         # )
@@ -160,6 +222,7 @@ def build_literature_tools(
         expand_search_terms,
         fetch_and_cache,
         semantic_search,
+        safety_search,
         synthesize,
         finalize_analysis,
     ]
