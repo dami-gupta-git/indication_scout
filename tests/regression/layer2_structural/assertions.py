@@ -20,13 +20,16 @@ from indication_scout.agents.supervisor.supervisor_output import (
 from tests.regression.common.failure_buckets import BucketedDiff
 from tests.regression.layer2_structural.spec import (
     CandidateSetContains,
+    DrugSafety,
     DrugSpec,
     ForbiddenInRanked,
     ForbiddenPhrase,
+    IndicationHarm,
     RankedOrder,
     RequiredInRanked,
     RequiredNCTs,
     RequiredPMIDs,
+    SafetySeverity,
 )
 
 
@@ -34,10 +37,29 @@ def _norm(s: str) -> str:
     return s.strip().lower()
 
 
-def _find_finding(report: SupervisorOutput, indication: str) -> CandidateFindings | None:
+def _alias_set(aliases: dict[str, list[str]], indication: str) -> set[str]:
+    """All normalized names that count as `indication`: itself plus its aliases.
+
+    Matches on either side — an alias key or any of its values resolves to the
+    full group — so the spec author can write whichever name is canonical to
+    them and still match a run that emitted a variant.
+    """
     target = _norm(indication)
+    for key, variants in aliases.items():
+        group = {_norm(key), *(_norm(v) for v in variants)}
+        if target in group:
+            return group
+    return {target}
+
+
+def _find_finding(
+    report: SupervisorOutput,
+    indication: str,
+    aliases: dict[str, list[str]] | None = None,
+) -> CandidateFindings | None:
+    names = _alias_set(aliases or {}, indication)
     for f in report.disease_findings:
-        if _norm(f.disease) == target:
+        if _norm(f.disease) in names:
             return f
     return None
 
@@ -65,8 +87,12 @@ def _ncts_in_section(finding: CandidateFindings, section: str) -> set[str]:
     return out
 
 
-def check_required_ncts(report: SupervisorOutput, a: RequiredNCTs) -> list[BucketedDiff]:
-    finding = _find_finding(report, a.indication)
+def check_required_ncts(
+    report: SupervisorOutput,
+    a: RequiredNCTs,
+    aliases: dict[str, list[str]] | None = None,
+) -> list[BucketedDiff]:
+    finding = _find_finding(report, a.indication, aliases)
     if finding is None:
         return [
             BucketedDiff(
@@ -101,8 +127,12 @@ def _cited_pmids(finding: CandidateFindings) -> set[str]:
     return set(es.supporting_pmids or []) | set(es.contradicting_pmids or [])
 
 
-def check_required_pmids(report: SupervisorOutput, a: RequiredPMIDs) -> list[BucketedDiff]:
-    finding = _find_finding(report, a.indication)
+def check_required_pmids(
+    report: SupervisorOutput,
+    a: RequiredPMIDs,
+    aliases: dict[str, list[str]] | None = None,
+) -> list[BucketedDiff]:
+    finding = _find_finding(report, a.indication, aliases)
     if finding is None or finding.literature is None:
         return [
             BucketedDiff(
@@ -134,10 +164,12 @@ def check_required_pmids(report: SupervisorOutput, a: RequiredPMIDs) -> list[Buc
 
 
 def check_required_in_ranked(
-    report: SupervisorOutput, a: RequiredInRanked
+    report: SupervisorOutput,
+    a: RequiredInRanked,
+    aliases: dict[str, list[str]] | None = None,
 ) -> list[BucketedDiff]:
     ranked = {_norm(d) for d in report.top_diseases}
-    if _norm(a.indication) in ranked:
+    if _alias_set(aliases or {}, a.indication) & ranked:
         return []
     return [
         BucketedDiff(
@@ -150,10 +182,22 @@ def check_required_in_ranked(
     ]
 
 
-def check_ranked_order(report: SupervisorOutput, a: RankedOrder) -> list[BucketedDiff]:
+def check_ranked_order(
+    report: SupervisorOutput,
+    a: RankedOrder,
+    aliases: dict[str, list[str]] | None = None,
+) -> list[BucketedDiff]:
     ranked = [_norm(d) for d in report.top_diseases]
-    wanted = [_norm(i) for i in a.indications]
-    missing = [orig for orig, n in zip(a.indications, wanted) if n not in ranked]
+
+    def _pos(indication: str) -> int | None:
+        names = _alias_set(aliases or {}, indication)
+        for i, name in enumerate(ranked):
+            if name in names:
+                return i
+        return None
+
+    positions_opt = [(orig, _pos(orig)) for orig in a.indications]
+    missing = [orig for orig, p in positions_opt if p is None]
     if missing:
         return [
             BucketedDiff(
@@ -164,7 +208,7 @@ def check_ranked_order(report: SupervisorOutput, a: RankedOrder) -> list[Buckete
                 spec_ref="ranked_order",
             )
         ]
-    positions = [ranked.index(n) for n in wanted]
+    positions = [p for _, p in positions_opt]
     if positions == sorted(positions):
         return []
     return [
@@ -182,10 +226,12 @@ def check_ranked_order(report: SupervisorOutput, a: RankedOrder) -> list[Buckete
 
 
 def check_forbidden_in_ranked(
-    report: SupervisorOutput, a: ForbiddenInRanked
+    report: SupervisorOutput,
+    a: ForbiddenInRanked,
+    aliases: dict[str, list[str]] | None = None,
 ) -> list[BucketedDiff]:
     ranked = {_norm(d) for d in report.top_diseases}
-    if _norm(a.indication) not in ranked:
+    if not (_alias_set(aliases or {}, a.indication) & ranked):
         return []
     return [
         BucketedDiff(
@@ -226,10 +272,12 @@ def check_forbidden_phrase(
 
 
 def check_candidate_set_contains(
-    report: SupervisorOutput, a: CandidateSetContains
+    report: SupervisorOutput,
+    a: CandidateSetContains,
+    aliases: dict[str, list[str]] | None = None,
 ) -> list[BucketedDiff]:
     found = {_norm(d) for d in report.candidate_diseases}
-    missing = [i for i in a.indications if _norm(i) not in found]
+    missing = [i for i in a.indications if not (_alias_set(aliases or {}, i) & found)]
     if not missing:
         return []
     return [
@@ -243,25 +291,138 @@ def check_candidate_set_contains(
     ]
 
 
+def _evidence_summary(finding: CandidateFindings):
+    lit = finding.literature
+    return lit.evidence_summary if lit is not None else None
+
+
+def check_safety_severity(
+    report: SupervisorOutput,
+    a: SafetySeverity,
+    aliases: dict[str, list[str]] | None = None,
+) -> list[BucketedDiff]:
+    finding = _find_finding(report, a.indication, aliases)
+    if finding is None:
+        return [
+            BucketedDiff(
+                bucket=a.bucket,
+                path=f"disease_findings[{a.indication!r}]",
+                severity="error",
+                detail="indication not present in disease_findings",
+                spec_ref="safety_severity",
+            )
+        ]
+    es = _evidence_summary(finding)
+    got = es.safety_severity if es is not None else None
+    allowed = {_norm(v) for v in a.allowed}
+    if got is not None and _norm(got) in allowed:
+        return []
+    return [
+        BucketedDiff(
+            bucket=a.bucket,
+            path=f"disease_findings[{a.indication!r}].literature.evidence_summary.safety_severity",
+            severity="error",
+            detail=f"safety_severity {got!r} not in allowed {a.allowed}",
+            spec_ref="safety_severity",
+        )
+    ]
+
+
+def check_indication_harm(
+    report: SupervisorOutput,
+    a: IndicationHarm,
+    aliases: dict[str, list[str]] | None = None,
+) -> list[BucketedDiff]:
+    finding = _find_finding(report, a.indication, aliases)
+    if finding is None:
+        return [
+            BucketedDiff(
+                bucket=a.bucket,
+                path=f"disease_findings[{a.indication!r}]",
+                severity="error",
+                detail="indication not present in disease_findings",
+                spec_ref="indication_harm",
+            )
+        ]
+    es = _evidence_summary(finding)
+    got = es.indication_harm if es is not None else None
+    if got == a.expected:
+        return []
+    return [
+        BucketedDiff(
+            bucket=a.bucket,
+            path=f"disease_findings[{a.indication!r}].literature.evidence_summary.indication_harm",
+            severity="error",
+            detail=f"indication_harm {got!r}, expected {a.expected!r}",
+            spec_ref="indication_harm",
+        )
+    ]
+
+
+def check_drug_safety(report: SupervisorOutput, a: DrugSafety) -> list[BucketedDiff]:
+    diffs: list[BucketedDiff] = []
+    present = bool((report.drug_safety_summary or "").strip())
+    if a.summary_present and not present:
+        diffs.append(
+            BucketedDiff(
+                bucket=a.bucket,
+                path="drug_safety_summary",
+                severity="error",
+                detail="drug_safety_summary is empty; expected a collapsed drug-wide signal",
+                spec_ref="drug_safety",
+            )
+        )
+    elif not a.summary_present and present:
+        diffs.append(
+            BucketedDiff(
+                bucket=a.bucket,
+                path="drug_safety_summary",
+                severity="error",
+                detail="drug_safety_summary is non-empty; expected none",
+                spec_ref="drug_safety",
+            )
+        )
+    found = set(report.drug_safety_pmids or [])
+    missing = [p for p in a.required_pmids if p not in found]
+    if missing:
+        diffs.append(
+            BucketedDiff(
+                bucket=a.bucket,
+                path="drug_safety_pmids",
+                severity="error",
+                detail=f"missing drug-level safety PMIDs: {missing}",
+                spec_ref="drug_safety",
+            )
+        )
+    return diffs
+
+
 def run_spec(
     spec: DrugSpec,
     report: SupervisorOutput,
     rendered_md: str = "",
 ) -> list[BucketedDiff]:
     """Run every assertion in `spec` against `report`. Returns all diffs."""
+    aliases = spec.aliases
     diffs: list[BucketedDiff] = []
     for a in spec.required_ncts_surfaced:
-        diffs.extend(check_required_ncts(report, a))
+        diffs.extend(check_required_ncts(report, a, aliases))
     for a in spec.required_pmids_cited:
-        diffs.extend(check_required_pmids(report, a))
+        diffs.extend(check_required_pmids(report, a, aliases))
     for a in spec.required_in_ranked:
-        diffs.extend(check_required_in_ranked(report, a))
+        diffs.extend(check_required_in_ranked(report, a, aliases))
     if spec.ranked_order is not None:
-        diffs.extend(check_ranked_order(report, spec.ranked_order))
+        diffs.extend(check_ranked_order(report, spec.ranked_order, aliases))
     for a in spec.forbidden_in_ranked:
-        diffs.extend(check_forbidden_in_ranked(report, a))
+        diffs.extend(check_forbidden_in_ranked(report, a, aliases))
     for a in spec.forbidden_phrases:
         diffs.extend(check_forbidden_phrase(report, rendered_md, a))
     if spec.candidate_set_contains is not None:
-        diffs.extend(check_candidate_set_contains(report, spec.candidate_set_contains))
+        diffs.extend(check_candidate_set_contains(report, spec.candidate_set_contains, aliases))
+    for a in spec.safety_severity:
+        diffs.extend(check_safety_severity(report, a, aliases))
+    for a in spec.indication_harm:
+        diffs.extend(check_indication_harm(report, a, aliases))
+    if spec.drug_safety is not None:
+        diffs.extend(check_drug_safety(report, spec.drug_safety))
     return diffs

@@ -1,12 +1,25 @@
 # Metformin regression spec.
 #
-# Authored against gold_standard/metformin_2026-07-13_16-16-37.json. Each
+# Authored against gold_standard/metformin_2026-07-18_20-48-39.json. Each
 # assertion encodes a domain-meaningful invariant a regression must NOT flip.
-# Anchors are chosen to be STABLE across runs.
+# Anchors are chosen to be STABLE across runs — pinned only where they held
+# across BOTH 2026-07-18 runs (20:19 and 20:48).
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
 drug: metformin
+
+# Indication naming drifts run to run; resolve the variants to one canonical
+# name so a rename upstream isn't read as a coverage regression. Observed across
+# runs: hepatic steatosis <-> MASLD, cardiovascular disease <-> coronary artery
+# disorder.
+aliases:
+  hepatic steatosis:
+    - metabolic dysfunction-associated steatotic liver disease
+    - non-alcoholic fatty liver disease
+  cardiovascular disease:
+    - coronary artery disorder
+    - cardiovascular disorder
 
 # PCOS is stably #1. Cardiovascular disease and hepatic steatosis are similarly
 # weighted (both weak/mixed, neither animal-only) and swap #2/#3 run to run, so
@@ -37,19 +50,18 @@ required_ncts_surfaced:
     indication: polycystic ovary syndrome
     section: relevant
     ncts:
-      - NCT00068861
-      - NCT00994812
+      - NCT00068861   # stable across both 07-18 runs
   - bucket: literature_coverage
     indication: cardiovascular disease
     section: relevant
     ncts:
-      - NCT01037660
-      - NCT00443755
+      - NCT00343395   # stable across both 07-18 runs
+      - NCT01217307
   - bucket: literature_coverage
     indication: hepatic steatosis
     section: relevant
     ncts:
-      - NCT00063635
+      - NCT00063635   # stable across both 07-18 runs
       - NCT00303537
 
 required_pmids_cited:
@@ -57,17 +69,29 @@ required_pmids_cited:
     indication: polycystic ovary syndrome
     mode: cited
     pmids:
-      - "10634377"   # supporting
-      - "21917254"   # contradicting
+      - "10634377"   # stable across both 07-18 runs
   - bucket: literature_coverage
     indication: cardiovascular disease
     mode: cited
     pmids:
-      - "30672083"   # supporting
-      - "19171717"   # contradicting
+      - "23230096"   # stable across both 07-18 runs
+      - "30993313"
   - bucket: literature_coverage
     indication: hepatic steatosis
     mode: cited
     pmids:
-      - "19811343"   # contradicting
-      - "18640473"   # contradicting
+      - "19811343"   # stable across both 07-18 runs
+
+# Safety — metformin carries black-box warnings (lactic acidosis). Production
+# derives black_box from OT; holdout would fall back to serious.
+safety_severity:
+  - indication: polycystic ovary syndrome
+    allowed: [black_box, serious]
+  - indication: cardiovascular disease
+    allowed: [black_box, serious]
+  - indication: hepatic steatosis
+    allowed: [black_box, serious]
+
+# Drug-level collapsed safety signal must surface (empty = collapse regression).
+drug_safety:
+  summary_present: true

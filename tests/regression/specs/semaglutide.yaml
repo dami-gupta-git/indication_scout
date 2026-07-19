@@ -1,7 +1,14 @@
 # Semaglutide regression spec.
 #
-# Authored against gold_standard/semaglutide_2026-07-13_16-18-19.json. Each
+# Authored against gold_standard/semaglutide_2026-07-18_20-42-04.json. Each
 # assertion encodes a domain-meaningful invariant a regression must NOT flip.
+# Anchors are chosen to be STABLE across runs — pinned only where they held
+# across BOTH 2026-07-18 runs (20:17 and 20:42); volatile NCTs are omitted.
+#
+# Candidate-set shift from the prior (2026-07-13) gold: the top-3 changed
+# entirely (type-1 diabetes / NAFLD / parkinson -> cardiovascular / kidney /
+# diabetes). The old anchors pinned a different investigated set and are fully
+# replaced here.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
@@ -10,44 +17,56 @@ drug: semaglutide
 ranked_order:
   bucket: ranking
   indications:
-    - type 1 diabetes mellitus
-    - non-alcoholic fatty liver disease
-    - parkinson disease
+    - cardiovascular disorder
+    - kidney disorder
+    - diabetes mellitus
 
 candidate_set_contains:
   bucket: structural_integrity
   indications:
-    - type 1 diabetes mellitus
-    - non-alcoholic fatty liver disease
+    - cardiovascular disorder
+    - kidney disorder
+    - diabetes mellitus
     - parkinson disease
-    - cardiovascular disease
+    - metabolic dysfunction-associated steatotic liver disease
     - polycystic ovary syndrome
-    - alcohol dependence
 
 required_ncts_surfaced:
   - bucket: literature_coverage
-    indication: type 1 diabetes mellitus
+    indication: cardiovascular disorder
     section: relevant
     ncts:
-      - NCT03899402
-      - NCT05537233
+      - NCT07483801   # stable across both 07-18 runs
   - bucket: literature_coverage
-    indication: non-alcoholic fatty liver disease
+    indication: kidney disorder
     section: relevant
     ncts:
-      - NCT03884075
-      - NCT03357380
-  - bucket: literature_coverage
-    indication: parkinson disease
-    section: relevant
-    ncts:
-      - NCT03659682
+      - NCT05822609   # stable across both 07-18 runs
 
-# type 1 diabetes is the only ranked indication with a cited PMID; NAFLD and
-# Parkinson report no supporting/contradicting citations in this snapshot.
 required_pmids_cited:
   - bucket: literature_coverage
-    indication: type 1 diabetes mellitus
+    indication: cardiovascular disorder
     mode: cited
     pmids:
-      - "40550013"   # supporting
+      - "27633186"
+      - "38796653"
+  - bucket: literature_coverage
+    indication: kidney disorder
+    mode: cited
+    pmids:
+      - "34903039"
+      - "38796653"
+
+# Safety — semaglutide carries a black-box warning (thyroid C-cell / MTC risk).
+# Production derives black_box from OT; holdout would fall back to serious.
+safety_severity:
+  - indication: cardiovascular disorder
+    allowed: [black_box, serious]
+  - indication: kidney disorder
+    allowed: [black_box, serious]
+  - indication: diabetes mellitus
+    allowed: [black_box, serious]
+
+# Drug-level collapsed safety signal must surface (empty = collapse regression).
+drug_safety:
+  summary_present: true

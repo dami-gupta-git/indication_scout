@@ -361,6 +361,22 @@ async def run_supervisor_agent(
         if canonical not in top_set:
             disease_findings.append(finding)
 
+    # Collapse the per-candidate DRUG-LEVEL safety signal (drug-wide, ~identical across candidates)
+    # to a single blurb shown once at the top of the report. Summary: pick-first non-empty (in
+    # top-first disease_findings order). PMIDs: order-preserving union across candidates (the per-
+    # candidate lists overlap heavily but differ in order; union keeps the anchor stable run-to-run).
+    drug_safety_summary = ""
+    drug_safety_pmids: list[str] = []
+    for finding in disease_findings:
+        es = finding.literature.evidence_summary if finding.literature else None
+        if es is None:
+            continue
+        if not drug_safety_summary and es.safety_summary:
+            drug_safety_summary = es.safety_summary
+        for pmid in es.safety_pmids:
+            if pmid not in drug_safety_pmids:
+                drug_safety_pmids.append(pmid)
+
     return SupervisorOutput(
         drug_name=drug_name,
         candidate_diseases=candidate_diseases,
@@ -369,4 +385,6 @@ async def run_supervisor_agent(
         top_diseases=top_diseases,
         summary=summary,
         date_before=date_before,
+        drug_safety_summary=drug_safety_summary,
+        drug_safety_pmids=drug_safety_pmids,
     )

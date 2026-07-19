@@ -1,0 +1,55 @@
+# Rofecoxib regression spec.
+#
+# Authored against gold_standard/rofecoxib_2026-07-18_20-36-03.json. Rofecoxib
+# (Vioxx) was withdrawn worldwide in 2004 for cardiovascular harm — it is the
+# canonical SAFETY fixture in this suite. Its assertions pin the safety signal
+# (withdrawn severity, disease-specific harm, drug-level collapse) rather than
+# repurposing coverage: rofecoxib has no legitimate repurposing thesis, so
+# NCT/PMID coverage anchors are deliberately omitted (they drift run to run and
+# catch nothing meaningful here).
+#
+# Bucket values must match `tests/regression/failure_buckets.Bucket`.
+
+drug: rofecoxib
+
+# The three investigated indications (pain / arthritis / inflammation) permute
+# in rank order run to run, so membership is pinned via required_in_ranked
+# rather than a strict ranked_order.
+required_in_ranked:
+  - bucket: ranking
+    indication: pain
+  - bucket: ranking
+    indication: arthritis
+  - bucket: ranking
+    indication: inflammation
+
+candidate_set_contains:
+  bucket: structural_integrity
+  indications:
+    - pain
+    - arthritis
+    - inflammation
+
+# Safety — production derives `withdrawn` from the OT withdrawn-warning; holdout
+# (OT suppressed) falls back to `serious` from pre-cutoff literature. Both are
+# legitimate, so the allowed set covers both paths.
+safety_severity:
+  - indication: pain
+    allowed: [withdrawn, serious]
+  - indication: arthritis
+    allowed: [withdrawn, serious]
+  - indication: inflammation
+    allowed: [withdrawn, serious]
+
+indication_harm:
+  - indication: pain
+    expected: true
+  - indication: arthritis
+    expected: true
+  - indication: inflammation
+    expected: true
+
+# Drug-level collapsed safety signal must surface (empty = collapse regression).
+# Rofecoxib's withdrawal is the strongest drug-wide safety signal in the suite.
+drug_safety:
+  summary_present: true

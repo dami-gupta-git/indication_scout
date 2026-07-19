@@ -4,35 +4,96 @@ An agentic system for discovering drug repurposing opportunities.
 
 **Live demo:** <https://indicationscout-production.up.railway.app/>
 
+A drug name goes in; coordinated AI agents query live biomedical databases and produce a
+structured repurposing report — candidate indications, evidence strength, trial activity, safety
+signals, and a per-disease read on the state of the hypothesis.
+
+> For what every report field, verdict, and label means — and the exact rule behind each — see
+> [GLOSSARY.md](GLOSSARY.md). For the system design, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+---
+
 ## Overview
 
-IndicationScout is an agentic drug repurposing system. A drug name goes in; coordinated AI agents query multiple biomedical data sources and produce a repurposing report.
+IndicationScout pulls **live evidence at query time** — no static knowledge base, no precomputed
+answers. For each candidate indication it gathers current trial activity, recent literature,
+mechanistic associations, and regulatory status, then synthesizes them into one report that
+characterizes the *state of the hypothesis* per disease (live, stalled, niche, untested,
+post-readout-and-stuck).
 
-IndicationScout pulls **live evidence** from multiple biomedical databases at query time — no static knowledge base, no precomputed answers. For each candidate indication it gathers current trial activity, recent literature, mechanistic associations, and regulatory status, then synthesizes them into a single repurposing report that characterizes the *state of the hypothesis* (live, stalled, niche, untested, post-readout-and-stuck) per disease.
-
-> For a plain-language reference on what every report field, verdict, and label means — and the exact rule behind each (e.g. what "Closed signal" is, how Evidence "strong" is decided) — see [GLOSSARY.md](GLOSSARY.md).
+The system is built for **accuracy over coverage**: it would rather miss a legitimate candidate
+than surface one that isn't grounded in the upstream data. Candidates are seeded only from Open
+Targets target–disease associations, and reject paths are never loosened to rescue a missing
+result.
 
 A **Supervisor** agent orchestrates three specialist sub-agents:
 
-- **Literature agent** — Queries PubMed via EUtils, then runs a RAG pipeline: fetch abstracts, embed with BioLORD-2023, semantic search, and LLM-based synthesis of evidence for each candidate disease. It also runs a dedicated **safety pass**: a separate adverse-event PubMed search (the drug's MeSH "adverse effects" major-topic query, plus a disease-scoped query) ranked by Europe PMC citation count so landmark safety papers aren't buried by term-frequency relevance. In production the OpenTargets curated drug warnings (black-box / withdrawal) and top FAERS adverse events are the authoritative signal, with the PubMed abstracts as cited provenance; in a temporal holdout those undateable OpenTargets signals are suppressed and the summary is built only from pre-cutoff literature. This yields a **drug-wide safety summary** (with a deterministic severity — withdrawn / black-box / serious) rendered once at the top of the report, plus a per-candidate **indication-specific harm** flag when the disease-scoped literature reports a harm for the drug in that indication (e.g. rofecoxib × colorectal → the APPROVe cardiovascular signal).
-- **Clinical Trials agent** — Queries ClinicalTrials.gov v2 (REST) per drug × indication pair: all-status search (whitespace verdict + per-status counts), completed-trial query (with Phase 3 count), terminated-trial query (with `why_stopped` text classified into safety / efficacy / business / enrollment / unknown categories at the tool layer, falling back to the raw `why_stopped` text when no keyword matches), competitive landscape for the indication, and an FDA-label approval check (the candidate is still investigated fully even when the drug is already approved — the approval status is recorded for the supervisor rather than short-circuiting the analysis). Indications are resolved to a MeSH descriptor via NCBI E-utilities and the resolved preferred term is fed to CT.gov's server-side `AREA[ConditionMeshTerm]"<term>"` filter — so e.g. "hypertension" trials aren't mixed in with unrelated free-text matches like glaucoma. (Known bug: `AREA[ConditionMeshTerm]` also matches on MeSH ancestors, so a parent term like "hypertension" can still pull in pulmonary-hypertension trials; the post-filter fix is not yet implemented.)
-- **Mechanism agent** — Queries Open Targets target-level data (GraphQL) to retrieve disease associations with evidence scores and Reactome pathway annotations.
+- **Literature** — PubMed retrieval via NCBI E-utilities, then a RAG pipeline (BioLORD-2023
+  embeddings, semantic search, LLM synthesis) plus a dedicated adverse-event safety pass.
+- **Clinical Trials** — ClinicalTrials.gov v2 queries per drug × indication, MeSH-resolved,
+  with termination-reason classification and an FDA-label approval check.
+- **Mechanism** — Open Targets target-level disease associations, evidence scores, and Reactome
+  pathway annotations.
 
-The Supervisor first calls `find_candidates` (Open Targets competitor analysis) and `analyze_mechanism` in parallel, then delegates to the Literature and Clinical Trials agents per candidate disease.
+---
 
-### Top-3 candidate blurbs
+## Key characteristics
 
-After investigating candidates, the Supervisor produces a ranked Summary. For each of the **top 3 ranked candidates**, the Supervisor also writes a **2-sentence interpretive blurb** characterizing the *state of the hypothesis* — live, stalled, niche, untested, post-readout-and-stuck, etc. — grounded in the literature and clinical-trials sub-agent summaries seen during that run. Mechanism content is intentionally excluded from the blurb to keep it focused on clinical evidence. Before finalizing, the Supervisor must call `critique_ranking` once — a separate reviewer LLM audits the ranking order (closed/adverse-signal candidates must not outrank live ones) and repairs specific factual contradictions in the blurb fields; `finalize_supervisor` is rejected until it has run. The blurbs are then emitted by `finalize_supervisor` and rendered inline under each disease in the Summary section of both the Markdown report and the web UI Overview tab. 
+- **Multi-agent, live-data-first.** Real-time queries to Open Targets, ClinicalTrials.gov, PubMed,
+  Europe PMC, ChEMBL, and openFDA — parsed into Pydantic contracts at every boundary; agents never
+  see raw API responses.
 
-Data sources:
+- **Explicit safety reasoning.** A drug-wide safety summary (deterministic severity — withdrawn /
+  black-box / serious) from Open Targets warnings and FAERS signals, plus a per-indication harm
+  flag from disease-scoped adverse-event literature ranked by Europe PMC citation count.
 
-- Open Targets (GraphQL) — drug targets, disease associations, competitor drugs
-- ClinicalTrials.gov (REST v2) — trial search, whitespace detection, competitive landscape
-- PubMed (NCBI EUtils) — literature retrieval and abstract indexing
-- Europe PMC (REST) — citation counts used to rank adverse-event literature for the safety pass
-- NCBI MeSH (E-utilities) — indication → MeSH descriptor resolution for the clinical-trials server-side `AREA[ConditionMeshTerm]` filter
-- ChEMBL — molecule metadata and ATC classifications
-- openFDA — drug labels for FDA-approval extraction
+- **Contamination handling.** A four-way FDA approval label per candidate — `approved` (dropped),
+  `combination_only` (demoted), `contaminated` (kept, trial tables suppressed), `none` — decided
+  once from the FDA label and threaded down to the trial and literature relevance gates. Filters
+  approved indications, wrong-drug trials, and comorbid conditions out of a candidate's evidence.
+
+- **Temporal holdouts.** Run the system "as of" a past cutoff date to test whether it would have
+  surfaced an opportunity before it was validated. PubMed and trial queries are restricted to
+  pre-cutoff records; undateable signals are suppressed.
+
+- **Anti-hallucination by construction.** Exact identifiers (NCT IDs, PMIDs, OT scores) are pulled
+  straight off typed tool artifacts, never re-typed by the LLM (`content_and_artifact` pattern).
+  Floor/cap patterns let the model propose while deterministic code clamps to the underlying data.
+  No fabricated or default values for scientific/clinical fields.
+
+- **Prompt caching.** The ReAct agent loops use Anthropic ephemeral prompt caching (system-prompt
+  and growing-history breakpoints), cutting warm-run cost ~10–20% at a ~44–49% cache hit rate. See
+  [docs/anthropic_caching.md](docs/anthropic_caching.md).
+
+- **Full stack.** CLI, FastAPI backend, and React web UI; shared disk cache; snapshot regression
+  harness; async job API.
+
+Data sources: Open Targets (GraphQL), ClinicalTrials.gov (REST v2), PubMed (NCBI E-utilities),
+Europe PMC (citation counts), NCBI MeSH (descriptor resolution), ChEMBL (molecule metadata),
+openFDA (drug labels).
+
+---
+
+## Sample output
+
+A trimmed top-candidate block from `scout find -d "semaglutide"` (full report in `snapshots/`):
+
+```
+1. Cardiovascular Disorder
+   Stage        Active Phase 3 development on record (NCT05669755)
+   Literature   strong, supports, RCT-backed / controlled
+   Assessment   Maturing, awaiting readout
+
+2. Kidney Disorder
+   Stage        Early-phase only, no completed pivotal readout
+   Literature   strong, supports, RCT-backed, ⚠️ safety signal reported for this indication
+   Assessment   Live but bottlenecked
+```
+
+Each candidate carries a stage, graded literature strength/direction, a safety flag, and a
+one-line assessment. See [GLOSSARY.md](GLOSSARY.md) for how each field is derived.
+
+---
 
 ## Installation
 
@@ -131,6 +192,11 @@ scout find -d "metformin" --date-before 2020-01-01 # temporal holdout: only evid
 scout investigate -d "metformin" -i "alzheimer disease"  # run the pipeline on a fixed drug+disease pair (skips candidate discovery)
 scout --help
 ```
+
+> **Use the generic (INN) name, not a brand name.** Only the FDA-approval check resolves
+> brand → generic; the ClinicalTrials.gov and PubMed queries use the name you type verbatim. A
+> brand name silently misses evidence — e.g. `wegovy` misses ~84% of the trials `semaglutide`
+> finds, `vioxx` ~38% vs `rofecoxib`.
 
 #### Fixed pair (`investigate`)
 
@@ -234,37 +300,26 @@ mypy src/                           # type checking
 
 ```
 src/indication_scout/
-├── agents/          # AI agents
-│   ├── base.py             # BaseAgent abstract class (currently unused by ReAct agents)
-│   ├── _trial_formatting.py # Shared trial formatting helpers
-│   ├── _trial_signals.py   # Deterministic trial FACTS (highest completed phase, Phase-3-terminated-for-cause)
-│   ├── supervisor/         # Supervisor agent (orchestrates sub-agents) — supervisor_agent.py, supervisor_tools.py, supervisor_output.py
-│   ├── literature/         # Literature agent (PubMed RAG) — literature_agent.py, literature_tools.py, literature_output.py, pubmed_ae.py (adverse-event search for the safety pass)
-│   ├── clinical_trials/    # Clinical Trials agent (ClinicalTrials.gov + MeSH descriptor filter) — clinical_trials_agent.py, clinical_trials_tools.py, clinical_trials_output.py
-│   └── mechanism/          # Mechanism agent (Open Targets targets) — mechanism_agent.py, mechanism_tools.py, mechanism_output.py, mechanism_candidates.py, mechanism_row_builder.py, ot_score.py
-├── api/             # FastAPI application (main.py, routes/, schemas/) — /health + async analyses routes (POST/GET/report.md/DELETE), drill-down routes, and example-cache routes; serves the built React frontend in prod
-├── cli/             # Click-based CLI (cli.py) — exposes the `scout` command
-├── data_sources/    # Async API clients (OpenTargets, ClinicalTrials.gov, PubMed, Europe PMC, ChEMBL, FDA, DrugBank stub)
-├── db/              # SQLAlchemy session factory and declarative base
-├── helpers/         # Utility functions (drug name normalization)
-├── markers.py       # Code review exclusion markers (@no_review decorator)
-├── ml_models/       # ML modeling code
-│   ├── trial_risk/         # Trial-risk model (data.py, features.py, literature.py, score.py, train.py, inspect.py)
-│   └── success_classifier/ # Trial-success classifier (features.py, labels.py)
-├── models/          # Pydantic data contracts (model_open_targets, model_clinical_trials, model_pubmed_abstract, model_chembl, model_drug_profile, model_evidence_summary)
-├── prompts/         # LLM prompt templates (supervisor, literature, clinical_trials, synthesize, synthesize_holdout, summarize_safety, classify_indication_harm, pmid_direction, expand_search_terms, extract_fda_approvals, extract_fda_approval_single, list_label_indications, extract_organ_term, merge_diseases, normalize_disease, normalize_disease_batch)
-├── regression/      # Snapshot regression harness (diff.py, harness.py) — backs `scout diff-report`
-├── report/          # Report formatting (format_report.py) — turns SupervisorOutput into the final markdown report
-├── runners/         # Pipeline runners (rag_runner.py) and exploration scripts (pubmed_runner.py)
-├── services/        # Business logic -- LLM calls (llm.py, including parse_llm_response), embeddings (embeddings.py), disease normalization + MeSH resolver (disease_helper.py: llm_normalize_disease, normalize_for_pubmed, resolve_mesh_id), PubMed query building (pubmed_query.py), FDA approval extraction (approval_check.py), RAG pipeline (retrieval.py -- fetch_and_cache, semantic_search, synthesize), dev-stage judge (dev_stage.py), interpretive judge (judge_interpretive.py), shared CLI/API entry point (analysis_runner.py), async job store (job_store.py), progress events (progress.py)
-├── sqlalchemy/      # SQLAlchemy ORM models (pubmed_abstracts with pgvector embedding)
-├── utils/           # Shared file-based cache utility (cache_key, cache_get, cache_set)
-├── config.py        # Settings via pydantic-settings, loaded from .env
+├── agents/          # Supervisor + literature, clinical_trials, mechanism sub-agents
+├── api/             # FastAPI app (async analyses API; serves the React frontend in prod)
+├── cli/             # Click-based `scout` CLI
+├── data_sources/    # Async API clients (Open Targets, CT.gov, PubMed, Europe PMC, ChEMBL, FDA)
+├── models/          # Pydantic data contracts
+├── prompts/         # LLM prompt templates
+├── regression/      # Snapshot regression harness (backs `scout diff-report`)
+├── report/          # SupervisorOutput → markdown
+├── services/        # Business logic (LLM, embeddings, RAG, disease/FDA resolution, job store)
+├── ml_models/       # Trial-risk + trial-success modeling
+├── config.py        # Settings (pydantic-settings, .env + .env.constants)
 └── constants.py     # URLs, timeouts, lookup maps
 ```
 
+For a fully annotated tree and the data contracts, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Known Limitations
 
+- **Generic name required**: Only the FDA-approval check resolves brand → generic; ClinicalTrials.gov and PubMed queries use the typed drug string verbatim. Entering a brand name silently loses evidence and shifts downstream ranking (e.g. `wegovy` misses ~84% of trials vs `semaglutide`, `vioxx` ~38% vs `rofecoxib`). Type the INN.
+- **Best for focused-target drugs**: Drugs with specific molecular targets (semaglutide, metformin, imatinib) yield clean signal. Pleiotropic drugs (aspirin, corticosteroids, broad-spectrum antibiotics) surface noisy candidates via their many weak associations — treat those runs as exploratory.
 - **Abstract-only indexing**: PubMed articles without an abstract (letters, editorials, conference summaries) are excluded from the vector store and will not appear in semantic search results. Only articles with a non-empty abstract are embedded and cached.
 - **Incomplete Open Targets approval data**: Open Targets does not record all approved indications for every drug. Approved indications missing from Open Targets will not be filtered from repurposing candidates and may appear as false positives. For example, tofacitinib's ulcerative colitis and ankylosing spondylitis approvals are absent from Open Targets, causing them to appear as repurposing candidates.
 

@@ -516,15 +516,21 @@ def format_report(output: SupervisorOutput) -> str:
     # first non-empty and render ONCE here (not repeated per disease). Per-candidate DISEASE-SPECIFIC
     # harm is rendered inside each Literature block. Prefer the pre-collapsed field if set, else
     # pick-first from the findings.
+    # Prefer the collapsed drug-level fields the supervisor now populates. Fall back to the
+    # pick-first-summary / union-PMIDs collapse for legacy payloads (e.g. frozen gold snapshots)
+    # written before the supervisor carried these fields.
     drug_safety = output.drug_safety_summary
     drug_safety_pmids = list(output.drug_safety_pmids)
     if not drug_safety:
         for f in output.disease_findings:
             es = f.literature.evidence_summary if f.literature else None
-            if es is not None and es.safety_summary:
+            if es is None:
+                continue
+            if not drug_safety and es.safety_summary:
                 drug_safety = es.safety_summary
-                drug_safety_pmids = list(es.safety_pmids)
-                break
+            for pmid in es.safety_pmids:
+                if pmid not in drug_safety_pmids:
+                    drug_safety_pmids.append(pmid)
     if drug_safety:
         lines += ["## Drug Safety", ""]
         lines.append(

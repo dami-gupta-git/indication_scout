@@ -139,6 +139,61 @@ class CandidateSetContains(BaseModel):
         return _coerce_nones(cls, values)
 
 
+class SafetySeverity(BaseModel):
+    """`evidence_summary.safety_severity` for `indication` must be one of `allowed`.
+
+    Allowed is a SET, not an exact value: production derives severity from OT
+    warnings (e.g. withdrawn / black_box) while holdout — with OT suppressed —
+    picks from pre-cutoff literature (serious / moderate). Pin the set of values
+    the drug legitimately produces across prod + holdout, not a single one.
+    """
+
+    bucket: Bucket = Bucket.FACTUAL_ACCURACY
+    indication: str
+    allowed: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _v(cls, values):
+        return _coerce_nones(cls, values)
+
+
+class IndicationHarm(BaseModel):
+    """`evidence_summary.indication_harm` for `indication` must equal `expected`.
+
+    The disease-specific harm flag — whether the indication-scoped literature
+    reports a harm for this drug in this indication's context.
+    """
+
+    bucket: Bucket = Bucket.FACTUAL_ACCURACY
+    indication: str
+    expected: bool = True
+
+    @model_validator(mode="before")
+    @classmethod
+    def _v(cls, values):
+        return _coerce_nones(cls, values)
+
+
+class DrugSafety(BaseModel):
+    """Drug-level collapsed safety signal on the report root.
+
+    `summary_present` pins whether `drug_safety_summary` is non-empty (a drug
+    with a known drug-wide safety signal must surface one; "" is a regression
+    of the collapse). `required_pmids` optionally pins stable PMIDs that must
+    appear in the collapsed `drug_safety_pmids` union.
+    """
+
+    bucket: Bucket = Bucket.FACTUAL_ACCURACY
+    summary_present: bool = True
+    required_pmids: list[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def _v(cls, values):
+        return _coerce_nones(cls, values)
+
+
 class DrugSpec(BaseModel):
     """A single drug's regression spec, loaded from `specs/<drug>.yaml`."""
 
@@ -148,6 +203,14 @@ class DrugSpec(BaseModel):
     # spec was authored against. Used in the failure message when an assertion
     # fails so you can find the corresponding upstream snapshot.
 
+    aliases: dict[str, list[str]] = Field(default_factory=dict)
+    # Indication-name aliasing: maps a canonical indication (as written in the
+    # assertions below) to the run-to-run naming variants that mean the same
+    # disease (e.g. "cocaine use disorder" -> ["cocaine dependence"]). All
+    # indication lookups resolve through this table so a naming drift upstream
+    # doesn't read as a coverage regression. Both keys and values are matched
+    # case-insensitively.
+
     required_ncts_surfaced: list[RequiredNCTs] = Field(default_factory=list)
     required_pmids_cited: list[RequiredPMIDs] = Field(default_factory=list)
     required_in_ranked: list[RequiredInRanked] = Field(default_factory=list)
@@ -155,6 +218,9 @@ class DrugSpec(BaseModel):
     forbidden_in_ranked: list[ForbiddenInRanked] = Field(default_factory=list)
     forbidden_phrases: list[ForbiddenPhrase] = Field(default_factory=list)
     candidate_set_contains: CandidateSetContains | None = None
+    safety_severity: list[SafetySeverity] = Field(default_factory=list)
+    indication_harm: list[IndicationHarm] = Field(default_factory=list)
+    drug_safety: DrugSafety | None = None
 
     @model_validator(mode="before")
     @classmethod

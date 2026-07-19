@@ -1,0 +1,4502 @@
+{
+  "drug_name": "sildenafil",
+  "candidate_diseases": [
+    "malignant glioma",
+    "covid-19",
+    "raynaud disease",
+    "benign prostatic hyperplasia",
+    "ischemic stroke",
+    "congestive heart failure",
+    "infertility",
+    "endothelial dysfunction",
+    "hypertension",
+    "eisenmenger syndrome",
+    "chronic obstructive pulmonary disease",
+    "chronic kidney disease",
+    "major depressive disorder",
+    "coronary artery disorder",
+    "peripheral arterial disease",
+    "pulmonary hypertension",
+    "stroke disorder",
+    "cardiovascular disorder"
+  ],
+  "mechanism": {
+    "drug_targets": {
+      "PDE5A": "ENSG00000138735"
+    },
+    "mechanisms_of_action": [
+      {
+        "mechanism_of_action": "Phosphodiesterase 5A inhibitor",
+        "action_type": "INHIBITOR",
+        "target_ids": [
+          "ENSG00000138735"
+        ],
+        "target_symbols": [
+          "PDE5A"
+        ]
+      }
+    ],
+    "candidates": [
+      {
+        "target_symbol": "PDE5A",
+        "action_type": "INHIBITOR",
+        "disease_name": "coronary artery disorder",
+        "disease_id": "MONDO_0005010",
+        "disease_description": "Narrowing of the coronary arteries due to fatty deposits inside the arterial walls. The diagnostic criteria may include documented history of any of the following: documented coronary artery stenosis greater than or equal to 50% (by cardiac catheterization or other modality of direct imaging of the coronary arteries); previous coronary artery bypass surgery (CABG); previous percutaneous coronary intervention (PCI); previous myocardial infarction. (ACC)",
+        "target_function": "Plays a role in signal transduction by regulating the intracellular concentration of cyclic nucleotides. This phosphodiesterase catalyzes the specific hydrolysis of cGMP to 5'-GMP. Specifically regulates nitric-oxide- generated cGMP.."
+      },
+      {
+        "target_symbol": "PDE5A",
+        "action_type": "INHIBITOR",
+        "disease_name": "benign prostatic hyperplasia",
+        "disease_id": "MONDO_0010811",
+        "disease_description": "A non-cancerous nodular enlargement of the prostate gland. It is characterized by the presence of epithelial cell nodules, and stromal nodules containing fibrous and smooth muscle elements. It is the most common urologic disorder in men, causing blockage of urine flow.",
+        "target_function": "Plays a role in signal transduction by regulating the intracellular concentration of cyclic nucleotides. This phosphodiesterase catalyzes the specific hydrolysis of cGMP to 5'-GMP. Specifically regulates nitric-oxide- generated cGMP.."
+      },
+      {
+        "target_symbol": "PDE5A",
+        "action_type": "INHIBITOR",
+        "disease_name": "pulmonary hypertension",
+        "disease_id": "MONDO_0005149",
+        "disease_description": "Increased pressure within the pulmonary circulation due to lung or heart disorder.",
+        "target_function": "Plays a role in signal transduction by regulating the intracellular concentration of cyclic nucleotides. This phosphodiesterase catalyzes the specific hydrolysis of cGMP to 5'-GMP. Specifically regulates nitric-oxide- generated cGMP.."
+      },
+      {
+        "target_symbol": "PDE5A",
+        "action_type": "INHIBITOR",
+        "disease_name": "stroke disorder",
+        "disease_id": "MONDO_0005098",
+        "disease_description": "A sudden loss of neurological function secondary to hemorrhage or ischemia in the brain parenchyma due to a vascular event.",
+        "target_function": "Plays a role in signal transduction by regulating the intracellular concentration of cyclic nucleotides. This phosphodiesterase catalyzes the specific hydrolysis of cGMP to 5'-GMP. Specifically regulates nitric-oxide- generated cGMP.."
+      },
+      {
+        "target_symbol": "PDE5A",
+        "action_type": "INHIBITOR",
+        "disease_name": "cardiovascular disorder",
+        "disease_id": "MONDO_0004995",
+        "disease_description": "A disease involving the cardiovascular system.",
+        "target_function": "Plays a role in signal transduction by regulating the intracellular concentration of cyclic nucleotides. This phosphodiesterase catalyzes the specific hydrolysis of cGMP to 5'-GMP. Specifically regulates nitric-oxide- generated cGMP.."
+      }
+    ],
+    "summary": "Sildenafil acts primarily as a PDE5A inhibitor, and PDE5A's disease associations strongly reflect both its established clinical uses and compelling repurposing opportunities. Its highest-scoring associations are coronary artery disorder (overall 0.661), pulmonary arterial hypertension (0.609), and benign prostatic hyperplasia (0.607) — all conditions for which sildenafil is already approved or widely used — validating the target-disease link. Beyond these, notable associations include obesity (0.370), diabetes mellitus (0.366), and Alzheimer's disease (0.295), the latter supported by strong literature evidence (0.588) and clinical signals, aligning with emerging research into PDE5 inhibition as a neuroprotective strategy. Parkinson's disease also appears (0.312) with a meaningful genetic association score (0.473), suggesting that the cGMP/nitric oxide signaling pathway modulated by PDE5A may have broader neurological relevance worth investigating for repurposing."
+  },
+  "disease_findings": [
+    {
+      "disease": "raynaud disease",
+      "source": "competitor",
+      "approval_relationship": "none",
+      "literature": {
+        "search_results": [
+          "sildenafil AND \"Raynaud Disease\"",
+          "phosphodiesterase 5 inhibitors AND blood vessels",
+          "PDE5 inhibition AND vasodilation",
+          "PDE5A AND \"Raynaud Disease\"",
+          "Viagra AND \"Raynaud Disease\"",
+          "cGMP signaling AND blood vessel dysfunction",
+          "nitric oxide pathway AND \"Raynaud Disease\"",
+          "Revatio AND \"Raynaud Disease\""
+        ],
+        "pmids": [
+          "18552072",
+          "27129065",
+          "29931173",
+          "38956991",
+          "17352512",
+          "17917543",
+          "27541182",
+          "16224254",
+          "30856621",
+          "16835313",
+          "38306796",
+          "18437399",
+          "26631100",
+          "25824427",
+          "33422171",
+          "16100356",
+          "16804699",
+          "30383134",
+          "23426043",
+          "21360507",
+          "16275885",
+          "22833239",
+          "19053879",
+          "15295684",
+          "17057632",
+          "16275879",
+          "15953103",
+          "30776810",
+          "14623635",
+          "17345017",
+          "27998297",
+          "24789669",
+          "17694282",
+          "16964476",
+          "16960964",
+          "15896360",
+          "16908357",
+          "29241781",
+          "30677800",
+          "22453196",
+          "33974075",
+          "19268093",
+          "27608801",
+          "21533912",
+          "17849090",
+          "21283970",
+          "12528146",
+          "21633912",
+          "28281457",
+          "19183180",
+          "25467391",
+          "18505148",
+          "18018319",
+          "15479910",
+          "16924768",
+          "21890489",
+          "12166544",
+          "24450519",
+          "19624350",
+          "23917809",
+          "16387564",
+          "32909898",
+          "26122487",
+          "18765082",
+          "23410557",
+          "16672782",
+          "26696017",
+          "26142740",
+          "20225909",
+          "20942592",
+          "34768119",
+          "25953750",
+          "40145405",
+          "28606099",
+          "36121246",
+          "30471172",
+          "26138471",
+          "38832504",
+          "18689467",
+          "25330139",
+          "25176340",
+          "27094599",
+          "20175840",
+          "36162651",
+          "19262466",
+          "16368379",
+          "28052870",
+          "37324943",
+          "26573781",
+          "16204472",
+          "37417556",
+          "25410225",
+          "17706972",
+          "40588357",
+          "36174768",
+          "21820579",
+          "35585360",
+          "38597554",
+          "16815471",
+          "32878579",
+          "27097138",
+          "33359621",
+          "28986358",
+          "41931622",
+          "32844220",
+          "24619381",
+          "35062063",
+          "15533876",
+          "19808302",
+          "38856719",
+          "27232660",
+          "28603047",
+          "11081893",
+          "22371941",
+          "41212057",
+          "23118430",
+          "32706206",
+          "16273418",
+          "24011423",
+          "31640235",
+          "36408982",
+          "24313856",
+          "24521101",
+          "23347325",
+          "31206240",
+          "21924956",
+          "21812935",
+          "23204122",
+          "32599009",
+          "40388087",
+          "32912157",
+          "40204283",
+          "18076339",
+          "11750034",
+          "40880357",
+          "27928151",
+          "22906904",
+          "27297890",
+          "16387560",
+          "22790642",
+          "40783516",
+          "16755209",
+          "39556088",
+          "40701503",
+          "22229392",
+          "16432985",
+          "20001434",
+          "24037633",
+          "20522326",
+          "16193544",
+          "32073535",
+          "32504853",
+          "23204121",
+          "34984916",
+          "21876983",
+          "37221657",
+          "20367190",
+          "29724533",
+          "41291823",
+          "27144937",
+          "35813481",
+          "30706814",
+          "40763482",
+          "23321580",
+          "29158679",
+          "18528398",
+          "21465139",
+          "24000082",
+          "36849042",
+          "36617624",
+          "27072860",
+          "24092346",
+          "19034012",
+          "22465621",
+          "37016904",
+          "28105791",
+          "24201857",
+          "19267852",
+          "25929951",
+          "11336572",
+          "24813467",
+          "20500512",
+          "24413911",
+          "27515036",
+          "21048399",
+          "30168731",
+          "16387568",
+          "26464516",
+          "29364918",
+          "36597221",
+          "21944683",
+          "40878944",
+          "35413880",
+          "32701652",
+          "22450719",
+          "11146849",
+          "15219011",
+          "30911094",
+          "16607490",
+          "11590817",
+          "35680060",
+          "38148369",
+          "25223948",
+          "33356952",
+          "23443723",
+          "31339910",
+          "28132040",
+          "32750643",
+          "37307938",
+          "30636546",
+          "32212481",
+          "31630883",
+          "11351772",
+          "23650288",
+          "25832922",
+          "17150221",
+          "27164419",
+          "30169244",
+          "34774286",
+          "23129569",
+          "32056540",
+          "22252326",
+          "38241693",
+          "24819293",
+          "21956762",
+          "21297971",
+          "28830281",
+          "19480752",
+          "38606906",
+          "20704168",
+          "39563536",
+          "26639481",
+          "30656886",
+          "31044326",
+          "19718604",
+          "19028977",
+          "27400005",
+          "25577741",
+          "26580240",
+          "37354146",
+          "36198097",
+          "10962340",
+          "19298393",
+          "38603613",
+          "22094063",
+          "19729580",
+          "27189373",
+          "19121410",
+          "22914567",
+          "41009483",
+          "19523842",
+          "35602350",
+          "19718608",
+          "23997053",
+          "31125551",
+          "20164566",
+          "11249556",
+          "38030140",
+          "12027779",
+          "33152335",
+          "30946638",
+          "31542487",
+          "38713942",
+          "29667180",
+          "27872007",
+          "30821858",
+          "21649691",
+          "22426465",
+          "15224129",
+          "21036891",
+          "12836729",
+          "15224127",
+          "16036043",
+          "27451093",
+          "16042360",
+          "26432842",
+          "22918733",
+          "38138293",
+          "17383621",
+          "29616790",
+          "33009887",
+          "29660387",
+          "23441682",
+          "39292699",
+          "38542085",
+          "10541153",
+          "19546307",
+          "19127022",
+          "10899281",
+          "19961855",
+          "37766832",
+          "31978378",
+          "12207947",
+          "39789694",
+          "36522632",
+          "29375047",
+          "25837309",
+          "24808022",
+          "32526061",
+          "31493542",
+          "17308037",
+          "40730056",
+          "23504180",
+          "21996373",
+          "10078541",
+          "33169529",
+          "27903966",
+          "37334372",
+          "19384199",
+          "24281316",
+          "12209148",
+          "41131545",
+          "18953278",
+          "12414329",
+          "30646523",
+          "34393818",
+          "30701543",
+          "29545395",
+          "15769623",
+          "23831390",
+          "14609621",
+          "23775467",
+          "18234184",
+          "32427079",
+          "18367027",
+          "15295092",
+          "35119252",
+          "11890515",
+          "32535704",
+          "12003794",
+          "26108184",
+          "16914104",
+          "12695418",
+          "41839428",
+          "23117589",
+          "18046921",
+          "23622773",
+          "40080113",
+          "35950928",
+          "22312057",
+          "22716077",
+          "36915218",
+          "12824030",
+          "22763627",
+          "15613622",
+          "11696008",
+          "34510273",
+          "35764701",
+          "26047999",
+          "30245400",
+          "12679324",
+          "42188060",
+          "10385692",
+          "32459846",
+          "31741459",
+          "21695645",
+          "21796010",
+          "15041479",
+          "26027948",
+          "19096931",
+          "21416994",
+          "38862270",
+          "16716091",
+          "35110391",
+          "39106104",
+          "19154480",
+          "12698205",
+          "35460094",
+          "23114592",
+          "27225960",
+          "15093609",
+          "25163536",
+          "20479949",
+          "39827331",
+          "15837326",
+          "37082866",
+          "12614192",
+          "28316997",
+          "14609619",
+          "28982942",
+          "18957291",
+          "18757735",
+          "32171616",
+          "35704597",
+          "21762988",
+          "15537369",
+          "14622500",
+          "16387563",
+          "14521415",
+          "22066694",
+          "25372140",
+          "16859408",
+          "22578167",
+          "22855271",
+          "24877179",
+          "21284024",
+          "40188276",
+          "23143734",
+          "19183931",
+          "35975649",
+          "9916601",
+          "25429621",
+          "22759639",
+          "33952455",
+          "19138362",
+          "40772613",
+          "25425003",
+          "24878583",
+          "19239452",
+          "16236069",
+          "20553468",
+          "24157527",
+          "25303541",
+          "33142429",
+          "15988068",
+          "21771280",
+          "24146440",
+          "23033484",
+          "32336717",
+          "17303994",
+          "11607039",
+          "29220595",
+          "39589221",
+          "23575263",
+          "31311394",
+          "20093183",
+          "38368658",
+          "26205960",
+          "31409013",
+          "28306529",
+          "18790048",
+          "18596129",
+          "14626653",
+          "30896450",
+          "10913932",
+          "16787138",
+          "32229414",
+          "28596298",
+          "16432094",
+          "17301734",
+          "23684677",
+          "37080965",
+          "28585207",
+          "26682792",
+          "41515936",
+          "26499181",
+          "35328488",
+          "19089340",
+          "15546990",
+          "29047089",
+          "30403147",
+          "29979224",
+          "25521176",
+          "31686283",
+          "20716671",
+          "31396305",
+          "20160535",
+          "20203313",
+          "16510560",
+          "20716294",
+          "41047033",
+          "16719796",
+          "27264638",
+          "41269672",
+          "20093624",
+          "41037641",
+          "27184830",
+          "41232443",
+          "35064565",
+          "23737164",
+          "11090544",
+          "39887769",
+          "16195486",
+          "31830549",
+          "23978093",
+          "14645134",
+          "21148769",
+          "25360843",
+          "11889009",
+          "40796654",
+          "17681944",
+          "40121575",
+          "15229623",
+          "18703404",
+          "40826215",
+          "17339838",
+          "39063044",
+          "20933202",
+          "21695641",
+          "17637789",
+          "18786089",
+          "29055408",
+          "26261901",
+          "33066124",
+          "30880106",
+          "22988140",
+          "34958954",
+          "11884382",
+          "42123296",
+          "38844781",
+          "24531811",
+          "22748498",
+          "21615201",
+          "38643455",
+          "40633831",
+          "21351102",
+          "17052961",
+          "20214719",
+          "16465183",
+          "33657586",
+          "20553833",
+          "34638713",
+          "34768128",
+          "8951572",
+          "37254738",
+          "33494070",
+          "17305584",
+          "30981710",
+          "12747961",
+          "22220582",
+          "1848128",
+          "28914189",
+          "29342480",
+          "18321209",
+          "42216994",
+          "33772737",
+          "19912487",
+          "40209616",
+          "15312990",
+          "31184598",
+          "33710923",
+          "33464954",
+          "15879305",
+          "15218537",
+          "17445086",
+          "8712788",
+          "18607596",
+          "12393944",
+          "19219301",
+          "42289622",
+          "42085863",
+          "33483748",
+          "29424564",
+          "24317273",
+          "17322419",
+          "23953980",
+          "10702869",
+          "33515043",
+          "33681964",
+          "34768842",
+          "38552439",
+          "41269201",
+          "31689530",
+          "27879251",
+          "31434939",
+          "10974414",
+          "31416613",
+          "24929853",
+          "34504640",
+          "29420109",
+          "12677190",
+          "25855081",
+          "31498828",
+          "32630010",
+          "40383495",
+          "39913351",
+          "23529183",
+          "16565426",
+          "24938713",
+          "19485892",
+          "27235860",
+          "27470514",
+          "17148943",
+          "27222062",
+          "31619060",
+          "25481005",
+          "27474450",
+          "19095646",
+          "12225941",
+          "9116735",
+          "12468802",
+          "30249014",
+          "22685116",
+          "34014044",
+          "21755266",
+          "23863813",
+          "21670499",
+          "28453571",
+          "15947285",
+          "25326578",
+          "29626067",
+          "30327468",
+          "19120700",
+          "34185619",
+          "34477327",
+          "23580172",
+          "25117404",
+          "9176315",
+          "8262306",
+          "24024132",
+          "33621262",
+          "21967314",
+          "33444613",
+          "23318471",
+          "28880927",
+          "27979860",
+          "40973149",
+          "25724497",
+          "23642043",
+          "9729585",
+          "26482008",
+          "38914702",
+          "9352612",
+          "21903940",
+          "22290599",
+          "38847159",
+          "9606187",
+          "34324442",
+          "32249400",
+          "11956491",
+          "33058924",
+          "21926181",
+          "15466659",
+          "16373436",
+          "14993198",
+          "15639062",
+          "24926630",
+          "10555898",
+          "9041947",
+          "9301433"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "30383134",
+            "title": "On-Demand Sildenafil as a Treatment for Raynaud Phenomenon: A Series of n-of-1 Trials.",
+            "abstract": "BACKGROUND: Treatment of Raynaud phenomenon (RP) with phosphodiesterase-5 inhibitors has shown moderate efficacy. Adverse effects decrease the risk-benefit profile of these drugs, and patients may not be willing to receive long-term treatment. On-demand single doses before or during exposure to cold may be a good alternative. OBJECTIVE: To assess the efficacy and safety of on-demand sildenafil in RP. DESIGN: Series of randomized, double-blind, n-of-1 trials. (ClinicalTrials.gov: NCT02050360). SETTING: Outpatients at a French university hospital. PARTICIPANTS: Patients with primary or secondary RP. INTERVENTION: Each trial consisted of a multiple crossover study in a single patient. Repeated blocks of 3 periods of on-demand treatment were evaluated: 1 week of placebo, 1 week of sildenafil at 40 mg per dose, and 1 week of sildenafil at 80 mg per dose, with a maximum of 2 doses daily. MEASUREMENTS: Raynaud Condition Score (RCS) and frequency and daily duration of attacks. Skin blood flow in response to cooling also was assessed with laser speckle contrast imaging. Mixed-effects models were used and parameters were estimated in a Bayesian framework to determine individual and aggregated efficacy. RESULTS: 38 patients completed 2 to 5 treatment blocks. On the basis of aggregated data, the probability that sildenafil at 40 mg or 80 mg was more effective than placebo was greater than 90% for all outcomes (except for RCS with sildenafil, 80 mg). However, the aggregated effect size was not clinically relevant. Yet, substantial heterogeneity in sildenafil's efficacy was observed among participants, with clinically relevant efficacy in some patients. LIMITATION: The response to sildenafil was substantially heterogeneous among patients. CONCLUSION: Despite a high probability that sildenafil is superior to placebo, substantial heterogeneity was observed in patient response and aggregated results did not show that on-demand sildenafil has clinically relevant efficacy. In this context, the use of n-of-1 trials may be an original and relevant approach in RP. PRIMARY FUNDING SOURCE: GIRCI (Groupement Interrégional de Recherche Clinique et d'Innovation) Auvergne Rhône-Alpes (academic funding) and Pfizer.",
+            "similarity": 0.7784186155613063,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "21360507",
+            "title": "Modified-release sildenafil reduces Raynaud's phenomenon attack frequency in limited cutaneous systemic sclerosis.",
+            "abstract": "OBJECTIVE: To examine the effect of sildenafil in patients with Raynaud's phenomenon (RP) secondary to limited cutaneous systemic sclerosis (lcSSc). METHODS: In this double-blind, placebo-controlled study, 57 patients with RP secondary to lcSSc were randomized to receive modified-release sildenafil 100 mg once daily for 3 days followed by modified-release sildenafil 200 mg once daily for 25 days or placebo. The primary assessment was the percentage change in the number of RP attacks per week in the per-protocol population. Secondary end points included Raynaud's Condition Score, duration of attacks, RP pain score, endothelial dysfunction assessed by a peripheral arterial tonometric (PAT) device, and serum biomarker levels. RESULTS: The mean percentage reduction from baseline to day 28 in attacks per week was greater for modified-release sildenafil than for placebo (-44.0% versus -18.1%, P = 0.034); the mean number of attacks per week improved from 25.0 at baseline to 19.3 after placebo treatment and from 30.5 to 18.7 after modified-release sildenafil treatment (P = 0.244). Decreases from baseline in Raynaud's Condition Score, duration of attacks, and RP pain score were not significantly different between groups. Mean values and changes from baseline in PAT responses and serum biomarker levels were similar between groups. The most frequent adverse events were headache and dyspepsia; the majority of adverse events were mild or moderate. CONCLUSION: Our findings indicate that modified-release sildenafil reduced attack frequency in patients with RP secondary to lcSSc and was well tolerated. Modified-release sildenafil may be a treatment option in this patient population.",
+            "similarity": 0.7445134445807642,
+            "pubtype": [
+              "Journal Article",
+              "Multicenter Study",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "28281457",
+            "title": "Evaluation of the effect of sildenafil on the microvascular blood flow in patients with systemic sclerosis: a randomised, double-blind, placebo-controlled study.",
+            "abstract": "OBJECTIVES: To evaluate the effect of sildenafil as add-on therapy on the microvascular blood flow in patients with Raynaud's phenomenon (RP) secondary to systemic sclerosis (SSc). METHODS: In this double-blind, placebo-controlled study, 41 patients with RP secondary to SSc were randomly assigned to receive oral sildenafil 100 mg/day (21 patients, mean age 47.2 years) or placebo (20 patients, mean age 41.6 years) for 8 weeks. Patients were evaluated at baseline, 8 weeks after treatment, and 2 weeks after the end of the treatment. The primary outcome measures were the mean changes in finger blood flow (FBF) measured using laser Doppler imaging before and after cold stimulus at 8 weeks of treatment. Secondary endpoints included frequency and duration of RP attacks, Visual Analog Scale (VAS) score for RP severity, Raynaud's condition score, and serum levels of VEGF and endothelial progenitor cells (EPCs). RESULTS: After 8 weeks of treatment, the sildenafil group presented a significantly higher mean percentage change from baseline in FBF before cold stimulus (p=0.026), and in FBF after cold stimulus (p=0.028) compared with the placebo group. There was a significant improvement in the duration of RP and in the percentage change from baseline to week 8 in the RP VAS score in sildenafil compared with placebo. There were no changes in EPCs and VEGF levels after treatment in either group. CONCLUSIONS: Sildenafil improved digital blood flow and RP symptoms in SSc patients after 8 weeks of treatment, and might be a good therapeutic option for secondary RP.",
+            "similarity": 0.7426093552597195,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial"
+            ]
+          },
+          {
+            "pmid": "17301734",
+            "title": "The effects of tadalafil on cold-induced vasoconstriction in patients with Raynaud's phenomenon.",
+            "abstract": "Raynaud's phenomenon (RP) is a disorder characterized by episodic periods of vasoconstriction typically provoked by exposure to cold. Phosphodiesterase 5 (PDE5) inhibitors may improve digital blood flow and clinical symptoms in patients with RP, but the mechanisms are unknown. We examined the hypothesis that a PDE5 inhibitor, tadalafil, attenuates cold-induced vasoconstriction. Additionally, we examined whether tadalafil reduced vascular dysfunction following ischemia, thus altering the response to repeated cooling. We conducted a double-blind, placebo-controlled crossover study in 20 subjects with RP on two separate study days, when subjects received either placebo or tadalafil (10 mg). Digital blood flow (flux) was measured by laser Doppler flowmetry at rest and during two graduated local heat and cold exposure cycles. Temperature-response curves were evaluated by E(max) (maximal flux during heating), E(min) (minimal flux during cooling), and ET(50) and ET(90) (the local temperature at which flux decreased by 50% and 90% of E(max)-E(min), respectively). Tadalafil did not increase baseline flux (81.0+/-73.0 vs 91.3+/-114.0 arbitrary unit (AU), P=0.57), E(max) (280.0+/-107.6 vs 279.5+/-119.8 AU, P=0.94), ET(50) (25.4+/-4.4 vs 26.6+/-5.7 degrees C, P=0.62), or ET(90) (21.2+/-3.9 vs 21.8+/-5.0 degrees C, P=0.78), (cycle 1 values presented). There were no differences between cycles on either study day. In conclusion, in patients with RP, single-dose tadalafil does not increase digital blood flow at baseline or in response to heating, nor does it attenuate cold-induced vasoconstriction. Furthermore, it does not precondition the endothelium to resist a second cooling challenge. The clinical benefit in patients with RP treated with PDE5 inhibitors probably involves mechanisms other than acute inhibition of cold-induced vasoconstriction.",
+            "similarity": 0.6955548640595477,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, N.I.H., Extramural",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "23443723",
+            "title": "Sildenafil increases sympathetically mediated vascular tone in humans.",
+            "abstract": "BACKGROUND: Sildenafil, a selective phosphodiesterase-type-5 (PDE-5) inhibitor, produces vasodilation that improves erectile dysfunction and pulmonary hypertension. Sildenafil could also cause baroreflex sympathetic activation that would enhance vascular tone and oppose direct vasodilation. We tested the hypothesis that sildenafil administration increases sympathetically mediated vascular tone in healthy middle-aged men. METHODS: We randomized 9 healthy, middle-aged, male volunteers (mean age 45±2 years) in a double-blind, crossover fashion to receive a single oral dose of sildenafil 100mg or placebo on 2 separate study days. Hemodynamics and forearm blood flow responses were measured at baseline, at 30 and 45 minutes after study drug administration, and then during intra-arterial infusions of vasoactive drugs. After sildenafil and placebo administration, intrabrachial medications were infused to test forearm alpha receptor sensitivity (norepinephrine), cyclic-AMP-mediated vasodilation (isoproterenol), and sympathetically mediated vascular tone (phentolamine) (adenosine was a control vasodilator). Blood samples were taken before and 60 minutes after study drug administration and at the end of the intrabrachial infusions for measurement of plasma norepinephrine concentrations. RESULTS: Forearm vascular responses to norepinephrine, isoproterenol, and adenosine were not different after placebo and sildenafil administration. Percentage reduction in forearm vascular resistance during phentolamine was significantly lower after sildenafil than placebo (-73% ± 3% vs -63% ± 3%; P = 0.0002). Sildenafil significantly increased plasma norepinephrine compared with placebo 60 minutes after study drug administration and at the end of the study session (P = 0.02). CONCLUSIONS: Sildenafil increased sympathetically mediated vascular tone in middle-aged healthy men. Alpha-adrenergic-mediated vasoconstriction may offset vasodilation during PDE-5 inhibition and may explain the significant hypotension observed in patients taking alpha-blockers with sildenafil.",
+            "similarity": 0.5972073587665122,
+            "pubtype": [
+              "Comparative Study",
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, N.I.H., Extramural",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "Multiple randomized, double-blind, placebo-controlled trials have evaluated sildenafil for Raynaud's phenomenon (RP). Two trials found significant benefits: modified-release sildenafil reduced RP attack frequency by 44% versus 18.1% for placebo in patients with limited cutaneous systemic sclerosis (PMID: 21360507), and sildenafil 100 mg/day improved digital blood flow and RP symptom duration in systemic sclerosis patients (PMID: 28281457). However, an n-of-1 trial series found that while sildenafil was statistically superior to placebo, the aggregated effect size was not clinically relevant and substantial heterogeneity in patient response was observed (PMID: 30383134), and a mechanistic study found that sildenafil increases sympathetically mediated vascular tone via baroreflex activation, which may partially offset its vasodilatory effects (PMID: 23443723).",
+          "study_count": 4,
+          "strength": "strong",
+          "direction": "mixed",
+          "evidence_basis": "drug_specific",
+          "is_observational": false,
+          "is_animal_only": false,
+          "key_findings": [
+            "Modified-release sildenafil reduced RP attack frequency by a mean of 44.0% versus 18.1% for placebo (P=0.034) in patients with RP secondary to limited cutaneous systemic sclerosis (PMID: 21360507)",
+            "Sildenafil 100 mg/day for 8 weeks significantly improved finger blood flow before and after cold stimulus (p=0.026 and p=0.028, respectively) compared to placebo in systemic sclerosis patients (PMID: 28281457)",
+            "Sildenafil significantly improved duration of RP attacks and RP VAS score compared to placebo in systemic sclerosis patients (PMID: 28281457)",
+            "In an n-of-1 trial series, the probability that sildenafil at 40 mg or 80 mg was more effective than placebo exceeded 90% for most outcomes, but the aggregated effect size was not clinically relevant (PMID: 30383134)",
+            "Substantial heterogeneity in sildenafil's efficacy was observed among participants in the n-of-1 trial series, with clinically relevant efficacy in some patients but not others (PMID: 30383134)",
+            "Sildenafil significantly increased sympathetically mediated vascular tone and plasma norepinephrine levels compared to placebo in healthy men, suggesting alpha-adrenergic vasoconstriction may partially offset its vasodilatory effects (PMID: 23443723)",
+            "The percentage reduction in forearm vascular resistance during phentolamine was significantly lower after sildenafil than placebo (-63% ± 3% vs -73% ± 3%; P=0.0002), indicating increased sympathetic vascular tone with sildenafil (PMID: 23443723)"
+          ],
+          "supporting_pmids": [
+            "21360507",
+            "28281457"
+          ],
+          "contradicting_pmids": [
+            "30383134"
+          ],
+          "relevant_pmids": [
+            "30383134",
+            "21360507",
+            "28281457",
+            "23443723"
+          ],
+          "contaminated_pmids": [
+            "17301734"
+          ],
+          "neutral_pmids": [
+            "23443723"
+          ],
+          "safety_summary": "The top pharmacovigilance signal for sildenafil is headache (1,223 reports, logLR 762.4), consistent with its vasodilatory mechanism and corroborated across multiple trials (PMID: 9647940, PMID: 16275885, PMID: 21360507). Sildenafil also carries a strong FAERS signal for dyspnoea and pulmonary hypertension-related events, and a critical drug interaction with organic nitrates causing potentially severe hypotension is well documented (PMID: 10078539).",
+          "safety_pmids": [
+            "9647940",
+            "16275885",
+            "21360507",
+            "10078539"
+          ],
+          "safety_severity": "serious",
+          "indication_harm": true,
+          "indication_harm_summary": "Multiple abstracts report safety findings for sildenafil in the context of Raynaud's phenomenon, including adverse effects limiting treatment (PMID 16275885), adverse effects reducing the risk-benefit profile (PMID 30383134), critical finger ischemia and myocardial fibrosis after sudden sildenafil discontinuation in an SSc/RP patient (PMID 27608801), safety outcomes in an SSc/RP pilot study (PMID 22833239), safety data from a systematic review of RP treatments (PMID 38306796), and hypotension as a side effect leading to treatment discontinuation in RP patients (PMID 33422171).",
+          "indication_harm_pmids": [
+            "16275885",
+            "30383134",
+            "27608801",
+            "22833239",
+            "38306796",
+            "33422171"
+          ]
+        },
+        "summary": "Evidence strength: strong, direction: mixed. Sildenafil shows meaningful clinical benefit in Raynaud's disease, particularly in secondary Raynaud's phenomenon (RP) associated with systemic sclerosis (SSc), but safety concerns and tolerability issues temper the overall benefit-risk profile."
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 3,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 0
+          },
+          "trials": [
+            {
+              "nct_id": "NCT02050360",
+              "title": "\"As Required\" Oral Sildenafil in Raynaud's Phenomenon",
+              "brief_summary": "The purpose of this study is to determine whether \"on-demand\" sildenafil is effective in the treatment of Raynaud's phenomenon.",
+              "phase": "Phase 2/Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Raynaud's Phenomenon"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D011928",
+                  "term": "Raynaud Disease"
+                },
+                {
+                  "id": "D012595",
+                  "term": "Scleroderma, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D000090122",
+                  "term": "Livedoid Vasculopathy"
+                },
+                {
+                  "id": "D013927",
+                  "term": "Thrombosis"
+                },
+                {
+                  "id": "D016769",
+                  "term": "Embolism and Thrombosis"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D016491",
+                  "term": "Peripheral Vascular Diseases"
+                },
+                {
+                  "id": "D017445",
+                  "term": "Skin Diseases, Vascular"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil 40 mg",
+                  "description": null
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil 80 mg",
+                  "description": null
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": null
+                }
+              ],
+              "sponsor": "University Hospital, Grenoble",
+              "enrollment": 41,
+              "start_date": "2013-11",
+              "completion_date": "2015-05",
+              "primary_outcomes": [
+                {
+                  "measure": "Mean change in the Raynaud's Condition Score (RCS) during treatment, as compared to placebo.",
+                  "time_frame": "7 days"
+                }
+              ],
+              "references": [
+                "37929840",
+                "30383134"
+              ]
+            },
+            {
+              "nct_id": "NCT01347008",
+              "title": "Effect of Sildenafil on the Microcirculatory Blood Flow and Endothelial Progenitor Cells in Systemic Sclerosis",
+              "brief_summary": "Early phases of systemic sclerosis is characterized by inflammatory and microvasculature alterations. Sildenafil citrate has been shown to have vasodilatory effects and to enhance vasculogenesis. The purpose of this study is to evaluate the effect of sildenafil citrate on hand blood flow of patients with systemic sclerosis, using Laser Doppler Imaging.",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Scleroderma, Systemic",
+                "Scleroderma, Diffuse",
+                "Scleroderma, Limited",
+                "Raynaud Phenomenon"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D012595",
+                  "term": "Scleroderma, Systemic"
+                },
+                {
+                  "id": "D045743",
+                  "term": "Scleroderma, Diffuse"
+                },
+                {
+                  "id": "D045745",
+                  "term": "Scleroderma, Limited"
+                },
+                {
+                  "id": "D011928",
+                  "term": "Raynaud Disease"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D000090122",
+                  "term": "Livedoid Vasculopathy"
+                },
+                {
+                  "id": "D013927",
+                  "term": "Thrombosis"
+                },
+                {
+                  "id": "D016769",
+                  "term": "Embolism and Thrombosis"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D016491",
+                  "term": "Peripheral Vascular Diseases"
+                },
+                {
+                  "id": "D017445",
+                  "term": "Skin Diseases, Vascular"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil citrate",
+                  "description": "Oral sildenafil citratre, 50mg b.i.d., 8 weeks"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo (Sugar pill)",
+                  "description": "Placebo pills similar to sildenafil citrate pills, b.i.d for 8 weeks"
+                }
+              ],
+              "sponsor": "Federal University of São Paulo",
+              "enrollment": 41,
+              "start_date": "2011-04",
+              "completion_date": "2013-01",
+              "primary_outcomes": [
+                {
+                  "measure": "Digital Skin Microvascular Blood Flow Measured by Laser Doppler Imaging (LDI) Before Cold Stimulus",
+                  "time_frame": "8 weeks"
+                },
+                {
+                  "measure": "Digital Skin Microvascular Blood Flow Measured by Laser Doppler Imaging (LDI) After Cold Stimulus.",
+                  "time_frame": "8 weeks"
+                }
+              ],
+              "references": [
+                "37929840"
+              ]
+            },
+            {
+              "nct_id": "NCT03027674",
+              "title": "Topical 10 % Nifedipine Versus 5% Sildenafil in Secondary Raynaud",
+              "brief_summary": "Objective: To compare the efficacy of topical 10% nifedipine versus 5% sildenafil in patients with secondary Raynaud's phenomenon (RP).\n\nMethods: A randomized, double-blind, placebo-controlled pilot study took place in 10 patients with secondary RP. Topical 10% nifedipine on one hand and 5% sildenafil on the other hand were applied. The thumbs didn't receive any cream and served as a control group. The primary outcome was the improvement of blood flow and vessel diameter of the digital arteries measured by high frequency color Doppler ultrasound before and 1 hour after treatment.",
+              "phase": "Early Phase 1",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Raynaud Phenomenon Due to Trauma",
+                "Raynaud Disease",
+                "System; Sclerosis",
+                "Lupus Erythematosus, Systemic",
+                "Dermatomyositis",
+                "Ultrasound Therapy; Complications"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D011928",
+                  "term": "Raynaud Disease"
+                },
+                {
+                  "id": "D045743",
+                  "term": "Scleroderma, Diffuse"
+                },
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                },
+                {
+                  "id": "D003882",
+                  "term": "Dermatomyositis"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D000090122",
+                  "term": "Livedoid Vasculopathy"
+                },
+                {
+                  "id": "D013927",
+                  "term": "Thrombosis"
+                },
+                {
+                  "id": "D016769",
+                  "term": "Embolism and Thrombosis"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D016491",
+                  "term": "Peripheral Vascular Diseases"
+                },
+                {
+                  "id": "D017445",
+                  "term": "Skin Diseases, Vascular"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D012595",
+                  "term": "Scleroderma, Systemic"
+                },
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                },
+                {
+                  "id": "D017285",
+                  "term": "Polymyositis"
+                },
+                {
+                  "id": "D009220",
+                  "term": "Myositis"
+                },
+                {
+                  "id": "D009135",
+                  "term": "Muscular Diseases"
+                },
+                {
+                  "id": "D009140",
+                  "term": "Musculoskeletal Diseases"
+                },
+                {
+                  "id": "D009468",
+                  "term": "Neuromuscular Diseases"
+                },
+                {
+                  "id": "D009422",
+                  "term": "Nervous System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "10% nifedipine cream",
+                  "description": "Topical treatment for Raynaud"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "5% sildenafil cream",
+                  "description": "Topical treatment for Raynaud"
+                }
+              ],
+              "sponsor": "Pontificia Universidad Catolica de Chile",
+              "enrollment": 10,
+              "start_date": "2016-08",
+              "completion_date": "2016-08",
+              "primary_outcomes": [
+                {
+                  "measure": "Improvement of blood flow in the digital arteries (peak systolic velocity ) of the dorsal arterial arch of the proximal nail fold of the index, middle and thumb fingers of both hands",
+                  "time_frame": "Outcome measure will be assessed the same day of the study and the data will be presented after the data is analyzed (12 weeks)"
+                }
+              ],
+              "references": []
+            }
+          ]
+        },
+        "completed": {
+          "total_count": 3,
+          "trials": [
+            {
+              "nct_id": "NCT02050360",
+              "title": "\"As Required\" Oral Sildenafil in Raynaud's Phenomenon",
+              "brief_summary": "The purpose of this study is to determine whether \"on-demand\" sildenafil is effective in the treatment of Raynaud's phenomenon.",
+              "phase": "Phase 2/Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Raynaud's Phenomenon"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D011928",
+                  "term": "Raynaud Disease"
+                },
+                {
+                  "id": "D012595",
+                  "term": "Scleroderma, Systemic"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D000090122",
+                  "term": "Livedoid Vasculopathy"
+                },
+                {
+                  "id": "D013927",
+                  "term": "Thrombosis"
+                },
+                {
+                  "id": "D016769",
+                  "term": "Embolism and Thrombosis"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D016491",
+                  "term": "Peripheral Vascular Diseases"
+                },
+                {
+                  "id": "D017445",
+                  "term": "Skin Diseases, Vascular"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil 40 mg",
+                  "description": null
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil 80 mg",
+                  "description": null
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": null
+                }
+              ],
+              "sponsor": "University Hospital, Grenoble",
+              "enrollment": 41,
+              "start_date": "2013-11",
+              "completion_date": "2015-05",
+              "primary_outcomes": [
+                {
+                  "measure": "Mean change in the Raynaud's Condition Score (RCS) during treatment, as compared to placebo.",
+                  "time_frame": "7 days"
+                }
+              ],
+              "references": [
+                "37929840",
+                "30383134"
+              ]
+            },
+            {
+              "nct_id": "NCT01347008",
+              "title": "Effect of Sildenafil on the Microcirculatory Blood Flow and Endothelial Progenitor Cells in Systemic Sclerosis",
+              "brief_summary": "Early phases of systemic sclerosis is characterized by inflammatory and microvasculature alterations. Sildenafil citrate has been shown to have vasodilatory effects and to enhance vasculogenesis. The purpose of this study is to evaluate the effect of sildenafil citrate on hand blood flow of patients with systemic sclerosis, using Laser Doppler Imaging.",
+              "phase": "Phase 3",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Scleroderma, Systemic",
+                "Scleroderma, Diffuse",
+                "Scleroderma, Limited",
+                "Raynaud Phenomenon"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D012595",
+                  "term": "Scleroderma, Systemic"
+                },
+                {
+                  "id": "D045743",
+                  "term": "Scleroderma, Diffuse"
+                },
+                {
+                  "id": "D045745",
+                  "term": "Scleroderma, Limited"
+                },
+                {
+                  "id": "D011928",
+                  "term": "Raynaud Disease"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D000090122",
+                  "term": "Livedoid Vasculopathy"
+                },
+                {
+                  "id": "D013927",
+                  "term": "Thrombosis"
+                },
+                {
+                  "id": "D016769",
+                  "term": "Embolism and Thrombosis"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D016491",
+                  "term": "Peripheral Vascular Diseases"
+                },
+                {
+                  "id": "D017445",
+                  "term": "Skin Diseases, Vascular"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil citrate",
+                  "description": "Oral sildenafil citratre, 50mg b.i.d., 8 weeks"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo (Sugar pill)",
+                  "description": "Placebo pills similar to sildenafil citrate pills, b.i.d for 8 weeks"
+                }
+              ],
+              "sponsor": "Federal University of São Paulo",
+              "enrollment": 41,
+              "start_date": "2011-04",
+              "completion_date": "2013-01",
+              "primary_outcomes": [
+                {
+                  "measure": "Digital Skin Microvascular Blood Flow Measured by Laser Doppler Imaging (LDI) Before Cold Stimulus",
+                  "time_frame": "8 weeks"
+                },
+                {
+                  "measure": "Digital Skin Microvascular Blood Flow Measured by Laser Doppler Imaging (LDI) After Cold Stimulus.",
+                  "time_frame": "8 weeks"
+                }
+              ],
+              "references": [
+                "37929840"
+              ]
+            },
+            {
+              "nct_id": "NCT03027674",
+              "title": "Topical 10 % Nifedipine Versus 5% Sildenafil in Secondary Raynaud",
+              "brief_summary": "Objective: To compare the efficacy of topical 10% nifedipine versus 5% sildenafil in patients with secondary Raynaud's phenomenon (RP).\n\nMethods: A randomized, double-blind, placebo-controlled pilot study took place in 10 patients with secondary RP. Topical 10% nifedipine on one hand and 5% sildenafil on the other hand were applied. The thumbs didn't receive any cream and served as a control group. The primary outcome was the improvement of blood flow and vessel diameter of the digital arteries measured by high frequency color Doppler ultrasound before and 1 hour after treatment.",
+              "phase": "Early Phase 1",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Raynaud Phenomenon Due to Trauma",
+                "Raynaud Disease",
+                "System; Sclerosis",
+                "Lupus Erythematosus, Systemic",
+                "Dermatomyositis",
+                "Ultrasound Therapy; Complications"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D011928",
+                  "term": "Raynaud Disease"
+                },
+                {
+                  "id": "D045743",
+                  "term": "Scleroderma, Diffuse"
+                },
+                {
+                  "id": "D008180",
+                  "term": "Lupus Erythematosus, Systemic"
+                },
+                {
+                  "id": "D003882",
+                  "term": "Dermatomyositis"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D000090122",
+                  "term": "Livedoid Vasculopathy"
+                },
+                {
+                  "id": "D013927",
+                  "term": "Thrombosis"
+                },
+                {
+                  "id": "D016769",
+                  "term": "Embolism and Thrombosis"
+                },
+                {
+                  "id": "D014652",
+                  "term": "Vascular Diseases"
+                },
+                {
+                  "id": "D002318",
+                  "term": "Cardiovascular Diseases"
+                },
+                {
+                  "id": "D016491",
+                  "term": "Peripheral Vascular Diseases"
+                },
+                {
+                  "id": "D017445",
+                  "term": "Skin Diseases, Vascular"
+                },
+                {
+                  "id": "D012871",
+                  "term": "Skin Diseases"
+                },
+                {
+                  "id": "D017437",
+                  "term": "Skin and Connective Tissue Diseases"
+                },
+                {
+                  "id": "D012595",
+                  "term": "Scleroderma, Systemic"
+                },
+                {
+                  "id": "D003240",
+                  "term": "Connective Tissue Diseases"
+                },
+                {
+                  "id": "D001327",
+                  "term": "Autoimmune Diseases"
+                },
+                {
+                  "id": "D007154",
+                  "term": "Immune System Diseases"
+                },
+                {
+                  "id": "D017285",
+                  "term": "Polymyositis"
+                },
+                {
+                  "id": "D009220",
+                  "term": "Myositis"
+                },
+                {
+                  "id": "D009135",
+                  "term": "Muscular Diseases"
+                },
+                {
+                  "id": "D009140",
+                  "term": "Musculoskeletal Diseases"
+                },
+                {
+                  "id": "D009468",
+                  "term": "Neuromuscular Diseases"
+                },
+                {
+                  "id": "D009422",
+                  "term": "Nervous System Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "10% nifedipine cream",
+                  "description": "Topical treatment for Raynaud"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "5% sildenafil cream",
+                  "description": "Topical treatment for Raynaud"
+                }
+              ],
+              "sponsor": "Pontificia Universidad Catolica de Chile",
+              "enrollment": 10,
+              "start_date": "2016-08",
+              "completion_date": "2016-08",
+              "primary_outcomes": [
+                {
+                  "measure": "Improvement of blood flow in the digital arteries (peak systolic velocity ) of the dorsal arterial arch of the proximal nail fold of the index, middle and thumb fingers of both hands",
+                  "time_frame": "Outcome measure will be assessed the same day of the study and the data will be presented after the data is analyzed (12 weeks)"
+                }
+              ],
+              "references": []
+            }
+          ]
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 79,
+          "competitors": [
+            {
+              "sponsor": "Jay C. Buckey Jr.",
+              "drug_name": "100% Oxygen",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 100,
+              "most_recent_start": "2026-08"
+            },
+            {
+              "sponsor": "Brigham and Women's Hospital",
+              "drug_name": "Oral treprostinil (UT-15C) sustained release tablets",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 30,
+              "most_recent_start": "2025-10-15"
+            },
+            {
+              "sponsor": "Emory University",
+              "drug_name": "Botulinum toxin",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 36,
+              "most_recent_start": "2022-02-10"
+            },
+            {
+              "sponsor": "University of Central Florida",
+              "drug_name": "AbobotulinumtoxinA",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "TERMINATED"
+              ],
+              "total_enrollment": 3,
+              "most_recent_start": "2018-08-31"
+            },
+            {
+              "sponsor": "Otsuka America Pharmaceutical",
+              "drug_name": "Pletal",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 2,
+              "statuses": [
+                "COMPLETED"
+              ],
+              "total_enrollment": 150,
+              "most_recent_start": "2001-10"
+            },
+            {
+              "sponsor": "University Hospital, Toulouse",
+              "drug_name": "BOTOX INJECTION",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 8,
+              "most_recent_start": "2027-01-01"
+            },
+            {
+              "sponsor": "Civi Biopharma, Inc.",
+              "drug_name": "Placebo IV infusion",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 2,
+              "statuses": [
+                "COMPLETED"
+              ],
+              "total_enrollment": 232,
+              "most_recent_start": "2019-10-14"
+            },
+            {
+              "sponsor": "Assistance Publique - Hôpitaux de Paris",
+              "drug_name": "BOTOX® solution",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "COMPLETED"
+              ],
+              "total_enrollment": 91,
+              "most_recent_start": "2018-10-15"
+            },
+            {
+              "sponsor": "Johns Hopkins University",
+              "drug_name": "Onabotulinumtoxin A",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "COMPLETED"
+              ],
+              "total_enrollment": 40,
+              "most_recent_start": "2015-01"
+            },
+            {
+              "sponsor": "Federal University of São Paulo",
+              "drug_name": "Sildenafil citrate",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "COMPLETED"
+              ],
+              "total_enrollment": 41,
+              "most_recent_start": "2011-04"
+            }
+          ],
+          "phase_distribution": {
+            "Phase 3": 15,
+            "Phase 4": 6,
+            "Phase 2": 16,
+            "Early Phase 1": 2,
+            "Phase 1/Phase 2": 1,
+            "Phase 2/Phase 3": 5,
+            "Phase 1": 2
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT05698979",
+              "sponsor": "University Hospital, Toulouse",
+              "drug": "BOTOX INJECTION",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07240649",
+              "sponsor": "Jay C. Buckey Jr.",
+              "drug": "100% Oxygen",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07112183",
+              "sponsor": "Brigham and Women's Hospital",
+              "drug": "Oral treprostinil (UT-15C) sustained release tablets",
+              "phase": "Phase 4"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "sildenafil",
+            "hip-0908",
+            "hip0908",
+            "sildenafilo",
+            "uk-92480",
+            "aphrodil",
+            "granpidam",
+            "liqrev",
+            "mysildecard",
+            "nipatra",
+            "nsc-744009",
+            "nsc-758669",
+            "patrex",
+            "revatio",
+            "sildenafil actavis",
+            "sildenafil (as citrate)",
+            "sildenafil citrate",
+            "sildenafil ratiopharm",
+            "sildenafil teva",
+            "uk-92,480-10",
+            "uk-92480-10",
+            "viagra",
+            "vizarsin"
+          ]
+        },
+        "summary": "Two completed trials are on record for sildenafil in Raynaud's phenomenon. The primary study, NCT02050360, is a completed Phase 2/Phase 3 trial titled '\"As Required\" Oral Sildenafil in Raynaud's Phenomenon,' which evaluated on-demand oral dosing in this condition. A smaller completed Early Phase 1 study, NCT03027674, titled 'Topical 10% Nifedipine Versus 5% Sildenafil in Secondary Raynaud,' compared topical formulations of nifedipine and sildenafil in secondary Raynaud's phenomenon. No trials in this indication are currently active.",
+        "closure": "live",
+        "closure_reason": "No Phase 3 termination for safety or efficacy failure has been recorded, and the absence of a commercial filing for an off-patent drug does not constitute program closure.",
+        "relevant_nct_ids": [
+          "NCT02050360",
+          "NCT03027674"
+        ],
+        "contaminated_nct_ids": [
+          "NCT01347008"
+        ],
+        "relevance_reasoning": "NCT02050360 and NCT03027674 directly study sildenafil (oral and topical formulations, respectively) for Raynaud's phenomenon, which is neither an approved indication nor a subtype of one. NCT01347008 is contaminated because the trial's primary condition is systemic sclerosis (scleroderma) — a distinct disease — and Raynaud's disease appears only as a secondary MeSH tag; the summary confirms the study evaluates hand blood flow in systemic sclerosis patients, not Raynaud's disease as the target indication.",
+        "signals": {
+          "highest_completed_phase": "Phase 2/Phase 3",
+          "has_completed_phase3": true,
+          "completed_phase3_nct_ids": [
+            "NCT02050360"
+          ],
+          "has_completed_pure_phase3": false,
+          "completed_pure_phase3_nct_ids": [],
+          "has_active_phase3": false,
+          "active_phase3_nct_ids": [],
+          "phase3_terminated_for_cause": false,
+          "terminated_phase3_nct_ids": [],
+          "dev_stage": "completed_phase3",
+          "active_programs": "None active"
+        }
+      },
+      "blurb": {
+        "stage": "Phase 2/Phase 3 completed for this indication (no standalone Phase 3)",
+        "literature": "strong, mixed, RCT-backed / controlled, ⚠️ safety signal reported for this indication",
+        "blocker": "No trials currently recruiting; development is not actively progressing for this indication",
+        "active_programs": "None active",
+        "key_risk": "Mixed evidence base with a reported safety signal may deter further investment or regulatory pursuit",
+        "verdict": "Tested, status unconfirmed",
+        "watch": "",
+        "prose": "This hypothesis has been studied in controlled trials through an advanced development stage, with RCT-backed literature providing meaningful but mixed support for the indication. No trials are currently active, and a safety signal reported in this context adds uncertainty that complicates any path forward, particularly given the absence of an approved anchor indication to leverage."
+      }
+    },
+    {
+      "disease": "covid-19",
+      "source": "competitor",
+      "approval_relationship": "none",
+      "literature": {
+        "search_results": [
+          "sildenafil AND \"COVID-19\"",
+          "phosphodiesterase 5 inhibitors AND lung",
+          "PDE5 inhibition AND lung",
+          "PDE5A AND \"COVID-19\"",
+          "viagra AND \"COVID-19\"",
+          "revatio AND \"COVID-19\"",
+          "phosphodiesterase inhibitors AND pulmonary",
+          "cGMP signaling AND lung inflammation"
+        ],
+        "pmids": [
+          "33623736",
+          "34980198",
+          "32939238",
+          "37243243",
+          "39228925",
+          "35412483",
+          "36036333",
+          "35568507",
+          "38065603",
+          "33576273",
+          "32534175",
+          "36781160",
+          "32552139",
+          "35062063",
+          "32526061",
+          "37608528",
+          "38167268",
+          "33759449",
+          "34839645",
+          "39546241",
+          "34490736",
+          "33762367",
+          "33077403",
+          "34812146",
+          "34984162",
+          "33724265",
+          "36797849",
+          "37016904",
+          "34249284",
+          "36644405",
+          "32374264",
+          "33916747",
+          "32967280",
+          "35946103",
+          "37767178",
+          "39696269",
+          "32721814",
+          "37329980",
+          "41937007",
+          "32661494",
+          "39704767",
+          "36849541",
+          "40772955",
+          "27941129",
+          "32930508",
+          "35131401",
+          "33773120",
+          "40592721",
+          "38267108",
+          "34593120",
+          "36418485",
+          "36172951",
+          "30701543",
+          "36318987",
+          "32909898",
+          "38966990",
+          "18765082",
+          "35115083",
+          "40920956",
+          "39182575",
+          "19768639",
+          "23114592",
+          "16368379",
+          "32147955",
+          "20419092",
+          "33766260",
+          "26975811",
+          "31736357",
+          "25953750",
+          "22371941",
+          "33359621",
+          "33650125",
+          "40575830",
+          "31420854",
+          "42101599",
+          "30773322",
+          "41443227",
+          "41529702",
+          "37855531",
+          "37369218",
+          "19860698",
+          "24898750",
+          "25165714",
+          "19945540",
+          "27887774",
+          "30549830",
+          "30683832",
+          "24439578",
+          "32311453",
+          "25801159",
+          "33062261",
+          "27086030",
+          "39206778",
+          "34127619",
+          "29781586",
+          "38939948",
+          "24697923",
+          "36889521",
+          "28889107",
+          "37963481",
+          "19059113",
+          "38342349",
+          "12761347",
+          "23884568",
+          "26058042",
+          "40056331",
+          "18182843",
+          "28425346",
+          "11405657",
+          "32657833",
+          "18034662",
+          "35993480",
+          "29910047",
+          "34205602",
+          "20407377",
+          "32279941",
+          "21702653",
+          "25523363",
+          "29032565",
+          "25425003",
+          "30131231",
+          "30509704",
+          "25577563",
+          "35995298",
+          "25314091",
+          "28287348",
+          "40388087",
+          "30894101",
+          "42098073",
+          "26428267",
+          "22465621",
+          "39914261",
+          "40792599",
+          "40783516",
+          "19560695",
+          "11468204",
+          "21572384",
+          "11784212",
+          "31856792",
+          "35725975",
+          "29110626",
+          "33226665",
+          "31273873",
+          "33836637",
+          "17659276",
+          "17586695",
+          "28629920",
+          "29341044",
+          "24236926",
+          "21175577",
+          "27225961",
+          "23242212",
+          "24763525",
+          "25047735",
+          "12796132",
+          "28926093",
+          "20920145",
+          "29229321",
+          "27796857",
+          "25726539",
+          "19272792",
+          "35706353",
+          "27687597",
+          "34944010",
+          "23204121",
+          "16934242",
+          "24631434",
+          "21431102",
+          "29032569",
+          "31010561",
+          "25929951",
+          "27769022",
+          "25204443",
+          "34497295",
+          "20560976",
+          "37950789",
+          "38863262",
+          "32892515",
+          "23669822",
+          "27381367",
+          "23313949",
+          "20819768",
+          "15817798",
+          "24909193",
+          "33055583",
+          "17873760",
+          "23650288",
+          "23204065",
+          "41926705",
+          "16552352",
+          "19089341",
+          "24037630",
+          "28819824",
+          "16963541",
+          "33238192",
+          "20704168",
+          "19718604",
+          "24037627",
+          "25117627",
+          "20479949",
+          "40100308",
+          "29220595",
+          "26464516",
+          "34921523",
+          "31571429",
+          "12882446",
+          "29479945",
+          "21273054",
+          "32922301",
+          "42105936",
+          "19402887",
+          "28533270",
+          "39786829",
+          "25466700",
+          "24238697",
+          "41227315",
+          "15947285",
+          "27053699",
+          "30940497",
+          "25924799",
+          "18484798",
+          "30276666",
+          "30545971",
+          "27030675",
+          "33213478",
+          "24819293",
+          "31125551",
+          "19345227",
+          "22059996",
+          "41371490",
+          "38030140",
+          "23734196",
+          "27053698",
+          "26987998",
+          "21331640",
+          "24083892",
+          "38350773",
+          "25104786",
+          "35596935",
+          "22270721",
+          "25747598",
+          "16458289",
+          "39001537",
+          "29375047",
+          "24899690",
+          "27903966",
+          "23656623",
+          "17965319",
+          "41839428",
+          "39149110",
+          "35224304",
+          "21741267",
+          "42188060",
+          "17691956",
+          "15607396",
+          "12003794",
+          "12748310",
+          "36940862",
+          "9755101",
+          "25163536",
+          "33952455",
+          "14636078",
+          "15907909",
+          "36291124",
+          "12670778",
+          "20093183",
+          "27225960",
+          "21537000",
+          "16761012",
+          "17305584",
+          "17349888",
+          "28088782",
+          "16061711",
+          "35059138",
+          "29665366",
+          "16716091",
+          "29438213",
+          "33856030",
+          "9475279",
+          "16510560",
+          "12034568",
+          "11805217",
+          "31264002",
+          "24414253",
+          "8550830",
+          "29876530",
+          "28792962",
+          "17991881",
+          "9624145",
+          "12676767",
+          "9922221",
+          "24977346",
+          "31438631",
+          "16145478",
+          "30375198",
+          "15792963",
+          "21884777",
+          "11008127",
+          "26410556",
+          "12538421",
+          "27366192",
+          "14749671",
+          "10510442",
+          "22067410",
+          "11260387",
+          "8819523",
+          "18282775",
+          "17275845",
+          "9714779",
+          "16247326",
+          "25278030",
+          "31492386",
+          "14597480",
+          "28677661",
+          "31009843",
+          "22261303",
+          "22912874",
+          "9218482",
+          "7476903",
+          "9559913",
+          "15155272",
+          "11159025",
+          "9802959",
+          "37090981",
+          "35359601",
+          "36813290",
+          "15194181",
+          "39745090",
+          "10421832",
+          "36693635",
+          "39009409",
+          "39212123",
+          "37159034",
+          "39183442",
+          "32622335",
+          "37159965",
+          "18686943",
+          "33669167",
+          "40844145",
+          "34327862",
+          "7664866",
+          "34520193",
+          "11301069",
+          "39606712",
+          "30082518",
+          "15377497",
+          "19635928",
+          "28790817",
+          "9154339",
+          "32603117",
+          "9591435",
+          "16123210",
+          "15699784",
+          "8437112",
+          "11090574",
+          "31004869",
+          "7536098",
+          "41255094",
+          "10640287",
+          "39546471",
+          "20859807",
+          "16033645",
+          "16046159",
+          "40142089",
+          "28899935",
+          "16682455",
+          "9070212",
+          "20397815",
+          "39513857",
+          "11139438",
+          "19281073",
+          "27695125",
+          "15242814",
+          "18094015",
+          "21703411",
+          "29794203",
+          "41708123",
+          "6320908",
+          "33515531",
+          "6160042",
+          "16339700",
+          "26455478",
+          "26549702",
+          "16997739",
+          "12174704",
+          "32159371",
+          "31364206",
+          "11179103",
+          "19304913",
+          "26909542",
+          "31967915",
+          "22284994",
+          "22160266",
+          "15516532",
+          "9815111",
+          "23002364",
+          "9802963",
+          "19759179",
+          "23197074",
+          "8081075",
+          "26677751",
+          "21881145",
+          "21679722",
+          "21949154",
+          "18580443",
+          "7655990",
+          "16284211",
+          "16875702",
+          "9187994",
+          "23121078",
+          "32231178",
+          "40538231",
+          "15140418",
+          "8428213",
+          "38830372",
+          "7630121",
+          "16820175",
+          "23256720",
+          "29061062",
+          "20639653",
+          "18032446",
+          "20444277",
+          "17110505",
+          "20649375",
+          "42276722",
+          "12525998",
+          "7476570",
+          "15115560",
+          "15000031",
+          "20601633",
+          "41771338",
+          "18941502",
+          "19073273",
+          "24705723",
+          "19390238",
+          "27411390",
+          "10910492",
+          "24785301",
+          "19881228",
+          "3007902",
+          "30835622",
+          "19124370",
+          "31036559",
+          "18044684",
+          "19134535",
+          "10444515",
+          "30201409",
+          "20334459",
+          "9778491",
+          "15021978",
+          "16499932",
+          "10988094",
+          "10421196",
+          "8818342",
+          "21216837",
+          "18447606",
+          "27613392",
+          "15183075",
+          "29367458",
+          "38476122",
+          "28112925",
+          "35047052",
+          "27262358",
+          "41892949",
+          "11208644",
+          "9299282",
+          "11020486",
+          "29952109",
+          "21468165",
+          "16607484",
+          "15505498",
+          "33464954",
+          "31664853",
+          "41710324",
+          "2033517",
+          "16729780",
+          "15379590",
+          "19740258",
+          "27418821",
+          "10226902",
+          "20082309",
+          "14733623",
+          "29563781",
+          "25018629",
+          "8812741",
+          "27150141",
+          "32599107",
+          "16113474",
+          "16432925",
+          "8737690",
+          "1532041",
+          "9349724",
+          "37551664",
+          "31853617",
+          "40045018",
+          "39485297",
+          "25353067",
+          "34276407",
+          "40870501",
+          "33360351",
+          "30759374",
+          "33662448",
+          "23518214",
+          "35341977",
+          "41378745",
+          "40636259",
+          "41794266",
+          "40299433",
+          "41499484",
+          "32727145",
+          "22230399",
+          "36522238",
+          "33289321",
+          "41237701",
+          "37443161",
+          "41274320",
+          "23425625",
+          "16771693",
+          "34936088",
+          "36142518",
+          "25446933",
+          "35114420",
+          "32425769",
+          "20622042",
+          "36868790",
+          "38521574",
+          "26909880",
+          "36834974",
+          "17965142",
+          "34395518",
+          "36116161",
+          "11028547",
+          "18064650",
+          "16729719",
+          "36523421",
+          "41110301",
+          "28218740",
+          "35186104",
+          "34966541",
+          "31170354",
+          "26432873",
+          "19900583",
+          "20826567",
+          "33689813",
+          "26208141",
+          "39835571",
+          "41920788",
+          "21410486"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "37243243",
+            "title": "Efficacy of Sildenafil in Patients with Severe COVID-19 and Pulmonary Arterial Hypertension.",
+            "abstract": "Pulmonary arterial hypertension (PAH) is common in severe coronavirus disease 2019 (COVID-19) and worsens the prognosis. Sildenafil, a phosphodiesterase-5 inhibitor, is approved for PAH treatment but little is known about its efficacy in cases of severe COVID-19 with PAH. This study aimed to investigate the clinical efficacy of sildenafil in patients with severe COVID-19 and PAH. Intensive care unit (ICU) patients were randomly assigned to receive sildenafil or a placebo, with 75 participants in each group. Sildenafil was administered orally at 0.25 mg/kg t.i.d. for one week in a placebo-controlled, double-blind manner as an add-on therapy alongside the patient's routine treatment. The primary endpoint was one-week mortality, and the secondary endpoints were the one-week intubation rate and duration of ICU stay. The mortality rate was 4% vs. 13.3% (p = 0.078), the intubation rate was 8% and 18.7% (p = 0.09), and the length of ICU stay was 15 vs. 19 days (p < 0.001) for the sildenafil and placebo groups, respectively. If adjusted for PAH, sildenafil treatment significantly reduced mortality and intubation risks: OR = 0.21 (95% CI: 0.05-0.89) and OR = 0.26 (95% CI: 0.08-0.86), respectively. Sildenafil demonstrated some clinical efficacy in patients with severe COVID-19 and PAH and should be considered as an add-on therapy in these patients.",
+            "similarity": 0.6838922020221142,
+            "pubtype": [
+              "Randomized Controlled Trial",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "34980198",
+            "title": "Sildenafil for treating patients with COVID-19 and perfusion mismatch: a pilot randomized trial.",
+            "abstract": "BACKGROUND: SARS-CoV-2 seems to affect the regulation of pulmonary perfusion. Hypoperfusion in areas of well-aerated lung parenchyma results in a ventilation-perfusion mismatch that can be characterized using subtraction computed tomography angiography (sCTA). This study aims to evaluate the efficacy of oral sildenafil in treating COVID-19 inpatients showing perfusion abnormalities in sCTA. METHODS: Triple-blinded, randomized, placebo-controlled trial was conducted in Chile in a tertiary-care hospital able to provide on-site sCTA scans and ventilatory support when needed between August 2020 and March 2021. In total, 82 eligible adults were admitted to the ED with RT-PCR-confirmed or highly probable SARS-COV-2 infection and sCTA performed within 24 h of admission showing perfusion abnormalities in areas of well-aerated lung parenchyma; 42 were excluded and 40 participants were enrolled and randomized (1:1 ratio) once hospitalized. The active intervention group received sildenafil (25 mg orally three times a day for seven days), and the control group received identical placebo capsules in the same way. Primary outcomes were differences in oxygenation parameters measured daily during follow-up (PaO2/FiO2 ratio and A-a gradient). Secondary outcomes included admission to the ICU, requirement of non-invasive ventilation, invasive mechanical ventilation (IMV), and mortality rates. Analysis was performed on an intention-to-treat basis. RESULTS: Totally, 40 participants were enrolled (20 in the placebo group and 20 in the sildenafil group); 33 [82.5%] were male; and median age was 57 [IQR 41-68] years. No significant differences in mean PaO2/FiO2 ratios and A-a gradients were found between groups (repeated-measures ANOVA p = 0.67 and p = 0.69). IMV was required in 4 patients who received placebo and none in the sildenafil arm (logrank p = 0.04). Patients in the sildenafil arm showed a significantly shorter median length of hospital stay than the placebo group (9 IQR 7-12 days vs. 12 IQR 9-21 days, p = 0.04). CONCLUSIONS: No statistically significant differences were found in the oxygenation parameters. Sildenafil treatment could have a potential therapeutic role regarding the need for IMV in COVID-19 patients with specific perfusion patterns in sCTA. A large-scale study is needed to confirm these results. TRIAL REGISTRATION: Sildenafil for treating patients with COVID-19 and perfusion mismatch: a pilot randomized trial, NCT04489446, Registered 28 July 2020, https://clinicaltrials.gov/ct2/show/NCT04489446 .",
+            "similarity": 0.6453441961450948,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial"
+            ]
+          },
+          {
+            "pmid": "35596935",
+            "title": "Effects of sildenafil on symptoms and exercise capacity for heart failure with reduced ejection fraction and pulmonary hypertension (the SilHF study): a randomized placebo-controlled multicentre trial.",
+            "abstract": "AIMS: Pulmonary hypertension (PHT) may complicate heart failure with reduced ejection fraction (HFrEF) and is associated with a substantial symptom burden and poor prognosis. Sildenafil, a phosphodiesterase-5 (PDE-5) inhibitor, might have beneficial effects on pulmonary haemodynamics, cardiac function and exercise capacity in HFrEF and PHT. The aim of this study was to determine the safety, tolerability, and efficacy of sildenafil in patients with HFrEF and indirect evidence of PHT. METHODS AND RESULTS: The Sildenafil in Heart Failure (SilHF) trial was an investigator-led, randomized, multinational trial in which patients with HFrEF and a pulmonary artery systolic pressure (PASP) ≥40 mmHg by echocardiography were randomly assigned in a 2:1 ratio to receive sildenafil (up to 40 mg three times/day) or placebo. The co-primary endpoints were improvement in patient global assessment by visual analogue scale and in the 6-min walk test at 24 weeks. The planned sample size was 210 participants but, due to problems with supplying sildenafil/placebo and recruitment, only 69 patients (11 women, median age 68 (interquartile range [IQR] 62-74) years, median left ventricular ejection fraction 29% (IQR 24-35), median PASP 45 (IQR 42-55) mmHg) were included. Compared to placebo, sildenafil did not improve symptoms, quality of life, PASP or walk test distance. Sildenafil was generally well tolerated, but those assigned to sildenafil had numerically more serious adverse events (33% vs. 21%). CONCLUSION: Compared to placebo, sildenafil did not improve symptoms, quality of life or exercise capacity in patients with HFrEF and PHT.",
+            "similarity": 0.5303515994247056,
+            "pubtype": [
+              "Journal Article",
+              "Multicenter Study",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "19560695",
+            "title": "Acute hemodynamic effects of intravenous sildenafil citrate in congestive heart failure: comparison of phosphodiesterase type-3 and -5 inhibition.",
+            "abstract": "BACKGROUND: The reversibility of elevated pulmonary vascular resistance in heart failure bears an important relation to outcome after cardiac transplantation. The phosphodiesterase 3 (PDE3) and PDE5 inhibitors both increase levels of cyclic nucleotides in the vascular smooth muscle, causing vasodilatation. PDE3 inhibitors also have direct inotropic effects. We contrasted the acute hemodynamic responses to intravenous PDE3 and PDE5 inhibitors in patients with congestive cardiac failure to assess their relative suitability for reversibility testing in this setting. METHODS: Thirty patients undergoing assessment for cardiac transplantation underwent right heart catheterization. Patients were randomized to receive an intravenous bolus of milrinone (0.05 mg/kg) or sildenafil citrate at a high (0.43 mg/kg) or low dose (0.05 mg/kg). RESULTS: Differences between low- and high-dose sildenafil were not significant. Both agents caused similar reductions in systemic and pulmonary vascular resistance. Milrinone caused significantly greater reductions in pulmonary artery wedge and mean pulmonary artery pressure, and increases in heart rate. In all study groups, greater increases in cardiac index (>25%) were seen in patients with a higher pulmonary artery wedge pressure at baseline (29 +/- 1 vs 20 +/- 2 mm Hg; p < 0.001). CONCLUSIONS: In end-stage congestive cardiac failure, intravenous milrinone and sildenafil both cause similar reductions in systemic and pulmonary vascular resistance; however, milrinone has more cardiac selective effects on left ventricular filling and heart rate. Both agents appear to have a suitable hemodynamic profile for testing of reversibility of secondary pulmonary hypertension in congestive cardiac failure. Larger studies are needed to confirm these results.",
+            "similarity": 0.516900505598441,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "22067410",
+            "title": "Phosphodiesterase 5 inhibition with sildenafil reverses exercise oscillatory breathing in chronic heart failure: a long-term cardiopulmonary exercise testing placebo-controlled study.",
+            "abstract": "AIMS: Exercise oscillatory breathing (EOB) is a ventilatory abnormality that occurs in ∼20% of heart failure (HF) patients and carries a very unfavourable prognosis. Pulmonary vasoconstriction has been suggested to be involved in this disorder. We hypothesized that modulation of pulmonary vascular hypertone by oversignalling of the nitric oxide pathway with phosphodiesterase 5 (PDE5) inhibition might be beneficial. Accordingly, we performed a 1-year pilot trial with sildenafil in patients with HF and EOB. METHODS AND RESULTS: Among 122 HF cases, 32 presented with EOB during cardiopulmonary exercise testing (CPX) and were randomized to receive placebo (n = 16) or sildenafil (n = 16) at the dose of 50 mg three times a day, in addition to their current antifailure treatment. CPX-derived variables and pulmonary haemodynamics were assessed at 6 and 12 months. Sildenafil reversed EOB in 87% of patients at 6 months and 93% at 1 year, respectively (P < 0.01). This effect was accompanied by an improvement in functional performance (peak VO(2); from 9.6 to 12.4 and 13.2 mL/min/kg; P < 0.01) and exercise ventilation efficiency (ventilation to CO(2) production slope; from 41.1 to 32.7 and 31.5; P < 0.01). Chronic treatment with PDE5 inhibition significantly decreased pulmonary capillary wedge pressure (from 21 to 14 and 14 mmHg), mean pulmonary artery pressure (PAP; from 34.8 to 23 and 24 mmHg), and pulmonary vascular resistance (PVR; from 360 to 270 and 266 dyne/s/cm(5)) compared with placebo (P < 0.01 for each comparison). On exploratory analysis, there was a correlation between PAP and PVR and the decrease in EOB in the treatment group. Placebo did not alter any of the aforementioned variables. CONCLUSIONS: PDE5 inhibition in HF patients with EOB offers the dual advantage of improving functional capacity and modulating the EOB pattern. PAP and PVR reduction seem to underlie the correction of the breathing disorder. Whether reversal of this unfavourable prognostic signal can affect survival remains unconfirmed at the moment.",
+            "similarity": 0.5033439748250851,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "Two randomized, placebo-controlled trials evaluated sildenafil specifically in COVID-19 patients. In a double-blind RCT of ICU patients with severe COVID-19 and pulmonary arterial hypertension, sildenafil significantly reduced mortality and intubation risks when adjusted for PAH (OR=0.21 and OR=0.26, respectively) and shortened ICU stay (15 vs. 19 days, p<0.001) (PMID: 37243243). In a pilot RCT of COVID-19 inpatients with perfusion mismatch on sCTA, sildenafil was associated with no requirement for invasive mechanical ventilation versus 4 patients in the placebo arm (p=0.04) and a shorter hospital stay (9 vs. 12 days, p=0.04), though primary oxygenation endpoints were not significantly different (PMID: 34980198). The evidence supports repurposing sildenafil for COVID-19, particularly in patients with pulmonary vascular complications, though both studies were small and call for larger confirmatory trials.",
+          "study_count": 2,
+          "strength": "moderate",
+          "direction": "mixed",
+          "evidence_basis": "drug_specific",
+          "is_observational": false,
+          "is_animal_only": false,
+          "key_findings": [
+            "In a double-blind, placebo-controlled RCT of 150 ICU patients with severe COVID-19 and PAH, sildenafil (0.25 mg/kg t.i.d. for one week) significantly reduced mortality risk (OR=0.21, 95% CI: 0.05-0.89) and intubation risk (OR=0.26, 95% CI: 0.08-0.86) when adjusted for PAH (PMID: 37243243).",
+            "Sildenafil significantly shortened ICU stay compared to placebo (15 vs. 19 days, p<0.001) in severe COVID-19 patients with PAH (PMID: 37243243).",
+            "In a pilot triple-blinded RCT of 40 COVID-19 inpatients with perfusion mismatch on sCTA, no patients in the sildenafil arm required invasive mechanical ventilation versus 4 in the placebo arm (log-rank p=0.04) (PMID: 34980198).",
+            "Sildenafil-treated COVID-19 patients with perfusion mismatch had a significantly shorter median hospital stay than placebo (9 IQR 7-12 days vs. 12 IQR 9-21 days, p=0.04) (PMID: 34980198).",
+            "No statistically significant differences in primary oxygenation parameters (PaO2/FiO2 ratio and A-a gradient) were found between sildenafil and placebo groups in COVID-19 patients with perfusion mismatch (PMID: 34980198)."
+          ],
+          "supporting_pmids": [
+            "37243243",
+            "34980198"
+          ],
+          "contradicting_pmids": [
+            "37243243",
+            "34980198"
+          ],
+          "relevant_pmids": [
+            "37243243",
+            "34980198"
+          ],
+          "contaminated_pmids": [
+            "35596935",
+            "19560695",
+            "22067410"
+          ],
+          "neutral_pmids": [],
+          "safety_summary": "The top pharmacovigilance signal for sildenafil is headache (1,223 reports, logLR 762.4), consistent with its vasodilatory mechanism, alongside significant signals for dyspnoea and pulmonary hypertension-related events (PMID: 9647940, PMID: 10078541). In the COVID-19 repurposing context, sildenafil's interaction with nitrates causing potentially severe hypotension and a trial-halting increase in serious adverse events (predominantly pain-related hospitalizations) in sickle cell disease patients warrant careful patient selection (PMID: 10078539, PMID: 21527519).",
+          "safety_pmids": [
+            "9647940",
+            "10078541",
+            "10078539",
+            "21527519"
+          ],
+          "safety_severity": "serious",
+          "indication_harm": true,
+          "indication_harm_summary": "PMID 35568507 specifically reports on the use of sildenafil in patients with severe COVID-19 pneumonitis, a context in which safety findings (adverse events or harms) would be directly tied to COVID-19 treatment use.",
+          "indication_harm_pmids": [
+            "35568507"
+          ]
+        },
+        "summary": "Evidence strength: moderate, direction: mixed"
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 2,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 1
+          },
+          "trials": [
+            {
+              "nct_id": "NCT04489446",
+              "title": "Sildenafil in COVID-19",
+              "brief_summary": "This randomised trial aims to assess the role of sildenafil in improving oxygenation amongst hospitalised patients with COVID19.",
+              "phase": "Phase 1/Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Covid19",
+                "SARS-COV2 Infection"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D000086382",
+                  "term": "COVID-19"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D011024",
+                  "term": "Pneumonia, Viral"
+                },
+                {
+                  "id": "D011014",
+                  "term": "Pneumonia"
+                },
+                {
+                  "id": "D012141",
+                  "term": "Respiratory Tract Infections"
+                },
+                {
+                  "id": "D007239",
+                  "term": "Infections"
+                },
+                {
+                  "id": "D014777",
+                  "term": "Virus Diseases"
+                },
+                {
+                  "id": "D018352",
+                  "term": "Coronavirus Infections"
+                },
+                {
+                  "id": "D003333",
+                  "term": "Coronaviridae Infections"
+                },
+                {
+                  "id": "D030341",
+                  "term": "Nidovirales Infections"
+                },
+                {
+                  "id": "D012327",
+                  "term": "RNA Virus Infections"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil",
+                  "description": "Patients allocated to this arm will receive Sildenafil 25mg every 8 hours orally for up to seven consecutive days."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Patients allocated to this arm will receive a matching placebo similar to Sildenafil pills used in the intervention arm. Placebos will be delivered orally every 8 hours for up to seven consecutive days."
+                }
+              ],
+              "sponsor": "Universidad Nacional Andres Bello",
+              "enrollment": 40,
+              "start_date": "2020-08-19",
+              "completion_date": "2021-04-30",
+              "primary_outcomes": [
+                {
+                  "measure": "Arterial Oxygenation",
+                  "time_frame": "One hour after sildenafil administration"
+                },
+                {
+                  "measure": "Arterial Oxygenation",
+                  "time_frame": "Daily until the end of follow-up (up to 15 days after randomisation)"
+                },
+                {
+                  "measure": "Alveolo-arterial gradient",
+                  "time_frame": "One hour after sildenafil administration"
+                },
+                {
+                  "measure": "Alveolo-arterial gradient",
+                  "time_frame": "Daily until the end of follow-up (up to 15 days after randomisation)"
+                }
+              ],
+              "references": [
+                "32171076",
+                "32119647",
+                "32631389",
+                "32264791",
+                "32503680",
+                "34980198"
+              ]
+            },
+            {
+              "nct_id": "NCT04304313",
+              "title": "A Pilot Study of Sildenafil in COVID-19",
+              "brief_summary": "Observe the efficacy and safety of G1(Sildenafil citrate tablets) in patients with COVID-19 under clinical actual diagnosis and treatment conditions",
+              "phase": "Phase 3",
+              "overall_status": "UNKNOWN",
+              "why_stopped": null,
+              "indications": [
+                "COVID-19"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D000086382",
+                  "term": "COVID-19"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D011024",
+                  "term": "Pneumonia, Viral"
+                },
+                {
+                  "id": "D011014",
+                  "term": "Pneumonia"
+                },
+                {
+                  "id": "D012141",
+                  "term": "Respiratory Tract Infections"
+                },
+                {
+                  "id": "D007239",
+                  "term": "Infections"
+                },
+                {
+                  "id": "D014777",
+                  "term": "Virus Diseases"
+                },
+                {
+                  "id": "D018352",
+                  "term": "Coronavirus Infections"
+                },
+                {
+                  "id": "D003333",
+                  "term": "Coronaviridae Infections"
+                },
+                {
+                  "id": "D030341",
+                  "term": "Nidovirales Infections"
+                },
+                {
+                  "id": "D012327",
+                  "term": "RNA Virus Infections"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil citrate tablets",
+                  "description": "0.1g/day for 14 days"
+                }
+              ],
+              "sponsor": "Tongji Hospital",
+              "enrollment": 10,
+              "start_date": "2020-02-09",
+              "completion_date": "2020-03-01",
+              "primary_outcomes": [
+                {
+                  "measure": "Rate of disease remission",
+                  "time_frame": "14 days"
+                },
+                {
+                  "measure": "Rate of entering the critical stage",
+                  "time_frame": "14 days"
+                },
+                {
+                  "measure": "Time of entering the critical stage",
+                  "time_frame": "14 days"
+                }
+              ],
+              "references": [
+                "33240091"
+              ]
+            }
+          ]
+        },
+        "completed": {
+          "total_count": 1,
+          "trials": [
+            {
+              "nct_id": "NCT04489446",
+              "title": "Sildenafil in COVID-19",
+              "brief_summary": "This randomised trial aims to assess the role of sildenafil in improving oxygenation amongst hospitalised patients with COVID19.",
+              "phase": "Phase 1/Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Covid19",
+                "SARS-COV2 Infection"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D000086382",
+                  "term": "COVID-19"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D011024",
+                  "term": "Pneumonia, Viral"
+                },
+                {
+                  "id": "D011014",
+                  "term": "Pneumonia"
+                },
+                {
+                  "id": "D012141",
+                  "term": "Respiratory Tract Infections"
+                },
+                {
+                  "id": "D007239",
+                  "term": "Infections"
+                },
+                {
+                  "id": "D014777",
+                  "term": "Virus Diseases"
+                },
+                {
+                  "id": "D018352",
+                  "term": "Coronavirus Infections"
+                },
+                {
+                  "id": "D003333",
+                  "term": "Coronaviridae Infections"
+                },
+                {
+                  "id": "D030341",
+                  "term": "Nidovirales Infections"
+                },
+                {
+                  "id": "D012327",
+                  "term": "RNA Virus Infections"
+                },
+                {
+                  "id": "D008171",
+                  "term": "Lung Diseases"
+                },
+                {
+                  "id": "D012140",
+                  "term": "Respiratory Tract Diseases"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Sildenafil",
+                  "description": "Patients allocated to this arm will receive Sildenafil 25mg every 8 hours orally for up to seven consecutive days."
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "Placebo",
+                  "description": "Patients allocated to this arm will receive a matching placebo similar to Sildenafil pills used in the intervention arm. Placebos will be delivered orally every 8 hours for up to seven consecutive days."
+                }
+              ],
+              "sponsor": "Universidad Nacional Andres Bello",
+              "enrollment": 40,
+              "start_date": "2020-08-19",
+              "completion_date": "2021-04-30",
+              "primary_outcomes": [
+                {
+                  "measure": "Arterial Oxygenation",
+                  "time_frame": "One hour after sildenafil administration"
+                },
+                {
+                  "measure": "Arterial Oxygenation",
+                  "time_frame": "Daily until the end of follow-up (up to 15 days after randomisation)"
+                },
+                {
+                  "measure": "Alveolo-arterial gradient",
+                  "time_frame": "One hour after sildenafil administration"
+                },
+                {
+                  "measure": "Alveolo-arterial gradient",
+                  "time_frame": "Daily until the end of follow-up (up to 15 days after randomisation)"
+                }
+              ],
+              "references": [
+                "32171076",
+                "32119647",
+                "32631389",
+                "32264791",
+                "32503680",
+                "34980198"
+              ]
+            }
+          ]
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 7931,
+          "competitors": [
+            {
+              "sponsor": "ModernaTX, Inc.",
+              "drug_name": "mRNA-1273",
+              "drug_type": "Biological",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 30000,
+              "most_recent_start": "2025-11-26"
+            },
+            {
+              "sponsor": "Novavax",
+              "drug_name": "NVX-CoV2705",
+              "drug_type": "Biological",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 6500,
+              "most_recent_start": "2025-11-20"
+            },
+            {
+              "sponsor": "Henry M. Jackson Foundation for the Advancement of Military Medicine",
+              "drug_name": "Pfizer-BioNTech mRNA COVID-19 vaccine",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 54,
+              "most_recent_start": "2025-11-12"
+            },
+            {
+              "sponsor": "Marcel Curlin",
+              "drug_name": "Nuvaxovid (NVX-CoV2705)",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 1000,
+              "most_recent_start": "2025-10-01"
+            },
+            {
+              "sponsor": "Ottawa Heart Institute Research Corporation",
+              "drug_name": "Dapagliflozin (DAPA)",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 192,
+              "most_recent_start": "2026-09-01"
+            },
+            {
+              "sponsor": "Invivyd, Inc.",
+              "drug_name": "COVID-19 mRNA vaccine",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 210,
+              "most_recent_start": "2026-06-08"
+            },
+            {
+              "sponsor": "Academisch Medisch Centrum - Universiteit van Amsterdam (AMC-UvA)",
+              "drug_name": "Fluvoxamine",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 160,
+              "most_recent_start": "2026-06-04"
+            },
+            {
+              "sponsor": "StemCyte, Inc.",
+              "drug_name": "REGENECYTE",
+              "drug_type": "Biological",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 60,
+              "most_recent_start": "2026-03-31"
+            },
+            {
+              "sponsor": "Invivyd, Inc.",
+              "drug_name": "VYD2311-SD",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "ACTIVE_NOT_RECRUITING"
+              ],
+              "total_enrollment": 1770,
+              "most_recent_start": "2026-01-08"
+            },
+            {
+              "sponsor": "Unity Health Toronto",
+              "drug_name": "Baloxavir",
+              "drug_type": "Drug",
+              "max_phase": "Phase 3",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 264,
+              "most_recent_start": "2026-01-02"
+            }
+          ],
+          "phase_distribution": {
+            "Phase 1/Phase 2": 4,
+            "Phase 1": 12,
+            "Phase 3": 9,
+            "Phase 2/Phase 3": 2,
+            "Phase 2": 13,
+            "Early Phase 1": 1,
+            "Phase 4": 4
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT07664696",
+              "sponsor": "Kimera Labs Inc.",
+              "drug": "IV infusion using an isolated, placental, mesenchymal stem cell derived EVs",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT04366115",
+              "sponsor": "AVM Biotechnology Inc",
+              "drug": "AVM0703",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07682402",
+              "sponsor": "University of Alberta",
+              "drug": "Taurine",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT06907251",
+              "sponsor": "Ottawa Heart Institute Research Corporation",
+              "drug": "Dapagliflozin (DAPA)",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07703475",
+              "sponsor": "National Institute of Allergy and Infectious Diseases (NIAID)",
+              "drug": "RVX-sCPD9",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07388550",
+              "sponsor": "National Institute of Neurological Disorders and Stroke (NINDS)",
+              "drug": "Keytruda",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06974084",
+              "sponsor": "HealthBio, Inc.",
+              "drug": "Maraviroc (MVC)",
+              "phase": "Phase 2/Phase 3"
+            },
+            {
+              "nct_id": "NCT07397455",
+              "sponsor": "Imperial College London",
+              "drug": "SARS-CoV-2 Omicron EG.5.1 challenge agent 10^5 TCID50",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07640308",
+              "sponsor": "The Immunobiological Technology Institute (Bio-Manguinhos) / Oswaldo Cruz Foundation (Fiocruz)",
+              "drug": "Grupo 1 - dose 25 μg",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07655180",
+              "sponsor": "Invivyd, Inc.",
+              "drug": "COVID-19 mRNA vaccine",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07359482",
+              "sponsor": "Academisch Medisch Centrum - Universiteit van Amsterdam (AMC-UvA)",
+              "drug": "Fluvoxamine",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT04452097",
+              "sponsor": "Baylx Inc.",
+              "drug": "Human umbilical cord mesenchymal stem cells + best supportive care",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07597902",
+              "sponsor": "Icahn School of Medicine at Mount Sinai",
+              "drug": "Valacyclovir",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07536308",
+              "sponsor": "National Institute of Allergy and Infectious Diseases (NIAID)",
+              "drug": "OCU500",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07627815",
+              "sponsor": "ParagonClinicals Inc.",
+              "drug": "Paragon Novel Metabolic Regulator (PNMR)",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07567274",
+              "sponsor": "Leading Edge Clinic",
+              "drug": "DMSO-based otic solution with betahistine, dexamethasone, and lidocaine",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07552779",
+              "sponsor": "Pfizer",
+              "drug": "Ibuzatrelvir co-process API film coated tablet",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07298005",
+              "sponsor": "Michele van Vugt",
+              "drug": "Sonlicromanol",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07184385",
+              "sponsor": "StemCyte, Inc.",
+              "drug": "REGENECYTE",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07445971",
+              "sponsor": "ModeX Therapeutics, An OPKO Health Company",
+              "drug": "MDX2301",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07224490",
+              "sponsor": "Stephanie B. Seminara, MD",
+              "drug": "Kisspeptin 112-121",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07183709",
+              "sponsor": "National Institute of Allergy and Infectious Diseases (NIAID)",
+              "drug": "PepGNP-COVID19",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT04725110",
+              "sponsor": "University of Minnesota",
+              "drug": "Instilled T3",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07298434",
+              "sponsor": "Invivyd, Inc.",
+              "drug": "VYD2311-SD",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07314905",
+              "sponsor": "Unity Health Toronto",
+              "drug": "Baloxavir",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07189936",
+              "sponsor": "Vanderbilt University Medical Center",
+              "drug": "To Measure levels of circulating monocyte/ T cell doublets at Baseline",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07221162",
+              "sponsor": "National Institute of Allergy and Infectious Diseases (NIAID)",
+              "drug": "Aluminum Hydroxide Suspension",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07076862",
+              "sponsor": "University of California, Davis",
+              "drug": "A.1 - [¹⁸F]F-AraG PET/CT (90-min dynamic + 4-h static)",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT05060705",
+              "sponsor": "Scientific Center for Anti-infectious Drugs, Kazakhstan",
+              "drug": "Efesovir",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07266558",
+              "sponsor": "ModernaTX, Inc.",
+              "drug": "mRNA-1273",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07086222",
+              "sponsor": "Novavax",
+              "drug": "NVX-CoV2705",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT06721949",
+              "sponsor": "University of Alberta",
+              "drug": "Taurine",
+              "phase": "Phase 2/Phase 3"
+            },
+            {
+              "nct_id": "NCT07108036",
+              "sponsor": "ImmunityBio, Inc.",
+              "drug": "N-803 (IL-15 Superagonist)",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07287137",
+              "sponsor": "Henry M. Jackson Foundation for the Advancement of Military Medicine",
+              "drug": "Pfizer-BioNTech mRNA COVID-19 vaccine",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07215520",
+              "sponsor": "CastleVax Inc.",
+              "drug": "NDV-HXP-S-KP.2",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07222384",
+              "sponsor": "BioNTech SE",
+              "drug": "BNT162b2 (2025/2026 formulation)",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07128082",
+              "sponsor": "Scripps Translational Science Institute",
+              "drug": "Tirzepatide",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06810934",
+              "sponsor": "Kara Chew",
+              "drug": "CoTend-BXBB (SARS2-30404)",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07235137",
+              "sponsor": "Pfizer",
+              "drug": "Ibuzatrelvir",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07079670",
+              "sponsor": "Sanofi",
+              "drug": "NVX-CoV2705",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07051031",
+              "sponsor": "Marcel Curlin",
+              "drug": "Nuvaxovid (NVX-CoV2705)",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07089719",
+              "sponsor": "Assistance Publique - Hôpitaux de Paris",
+              "drug": "Bevacizumab Injection",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07157007",
+              "sponsor": "Traws Pharma, Inc.",
+              "drug": "Ratutrelvir (83-0060) non-randomised",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06928272",
+              "sponsor": "Douglas D. Fraser",
+              "drug": "Pirfenidone",
+              "phase": "Phase 3"
+            },
+            {
+              "nct_id": "NCT07123727",
+              "sponsor": "ImmunityBio, Inc.",
+              "drug": "Anktiva",
+              "phase": "Phase 2"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "sildenafil",
+            "hip-0908",
+            "hip0908",
+            "sildenafilo",
+            "uk-92480",
+            "aphrodil",
+            "granpidam",
+            "liqrev",
+            "mysildecard",
+            "nipatra",
+            "nsc-744009",
+            "nsc-758669",
+            "patrex",
+            "revatio",
+            "sildenafil actavis",
+            "sildenafil (as citrate)",
+            "sildenafil citrate",
+            "sildenafil ratiopharm",
+            "sildenafil teva",
+            "uk-92,480-10",
+            "uk-92480-10",
+            "viagra",
+            "vizarsin"
+          ]
+        },
+        "summary": "Sildenafil has been evaluated in COVID-19 across two recorded studies. A completed Phase 1/Phase 2 trial (NCT04489446, 'Sildenafil in COVID-19') has finished, providing early-phase data on the drug in this setting. A Phase 3 pilot study (NCT04304313, 'A Pilot Study of Sildenafil in COVID-19') is also on record, though its current status is unknown.",
+        "closure": "unknown",
+        "closure_reason": "The Phase 3 trial (NCT04304313) has an unknown status with no reported safety-based termination or documented efficacy failure, so the pair cannot be confirmed as closed.",
+        "relevant_nct_ids": [
+          "NCT04489446",
+          "NCT04304313"
+        ],
+        "contaminated_nct_ids": [],
+        "relevance_reasoning": "Both trials study sildenafil as the experimental intervention directly in COVID-19 patients, and COVID-19 is not an approved indication for sildenafil (approved only for erectile dysfunction and PAH). No contamination from approved indications or distinct diseases applies.",
+        "signals": {
+          "highest_completed_phase": "Phase 1/Phase 2",
+          "has_completed_phase3": false,
+          "completed_phase3_nct_ids": [],
+          "has_completed_pure_phase3": false,
+          "completed_pure_phase3_nct_ids": [],
+          "has_active_phase3": false,
+          "active_phase3_nct_ids": [],
+          "phase3_terminated_for_cause": false,
+          "terminated_phase3_nct_ids": [],
+          "dev_stage": "phase3_unknown_status",
+          "active_programs": "None active; 1 on record with unknown status (NCT04304313)"
+        }
+      },
+      "blurb": {
+        "stage": "Phase 3 on record, status unknown",
+        "literature": "moderate, mixed, RCT-backed / controlled, ⚠️ safety signal reported for this indication",
+        "blocker": "Phase 3 trial on record but current status is unconfirmed; no trials are actively recruiting",
+        "active_programs": "None active; 1 on record with unknown status (NCT04304313)",
+        "key_risk": "Mixed evidence base with a reported safety signal could undermine benefit-risk assessment for this indication",
+        "verdict": "Tested, status unconfirmed",
+        "watch": "",
+        "prose": "This hypothesis has been studied through controlled trials including a Phase 3 effort, and the moderate, RCT-backed literature provides a meaningful evidentiary foundation, though findings are mixed and a safety signal has been flagged for this specific indication. No trials are currently active, and with the lone recorded program's status unconfirmed, the clinical trajectory remains unclear without further information on outcomes or sponsor intent."
+      }
+    },
+    {
+      "disease": "malignant glioma",
+      "source": "competitor",
+      "approval_relationship": "none",
+      "literature": {
+        "search_results": [
+          "sildenafil AND \"Glioma\"",
+          "phosphodiesterase 5 inhibitors AND brain",
+          "PDE5 inhibition AND brain tumor",
+          "PDE5A AND \"Glioma\"",
+          "PDE5A AND glioblastoma",
+          "viagra AND \"Glioma\"",
+          "revatio AND \"Glioma\"",
+          "cGMP signaling AND brain cancer",
+          "nitric oxide pathway AND glioma",
+          "sildenafil citrate AND brain neoplasm"
+        ],
+        "pmids": [
+          "38712133",
+          "36623589",
+          "25303541",
+          "35725975",
+          "25103559",
+          "18674521",
+          "11389965",
+          "37697134",
+          "38995794",
+          "33773120",
+          "40912996",
+          "39158758",
+          "26770022",
+          "36921685",
+          "34593120",
+          "20430262",
+          "39425458",
+          "41819105",
+          "35050491",
+          "32056743",
+          "31978378",
+          "25051133",
+          "31493542",
+          "26308684",
+          "31163203",
+          "41484960",
+          "37056058",
+          "40489090",
+          "25817916",
+          "35804462",
+          "41352712",
+          "40482756",
+          "20419092",
+          "36324868",
+          "36330433",
+          "25330139",
+          "31736357",
+          "23553123",
+          "37453616",
+          "36121246",
+          "40208234",
+          "31420854",
+          "24112792",
+          "42227483",
+          "19179645",
+          "19187094",
+          "38832504",
+          "26689223",
+          "32056276",
+          "28956337",
+          "19262466",
+          "23174209",
+          "15630588",
+          "26750624",
+          "22426465",
+          "39339313",
+          "22647499",
+          "21796010",
+          "32401481",
+          "24513083",
+          "12525671",
+          "39951190",
+          "41931622",
+          "30753989",
+          "29068218",
+          "22359075",
+          "27887774",
+          "27606546",
+          "25801159",
+          "24211383",
+          "29150274",
+          "19678884",
+          "26200391",
+          "28889107",
+          "32690623",
+          "33062261",
+          "23360268",
+          "40802200",
+          "15574127",
+          "28648945",
+          "29847860",
+          "23478662",
+          "19553447",
+          "19059113",
+          "25524816",
+          "34685745",
+          "28956342",
+          "29616790",
+          "23685322",
+          "37239274",
+          "40718899",
+          "22406168",
+          "24021215",
+          "23597052",
+          "30509704",
+          "41069031",
+          "20196613",
+          "24705918",
+          "27636599",
+          "25727737",
+          "12127092",
+          "17690141",
+          "40562301",
+          "18600581",
+          "17349888",
+          "23313637",
+          "30706814",
+          "18499090",
+          "24346005",
+          "24930089",
+          "15746452",
+          "35001638",
+          "39851514",
+          "31856792",
+          "21056623",
+          "23620198",
+          "18548330",
+          "12086542",
+          "36978225",
+          "12425869",
+          "24534417",
+          "23579428",
+          "22580489",
+          "38142044",
+          "15224129",
+          "16928803",
+          "27450675",
+          "37629665",
+          "27109920",
+          "37382636",
+          "38132665",
+          "20216161",
+          "21820491",
+          "25148949",
+          "31658364",
+          "23010935",
+          "23007624",
+          "20920145",
+          "41469822",
+          "30592970",
+          "34764335",
+          "39695100",
+          "28776122",
+          "28663315",
+          "39393981",
+          "37354146",
+          "29197805",
+          "32513693",
+          "25736380",
+          "41823692",
+          "35034363",
+          "23204118",
+          "24890846",
+          "30849920",
+          "16807265",
+          "26967220",
+          "16883304",
+          "23831390",
+          "28626017",
+          "22430368",
+          "38850034",
+          "23385684",
+          "19368809",
+          "35144425",
+          "20819768",
+          "19996941",
+          "38533961",
+          "39513267",
+          "25546329",
+          "24034153",
+          "34405565",
+          "22215207",
+          "25896769",
+          "31677373",
+          "38676710",
+          "17339532",
+          "32534033",
+          "20043991",
+          "31323263",
+          "24662845",
+          "15756578",
+          "24697923",
+          "34774286",
+          "32859137",
+          "35095084",
+          "41753308",
+          "18076343",
+          "32754905",
+          "39400753",
+          "37241131",
+          "32302594",
+          "26360334",
+          "22618382",
+          "22580537",
+          "32728000",
+          "18641057",
+          "28228114",
+          "28343223",
+          "40175147",
+          "37032204",
+          "33450772",
+          "20536457",
+          "19729580",
+          "16478861",
+          "41519709",
+          "22306745",
+          "32467879",
+          "37175205",
+          "37577366",
+          "26108184",
+          "28099939",
+          "24651037",
+          "34575827",
+          "11259554",
+          "19962417",
+          "12477052",
+          "9253655",
+          "38855175",
+          "36734872",
+          "41993020",
+          "41009771",
+          "27251363",
+          "41047765",
+          "26713600",
+          "38058425",
+          "10872744",
+          "18045170",
+          "36124735",
+          "18571301",
+          "26477316",
+          "39030882",
+          "30971889",
+          "35874504",
+          "18308460",
+          "36834974",
+          "36297384",
+          "29050202",
+          "36672884",
+          "35441581",
+          "30635550",
+          "29704309",
+          "32926224",
+          "15970531",
+          "33271150",
+          "10593861",
+          "39101921",
+          "39243423",
+          "31309113",
+          "24523141",
+          "33499110",
+          "17499237",
+          "21041233",
+          "24137337",
+          "9236208",
+          "23370169",
+          "12832291",
+          "24662848",
+          "42447397",
+          "29434677",
+          "41531954",
+          "25620587",
+          "29288364",
+          "8549642",
+          "15816855",
+          "3423468",
+          "17869444",
+          "16256044",
+          "7950978",
+          "27110797",
+          "8938725",
+          "8020502",
+          "12715105",
+          "16971023",
+          "38750472",
+          "37085663",
+          "15831232",
+          "28506076",
+          "29030124",
+          "27411305",
+          "20144787",
+          "21999731",
+          "37682326",
+          "24325546",
+          "25153032",
+          "36880372",
+          "20447464",
+          "12515829",
+          "31954716",
+          "9180263",
+          "40169552",
+          "8748661",
+          "11068017",
+          "15583861",
+          "34370176",
+          "29896202",
+          "16158421",
+          "9514205",
+          "15088099",
+          "10788433",
+          "32000638",
+          "18559623",
+          "11693258",
+          "27470568",
+          "8930181",
+          "41697735",
+          "18297103",
+          "23471571",
+          "11124973",
+          "32201424",
+          "16444588",
+          "22101739",
+          "10973798",
+          "9713849",
+          "27554921",
+          "9610382",
+          "39469810",
+          "11893522",
+          "12548860",
+          "34575998",
+          "27618552",
+          "17047412",
+          "20452681",
+          "28327358",
+          "32652671",
+          "21332719",
+          "23590833",
+          "33574907",
+          "39159216",
+          "10964656",
+          "36670940",
+          "21442623",
+          "10397271",
+          "10874128",
+          "29713056",
+          "18068681",
+          "19656565",
+          "39587016",
+          "12388547",
+          "26170741",
+          "8784266",
+          "30146703",
+          "25998888",
+          "31139381",
+          "21616556",
+          "27869735",
+          "10369188",
+          "25051975",
+          "14572607",
+          "27068033",
+          "21849924",
+          "11311970",
+          "31217780",
+          "30872170",
+          "42072147",
+          "14720208",
+          "29296736",
+          "17977565",
+          "28135697",
+          "27363017",
+          "40129207",
+          "12421592",
+          "27584787",
+          "23246638",
+          "26106824",
+          "21590769",
+          "26553160",
+          "11133047",
+          "20554329",
+          "23399681",
+          "11166726",
+          "25299754",
+          "23850171",
+          "23871826",
+          "20092674",
+          "15098930",
+          "29987482",
+          "17257593",
+          "12154035",
+          "12065713",
+          "29335864",
+          "19429333",
+          "11902113",
+          "19904526",
+          "15617735",
+          "17979570",
+          "9619297",
+          "7488043",
+          "20224909",
+          "15208263",
+          "20432622",
+          "12711309",
+          "12481422",
+          "8627302",
+          "8878539",
+          "18078452",
+          "19899826",
+          "14695179",
+          "28355088",
+          "16881054",
+          "21414308",
+          "9701055",
+          "10737607",
+          "42193264",
+          "9064610",
+          "30466987",
+          "9467822",
+          "9453547",
+          "28676971",
+          "41663838",
+          "19042033",
+          "23338857",
+          "12115505",
+          "12206816",
+          "21115084",
+          "18321443",
+          "9551992",
+          "12198774",
+          "7687436",
+          "7696584",
+          "7521167",
+          "23422148"
+        ],
+        "semantic_search_results": [
+          {
+            "pmid": "38832504",
+            "title": "Cerebrovascular Effects of Sildenafil in Small Vessel Disease: The OxHARP Trial.",
+            "abstract": "BACKGROUND: Vascular cognitive impairment due to cerebral small vessel disease is associated with cerebral pulsatility, white matter hypoperfusion, and reduced cerebrovascular reactivity (CVR), and is potentially improved by endothelium-targeted drugs such as cilostazol. Whether sildenafil, a phosphodiesterase-5 inhibitor, improves cerebrovascular dysfunction is unknown. METHODS: OxHARP trial (Oxford Haemodynamic Adaptation to Reduce Pulsatility) was a double-blind, randomized, placebo-controlled, 3-way crossover trial after nonembolic cerebrovascular events with mild-moderate white matter hyperintensities (WMH), the most prevalent manifestation of cerebral small vessel disease. The primary outcome assessed the superiority of 3 weeks of sildenafil 50 mg thrice daily versus placebo (mixed-effect linear models) on middle cerebral artery pulsatility, derived from peak systolic and end-diastolic velocities (transcranial ultrasound), with noninferiority to cilostazol 100 mg twice daily. Secondary end points included the following: cerebrovascular reactivity during inhalation of air, 4% and 6% CO2 on transcranial ultrasound (transcranial ultrasound-CVR); blood oxygen-level dependent-magnetic resonance imaging within WMH (CVR-WMH) and normal-appearing white matter (CVR-normal-appearing white matter); cerebral perfusion by arterial spin labeling (magnetic resonance imaging pseudocontinuous arterial spin labeling); and resistance by cerebrovascular conductance. Adverse effects were compared by Cochran Q. RESULTS: In 65/75 (87%) patients (median, 70 years;79% male) with valid primary outcome data, cerebral pulsatility was unchanged on sildenafil versus placebo (0.02, -0.01 to 0.05; P=0.18), or versus cilostazol (-0.01, -0.04 to 0.02; P=0.36), despite increased blood flow (∆ peak systolic velocity, 6.3 cm/s, 3.5-9.07; P<0.001; ∆ end-diastolic velocity, 1.98, 0.66-3.29; P=0.004). Secondary outcomes improved on sildenafil versus placebo for CVR-transcranial ultrasound (0.83 cm/s per mm Hg, 0.23-1.42; P=0.007), CVR-WMH (0.07, 0-0.14; P=0.043), CVR-normal-appearing white matter (0.06, 0.00-0.12; P=0.048), perfusion (WMH: 1.82 mL/100 g per minute, 0.5-3.15; P=0.008; and normal-appearing white matter, 2.12, 0.66-3.6; P=0.006) and cerebrovascular resistance (sildenafil-placebo: 0.08, 0.05-0.10; P=4.9×10-8; cilostazol-placebo, 0.06, 0.03-0.09; P=5.1×10-5). Both drugs increased headaches (P=1.1×10-4), while cilostazol increased moderate-severe diarrhea (P=0.013). CONCLUSIONS: Sildenafil did not reduce pulsatility but increased cerebrovascular reactivity and perfusion. Sildenafil merits further study to determine whether it prevents the clinical sequelae of small vessel disease. REGISTRATION: URL: https://www.clinicaltrials.gov/study/NCT03855332; Unique identifier: NCT03855332.",
+            "similarity": 0.5788227147313076,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial"
+            ]
+          },
+          {
+            "pmid": "28228114",
+            "title": "Efficacy of 1, 5, and 20 mg oral sildenafil in the treatment of adults with pulmonary arterial hypertension: a randomized, double-blind study with open-label extension.",
+            "abstract": "BACKGROUND: In a previous study, 6-minute walk distance (6MWD) improvement with sildenafil was not dose dependent at the 3 doses tested (20, 40, and 80 mg 3 times daily [TID]). This study assessed whether lower doses were less effective than the approved 20-mg TID dosage. METHODS: Treatment-naive patients with pulmonary arterial hypertension were randomized to 12 weeks of double-blind sildenafil 1, 5, or 20 mg TID; 12 weeks of open-label sildenafil 20 mg TID followed. Changes from baseline in 6-minute walk distance (6MWD) for sildenafil 1 or 5 mg versus 20 mg TID were compared using a Williams test. Hemodynamics, functional class, and biomarkers were assessed. RESULTS: The study was prematurely terminated for non-safety reasons, with 129 of 219 planned patients treated. At week 12, 6MWD change from baseline was significantly greater for sildenafil 20 versus 1 mg (P = 0.011) but not versus 5 mg. At week 24, 6MWD increases from baseline were larger in those initially randomized to 20 versus 5 or 1 mg (74 vs 50 and 47 m, respectively). At week 12, changes in hemodynamic parameters were generally small and variable between treatment groups; odds ratios for improvement in functional class were not statistically significantly different. Improvements in B-type natriuretic peptide levels were significantly greater with sildenafil 20 versus 1 but not 5 mg. CONCLUSIONS: Sildenafil 20 mg TID appeared to be more effective than 1 mg TID for improving 6MWD; sildenafil 5 mg TID appeared to have similar clinical and hemodynamic effects as 20 mg TID. TRIAL REGISTRATION: ClinicalTrials.gov NCT00430716 (Registration date: January 31, 2007).",
+            "similarity": 0.5207445297144255,
+            "pubtype": [
+              "Journal Article",
+              "Multicenter Study",
+              "Randomized Controlled Trial",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "41519709",
+            "title": "Sildenafil provokes headache but not migraine in men with migraine without aura: a randomized, placebo-controlled crossover trial.",
+            "abstract": "BACKGROUND: Cyclic guanosine monophosphate (cGMP)-mediated mechanisms plays a role in migraine pathophysiology. Sildenafil, a phosphodiesterase type 5 inhibitor, increases intracellular cGMP and can reliably induce migraine attacks in women. However, its migraine-inducing potential in men remains largely unknown. METHODS: In this randomized, double-blind, placebo-controlled crossover trial, 12 men with migraine without aura received sildenafil (100 mg) and placebo in separate sessions ≥ 7 days apart. An open-label parallel cohort of 15 women with migraine received sildenafil (100 mg) under similar experimental conditions. The primary endpoints were (i) the incidence of migraine-like attacks after sildenafil compared with placebo in men, and (ii) the incidence of migraine-like attacks after sildenafil in men and women. RESULTS: In men, sildenafil induced headache more frequently than placebo (83% vs. 25%, p = 0.033), whereas the incidence of migraine-like attacks did not differ between sildenafil and placebo (25% vs. 17%, p = 0.500). In women, sildenafil induced headache in all participants and migraine-like attacks in 67%, a significantly higher proportion than in men (67% vs. 25%, p = 0.038). Adverse events were more frequent after sildenafil than placebo, most commonly flushing and nasal congestion. CONCLUSIONS: Sildenafil provoked headache but not migraine in men with migraine without aura, whereas women showed a markedly greater susceptibility to migraine induction. These findings suggest that cGMP-mediated mechanisms contribute less prominently to migraine generation in men.",
+            "similarity": 0.5184147237706933,
+            "pubtype": [
+              "Journal Article",
+              "Randomized Controlled Trial"
+            ]
+          },
+          {
+            "pmid": "38142044",
+            "title": "Feasibility and Safety of Sildenafil to Repair Brain Injury Secondary to Birth Asphyxia (SANE-01): A Randomized, Double-blind, Placebo-controlled Phase Ib Clinical Trial.",
+            "abstract": "OBJECTIVE: To test feasibility and safety of administering sildenafil in neonates with neonatal encephalopathy (NE), developing brain injury despite therapeutic hypothermia (TH). STUDY DESIGN: We performed a randomized, double-blind, placebo-controlled phase Ib clinical trial between 2016 and 2019 in neonates with moderate or severe NE, displaying brain injury on day-2 magnetic resonance imaging (MRI) despite TH. Neonates were randomized (2:1) to 7-day sildenafil or placebo (2 mg/kg/dose enterally every 12 hours, 14 doses). Outcomes included feasibility and safety (primary outcomes), pharmacokinetics (secondary), and day-30 neuroimaging and 18-month neurodevelopment assessments (exploratory). RESULTS: Of the 24 enrolled neonates, 8 were randomized to sildenafil and 3 to placebo. A mild decrease in blood pressure was reported in 2 of the 8 neonates after initial dose, but not with subsequent doses. Sildenafil plasma steady-state concentration was rapidly reached, but decreased after TH discontinuation. Twelve percent of neonates (1/8) neonates died in the sildenafil group and 0% (0/3) in the placebo group. Among surviving neonates, partial recovery of injury, fewer cystic lesions, and less brain volume loss on day-30 magnetic resonance imaging were noted in 71% (5/7) of the sildenafil group and in 0% (0/3) of the placebo group. The rate of death or survival to 18 months with severe neurodevelopmental impairment was 57% (4/7) in the sildenafil group and 100% (3/3) in the placebo group. CONCLUSIONS: Sildenafil was safe and well-absorbed in neonates with NE treated with TH. Optimal dosing needs to be established. Evaluation of a larger number of neonates through subsequent phases II and III trials is required to establish efficacy. CLINICAL TRIAL REGISTRATION: ClinicalTrials.govNCT02812433.",
+            "similarity": 0.48518981310291154,
+            "pubtype": [
+              "Randomized Controlled Trial",
+              "Clinical Trial, Phase I",
+              "Journal Article",
+              "Research Support, Non-U.S. Gov't"
+            ]
+          },
+          {
+            "pmid": "40489090",
+            "title": "Intrapartum Sildenafil to Improve Perinatal Outcomes: A Randomized Clinical Trial.",
+            "abstract": "IMPORTANCE: Sildenafil citrate may increase uteroplacental blood flow. Its ability to reduce perinatal complications related to fetal hypoxia during labor is uncertain. OBJECTIVE: To compare the effectiveness of intrapartum maternal oral sildenafil citrate vs placebo in improving perinatal outcomes potentially related to intrapartum hypoxia in term pregnancies. DESIGN, SETTING, AND PARTICIPANTS: This pragmatic, multicenter, investigator-initiated, placebo-controlled randomized clinical trial including 3257 women was conducted in 13 Australian hospitals from September 6, 2021, to June 28, 2024. The last date of follow-up (28-day neonatal mortality) was July 26, 2024. Women aged 18 years or older with singleton or dichorionic twin pregnancies, planning vaginal birth at term by either spontaneous labor or induction of labor, were recruited. INTERVENTIONS: Women were assigned to 50 mg oral sildenafil citrate every 8 hours up to 150 mg or equivalent placebo. MAIN OUTCOME AND MEASURES: The primary composite outcome was intrapartum stillbirth, neonatal death, Apgar score less than 4 at 5 minutes (a score of <4 at 5 minutes is indicative of severe neonatal depression at birth, with scores ranging from 0 to 10), acidosis at birth (umbilical cord artery pH <7.0), hypoxic ischemic encephalopathy, neonatal seizures, neonatal respiratory support for greater than 4 hours, neonatal unit admission for greater than 48 hours, persistent pulmonary hypertension of the newborn, or meconium aspiration syndrome. Secondary outcomes were the individual components of the primary composite and emergency cesarean delivery or instrumental birth for intrapartum fetal distress. RESULTS: A total of 3257 women were randomized to sildenafil citrate (n = 1626 women and 1634 infants) or placebo (n = 1631 women and 1641 infants). Mean (SD) maternal age and gestation at randomization were similar in both groups (31.7 [5.1] vs 31.5 [5.0] years and 39.5 [1.2] vs 39.5 [1.1] weeks, respectively). A total of 868 participants (53.4%) vs 874 participants (53.6%) were of Australia/New Zealand ethnicity and 315 participants (19.4%) vs 311 participants (19.1%) were of European ethnicity. Most participants were nulliparous (944 of 1624 [58.1%; 2 missing values] vs 966 of 1630 [59.3%; 1 missing value]). Induction of labor occurred in 1353 of 1621 women (83.5%) in the sildenafil citrate group and 1348 of 1627 women (82.9%) in the placebo group. The primary outcome occurred in 83 of 1625 women (5.1%) in the sildenafil citrate group and 84 of 1625 (5.2%) in the placebo group (relative risk, 1.02; 95% CI, 0.75-1.37). Sildenafil citrate had no significant effect on emergency cesarean delivery or instrumental vaginal birth for fetal distress (relative risk, 1.12; 95% CI, 0.98-1.29) or on any of the individual components of the primary outcome. Subgroup analyses showed no evidence of heterogeneity of treatment effect. CONCLUSIONS AND RELEVANCE: Sildenafil citrate did not result in a lower incidence of adverse perinatal outcomes potentially related to intrapartum hypoxia. TRIAL REGISTRATION: anzctr.org.au Identifier: ACTRN12621000231842.",
+            "similarity": 0.4738913017386792,
+            "pubtype": [
+              "Journal Article",
+              "Multicenter Study",
+              "Pragmatic Clinical Trial",
+              "Research Support, Non-U.S. Gov't",
+              "Randomized Controlled Trial"
+            ]
+          }
+        ],
+        "evidence_summary": {
+          "summary": "None of the five provided abstracts address sildenafil as a treatment for malignant glioma. PMID 38832504 studies sildenafil in cerebral small vessel disease, PMID 28228114 studies sildenafil for pulmonary arterial hypertension (an FDA-approved indication), PMID 41519709 studies sildenafil's role in migraine induction, PMID 38142044 studies sildenafil for neonatal encephalopathy secondary to birth asphyxia, and PMID 40489090 studies intrapartum sildenafil for perinatal outcomes — none of which constitute evidence for repurposing sildenafil to treat malignant glioma. The retrieved literature is insufficient to assess this drug-disease pair.",
+          "study_count": 0,
+          "strength": "none",
+          "direction": "none",
+          "evidence_basis": "none",
+          "is_observational": null,
+          "is_animal_only": null,
+          "key_findings": [],
+          "supporting_pmids": [],
+          "contradicting_pmids": [],
+          "relevant_pmids": [],
+          "contaminated_pmids": [
+            "38832504",
+            "28228114",
+            "41519709",
+            "38142044",
+            "40489090"
+          ],
+          "neutral_pmids": [],
+          "safety_summary": "The top pharmacovigilance signal for sildenafil is headache (1,223 reports, logLR 762.4), consistent with its vasodilatory mechanism (PMID: 9647940, PMID: 10078541). Pulmonary arterial hypertension and dyspnoea also carry high FAERS signals (logLR 625.7 and 565.8, respectively), and a trial in sickle cell disease was halted early due to excess serious adverse events including pain-related hospitalizations in the sildenafil arm (PMID: 21527519).",
+          "safety_pmids": [
+            "9647940",
+            "10078541",
+            "21527519"
+          ],
+          "safety_severity": "serious",
+          "indication_harm": false,
+          "indication_harm_summary": "",
+          "indication_harm_pmids": []
+        },
+        "summary": "Evidence strength: none, direction: none"
+      },
+      "clinical_trials": {
+        "search": {
+          "total_count": 1,
+          "by_status": {
+            "RECRUITING": 0,
+            "ACTIVE_NOT_RECRUITING": 0,
+            "WITHDRAWN": 0,
+            "UNKNOWN": 0
+          },
+          "trials": [
+            {
+              "nct_id": "NCT01817751",
+              "title": "Sorafenib, Valproic Acid, and Sildenafil in Treating Patients With Recurrent High-Grade Glioma",
+              "brief_summary": "The purpose of this research study is to test the safety, tolerability, and effectiveness of the combination of three drugs, sorafenib (Nexavar®), valproic acid (Depakote®), and sildenafil (Viagra®), when used to treat high-grade glioma, a type of brain tumor.",
+              "phase": "Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Glioblastoma",
+                "Recurrent Adult Brain Neoplasm",
+                "Malignant Glioma",
+                "WHO Grade III Glioma"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D005909",
+                  "term": "Glioblastoma"
+                },
+                {
+                  "id": "D001932",
+                  "term": "Brain Neoplasms"
+                },
+                {
+                  "id": "D005910",
+                  "term": "Glioma"
+                },
+                {
+                  "id": "D009461",
+                  "term": "Neurologic Manifestations"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D001254",
+                  "term": "Astrocytoma"
+                },
+                {
+                  "id": "D018302",
+                  "term": "Neoplasms, Neuroepithelial"
+                },
+                {
+                  "id": "D017599",
+                  "term": "Neuroectodermal Tumors"
+                },
+                {
+                  "id": "D009373",
+                  "term": "Neoplasms, Germ Cell and Embryonal"
+                },
+                {
+                  "id": "D009370",
+                  "term": "Neoplasms by Histologic Type"
+                },
+                {
+                  "id": "D009369",
+                  "term": "Neoplasms"
+                },
+                {
+                  "id": "D009375",
+                  "term": "Neoplasms, Glandular and Epithelial"
+                },
+                {
+                  "id": "D009380",
+                  "term": "Neoplasms, Nerve Tissue"
+                },
+                {
+                  "id": "D016543",
+                  "term": "Central Nervous System Neoplasms"
+                },
+                {
+                  "id": "D009423",
+                  "term": "Nervous System Neoplasms"
+                },
+                {
+                  "id": "D009371",
+                  "term": "Neoplasms by Site"
+                },
+                {
+                  "id": "D001927",
+                  "term": "Brain Diseases"
+                },
+                {
+                  "id": "D002493",
+                  "term": "Central Nervous System Diseases"
+                },
+                {
+                  "id": "D009422",
+                  "term": "Nervous System Diseases"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "sorafenib tosylate",
+                  "description": "Given by mouth"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "valproic acid",
+                  "description": "Given by mouth"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "sildenafil citrate",
+                  "description": "Given by mouth"
+                }
+              ],
+              "sponsor": "Virginia Commonwealth University",
+              "enrollment": 47,
+              "start_date": "2013-04-11",
+              "completion_date": "2020-08-27",
+              "primary_outcomes": [
+                {
+                  "measure": "Number of Participants With 6-Month Progression Free Survival (PFS)",
+                  "time_frame": "Up to 6 months"
+                }
+              ],
+              "references": [
+                "34171339"
+              ]
+            }
+          ]
+        },
+        "completed": {
+          "total_count": 1,
+          "trials": [
+            {
+              "nct_id": "NCT01817751",
+              "title": "Sorafenib, Valproic Acid, and Sildenafil in Treating Patients With Recurrent High-Grade Glioma",
+              "brief_summary": "The purpose of this research study is to test the safety, tolerability, and effectiveness of the combination of three drugs, sorafenib (Nexavar®), valproic acid (Depakote®), and sildenafil (Viagra®), when used to treat high-grade glioma, a type of brain tumor.",
+              "phase": "Phase 2",
+              "overall_status": "COMPLETED",
+              "why_stopped": null,
+              "indications": [
+                "Glioblastoma",
+                "Recurrent Adult Brain Neoplasm",
+                "Malignant Glioma",
+                "WHO Grade III Glioma"
+              ],
+              "mesh_conditions": [
+                {
+                  "id": "D005909",
+                  "term": "Glioblastoma"
+                },
+                {
+                  "id": "D001932",
+                  "term": "Brain Neoplasms"
+                },
+                {
+                  "id": "D005910",
+                  "term": "Glioma"
+                },
+                {
+                  "id": "D009461",
+                  "term": "Neurologic Manifestations"
+                }
+              ],
+              "mesh_ancestors": [
+                {
+                  "id": "D001254",
+                  "term": "Astrocytoma"
+                },
+                {
+                  "id": "D018302",
+                  "term": "Neoplasms, Neuroepithelial"
+                },
+                {
+                  "id": "D017599",
+                  "term": "Neuroectodermal Tumors"
+                },
+                {
+                  "id": "D009373",
+                  "term": "Neoplasms, Germ Cell and Embryonal"
+                },
+                {
+                  "id": "D009370",
+                  "term": "Neoplasms by Histologic Type"
+                },
+                {
+                  "id": "D009369",
+                  "term": "Neoplasms"
+                },
+                {
+                  "id": "D009375",
+                  "term": "Neoplasms, Glandular and Epithelial"
+                },
+                {
+                  "id": "D009380",
+                  "term": "Neoplasms, Nerve Tissue"
+                },
+                {
+                  "id": "D016543",
+                  "term": "Central Nervous System Neoplasms"
+                },
+                {
+                  "id": "D009423",
+                  "term": "Nervous System Neoplasms"
+                },
+                {
+                  "id": "D009371",
+                  "term": "Neoplasms by Site"
+                },
+                {
+                  "id": "D001927",
+                  "term": "Brain Diseases"
+                },
+                {
+                  "id": "D002493",
+                  "term": "Central Nervous System Diseases"
+                },
+                {
+                  "id": "D009422",
+                  "term": "Nervous System Diseases"
+                },
+                {
+                  "id": "D012816",
+                  "term": "Signs and Symptoms"
+                },
+                {
+                  "id": "D013568",
+                  "term": "Pathological Conditions, Signs and Symptoms"
+                }
+              ],
+              "interventions": [
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "sorafenib tosylate",
+                  "description": "Given by mouth"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "valproic acid",
+                  "description": "Given by mouth"
+                },
+                {
+                  "intervention_type": "Drug",
+                  "intervention_name": "sildenafil citrate",
+                  "description": "Given by mouth"
+                }
+              ],
+              "sponsor": "Virginia Commonwealth University",
+              "enrollment": 47,
+              "start_date": "2013-04-11",
+              "completion_date": "2020-08-27",
+              "primary_outcomes": [
+                {
+                  "measure": "Number of Participants With 6-Month Progression Free Survival (PFS)",
+                  "time_frame": "Up to 6 months"
+                }
+              ],
+              "references": [
+                "34171339"
+              ]
+            }
+          ]
+        },
+        "terminated": {
+          "total_count": 0,
+          "trials": []
+        },
+        "landscape": {
+          "total_trial_count": 1556,
+          "competitors": [
+            {
+              "sponsor": "Rigel Pharmaceuticals",
+              "drug_name": "Olutasidenib",
+              "drug_type": "Drug",
+              "max_phase": "Phase 4",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 16,
+              "most_recent_start": "2026-02-23"
+            },
+            {
+              "sponsor": "Nationwide Children's Hospital",
+              "drug_name": "Opdualag",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 12,
+              "most_recent_start": "2027-03-01"
+            },
+            {
+              "sponsor": "Nuvation Bio Inc.",
+              "drug_name": "Safusidenib",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 40,
+              "most_recent_start": "2027-03"
+            },
+            {
+              "sponsor": "University of Alabama at Birmingham",
+              "drug_name": "mirdametinib",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 55,
+              "most_recent_start": "2026-08-01"
+            },
+            {
+              "sponsor": "Tianjin First Central Hospital",
+              "drug_name": "nimotuzumab",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 50,
+              "most_recent_start": "2026-07-03"
+            },
+            {
+              "sponsor": "BrainChild Bio, Inc",
+              "drug_name": "BCB-276",
+              "drug_type": "Biological",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 75,
+              "most_recent_start": "2026-07"
+            },
+            {
+              "sponsor": "FluoGuide A/S",
+              "drug_name": "FG001",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "NOT_YET_RECRUITING"
+              ],
+              "total_enrollment": 76,
+              "most_recent_start": "2026-06-30"
+            },
+            {
+              "sponsor": "HighField Biopharmaceuticals Corporation",
+              "drug_name": "HF1K16",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 30,
+              "most_recent_start": "2026-06-30"
+            },
+            {
+              "sponsor": "Clinica Universidad de Navarra, Universidad de Navarra",
+              "drug_name": "DNX-2401",
+              "drug_type": "Biological",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 39,
+              "most_recent_start": "2026-05-12"
+            },
+            {
+              "sponsor": "Guangzhou Virotech Pharmaceutical Co., Ltd.",
+              "drug_name": "VRT106 for injection",
+              "drug_type": "Drug",
+              "max_phase": "Phase 2",
+              "trial_count": 1,
+              "statuses": [
+                "RECRUITING"
+              ],
+              "total_enrollment": 10,
+              "most_recent_start": "2026-05-07"
+            }
+          ],
+          "phase_distribution": {
+            "Early Phase 1": 4,
+            "Phase 2": 14,
+            "Phase 1/Phase 2": 7,
+            "Phase 1": 17,
+            "Phase 4": 1
+          },
+          "recent_starts": [
+            {
+              "nct_id": "NCT05676489",
+              "sponsor": "University of Alabama at Birmingham",
+              "drug": "[F-18]MeFAMP PET",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07703436",
+              "sponsor": "Nuvation Bio Inc.",
+              "drug": "Safusidenib",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07644312",
+              "sponsor": "Nationwide Children's Hospital",
+              "drug": "Opdualag",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07567469",
+              "sponsor": "Regeneron Pharmaceuticals",
+              "drug": "Cemiplimab",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07521657",
+              "sponsor": "University of Alabama at Birmingham",
+              "drug": "mirdametinib",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07472790",
+              "sponsor": "Beijing Bio-Targeting Therapeutics Technology Co., Ltd",
+              "drug": "Novel oncolytic virus Ad-TD-nsIL12（BioTTT001）",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT05555550",
+              "sponsor": "Children's Hospital of Philadelphia",
+              "drug": "18F-Fluciclovine",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07416188",
+              "sponsor": "National Institute of Neurological Disorders and Stroke (NINDS)",
+              "drug": "LMP744",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07710690",
+              "sponsor": "Neuregen Therapeutics Co., Ltd.",
+              "drug": "NRG-103",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07707973",
+              "sponsor": "Tianjin First Central Hospital",
+              "drug": "nimotuzumab",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07680439",
+              "sponsor": "BrainChild Bio, Inc",
+              "drug": "BCB-276",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06946680",
+              "sponsor": "University of Florida",
+              "drug": "Ex-Vivo expanded autologous IL-8 receptor (CXCR2) modified CD70 CAR (8R-70CAR) T cells",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07609472",
+              "sponsor": "FluoGuide A/S",
+              "drug": "FG001",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07678684",
+              "sponsor": "HighField Biopharmaceuticals Corporation",
+              "drug": "HF1K16",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07629089",
+              "sponsor": "Megan Mantica",
+              "drug": "Vorasidenib",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07468136",
+              "sponsor": "Mayo Clinic",
+              "drug": "Eflornithine",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT06666712",
+              "sponsor": "Jeffrey N. Bruce",
+              "drug": "Topotecan",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07541781",
+              "sponsor": "Kailin Yang, MD, PhD",
+              "drug": "Sitagliptin",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT05341947",
+              "sponsor": "Jeremy Rudnick, M.D",
+              "drug": "Activated T cells",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07639970",
+              "sponsor": "Hua Pang",
+              "drug": "[⁶⁸Ga]Ga-HT547 and [¹⁷⁷Lu]Lu-HT547",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07664176",
+              "sponsor": "Children's National Research Institute",
+              "drug": "Lumason",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07457307",
+              "sponsor": "NYU Langone Health",
+              "drug": "Temozolomide",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07331064",
+              "sponsor": "Sarah Rumler",
+              "drug": "Gallium maltolate",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT06465199",
+              "sponsor": "Milton S. Hershey Medical Center",
+              "drug": "Eflornithine (DFMO)",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07424092",
+              "sponsor": "Clinica Universidad de Navarra, Universidad de Navarra",
+              "drug": "DNX-2401",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07589257",
+              "sponsor": "Guangzhou Virotech Pharmaceutical Co., Ltd.",
+              "drug": "VRT106 for injection",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07326566",
+              "sponsor": "Black Diamond Therapeutics, Inc.",
+              "drug": "silevertinib in combination with temozolomide",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT06528691",
+              "sponsor": "St. Jude Children's Research Hospital",
+              "drug": "Entrectinib",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07206849",
+              "sponsor": "Nationwide Children's Hospital",
+              "drug": "Tovorafenib",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07481721",
+              "sponsor": "Ming Yang",
+              "drug": "IL13Rα2 CAR-T Cells Secreting Anti-PD-L1 Antibody",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07076498",
+              "sponsor": "M.D. Anderson Cancer Center",
+              "drug": "M032",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07464925",
+              "sponsor": "Tetragon Biosciences Ltd",
+              "drug": "GLIX1",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07462507",
+              "sponsor": "Washington University School of Medicine",
+              "drug": "[C-11]-CS1P1",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07539441",
+              "sponsor": "Memorial Sloan Kettering Cancer Center",
+              "drug": "Mirdametinib",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07210632",
+              "sponsor": "Eben Rosenthal",
+              "drug": "Nivolumab",
+              "phase": "Early Phase 1"
+            },
+            {
+              "nct_id": "NCT07501156",
+              "sponsor": "Shenzhen Geno-Immune Medical Institute",
+              "drug": "H3K27M-EIEs",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07389278",
+              "sponsor": "Sabine Mueller, MD, PhD",
+              "drug": "ADI-PEG 20 (Arginine deiminase pegylated)",
+              "phase": "Phase 1/Phase 2"
+            },
+            {
+              "nct_id": "NCT07551336",
+              "sponsor": "Beijing Biotech",
+              "drug": "Dual-target CAR-NK cells",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07438860",
+              "sponsor": "Tiffany Hodges",
+              "drug": "SBK2-ICG",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07455045",
+              "sponsor": "Shanghai Fudan-Zhangjiang Bio-Pharmaceutical Co., Ltd.",
+              "drug": "FZ-AD005",
+              "phase": "Phase 1"
+            },
+            {
+              "nct_id": "NCT07439172",
+              "sponsor": "The Cooper Health System",
+              "drug": "Pre-radiation temozolomide.",
+              "phase": "Phase 2"
+            },
+            {
+              "nct_id": "NCT07486713",
+              "sponsor": "Rigel Pharmaceuticals",
+              "drug": "Olutasidenib",
+              "phase": "Phase 4"
+            },
+            {
+              "nct_id": "NCT07480941",
+              "sponsor": "Beijing Biotech",
+              "drug": "Dual-target CAR-NK cells",
+              "phase": "Phase 1"
+            }
+          ]
+        },
+        "approval": {
+          "is_approved": false,
+          "label_found": true,
+          "matched_indication": null,
+          "drug_names_checked": [
+            "sildenafil",
+            "hip-0908",
+            "hip0908",
+            "sildenafilo",
+            "uk-92480",
+            "aphrodil",
+            "granpidam",
+            "liqrev",
+            "mysildecard",
+            "nipatra",
+            "nsc-744009",
+            "nsc-758669",
+            "patrex",
+            "revatio",
+            "sildenafil actavis",
+            "sildenafil (as citrate)",
+            "sildenafil citrate",
+            "sildenafil ratiopharm",
+            "sildenafil teva",
+            "uk-92,480-10",
+            "uk-92480-10",
+            "viagra",
+            "vizarsin"
+          ]
+        },
+        "summary": "Clinical investigation of sildenafil in recurrent high-grade glioma is represented by one completed Phase 2 trial: NCT01817751, 'Sorafenib, Valproic Acid, and Sildenafil in Treating Patients With Recurrent High-Grade Glioma.' This study evaluated the three-drug combination in patients with recurrent high-grade glioma and has reached completed status.",
+        "closure": "live",
+        "closure_reason": "The single relevant trial was completed without any reported safety-based or benefit:risk termination, and no literature documents efficacy failure for this combination in this indication.",
+        "relevant_nct_ids": [
+          "NCT01817751"
+        ],
+        "contaminated_nct_ids": [],
+        "relevance_reasoning": "NCT01817751 studies sildenafil as one of three experimental agents (alongside sorafenib and valproic acid) in recurrent high-grade glioma, which is a narrower subtype of malignant glioma — not an approved indication for sildenafil (approved only for ED and PAH). All trials shown are therefore relevant to this repurposing pair.",
+        "signals": {
+          "highest_completed_phase": "Phase 2",
+          "has_completed_phase3": false,
+          "completed_phase3_nct_ids": [],
+          "has_completed_pure_phase3": false,
+          "completed_pure_phase3_nct_ids": [],
+          "has_active_phase3": false,
+          "active_phase3_nct_ids": [],
+          "phase3_terminated_for_cause": false,
+          "terminated_phase3_nct_ids": [],
+          "dev_stage": "completed_phase2",
+          "active_programs": "None active"
+        }
+      },
+      "blurb": {
+        "stage": "Phase 2 completed for this indication, no Phase 3",
+        "literature": "none, undetermined design",
+        "blocker": "No trials currently recruiting; development has not advanced beyond the completed study",
+        "active_programs": "None active",
+        "key_risk": "Insufficient evidence base to justify further investment without additional efficacy or safety data",
+        "verdict": "Tested, status unconfirmed",
+        "watch": "",
+        "prose": "The hypothesis has been formally studied, with one registered trial on record reaching a completed stage, demonstrating that the candidate was taken beyond pure speculation into clinical evaluation. No program is currently active, and with no literature signal and no relationship to an approved indication, the path forward remains unclear and unconfirmed."
+      }
+    }
+  ],
+  "top_diseases": [
+    "raynaud disease",
+    "covid-19",
+    "malignant glioma"
+  ],
+  "summary": "Ranked repurposing signals for sildenafil:\n\n1. raynaud disease — strong mixed literature (multiple RCTs and meta-analyses); Phase 2/Phase 3 completed (Phase 2-scale), no standalone Phase 3 on record\n2. covid-19 — moderate mixed literature, safety signal present; Phase 3 on record (status unknown)\n3. malignant glioma — no drug-specific literature signal (none strength); Phase 2 completed, no Phase 3 on record",
+  "date_before": null,
+  "is_investigate": false,
+  "drug_safety_summary": "The top pharmacovigilance signal for sildenafil is headache (1,223 reports, logLR 762.4), consistent with its vasodilatory mechanism and corroborated across multiple trials (PMID: 9647940, PMID: 16275885, PMID: 21360507). Sildenafil also carries a strong FAERS signal for dyspnoea and pulmonary hypertension-related events, and a critical drug interaction with organic nitrates causing potentially severe hypotension is well documented (PMID: 10078539).",
+  "drug_safety_pmids": [
+    "9647940",
+    "16275885",
+    "21360507",
+    "10078539",
+    "10078541",
+    "21527519"
+  ]
+}

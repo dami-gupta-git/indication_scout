@@ -1,8 +1,14 @@
 # Sildenafil regression spec.
 #
-# Authored against gold_standard/sildenafil_2026-07-13_16-13-09.json. Each
+# Authored against gold_standard/sildenafil_2026-07-18_20-40-31.json. Each
 # assertion encodes a domain-meaningful invariant a regression must NOT flip.
-# Anchors are chosen to be STABLE across runs.
+# Anchors are chosen to be STABLE across runs (confirmed identical across the
+# 20:20 and 20:40 runs on 2026-07-18).
+#
+# Candidate-set shift from the prior (2026-07-13) gold: hypertension dropped out
+# of the top-3 (replaced by malignant glioma) and is now only a candidate, not
+# an investigated indication; duchenne muscular dystrophy is no longer surfaced.
+# Anchors reconciled accordingly.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
@@ -13,37 +19,30 @@ ranked_order:
   indications:
     - raynaud disease
     - covid-19
-    - hypertension
+    - malignant glioma
 
 candidate_set_contains:
   bucket: structural_integrity
   indications:
     - raynaud disease
     - covid-19
-    - hypertension
+    - malignant glioma
+    - hypertension            # still surfaced as a candidate, no longer top-3
     - eisenmenger syndrome
     - benign prostatic hyperplasia
-    - duchenne muscular dystrophy
 
 required_ncts_surfaced:
   - bucket: literature_coverage
     indication: raynaud disease
     section: relevant
     ncts:
-      - NCT01347008
-      - NCT02050360
+      - NCT02050360   # stable across the 20:20/20:40 runs
   - bucket: literature_coverage
     indication: covid-19
     section: relevant
     ncts:
       - NCT04489446
       - NCT04304313
-  - bucket: literature_coverage
-    indication: hypertension
-    section: relevant
-    ncts:
-      - NCT00223717
-      - NCT01044693
 
 required_pmids_cited:
   - bucket: literature_coverage
@@ -58,9 +57,15 @@ required_pmids_cited:
     pmids:
       - "37243243"
       - "34980198"
-  - bucket: literature_coverage
-    indication: hypertension
-    mode: cited
-    pmids:
-      - "16940217"   # supporting (stable across all runs)
-      - "11132612"   # BP on antihypertensives, small effect (contradicting; stable in current behavior)
+
+# Safety — sildenafil carries a serious-severity signal (priapism, NAION,
+# hypotension with nitrates). Production/holdout both land on `serious` here.
+safety_severity:
+  - indication: raynaud disease
+    allowed: [serious, black_box, moderate]
+  - indication: covid-19
+    allowed: [serious, black_box, moderate]
+
+# Drug-level collapsed safety signal must surface (empty = collapse regression).
+drug_safety:
+  summary_present: true

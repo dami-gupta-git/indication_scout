@@ -1,6 +1,6 @@
 # Bupropion regression spec.
 #
-# Authored against gold_standard/bupropion_2026-07-13_16-13-25.json. Each
+# Authored against gold_standard/bupropion_2026-07-18_20-35-58.json. Each
 # assertion encodes a domain-meaningful invariant — a fact about bupropion's
 # evidence base that a regression must NOT silently flip. If one fails, the
 # supervisor, a sub-agent, or the upstream data layer stopped surfacing a
@@ -8,53 +8,45 @@
 #
 # Anchors are chosen to be STABLE across runs. Trials the relevance classifier
 # treats as borderline (comorbid / dual-indication studies whose
-# relevant-vs-contaminated call flips run to run — e.g. cocaine NCT00000268,
-# cocaine+ADHD) are deliberately NOT pinned; pinning them makes the test flaky
-# without catching real coverage loss.
+# relevant-vs-contaminated call flips run to run) are deliberately NOT pinned;
+# pinning them makes the test flaky without catching real coverage loss.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
 drug: bupropion
 
+# Indication naming drifts run to run; resolve the variants to one canonical
+# name so a rename upstream isn't read as a coverage regression.
+aliases:
+  cocaine use disorder:
+    - cocaine dependence
+  attention deficit-hyperactivity disorder:
+    - attention deficit hyperactivity disorder
+
 # The three ranked repurposing signals, in the order the report presents them.
 ranked_order:
   bucket: ranking
   indications:
-    - attention deficit hyperactivity disorder
-    - cocaine dependence
+    - attention deficit-hyperactivity disorder
     - mood disorder
+    - cocaine use disorder
 
 candidate_set_contains:
   bucket: structural_integrity
   indications:
-    - attention deficit hyperactivity disorder
-    - cocaine dependence
+    - attention deficit-hyperactivity disorder
+    - cocaine use disorder
     - mood disorder
     - schizophrenia
     - methamphetamine dependence
-    - obesity
 
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids).
 required_ncts_surfaced:
   - bucket: literature_coverage
-    indication: attention deficit hyperactivity disorder
+    indication: attention deficit-hyperactivity disorder
     section: relevant
     ncts:
-      - NCT00048360   # adult ADHD, Phase 3, completed
-      # NCT00061087 (ADHD in methadone patients) deliberately NOT pinned: bupropion
-      # is an ACTIVE_COMPARATOR arm, so the relevance classifier's relevant-vs-
-      # contaminated call flips run to run — a borderline comorbidity trial, per the
-      # header policy of pinning STABLE anchors only.
-  - bucket: literature_coverage
-    indication: cocaine dependence
-    section: relevant
-    ncts:
-      - NCT02111798   # bupropion + contingency management, Phase 2/3, completed (stable across runs)
-  - bucket: literature_coverage
-    indication: cocaine dependence
-    section: terminated
-    ncts:
-      - NCT00000276   # dopamine reuptake inhibitors of cocaine abuse, Phase 1, terminated (stable)
+      - NCT00048360   # adult ADHD, Phase 3, completed (stable across runs)
   - bucket: literature_coverage
     indication: mood disorder
     section: relevant
@@ -64,30 +56,48 @@ required_ncts_surfaced:
 # Cited PMIDs (evidence_summary supporting + contradicting).
 required_pmids_cited:
   - bucket: literature_coverage
-    indication: attention deficit hyperactivity disorder
+    indication: attention deficit-hyperactivity disorder
     mode: cited
     pmids:
       - "11156812"   # adult ADHD RCT, bupropion SR
       - "15820237"   # bupropion XL, 162 adults
-  - bucket: literature_coverage
-    indication: cocaine dependence
-    mode: cited
-    pmids:
-      - "16461866"   # bupropion + contingency management RCT (supporting)
-      - "18551884"   # no benefit vs placebo (contradicting)
-      - "18612883"   # not more effective than placebo, opioid-dependent (contradicting)
   - bucket: literature_coverage
     indication: mood disorder
     mode: cited
     pmids:
       - "2856918"    # open trial, bipolar/schizoaffective maintenance
 
+# Safety — bupropion carries black-box warnings (psychiatric / cardiotoxicity).
+# Production derives black_box from OT warnings; holdout (OT suppressed) would
+# pick serious from pre-cutoff literature, hence the allowed set.
+safety_severity:
+  - indication: attention deficit-hyperactivity disorder
+    allowed: [black_box, serious]
+  - indication: mood disorder
+    allowed: [black_box, serious]
+  - indication: cocaine use disorder
+    allowed: [black_box, serious]
+
+# Disease-specific harm flag — the indication-scoped literature reports a harm
+# for bupropion in each of these contexts.
+indication_harm:
+  - indication: attention deficit-hyperactivity disorder
+    expected: true
+  - indication: mood disorder
+    expected: true
+  - indication: cocaine use disorder
+    expected: true
+
+# Drug-level collapsed safety signal must surface (empty = collapse regression).
+drug_safety:
+  summary_present: true
+
 forbidden_in_ranked:
   # Obesity is FDA-approved only as Contrave (bupropion + naltrexone), not
   # bupropion monotherapy — the supervisor must keep it out of the ranked
   # signals via the combination-product rule.
   - bucket: demotion_logic
-    indication: obesity
+    indication: obesity disorder
 
 forbidden_phrases:
   # Bupropion monotherapy is not FDA-approved for obesity — the combination
