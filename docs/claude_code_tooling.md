@@ -21,7 +21,6 @@ Agent file locations:
 | Agent | Description |
 |---|---|
 | **docs-engineer** | Project-local override of the global docs-engineer (same role, project-scoped). |
-| **project-state-updater** | Appends a dated snapshot to `PROJECT_STATE.md` based on the most recent session file. Invoked by `/remember`. Runs on `claude-haiku`. Never rewrites — append only. |
 | **code-reviewer** | Reviews code for correctness, style, architectural conformance, and consistency with project conventions. Triggered by `/review` or phrases like "review this" / "check this code". Reads `ARCHITECTURE.md`, `docs/DESIGN.md`, and `skills/testing.md` before reviewing. Runs on `claude-sonnet`. |
 
 ---
@@ -34,18 +33,15 @@ Skills are markdown files in `skills/`. They can be referenced by CLAUDE.md as r
 
 | File | How used | Description |
 |---|---|---|
-| **session.md** | defined here, used by Claude and `/remember` | Session continuation block format and rules |
+| **session.md** | defined here, used by Claude | Session continuation block format and rules |
 | **testing.md** | referenced by CLAUDE.md | Test layout, style rules, and assertion standards |
 
 ---
 
 ## Slash Commands
 
-Slash commands live in `.claude/commands/` and are invoked via `/command-name`.
-
-| File | Invocation | Description |
-|---|---|---|
-| **remember.md** | `/remember` | Appends a session continuation block to the current session file, then appends a snapshot to `PROJECT_STATE.md`. Format defined in `skills/session.md`. |
+Slash commands live in `.claude/commands/` and are invoked via `/command-name`. None are currently defined — session writes
+and findings promotion happen automatically at context thresholds.
 
 ---
 
@@ -84,11 +80,15 @@ Manages `session_*.md` files in the project root.
 | Trigger | Action | Who |
 |---|---|---|
 | Session start | Create/load session file, print to context | `SessionStart` hook |
-| Natural milestones during session | Append session continuation block | Claude, following `skills/session.md` |
-| End of session | Append session continuation block + update `PROJECT_STATE.md` | Claude, via `/remember` |
+| Natural milestones during session | Rewrite the session block | Claude, following `skills/session.md` |
+| Context thresholds (20/40/60/75/85%) | Rewrite the session block + promote confirmed findings to `for_me/findings.md` | `UserPromptSubmit` and `Stop` hooks |
 
 **Rotation rules:**
-- Session files older than 30 minutes are rotated to `session_bak/` before a new one is created
+- Two triggers: the active session file exceeding 20 KB, evaluated at session start, and context reaching the 85% threshold,
+  evaluated mid-session
+- Rotation summarizes the file into `sessions_summary.md`, moves it to `session_archive/`, and creates a replacement
+- Nothing in the archive is pruned. `sessions_summary.md` itself rotates by the same rule at 60 KB
+- See `design_session_memory.md` for the full design
 
 **Session file structure:**
 ```
