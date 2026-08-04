@@ -2,13 +2,19 @@
 Session file manager for IndicationScout.
 
 Usage:
-    python scripts/session.py append "Some note to add"
-    python scripts/session.py startup   # prints path + contents of current session file
+    python scripts/session.py startup                      # rotation check, then print session file + summary
+    python scripts/session.py rotate-check                  # prints "due" or "ok"
+    python scripts/session.py rotate --summary-file <path>  # append summary, archive, create replacement
 
 Rules:
-- Session files are named session_{datetime}.md in the project root.
-- Appending to a file exceeding 20 KB rotates it to session_bak/ first.
-- session_bak/ retains the 5 most recent files; older ones are deleted.
+- Session files are named session_{datetime}.md in the project root, one per rotation (not per session).
+- Rotation is a size rule, evaluated at session start: past MAX_SIZE_BYTES the file is summarized into
+  sessions_summary.md, moved to session_archive/, and replaced.
+- Summarizing needs a model, so it happens outside this script: `startup` reports that rotation is due and the
+  model calls `rotate` with the summary it wrote.
+- Nothing in the archive is pruned. sessions_summary.md rotates by the same rule at SUMMARY_MAX_SIZE_BYTES.
+
+See design_session_memory.md.
 """
 
 import argparse
@@ -21,9 +27,12 @@ from pathlib import Path
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SESSION_BAK = PROJECT_ROOT / "session_bak"
-MAX_SIZE_BYTES = 20 * 1024  # 20 KB
-MAX_BAK_FILES = 5
+SESSION_ARCHIVE = PROJECT_ROOT / "session_archive"
+SUMMARY_FILE = PROJECT_ROOT / "sessions_summary.md"
+LEGACY_BAK = PROJECT_ROOT / "session_bak"
+
+MAX_SIZE_BYTES = 20 * 1024
+SUMMARY_MAX_SIZE_BYTES = 60 * 1024
 
 
 def _current_session_file() -> Path | None:
@@ -32,62 +41,100 @@ def _current_session_file() -> Path | None:
     return files[-1] if files else None
 
 
-def _rotate(path: Path) -> None:
-    """Move path to session_bak/ and prune to MAX_BAK_FILES."""
-    SESSION_BAK.mkdir(exist_ok=True)
-    dest = SESSION_BAK / path.name
-    shutil.move(str(path), dest)
-    logger.info("Rotated %s → %s", path.name, dest)
-
-    bak_files = sorted(SESSION_BAK.glob("session_*.md"))
-    while len(bak_files) > MAX_BAK_FILES:
-        oldest = bak_files.pop(0)
-        oldest.unlink()
-        logger.info("Deleted oldest backup: %s", oldest.name)
-
-
 def _new_session_file() -> Path:
     """Create and return a new session file with current timestamp."""
-    name = "session_" + datetime.now().strftime("%Y-%m-%d_%H-%M") + ".md"
-    path = PROJECT_ROOT / name
-    path.write_text(
-        f"# IndicationScout — Session\n\n"
-        f"> Started: {datetime.now().strftime('%Y-%m-%d %H:%M')}\n\n"
-        f"## What Was Worked On\n\n"
-        f"## Decisions Made\n\n"
-        f"## Pain Points / Errors Found\n\n"
-        f"## Next Steps Agreed On\n\n"
-    )
+    now = datetime.now()
+    path = PROJECT_ROOT / ("session_" + now.strftime("%Y-%m-%d_%H-%M") + ".md")
+    path.write_text(f"# IndicationScout — Session\n\n> Started: {now.strftime('%Y-%m-%d %H:%M')}\n\n")
     logger.info("Created new session file: %s", path.name)
     return path
 
 
-def _is_too_large(path: Path) -> bool:
-    return path.stat().st_size >= MAX_SIZE_BYTES
+def _archive(path: Path, name: str | None = None) -> Path:
+    """Move path into session_archive/ under `name`. No pruning."""
+    SESSION_ARCHIVE.mkdir(exist_ok=True)
+    dest = SESSION_ARCHIVE / (name or path.name)
+    shutil.move(str(path), dest)
+    logger.info("Archived %s → %s", path.name, dest.name)
+    return dest
 
 
-def get_or_create_session() -> Path:
-    """Return the active session file, rotating/creating as needed."""
+def _is_too_large(path: Path, limit: int) -> bool:
+    return path.exists() and path.stat().st_size >= limit
+
+
+def rotation_due() -> bool:
+    current = _current_session_file()
+    return current is not None and _is_too_large(current, MAX_SIZE_BYTES)
+
+
+def _migrate_legacy_bak() -> None:
+    """One-time move of session_bak/ contents into session_archive/. The prune is gone."""
+    if not LEGACY_BAK.is_dir():
+        return
+    for path in sorted(LEGACY_BAK.glob("session_*.md")):
+        SESSION_ARCHIVE.mkdir(exist_ok=True)
+        dest = SESSION_ARCHIVE / path.name
+        if dest.exists():
+            continue
+        shutil.move(str(path), dest)
+        logger.info("Migrated %s → session_archive/", path.name)
+
+
+def _rotate_summary_if_needed() -> None:
+    """sessions_summary.md rotates by the same rule one level up; summarizing happens before this call."""
+    if not _is_too_large(SUMMARY_FILE, SUMMARY_MAX_SIZE_BYTES):
+        return
+    _archive(SUMMARY_FILE, name=f"sessions_summary_{datetime.now().strftime('%Y-%m-%d_%H-%M')}.md")
+
+
+def cmd_rotate(summary_file: Path) -> None:
+    """Append the model's summary, archive the file, create the replacement."""
     current = _current_session_file()
     if current is None:
-        return _new_session_file()
-    if _is_too_large(current):
-        _rotate(current)
-        return _new_session_file()
-    return current
+        logger.error("No session file to rotate")
+        sys.exit(1)
 
+    summary = summary_file.read_text().strip()
+    if not summary:
+        logger.error("Empty summary; refusing to rotate (the summary is the only compressed record)")
+        sys.exit(1)
 
-def cmd_append(text: str) -> None:
-    path = get_or_create_session()
-    with path.open("a") as f:
-        f.write(text.rstrip() + "\n")
-    print(path)
+    # Archive before appending: a failed move must not leave a summary behind, or the retry appends it twice.
+    name = current.name
+    _archive(current)
+
+    with SUMMARY_FILE.open("a") as fh:
+        fh.write(f"\n---\n\n## {name} (archived {datetime.now().strftime('%Y-%m-%d %H:%M')})\n\n")
+        fh.write(summary + "\n")
+
+    fresh = _new_session_file()
+    _rotate_summary_if_needed()
+    print(fresh)
 
 
 def cmd_startup() -> None:
-    path = get_or_create_session()
-    print(f"Session file: {path}\n")
-    print(path.read_text())
+    """Rotation is evaluated before the read; when due, print the instruction and no file content."""
+    _migrate_legacy_bak()
+
+    if rotation_due():
+        current = _current_session_file()
+        print(
+            "ROTATION DUE — before anything else:\n"
+            f"1. Summarize {current.name} in at most 15 lines: date range, what changed, decisions with "
+            "reasoning, unresolved problems. Summarize that file alone; do not re-read anything else.\n"
+            "2. Write the summary to a file, then run:\n"
+            "   python scripts/session.py rotate --summary-file <path>\n"
+            "3. Read the new session file and sessions_summary.md."
+        )
+        return
+
+    current = _current_session_file() or _new_session_file()
+    print(f"Session file: {current}\n")
+    print(current.read_text())
+    if SUMMARY_FILE.exists():
+        print(f"\n--- {SUMMARY_FILE.name} ---\n")
+        print(SUMMARY_FILE.read_text())
 
 
 def main() -> None:
@@ -95,17 +142,20 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Manage IndicationScout session files.")
     sub = parser.add_subparsers(dest="command", required=True)
 
-    app = sub.add_parser("append", help="Append text to the current session file.")
-    app.add_argument("text", help="Text to append.")
+    sub.add_parser("startup", help="Rotation check, then print the session file and summary.")
+    sub.add_parser("rotate-check", help="Print 'due' or 'ok'.")
 
-    sub.add_parser("startup", help="Print path to the current (or new) session file.")
+    rot = sub.add_parser("rotate", help="Archive the current file and create its replacement.")
+    rot.add_argument("--summary-file", required=True, type=Path, help="File holding the model-written summary.")
 
     args = parser.parse_args()
 
-    if args.command == "append":
-        cmd_append(args.text)
-    elif args.command == "startup":
+    if args.command == "startup":
         cmd_startup()
+    elif args.command == "rotate-check":
+        print("due" if rotation_due() else "ok")
+    elif args.command == "rotate":
+        cmd_rotate(args.summary_file)
 
 
 if __name__ == "__main__":
