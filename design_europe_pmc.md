@@ -19,6 +19,9 @@ abstract; records without an abstract are excluded. Under a temporal holdout, a 
 bound is added to the query.
 
 The full result set is paginated through, following the cursor Europe PMC returns until exhausted.
+Europe PMC repeats the cursor on the final page rather than omitting it, so pagination stops on an
+unchanged cursor; a cursor seen earlier in the same fetch raises, which catches a server-side
+cycle that would otherwise re-request pages forever.
 There is no result cap and no relevance filtering, ranking, or scoring. The five drugs behind the
 recall measurements gave pools of 287 to 3,298 papers, but a later bounded sildenafil query
 returned 6,739 records, so that range is not a ceiling. Pool sizes across the validation runbook
@@ -34,11 +37,16 @@ identifier Europe PMC assigns, not by PMID, which preprints lack.
 
 Dates come from the first-publication date throughout — both the holdout bound in the query and
 the publication year stored on the paper. The alternative field, publication year, is the year the
-paper reached a journal issue, which disagrees with first publication on roughly 17% of records
-and is absent from a small number entirely. Filtering on one and storing the other would let a
+paper reached a journal issue, which disagrees with first publication on 16.1% of a measured
+6,739-record pool and is absent from a small number entirely. Filtering on one and storing the other would let a
 paper pass a cutoff and then report a year beyond it. First publication is also the correct
 holdout semantics: a paper available online in November 2021 and issued in 2022 was readable
 before a 2022 cutoff, so it belongs in that run.
+
+The cutoff is exclusive, matching the PubMed client, but Europe PMC's date range is inclusive at
+both ends, so the query sends the day before the cutoff. Passing the cutoff through directly
+returned papers published on the cutoff date itself, which is a holdout cut at an approval date
+seeing papers published that day.
 
 Each paper carries forward its identifiers, title, abstract, journal, first-publication date,
 type, and citation count.
@@ -74,9 +82,10 @@ it was extracted from and the raw wordings that collapsed into it. Conditions th
 approved for are removed. An unparseable merge response raises rather than yielding an empty
 removal list, which would present approved indications as novel candidates.
 
-The approved-indication list is resolved as of the retrieval cutoff, not as of today. Under a
-holdout it comes from the hardcoded approvals table the pipeline already loads in place of the
-live FDA lookup, filtered to approvals granted before the cutoff. Removing today's list from a
+The approved-indication list is resolved as of the retrieval cutoff, not as of today. The grouping
+step takes an already-filtered list; `approval_check.list_approved_indications_at` performs that
+read, keeping only entries in the approvals table dated before the cutoff. Supplying it is the
+caller's job, which is part of the undecided invocation below. Removing today's list from a
 holdout run would strip the indication the run exists to discover: a colchicine run cut at 2008
 would drop atherosclerotic cardiovascular disease, approved in 2022.
 
@@ -131,13 +140,25 @@ similarity would assert two records are the same paper without the source saying
 
 ## Testing
 
-Integration tests cover retrieval against the live API: field parsing, the date bound, pagination
-past a single page, and the empty result. Extraction is tested at the prompt level on abstracts
-with known content, including abstracts that do not name a condition, which must return NONE.
-Leakage is tested by running holdout-era abstracts that omit the eventual indication and asserting
-it is not emitted, with a positive control so a model that always returned NONE could not pass.
-Selection is unit tested on a stubbed merge: synonym grouping, approved-indication removal, and a
-holdout case where a post-cutoff approval must survive.
+Retrieval is covered by integration tests against the live API in
+`tests/integration/data_sources/test_europe_pmc_search.py`: field parsing of a pinned article,
+whole-pool retrieval with unique identities, the date bound at two cutoffs, pagination past one
+page, and the empty result. These are pinned to minoxidil's pre-1988 pool, which is closed — no
+new paper can publish into a window that ended in 1987 — so the expected counts stay exact.
+
+Extraction is tested at the prompt level in `tests/unit/test_condition_extraction.py` (prompt
+builder, and parsing of multi-condition, NONE, bulleted, mixed, order-preserving-dedup,
+prose-line and long-but-real inputs). Leakage is tested in
+`tests/integration/services/test_condition_extraction.py` by running holdout-era abstracts that
+omit the eventual indication and asserting it is not emitted, with a positive control so a model
+that always returned NONE could not pass. Negatives are pinned by article key and chosen against
+each indication's full synonym set; a keyword-only pass had mislabeled a minoxidil paper titled
+"male pattern baldness" as a negative.
+
+Selection is unit tested on a stubbed merge in `tests/unit/test_condition_grouping.py`: synonym
+grouping, approved-indication removal, a holdout case where a post-cutoff approval must survive,
+an empty input making no LLM call, an unparseable merge propagating, and aliases absent from the
+input being ignored. The model factory is unit tested in `tests/unit/test_model_europe_pmc.py`.
 
 The leakage and recall evidence rests on five hand-picked drug-indication pairs and 60 abstracts,
 and the negative abstracts were chosen by matching a single keyword, which mislabeled one paper

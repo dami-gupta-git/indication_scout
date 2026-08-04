@@ -69,8 +69,8 @@ A **Supervisor** agent orchestrates three specialist sub-agents:
   harness; async job API.
 
 Data sources: Open Targets (GraphQL), ClinicalTrials.gov (REST v2), PubMed (NCBI E-utilities),
-Europe PMC (citation counts), NCBI MeSH (descriptor resolution), ChEMBL (molecule metadata),
-openFDA (drug labels).
+Europe PMC (citation counts, and drug-scoped literature retrieval), NCBI MeSH (descriptor
+resolution), ChEMBL (molecule metadata), openFDA (drug labels).
 
 ---
 
@@ -151,7 +151,12 @@ Required environment variables:
 | `OPENFDA_API_KEY` | No | OpenFDA API key |
 | `LLM_MODEL` | No | Primary LLM model (default: `claude-sonnet-4-6`) |
 | `SMALL_LLM_MODEL` | No | Lightweight LLM model (default: `claude-haiku-4-5-20251001`) |
+| `BIG_LLM_MODEL` | No | Heavyweight LLM model (default: `claude-opus-4-6`) |
 | `EMBEDDING_MODEL` | No | Embedding model (default: `FremyCompany/BioLORD-2023`) |
+| `SEED_REPORTS_ENABLED` | No | Serve a committed seed report instead of running the agents (default: `true`); set `false` to force every request through the live pipeline |
+| `TRACING_ENABLED` | No | Opt-in OpenTelemetry → Langfuse tracing (default: `false`); `LANGFUSE_PUBLIC_KEY`, `LANGFUSE_SECRET_KEY`, `LANGFUSE_BASE_URL` accompany it |
+| `SCOUT_CACHE_DIR` | No | Disk-cache location; read directly by `constants.py`, not a `Settings` field |
+| `CONSTANTS_FILE` | No | Which `.env.constants*` file to load (default: `.env.constants`) |
 
 ¹ `ANTHROPIC_API_KEY` is required at runtime, not at startup: the app boots with an empty key
 and fails on the first Claude call. Set it before running any analysis.
@@ -304,11 +309,16 @@ src/indication_scout/
 ├── api/             # FastAPI app (async analyses API; serves the React frontend in prod)
 ├── cli/             # Click-based `scout` CLI
 ├── data_sources/    # Async API clients (Open Targets, CT.gov, PubMed, Europe PMC, ChEMBL, FDA)
+├── db/              # SQLAlchemy session factory
+├── helpers/         # Drug-name normalization and similar helpers
 ├── models/          # Pydantic data contracts
 ├── prompts/         # LLM prompt templates
 ├── regression/      # Snapshot regression harness (backs `scout diff-report`)
 ├── report/          # SupervisorOutput → markdown
+├── runners/         # Standalone runner scripts (pubmed_runner, rag_runner)
 ├── services/        # Business logic (LLM, embeddings, RAG, disease/FDA resolution, job store)
+├── sqlalchemy/      # ORM models (pubmed_abstracts with pgvector)
+├── utils/           # Shared file cache
 ├── ml_models/       # Trial-risk + trial-success modeling
 ├── config.py        # Settings (pydantic-settings, .env + .env.constants)
 └── constants.py     # URLs, timeouts, lookup maps

@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-IndicationScout is an agentic drug repurposing system. A drug name goes in; coordinated AI agents query multiple biomedical data sources (Open Targets, ClinicalTrials.gov, PubMed, ChEMBL, openFDA) and produce a repurposing report identifying candidate indications worth investigating.
+IndicationScout is an agentic drug repurposing system. A drug name goes in; coordinated AI agents query multiple biomedical data sources (Open Targets, ClinicalTrials.gov, PubMed, Europe PMC, ChEMBL, openFDA) and produce a repurposing report identifying candidate indications worth investigating.
 
 ### Directory Structure
 
@@ -28,6 +28,7 @@ indication_scout/
 │   │   ├── open_targets.py        # OpenTargetsClient (GraphQL)
 │   │   ├── clinical_trials.py     # ClinicalTrialsClient (REST v2)
 │   │   ├── pubmed.py              # PubMedClient (NCBI E-utilities)
+│   │   ├── europe_pmc.py          # EuropePMCClient (citation counts + drug-scoped literature search)
 │   │   ├── chembl.py              # ChEMBLClient + drug-name resolution helpers
 │   │   ├── fda.py                 # FDAClient (openFDA labels)
 │   │   └── drugbank.py            # DrugBankClient (stub)
@@ -38,6 +39,7 @@ indication_scout/
 │   │   ├── model_open_targets.py
 │   │   ├── model_clinical_trials.py
 │   │   ├── model_pubmed_abstract.py
+│   │   ├── model_europe_pmc.py
 │   │   ├── model_chembl.py
 │   │   ├── model_drug_profile.py
 │   │   └── model_evidence_summary.py
@@ -51,6 +53,8 @@ indication_scout/
 │   │   ├── disease_helper.py      # LLM disease normalization + MeSH descriptor resolver
 │   │   ├── pubmed_query.py        # Query building
 │   │   ├── retrieval.py           # RAG: drug profile, semantic search, synthesis
+│   │   ├── condition_extraction.py # Europe PMC abstract → stated treated-conditions (not yet wired in)
+│   │   ├── condition_grouping.py  # Extracted conditions → candidate indications (not yet wired in)
 │   │   ├── approval_check.py      # openFDA label + LLM approval extraction
 │   │   ├── dev_stage.py           # LLM-judged development-stage tier from trial facts
 │   │   ├── judge_interpretive.py  # LLM interpretation of resolved facts (keeps blurbs consistent with dev_stage)
@@ -73,14 +77,15 @@ indication_scout/
 
 | Component | Status | Description |
 |-----------|--------|-------------|
-| Data Sources | **Complete** | OpenTargetsClient, ClinicalTrialsClient, PubMedClient, ChEMBLClient, FDAClient; DrugBankClient is a stub |
-| Data Models | **Complete** | Pydantic models for all data contracts (Open Targets, ClinicalTrials, PubMed, ChEMBL, DrugProfile, EvidenceSummary) |
+| Data Sources | **Complete** | OpenTargetsClient, ClinicalTrialsClient, PubMedClient, EuropePMCClient, ChEMBLClient, FDAClient; DrugBankClient is a stub |
+| Data Models | **Complete** | Pydantic models for all data contracts (Open Targets, ClinicalTrials, PubMed, Europe PMC, ChEMBL, DrugProfile, EvidenceSummary) |
 | BaseClient | **Complete** | Retry with exponential backoff; persistent failure log via `log_data_source_failure` |
 | File Cache | **Complete** | Shared `utils/cache.py` used by all clients and services (`cache/<namespace>/<sha>.json`, config-driven TTL (currently 60 days)) |
 | Services | **Complete** | `llm.py`, `embeddings.py`, `disease_helper.py`, `pubmed_query.py`, `approval_check.py`, `retrieval.py` (build_drug_profile, expand_search_terms, extract_organ_term, fetch_new_abstracts, embed_abstracts, fetch_and_cache, semantic_search, synthesize, get_drug_competitors) |
 | Agents | **Complete** | Supervisor + literature, clinical_trials, mechanism sub-agents — all built on the custom gated ReAct loop (`agents/_react_loop.py`). `BaseAgent` ABC still exists in `agents/base.py` but is unused. |
 | API | **Complete** | FastAPI app: `/health` plus async `analyses` (POST/GET/report.md/DELETE), `drilldown`, and `examples` routers (in `api/routes/`); CORS + visitor/bot logging; serves the built React frontend in prod |
 | CLI | **Complete** | `scout find` (run pipeline), `scout investigate` (run pipeline on a fixed drug+disease pair, no candidate discovery), `scout render` (re-render saved JSON), `scout diff-report` (diff two JSON snapshots) — in `cli/cli.py` |
+| Literature candidate sourcing | **Built, not wired** | Europe PMC retrieval, condition extraction and grouping are implemented and tested; nothing calls them. Invocation point undecided — see `design_europe_pmc.md` and `PLAN_europe_pmc.md` |
 
 ---
 
@@ -302,11 +307,19 @@ Configuration values come from `Settings` (`default_timeout`, `default_max_retri
 │  │   fda_approval_check                                              │
 │  ├── disease_norm, disease_merge,               (disease_helper)    │
 │  │   pubmed_count, mesh_resolver                                     │
-│  └── competitors_merged, synthesize, organ_term  (retrieval)         │
+│  ├── competitors_merged, synthesize, organ_term  (retrieval)         │
+│  └── europe_pmc_search,                          (Europe PMC        │
+│      europe_pmc_extraction                        sourcing)          │
 │                                                                      │
 │  In addition, OpenTargetsClient persists per-target evidence files  │
 │  via _save_target_evidences (separate JSON), and ChEMBLClient       │
 │  persists drug-name caches (_save_chembl_names).                    │
+│                                                                      │
+│  The two Europe PMC namespaces are written against the shared       │
+│  helper but carry no per-call TTL yet, so they take the global      │
+│  value; retrieval goes stale as papers publish while extraction is  │
+│  keyed on an immutable record id, so the two may not share it.      │
+│  Undecided — see PLAN_europe_pmc.md section 9.                      │
 │                                                                      │
 └─────────────────────────────────────────────────────────────────────┘
 ```
@@ -915,6 +928,8 @@ ChEMBL IDs and drug-name lists are persisted in dedicated per-drug JSON files un
 | `disease_helper.py` | `llm_normalize_disease`, `llm_normalize_disease_batch`, `merge_duplicate_diseases`, `pubmed_count`, `normalize_for_pubmed`, `normalize_batch`, `resolve_mesh_id` |
 | `pubmed_query.py` | `get_pubmed_query(drug_name, disease_name)` |
 | `retrieval.py` | `RetrievalService` — `build_drug_profile`, `get_drug_competitors`, `fetch_new_abstracts`, `embed_abstracts`, `fetch_and_cache`, `semantic_search`, `synthesize` (takes `approved_indications`; per-PMID directions via `_judge_pmid_directions`), `extract_organ_term`, `expand_search_terms` |
+| `condition_extraction.py` | `build_prompt`, `parse_response`, `extract_conditions` — one small-LLM call per Europe PMC abstract, cached per article, failures counted in `ExtractionResult.skipped` rather than recorded as NONE |
+| `condition_grouping.py` | `group_conditions` — one `merge_duplicate_diseases` call over all extracted names, returning `GroupedCondition` (canonical name, aliases, article keys) sorted by paper count, with already-approved conditions removed |
 | `approval_check.py` | `get_approved_indications`, `list_approved_indications_at`, `list_approved_indications_from_labels`, `extract_approved_from_labels`, `get_all_fda_approved_diseases`, `get_fda_approved_disease_mapping` |
 | `dev_stage.py` | `judge_dev_stage`, `dev_stage_phrase` (`DEV_STAGE_PHRASE` / `DEV_STAGE_TIERS`) — LLM-judged development-stage tier with a deterministic phase-band floor |
 | `judge_interpretive.py` | `judge_interpretive` — isolated LLM call interpreting already-resolved facts so blurb fields don't contradict the authoritative dev_stage |
@@ -931,6 +946,7 @@ ChEMBL IDs and drug-name lists are persisted in dedicated per-drug JSON files un
 | Open Targets Platform | GraphQL | https://api.platform.opentargets.org/api/v4/graphql | None |
 | ClinicalTrials.gov | REST v2 | https://clinicaltrials.gov/api/v2/ | None |
 | PubMed / NCBI E-utilities | REST | https://eutils.ncbi.nlm.nih.gov/entrez/eutils/ | API key (optional) |
+| Europe PMC | REST | https://www.ebi.ac.uk/europepmc/webservices/rest/search | None |
 | ChEMBL | REST | https://www.ebi.ac.uk/chembl/api/data | None |
 | openFDA | REST | https://api.fda.gov/ | API key (optional) |
 | Anthropic | REST | Anthropic Messages API | API key required |
@@ -989,6 +1005,7 @@ Settings:
     rag_llm_concurrency: int
     rag_pubmed_concurrency: int
     rag_disease_concurrency: int
+    europe_pmc_extraction_concurrency: int  # in-flight condition-extraction LLM calls
     clinical_trials_landscape_max_trials: int
     clinical_trials_cap: int
     supervisor_candidate_cap: int          # trims the final ranked candidate list

@@ -136,6 +136,32 @@ The OT competitor cache is keyed on `date_before` so cutoff and no-cutoff runs d
 competitor lists ([retrieval.py:106-109](src/indication_scout/services/retrieval.py#L106-L109)),
 and the OT client suppresses its current-state approved-indications strip under `date_before`.
 
+### 7. Europe PMC (literature candidate sourcing)
+
+Not yet on any run path — the component is built but nothing calls it, so a holdout run today does
+not exercise it. Its holdout behavior is nonetheless implemented, and is recorded here because the
+semantics differ from the PubMed layer above.
+
+`EuropePMCClient.search_by_drug` accepts `date_before` and adds a publication-date bound to the
+query. The bound is exclusive, matching `PubMedClient.search`, but Europe PMC's date range is
+inclusive at both ends, so the client sends the day before the cutoff; passing the cutoff through
+directly returned papers published on the cutoff date itself.
+
+The bound and the year stored on each article both come from `firstPublicationDate` rather than
+`pubYear`. The two disagree on 16.1% of a measured pool, so filtering on one and storing the other
+would let a paper pass a cutoff and then report a year beyond it. First publication is also the
+correct holdout semantics: a paper online in November 2021 and issued in 2022 was readable before a
+2022 cutoff.
+
+The extraction prompt forbids the model from using knowledge of the drug beyond the supplied
+abstract. Without that constraint a holdout run recovers the post-cutoff indication from the model
+rather than from the literature. The approved-indication list used to drop already-approved
+conditions must be resolved as of the cutoff via `list_approved_indications_at`; passing today's
+list would strip the very indication a holdout run exists to discover.
+
+The retrieval cache is keyed on the query, which contains the date bound, so cutoff and no-cutoff
+runs do not share entries. See `design_europe_pmc.md`.
+
 ## Cache Isolation
 
 Any cache that survives across runs has `date_before` mixed into its key so a holdout run cannot
