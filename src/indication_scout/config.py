@@ -86,6 +86,9 @@ class Settings(BaseSettings):
     rag_llm_concurrency: int
     rag_pubmed_concurrency: int
     rag_disease_concurrency: int
+    # Bound on in-flight Europe PMC condition-extraction LLM calls. Pools run to a few thousand
+    # papers, so this sets the wall-clock of the extraction stage.
+    europe_pmc_extraction_concurrency: int
 
     # Clinical trials
     clinical_trials_landscape_max_trials: int

@@ -47,6 +47,52 @@ class MergeResult(TypedDict):
     remove: list[str]
 
 
+def _validated_merge_result(raw: Any, disease_count: int, source: str) -> MergeResult:
+    """Return `raw` as a MergeResult, raising DataSourceError if it is not one.
+
+    A response that parses as JSON but omits `merge`/`remove`, or types them wrongly, would reach
+    callers as an empty result once they guard it — the same silent no-op a parse failure used to
+    produce, and the same consequence: an already-approved indication surviving as a novel
+    candidate. `MergeResult` is a TypedDict, so nothing enforces the shape at runtime without this.
+    """
+    if not isinstance(raw, dict):
+        raise DataSourceError(
+            "llm",
+            f"merge_duplicate_diseases: {source} for {disease_count} diseases is "
+            f"{type(raw).__name__}, expected an object",
+        )
+
+    merge, remove = raw.get("merge"), raw.get("remove")
+    if not isinstance(merge, dict) or not isinstance(remove, list):
+        raise DataSourceError(
+            "llm",
+            f"merge_duplicate_diseases: {source} for {disease_count} diseases has "
+            f"merge={type(merge).__name__}, remove={type(remove).__name__}; "
+            "expected an object and a list",
+        )
+
+    for canonical, aliases in merge.items():
+        if not isinstance(canonical, str) or not isinstance(aliases, list):
+            raise DataSourceError(
+                "llm",
+                f"merge_duplicate_diseases: {source} has a malformed merge entry "
+                f"({type(canonical).__name__} -> {type(aliases).__name__})",
+            )
+        if not all(isinstance(a, str) for a in aliases):
+            raise DataSourceError(
+                "llm",
+                f"merge_duplicate_diseases: {source} has a non-string alias under {canonical!r}",
+            )
+
+    if not all(isinstance(r, str) for r in remove):
+        raise DataSourceError(
+            "llm",
+            f"merge_duplicate_diseases: {source} has a non-string entry in remove",
+        )
+
+    return {"merge": merge, "remove": remove}
+
+
 # ── LLM Normalize ───────────────────────────────────────────────────────────
 
 
@@ -163,8 +209,12 @@ async def merge_duplicate_diseases(
     `remove` list (terms to drop, e.g. already-approved indications). Cached by the
     sorted input sets so identical disease/indication lists reuse the prior result.
 
-    On an unparseable LLM response, logs the error and returns an empty result
-    (no merges, no removals) rather than failing the pipeline.
+    Raises DataSourceError on an unparseable LLM response. An empty result is
+    indistinguishable from a legitimate "nothing to merge, nothing to remove", and every
+    caller uses `remove` to drop already-approved indications — so a silent empty result
+    lets an approved indication survive as a novel candidate. The LLM layer already
+    retries transient failures, so reaching this point means the model returned something
+    genuinely unusable.
     """
     # Cache key is order-independent: sort both lists so equivalent inputs collide.
     cache_params = {
@@ -174,7 +224,9 @@ async def merge_duplicate_diseases(
     }
     cached = cache_get("disease_merge", cache_params, DEFAULT_CACHE_DIR)
     if cached is not None:
-        return cached
+        # Validated too: a cache entry written before this check, or hand-edited, can hold any
+        # shape, and an unvalidated one reaches callers by the same route as a bad live response.
+        return _validated_merge_result(cached, len(diseases), source="cache")
 
     prompt = (
         (_PROMPTS_DIR / "merge_diseases.txt")
@@ -184,16 +236,21 @@ async def merge_duplicate_diseases(
     response = await query_small_llm(prompt, max_tokens=max_tokens)
     cleaned = strip_markdown_fences(response)
     try:
-        result = json.loads(cleaned)
+        parsed = json.loads(cleaned)
     except json.JSONDecodeError as e:
         logger.error(
             "merge_duplicate_diseases: failed to parse LLM response: %s\nResponse was: %s",
             e,
             response,
         )
-        return {"merge": {}, "remove": []}
+        raise DataSourceError(
+            "llm",
+            f"merge_duplicate_diseases: unparseable response for {len(diseases)} diseases: {e}",
+        ) from e
 
-    # Only cache successfully-parsed results; parse failures are not persisted.
+    result = _validated_merge_result(parsed, len(diseases), source="LLM response")
+
+    # Only cache validated results; malformed ones are not persisted.
     cache_set("disease_merge", cache_params, result, DEFAULT_CACHE_DIR)
     return result
 

@@ -357,6 +357,46 @@ EUROPE_PMC_SEARCH_URL: str = f"{EUROPE_PMC_BASE_URL}/search"
 # Batch size for the EXT_ID:pmid OR-query citation lookup.
 EUROPE_PMC_CITATION_BATCH: int = 40
 
+# Europe PMC literature sourcing — drug-scoped candidate-indication retrieval. Separate from the
+# citation-count use above: this pulls the full literature pool for a drug so indications that
+# exist only as literature signal (case reports, off-label use, hypotheses) can be extracted.
+# Drug name matched in title or abstract; HAS_ABSTRACT:Y because extraction reads the abstract and
+# a record without one carries no signal. {drug} is the drug name, {year_clause} is either empty
+# or a publication-year bound appended under a temporal holdout.
+EUROPE_PMC_DRUG_QUERY: str = '(TITLE:"{drug}" OR ABSTRACT:"{drug}") AND HAS_ABSTRACT:Y{year_clause}'
+# Appended to EUROPE_PMC_DRUG_QUERY under a temporal holdout to exclude post-cutoff papers.
+EUROPE_PMC_YEAR_CLAUSE: str = " AND (FIRST_PDATE:[1900-01-01 TO {date_before}])"
+# resultType=core is required for the abstract and for journalInfo.journal.title; the lite
+# result type returns neither.
+EUROPE_PMC_RESULT_TYPE: str = "core"
+# Max records per search page. 1000 is Europe PMC's documented ceiling for cursor pagination.
+EUROPE_PMC_PAGE_SIZE: int = 1000
+# Europe PMC paginates by opaque cursor rather than offset; "*" requests the first page and each
+# response carries the next cursor.
+EUROPE_PMC_CURSOR_PARAM: str = "cursorMark"
+EUROPE_PMC_CURSOR_START: str = "*"
+# Cache namespaces: retrieval keyed on the query (drug + any date bound), extraction keyed on the
+# individual paper id so an expanded pool only pays for papers not yet seen.
+EUROPE_PMC_SEARCH_NS: str = "europepmc_drug_search"
+EUROPE_PMC_EXTRACTION_NS: str = "europepmc_extraction"
+# System prompt for condition extraction. Paired with the instruction in
+# prompts/extract_treated_conditions.txt confining the model to the supplied abstract: the model
+# knows every holdout answer from pretraining, so an unconstrained read leaks the post-cutoff
+# indication instead of recovering it from the literature.
+EUROPE_PMC_EXTRACTION_SYSTEM: str = (
+    "You extract stated facts from biomedical abstracts. You never infer, complete, "
+    "or add information from your own knowledge."
+)
+# Extraction returns a short list of condition names, so the reply is small. Capping it also bounds
+# the cost of a reply that ignores the format and starts explaining itself.
+EUROPE_PMC_EXTRACTION_MAX_TOKENS: int = 150
+# Longest a returned line may be before it is discarded as prose rather than a condition name. The
+# model occasionally explains why it answered NONE instead of answering; observed cases ran to full
+# sentences, while real condition names ("chronic obstructive pulmonary disease exacerbation",
+# "stress urinary incontinence in women") stay well inside this.
+EUROPE_PMC_MAX_CONDITION_WORDS: int = 12
+
+
 # Curated per-drug list of candidate disease phrasings to short-circuit as
 # FDA-approved (return True without calling the LLM). Acts strictly as an
 # LLM backstop: only add candidate phrasings the LLM-against-label flow

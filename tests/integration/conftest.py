@@ -34,6 +34,7 @@ from indication_scout.config import get_settings
 from indication_scout.constants import TEST_CACHE_DIR
 from indication_scout.data_sources.chembl import ChEMBLClient
 from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
+from indication_scout.data_sources.europe_pmc import EuropePMCClient
 from indication_scout.data_sources.fda import FDAClient
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.data_sources.pubmed import PubMedClient
@@ -104,6 +105,14 @@ def test_cache_dir():
 async def fda_client():
     """Create and tear down an FDAClient using the test cache."""
     c = FDAClient(cache_dir=TEST_CACHE_DIR)
+    yield c
+    await c.close()
+
+
+@pytest.fixture
+async def europe_pmc_client():
+    """Create and tear down a EuropePMCClient using the test cache."""
+    c = EuropePMCClient(cache_dir=TEST_CACHE_DIR)
     yield c
     await c.close()
 

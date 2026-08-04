@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, call, patch
 import pytest
 
 from indication_scout.constants import BROADENING_BLOCKLIST
+from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.services.disease_helper import (
     llm_normalize_disease,
     llm_normalize_disease_batch,
@@ -253,14 +254,19 @@ async def test_merge_duplicate_diseases_parses_response_formats(
         }
 
 
-async def test_merge_duplicate_diseases_returns_fallback_on_invalid_json():
-    """merge_duplicate_diseases returns empty structure when LLM returns invalid JSON."""
+async def test_merge_duplicate_diseases_raises_on_invalid_json():
+    """An unparseable response raises rather than returning an empty result.
+
+    Every caller uses `remove` to drop already-approved indications, so an empty result is
+    indistinguishable from "nothing to remove" and would let an approved indication survive as a
+    novel candidate.
+    """
     with patch(
         "indication_scout.services.disease_helper.query_small_llm",
         new=AsyncMock(return_value="not valid json at all"),
     ):
-        result = await merge_duplicate_diseases(["narcolepsy"], [])
-        assert result == {"merge": {}, "remove": []}
+        with pytest.raises(DataSourceError, match="unparseable response"):
+            await merge_duplicate_diseases(["narcolepsy"], [])
 
 
 # ── llm_normalize_disease_batch unit tests ───────────────────────────────────
@@ -630,3 +636,48 @@ async def test_resolve_mesh_id_does_not_cache_failures(tmp_path, monkeypatch):
     assert not (tmp_path / "mesh_resolver").exists() or not list(
         (tmp_path / "mesh_resolver").glob("*.json")
     ), "Failures were cached — this means every later call for the same string returns None forever"
+
+
+@pytest.mark.parametrize(
+    "bad_response",
+    [
+        '{"merge": {}}',  # remove missing
+        '{"remove": []}',  # merge missing
+        '["narcolepsy"]',  # not an object
+        '{"merge": [], "remove": []}',  # merge wrong type
+        '{"merge": {}, "remove": {}}',  # remove wrong type
+    ],
+)
+async def test_merge_duplicate_diseases_raises_on_wrong_shape(
+    bad_response, tmp_path, monkeypatch
+):
+    """Valid JSON of the wrong shape raises rather than degrading to an empty result.
+
+    Callers guard with .get(), so an unvalidated bad shape would silently become "nothing to
+    merge, nothing to remove" — the same hazard as an unparseable response, reached by a
+    different route.
+    """
+    monkeypatch.setattr(
+        "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
+    )
+    with patch(
+        "indication_scout.services.disease_helper.query_small_llm",
+        new=AsyncMock(return_value=bad_response),
+    ):
+        with pytest.raises(DataSourceError):
+            await merge_duplicate_diseases(["narcolepsy"], [])
+
+
+async def test_merge_duplicate_diseases_raises_on_malformed_cache_entry(
+    tmp_path, monkeypatch
+):
+    """A cache entry of the wrong shape raises too — it reaches callers by the same route."""
+    monkeypatch.setattr(
+        "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
+    )
+    with patch(
+        "indication_scout.services.disease_helper.cache_get",
+        return_value={"merge": {}},
+    ):
+        with pytest.raises(DataSourceError, match="cache"):
+            await merge_duplicate_diseases(["narcolepsy"], [])

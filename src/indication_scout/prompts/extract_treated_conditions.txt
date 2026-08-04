@@ -1,0 +1,16 @@
+Below is the title and abstract of a biomedical paper involving {drug}.
+
+List the medical condition(s) that this paper studies {drug} as a treatment or therapy for.
+
+Rules:
+- Only list a condition if THIS TEXT states {drug} was used, tested, or proposed to treat it.
+- Copy the condition wording verbatim from the text. Do not substitute a term you know.
+- If {drug} appears only as a comparator, an assay reagent, a contaminant, an impurity, or background context, output NONE.
+- If the paper is about {drug}'s adverse effects, pharmacokinetics, or chemistry rather than treating a condition, output NONE.
+- Do NOT use any knowledge about {drug} beyond this text. If the text does not name a condition treated by {drug}, output NONE.
+
+Output one condition per line, or the single word NONE. Each line must be a condition name only — no sentences, no explanation, no reasoning.
+
+---
+{text}
+---
