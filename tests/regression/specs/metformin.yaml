@@ -1,9 +1,10 @@
 # Metformin regression spec.
 #
-# Authored against gold_standard/metformin_2026-07-18_20-48-39.json. Each
+# Authored against gold_standard/metformin_2026-08-03_20-22-47.json. Each
 # assertion encodes a domain-meaningful invariant a regression must NOT flip.
 # Anchors are chosen to be STABLE across runs — pinned only where they held
-# across BOTH 2026-07-18 runs (20:19 and 20:48).
+# across both the 2026-07-18 runs (20:19, 20:48) and the 2026-08-03 run
+# (20:22), which fixed the MASLD trial-count-0 display bug from 07-18.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 

@@ -79,7 +79,7 @@
         "target_function": "G protein-coupled receptor for glucagon-like peptide 1 (GLP- 1). Ligand binding triggers activation of a signaling cascade that leads to the activation of adenylyl cyclase and increased intracellular cAMP levels. Plays a role in regulating insulin secretion in response to GLP-1.."
       }
     ],
-    "summary": "Semaglutide acts exclusively as a GLP-1 receptor (GLP1R) agonist, making GLP1R the sole and defining pharmacological target. GLP1R shows its strongest disease associations with type 2 diabetes mellitus (overall score 0.761) and obesity (0.680), both supported by high clinical, genetic, and literature evidence — consistent with semaglutide's approved indications. Beyond its established uses, GLP1R associations extend to metabolic dysfunction-associated steatotic liver disease (MAFLD/NASH, 0.534), polycystic ovary syndrome (0.420), hypertension (0.483), and chronic kidney disease (0.416), all of which represent active or emerging repurposing opportunities for semaglutide. The breadth of these associations reflects GLP1R's central role in metabolic and cardiorenal homeostasis, supporting ongoing clinical trials investigating semaglutide in MASH, heart failure, and CKD."
+    "summary": "Semaglutide acts exclusively as a GLP-1 receptor (GLP1R) agonist, making GLP1R the sole and defining pharmacological target. GLP1R shows its strongest disease associations with type 2 diabetes mellitus (overall score 0.761) and obesity (0.680), both backed by high clinical, genetic, and literature evidence — fully consistent with semaglutide's approved indications. Beyond its established uses, GLP1R associations extend to metabolic dysfunction-associated steatotic liver disease (MAFLD/NASH, 0.534), polycystic ovary syndrome (0.420), hypertension (0.483), and chronic kidney disease (0.416), all of which represent active or emerging repurposing opportunities for semaglutide. The breadth of these metabolic and cardiorenal associations reflects GLP1R's central role in energy homeostasis, insulin secretion, and organ-protective signaling, supporting ongoing clinical trials exploring semaglutide in heart failure, kidney disease, and liver steatosis."
   },
   "disease_findings": [
     {
@@ -1281,7 +1281,7 @@
           "indication_harm_summary": "",
           "indication_harm_pmids": []
         },
-        "summary": "strong"
+        "summary": "Semaglutide shows strong evidence supporting its use in cardiovascular disorder, with key findings from clinical trials and mechanistic studies. Safety signals include a black-box warning for carcinogenicity, a strong pancreatitis pharmacovigilance signal, and reports of serious hepatotoxicity."
       },
       "clinical_trials": {
         "search": {
@@ -3300,15 +3300,11 @@
             "wegovy"
           ]
         },
-        "summary": "Clinical investigation of semaglutide in this indication has advanced through Phase 2. The completed anchor study is NCT05193578 (Phase 2, completed), a home-based intervention examining semaglutide treatment of neuroleptic-related prediabetes. Beyond that completed work, four non-pivotal studies remain active. NCT07221214 (Phase 2, recruiting) is evaluating GLP-1 receptor agonists to decrease ethanol consumption and cardiovascular disease risk in people living with HIV. NCT07483801 (Phase 4, not yet recruiting), the DECODE study, is a series of pilot studies examining the haemodynamic effects of semaglutide and tirzepatide. NCT06446531 (Phase 1, recruiting) is focused on prevention of progression of prediabetes, obesity, and cardiovascular risk. Finally, NCT07187830 (not phase-assigned, recruiting) is investigating visceral adipose tissue and liver changes associated with semaglutide in chronic kidney disease. Together these studies reflect a continuing and active investigational landscape for this drug–indication pair.",
+        "summary": "Clinical investigation in this indication is represented by a single Phase 4 pilot study. DECODE (NCT07483801) — 'Haemodynamic Effects Of Semaglutide and Tirzepatide - a Series of Pilot Studies' — is currently not yet recruiting. No trials in this indication have been terminated for safety or benefit:risk concerns.",
         "closure": "live",
-        "closure_reason": "Multiple trials are actively recruiting and no relevant Phase 3 termination for safety or benefit:risk, nor published evidence of efficacy failure, has been identified.",
+        "closure_reason": "An active non-pivotal Phase 4 study (NCT07483801) remains on record with no negative safety or efficacy termination to indicate closure.",
         "relevant_nct_ids": [
-          "NCT07221214",
-          "NCT05193578",
-          "NCT07483801",
-          "NCT06446531",
-          "NCT07187830"
+          "NCT07483801"
         ],
         "contaminated_nct_ids": [
           "NCT07188545",
@@ -3317,13 +3313,17 @@
           "NCT05700877",
           "NCT05669755",
           "NCT06082063",
+          "NCT07221214",
+          "NCT05193578",
           "NCT06959784",
           "NCT05870462",
-          "NCT07677995"
+          "NCT06446531",
+          "NCT07677995",
+          "NCT07187830"
         ],
-        "relevance_reasoning": "Trials studying semaglutide's cardiovascular effects specifically in populations with type 2 diabetes, obesity, or as a comparator arm for another drug (tirzepatide/dulaglutide) are contaminated because they target FDA-approved indications (T2DM, obesity, MACE) or study a different drug as the primary agent. Trials studying semaglutide's direct cardiovascular/haemodynamic effects in novel populations (HIV with alcohol use, schizophrenia/prediabetes, prediabetes/obesity without established T2DM, or direct vascular mechanistic studies) are classified as relevant as they explore cardiovascular risk reduction in non-approved populations or distinct mechanistic contexts.",
+        "relevance_reasoning": "Nearly all retrieved trials are contaminated: most study semaglutide in populations with Type 2 Diabetes, obesity, or prediabetes (all approved indications), use semaglutide only as a comparator/component in multi-drug trials, or target a distinct primary indication (alcohol use, schizophrenia). Only NCT07483801 (DECODE) qualifies as potentially relevant, studying direct hemodynamic/vascular cardiovascular effects of semaglutide independent of its approved metabolic indications, though the evidence base for semaglutide as a standalone cardiovascular disorder therapy is extremely thin.",
         "signals": {
-          "highest_completed_phase": "Phase 2",
+          "highest_completed_phase": null,
           "has_completed_phase3": false,
           "completed_phase3_nct_ids": [],
           "has_completed_pure_phase3": false,
@@ -3332,19 +3332,19 @@
           "active_phase3_nct_ids": [],
           "phase3_terminated_for_cause": false,
           "terminated_phase3_nct_ids": [],
-          "dev_stage": "completed_phase2",
-          "active_programs": "No pivotal program active; 4 non-pivotal active (NCT07221214, NCT07483801, NCT06446531, NCT07187830)"
+          "dev_stage": "exploratory_phase4_only",
+          "active_programs": "No pivotal program active; 1 non-pivotal active (NCT07483801)"
         }
       },
       "blurb": {
-        "stage": "Phase 2 completed for this indication, no Phase 3",
+        "stage": "Phase 4 exploratory only (post-approval off-label study; no dedicated development program for this indication)",
         "literature": "strong, supports, RCT-backed / controlled",
-        "blocker": "No pivotal program active; development has not advanced beyond mid-stage for this indication",
-        "active_programs": "No pivotal program active; 4 non-pivotal active (NCT07221214, NCT07483801, NCT06446531, NCT07187830)",
-        "key_risk": "Overlap with an approved related indication may complicate trial design, endpoint selection, and regulatory pathway demarcation",
+        "blocker": "No pivotal program is active; development remains at the exploratory post-approval stage with one non-pivotal trial ongoing.",
+        "active_programs": "No pivotal program active; 1 non-pivotal active (NCT07483801)",
+        "key_risk": "Overlap with an approved related indication may obscure whether evidence is truly specific to this candidate use, complicating any future regulatory pathway.",
         "verdict": "Live but bottlenecked",
         "watch": "",
-        "prose": "The hypothesis carries meaningful credibility, supported by RCT-backed literature and a substantial registry of 14 trials, with four non-pivotal studies still active. Progress toward a definitive regulatory submission is constrained by the absence of a pivotal program and by the inherent complexity of disentangling this broader indication from the overlapping approved use, leaving the clinical story incomplete despite sustained investigational activity."
+        "prose": "The hypothesis is actively studied, with 14 trials on record and one non-pivotal study currently running, supported by RCT-backed literature that strengthens the scientific rationale. However, because this candidate indication broadly overlaps an approved related use, the evidence base cannot be cleanly attributed to this specific population, leaving the dedicated regulatory case underdeveloped."
       }
     },
     {
@@ -4159,7 +4159,7 @@
             "42128321"
           ]
         },
-        "summary": "Semaglutide shows strong evidence supporting repurposing for kidney disorder, with renoprotective effects demonstrated across multiple clinical and preclinical studies. Key findings include significant reductions in proteinuria, eGFR preservation, and anti-inflammatory/anti-fibrotic mechanisms. A black-box warning for carcinogenicity and a pancreatitis signal require monitoring; mild bone remodeling suppression was noted in CKD rats."
+        "summary": "Semaglutide shows strong evidence for repurposing in kidney disorder, with multiple studies demonstrating renoprotective effects, particularly in diabetic kidney disease and chronic kidney disease (CKD). Key findings include reductions in albuminuria, eGFR preservation, and anti-inflammatory/anti-fibrotic mechanisms. Safety considerations include a black-box warning for carcinogenicity, a strong pancreatitis signal, and a preclinical bone remodeling concern in CKD rats."
       },
       "clinical_trials": {
         "search": {
@@ -5737,7 +5737,7 @@
           "NCT04741074",
           "NCT05897372"
         ],
-        "relevance_reasoning": "Only NCT05822609 studies semaglutide as the experimental agent for diabetic kidney disease in Type 1 diabetes — a sibling indication to the approved T2DM/CKD scope and not itself FDA-approved. All other trials are contaminated: NCT04515849 uses semaglutide only as an active comparator for cotadutide; NCT05897372 uses semaglutide as one component of a multi-drug protocol; NCT05220917 and NCT06821919 study drug classes rather than semaglutide specifically; NCT07392151 is a prediabetes intervention not studying semaglutide; and NCT04741074 targets ESKD/CKD outcomes already covered by semaglutide's approved indications.",
+        "relevance_reasoning": "Only NCT05822609 is relevant: it studies semaglutide as the primary experimental agent for diabetic kidney disease specifically in type 1 diabetes — a sibling of the approved T2DM indication and not itself an approved indication for semaglutide. All other trials are contaminated: most fail TEST 0 (semaglutide is a comparator arm, one of many drug classes, or part of a multi-drug protocol rather than the studied agent), and NCT04741074 fails TEST 1 (ESKD is an approved kidney indication for semaglutide).",
         "signals": {
           "highest_completed_phase": null,
           "has_completed_phase3": false,
@@ -5759,7 +5759,7 @@
         "active_programs": "No pivotal program active; 1 non-pivotal active (NCT05822609)",
         "key_risk": "Reported safety signal in this indication could halt further development or limit therapeutic window",
         "verdict": "Live but bottlenecked",
-        "watch": "",
+        "watch": "⚠️ Safety signal reported for this indication",
         "prose": "The hypothesis carries meaningful scientific credibility, supported by RCT-backed literature, and remains active through at least one ongoing non-pivotal trial, though no pivotal program has yet been initiated or completed. A documented safety signal specific to this indication represents a substantive hurdle that will need to be addressed before the evidence base can mature toward a regulatory pathway."
       }
     },
@@ -6989,7 +6989,7 @@
             "31186300"
           ]
         },
-        "summary": "Evidence synthesis complete for semaglutide in diabetes mellitus. Safety signal includes a black-box warning for carcinogenicity and a strong pharmacovigilance signal for pancreatitis. GI adverse events are the most common cause of treatment discontinuation. Synthesizer returned strength: none based on retrieved abstracts."
+        "summary": "Evidence synthesis complete for semaglutide in diabetes mellitus."
       },
       "clinical_trials": {
         "search": {
@@ -15437,12 +15437,6 @@
           "NCT06914141",
           "NCT06659679",
           "NCT03914326",
-          "NCT05161429",
-          "NCT07456774",
-          "NCT06980623",
-          "NCT07390110",
-          "NCT05441267",
-          "NCT05700877",
           "NCT03819153",
           "NCT01720446",
           "NCT04469855",
@@ -15479,6 +15473,12 @@
           "NCT05259033",
           "NCT05013229",
           "NCT04878393",
+          "NCT05161429",
+          "NCT07456774",
+          "NCT06980623",
+          "NCT07390110",
+          "NCT05441267",
+          "NCT05700877",
           "NCT05579977",
           "NCT04938388",
           "NCT04624672",
@@ -15492,7 +15492,7 @@
           "NCT07564414",
           "NCT07662213"
         ],
-        "relevance_reasoning": "Semaglutide is FDA-approved for type 2 diabetes mellitus, which is the exact indication studied across every trial in the search, completed, and terminated scopes — all trials involve T2DM patients or T2DM as the primary condition. Because type 2 diabetes mellitus is a core approved indication of semaglutide, every shown trial constitutes already-approved evidence (TEST 1 contamination), not a repurposing opportunity. Several trials also involve other drugs as the primary studied agent (e.g., tirzepatide, PF-07081532, IcoSema, orforglipron) with semaglutide serving only as an active comparator arm, adding TEST 0 contamination for those.",
+        "relevance_reasoning": "Semaglutide is FDA-approved for type 2 diabetes mellitus, and every trial shown studies semaglutide specifically in the context of type 2 diabetes (glycemic control, cardiovascular outcomes in T2DM, CKD in T2DM, real-world T2DM use, etc.) — all of which fall squarely within or are narrower forms of its approved T2DM indication. Trials where semaglutide appears only as a comparator arm (e.g. tirzepatide head-to-head studies, orforglipron vs semaglutide) are also contaminated under TEST 0 as the studied agent is the other drug. No trial studies semaglutide for a genuinely distinct, non-approved subtype of diabetes mellitus (e.g. type 1 diabetes), so all trials are classified as contaminated.",
         "signals": {
           "highest_completed_phase": null,
           "has_completed_phase3": false,
@@ -15507,24 +15507,14 @@
           "active_programs": "None active"
         }
       },
-      "blurb": {
-        "stage": "No registry (ClinicalTrials.gov) trials on record for this indication",
-        "literature": "evidence is for an already-approved sub-indication (not repurposing)",
-        "blocker": "No trials registered specifically for this indication; the broad trial record overlaps an approved related use and cannot be cleanly separated",
-        "active_programs": "None active",
-        "key_risk": "Evidence base reflects an approved sub-indication rather than a true repurposing signal, leaving the broader disease hypothesis unvalidated on its own terms",
-        "verdict": "Tested, status unconfirmed",
-        "watch": "",
-        "prose": "A substantial body of trial activity exists, but it is entangled with an approved related indication rather than representing dedicated investigation of this broader candidate disease. No currently recruiting programs are on record, so while the hypothesis has been studied in overlapping contexts, its independent clinical status remains unconfirmed."
-      }
+      "blurb": null
     }
   ],
   "top_diseases": [
     "cardiovascular disorder",
-    "kidney disorder",
-    "diabetes mellitus"
+    "kidney disorder"
   ],
-  "summary": "Ranked repurposing signals for semaglutide:\n\n1. cardiovascular disorder — strong RCT-level literature, supports; Phase 2 completed, no Phase 3 on record for this indication\n2. kidney disorder — strong literature, supports, adverse signal present; early-phase only, no completed pivotal readout\n3. diabetes mellitus — no usable drug-specific repurposing literature, adverse signal present; no relevant registry trials on record\n\nEvidence gate exclusions: diabetes mellitus",
+  "summary": "Ranked repurposing signals for semaglutide:\n\n1. cardiovascular disorder — strong RCT-level literature, supports; Phase 4 exploratory only (post-approval off-label study, no dedicated development program)\n2. kidney disorder — strong literature, supports; early-phase only, no completed pivotal readout; safety signal reported\n\nEvidence gate exclusions: diabetes mellitus — 0 relevant registry trials, literature direction=none (signal absorbed by approved T2DM indication)",
   "date_before": null,
   "is_investigate": false,
   "drug_safety_summary": "Semaglutide carries a black-box warning for carcinogenicity. The strongest pharmacovigilance signal is pancreatitis (logLR 594.6), and serious hepatotoxicity including acute-on-chronic liver failure has been reported (PMID: 42244313).",

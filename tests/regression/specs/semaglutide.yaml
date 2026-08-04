@@ -1,14 +1,16 @@
 # Semaglutide regression spec.
 #
-# Authored against gold_standard/semaglutide_2026-07-18_20-42-04.json. Each
+# Authored against gold_standard/semaglutide_2026-08-03_20-30-07.json. Each
 # assertion encodes a domain-meaningful invariant a regression must NOT flip.
-# Anchors are chosen to be STABLE across runs — pinned only where they held
-# across BOTH 2026-07-18 runs (20:17 and 20:42); volatile NCTs are omitted.
 #
-# Candidate-set shift from the prior (2026-07-13) gold: the top-3 changed
-# entirely (type-1 diabetes / NAFLD / parkinson -> cardiovascular / kidney /
-# diabetes). The old anchors pinned a different investigated set and are fully
-# replaced here.
+# Candidate-set shift from the prior (2026-07-18) gold: NCT05669755 (REDEFINE
+# 3) was reclassified from relevant to contaminated — it studies CagriSema
+# (cagrilintide + semaglutide combination), not semaglutide monotherapy. That
+# trial had been propping up "diabetes mellitus" as a top-3 candidate; with it
+# correctly excluded, diabetes mellitus no longer surfaces in the top ranks.
+# NCT04741074 (kidney transplant candidacy) was also reclassified as
+# contaminated — all enrollees have T2DM per inclusion criteria, placing it
+# within the approved indication.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
@@ -19,14 +21,12 @@ ranked_order:
   indications:
     - cardiovascular disorder
     - kidney disorder
-    - diabetes mellitus
 
 candidate_set_contains:
   bucket: structural_integrity
   indications:
     - cardiovascular disorder
     - kidney disorder
-    - diabetes mellitus
     - parkinson disease
     - metabolic dysfunction-associated steatotic liver disease
     - polycystic ovary syndrome
@@ -63,8 +63,6 @@ safety_severity:
   - indication: cardiovascular disorder
     allowed: [black_box, serious]
   - indication: kidney disorder
-    allowed: [black_box, serious]
-  - indication: diabetes mellitus
     allowed: [black_box, serious]
 
 # Drug-level collapsed safety signal must surface (empty = collapse regression).
