@@ -76,6 +76,13 @@ class Settings(BaseSettings):
     default_timeout: float
     default_max_retries: int
 
+    # Database connection pool. Must comfortably exceed the run's peak concurrent DB
+    # sessions: 1 (the run-level session held for the whole run) + supervisor_investigation_cap
+    # (each analyze_literature call in the investigate_top_candidates fan-out checks out its own
+    # session). Too small and the fan-out times out waiting for a connection.
+    db_pool_size: int
+    db_max_overflow: int
+
     # Literature / RAG
     literature_top_k: int
     semantic_search_top_k: int

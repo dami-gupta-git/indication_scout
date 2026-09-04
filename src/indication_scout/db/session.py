@@ -7,7 +7,12 @@ from indication_scout.config import get_settings
 
 
 def _make_engine():
-    return create_engine(get_settings().database_url)
+    settings = get_settings()
+    return create_engine(
+        settings.database_url,
+        pool_size=settings.db_pool_size,
+        max_overflow=settings.db_max_overflow,
+    )
 
 
 def _make_session_factory():
