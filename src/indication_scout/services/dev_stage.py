@@ -11,7 +11,6 @@ filtering stays deterministic upstream), only nct_id + phase + overall_status. T
 cached (per the relevant trial set) so a given pair is judged once within the TTL window.
 """
 
-import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -20,7 +19,7 @@ from indication_scout.agents._trial_formatting import _classify_stop_reason
 from indication_scout.agents._trial_signals import _is_active, _normalize_status
 from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
-from indication_scout.services.llm import query_llm
+from indication_scout.services.llm import parse_last_json_object, query_llm
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
@@ -116,7 +115,8 @@ any trial is listed, regardless of its phase.
 Trials:
 {trials}
 
-Respond with ONLY a JSON object:
+Respond with the JSON object and NOTHING else — no reasoning, no preamble, no explanation \
+outside the object. Put any justification in the "reason" field:
 {{"tier": "<one_tier>", "reason": "<one short sentence>"}}"""
 
 
@@ -320,13 +320,17 @@ def _render_active_programs(trials: list[Trial]) -> str:
     if pivotal:
         parts = []
         if pure3_active:
-            parts.append(f"{len(pure3_active)} Phase 3 active ({', '.join(pure3_active)})")
+            parts.append(
+                f"{len(pure3_active)} Phase 3 active ({', '.join(pure3_active)})"
+            )
         if pure3_planned:
             parts.append(
                 f"{len(pure3_planned)} Phase 3 not yet recruiting ({', '.join(pure3_planned)})"
             )
         if p2p3_active:
-            parts.append(f"{len(p2p3_active)} Phase 2/Phase 3 active ({', '.join(p2p3_active)})")
+            parts.append(
+                f"{len(p2p3_active)} Phase 2/Phase 3 active ({', '.join(p2p3_active)})"
+            )
         if p2p3_planned:
             parts.append(
                 f"{len(p2p3_planned)} Phase 2/Phase 3 not yet recruiting "
@@ -381,20 +385,13 @@ def _parse_tier(text: str) -> str | None:
     """Extract the `tier` from the LLM JSON response. None on parse failure or an unknown tier
     (so the caller can fall back to the safe floor). active_programs is NOT read from the LLM —
     it is rendered deterministically in judge_dev_stage (_render_active_programs)."""
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        # Strip a ```json ... ``` fence.
-        parts = stripped.split("```")
-        if len(parts) >= 2:
-            stripped = parts[1]
-            if stripped.lower().startswith("json"):
-                stripped = stripped[4:]
-            stripped = stripped.strip()
-    try:
-        data = json.loads(stripped)
-        tier = data.get("tier")
-    except (json.JSONDecodeError, AttributeError):
+    # The model sometimes reasons in prose before emitting the object; requiring the whole
+    # response to BE the object discarded a correct tier and silently floored the pair to
+    # untested. Scan for the last balanced object instead.
+    data = parse_last_json_object(text)
+    if data is None:
         return None
+    tier = data.get("tier")
     if tier not in DEV_STAGE_TIERS:
         return None
     return tier
@@ -440,14 +437,19 @@ async def judge_dev_stage(
     response = await query_llm(prompt)
     tier = _parse_tier(response)
     if tier is None:
+        # Unparseable output is a transient failure, not a judgment. Return the safe floor for
+        # this run but do NOT cache it — a cached floor would persist a non-answer as fact for
+        # the whole TTL (it did: metformin x heart failure read early_phase for a completed
+        # Phase 2/3). Leaving it uncached means the next run re-asks.
         logger.warning(
-            "judge_dev_stage: could not parse a valid tier for %s x %s; defaulting to "
-            "the safe floor. Response was: %s",
+            "judge_dev_stage: could not parse a valid tier for %s x %s; returning the safe "
+            "floor UNCACHED. Response was: %s",
             drug,
             indication,
             response,
         )
-        tier = "untested"
+        floor_tier = _enforce_tier_floor("untested", relevant_trials)
+        return StageJudgment(tier=floor_tier, active_programs=active_programs)
 
     floored_tier = _enforce_tier_floor(tier, relevant_trials)
     if floored_tier != tier:

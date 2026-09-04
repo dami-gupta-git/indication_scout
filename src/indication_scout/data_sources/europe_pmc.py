@@ -15,6 +15,7 @@ from typing import Any
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     EUROPE_PMC_CITATION_BATCH,
+    EUROPE_PMC_CITATION_NS,
     EUROPE_PMC_CURSOR_PARAM,
     EUROPE_PMC_CURSOR_START,
     EUROPE_PMC_DRUG_QUERY,
@@ -137,20 +138,41 @@ class EuropePMCClient(BaseClient):
         if not pmids:
             return {}
 
+        # Per-PMID cache. A PMID Europe PMC has no record for is cached as {"count": None} rather
+        # than left absent, so those PMIDs aren't re-queried every run — otherwise a single
+        # unindexed PMID keeps the whole batch request alive and re-pays its timeout cost.
         counts: dict[str, int] = {}
-        for i in range(0, len(pmids), batch_size):
-            chunk = pmids[i : i + batch_size]
+        missing: list[str] = []
+        for pmid in pmids:
+            cached = cache_get(EUROPE_PMC_CITATION_NS, {"pmid": pmid}, self.cache_dir)
+            if cached is None:
+                missing.append(pmid)
+            elif cached["count"] is not None:
+                counts[pmid] = cached["count"]
+
+        for i in range(0, len(missing), batch_size):
+            chunk = missing[i : i + batch_size]
             query = "(" + " OR ".join(f"EXT_ID:{p}" for p in chunk) + ") AND SRC:MED"
             params = {"query": query, "format": "json", "pageSize": batch_size}
             try:
                 data = await self._rest_get(self.SEARCH_URL, params)
             except DataSourceError as e:
                 logger.warning(
-                    "europepmc: citation batch failed (%s); those PMIDs fall back to 0", e
+                    "europepmc: citation batch failed (%s); those PMIDs fall back to 0",
+                    e,
                 )
                 continue
+            fetched: dict[str, int] = {}
             for rec in (data.get("resultList", {}) or {}).get("result", []) or []:
                 pmid = rec.get("pmid")
                 if pmid:
-                    counts[pmid] = int(rec.get("citedByCount", 0) or 0)
+                    fetched[pmid] = int(rec.get("citedByCount", 0) or 0)
+            counts.update(fetched)
+            for pmid in chunk:
+                cache_set(
+                    EUROPE_PMC_CITATION_NS,
+                    {"pmid": pmid},
+                    {"count": fetched.get(pmid)},
+                    self.cache_dir,
+                )
         return counts

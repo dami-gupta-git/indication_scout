@@ -39,6 +39,17 @@ def test_parse_tier_garbage_is_none():
     assert _parse_tier("not json at all") is None
 
 
+def test_parse_tier_after_prose_reasoning():
+    """The model reasons in prose, then emits the object last — the tier must survive."""
+    response = (
+        "I need to check whether the Phase 3 termination was for cause.\n"
+        "NCT01217307 (Phase 2/Phase 3) is COMPLETED and no active pure Phase 3 exists,\n"
+        "so tier 2 applies.\n\n"
+        '{"tier": "completed_phase3", "reason": "completed Phase 2/3, no active Phase 3"}'
+    )
+    assert _parse_tier(response) == "completed_phase3"
+
+
 async def test_judge_empty_trials_returns_floor_without_llm(tmp_path):
     """No trials → untested / None active, and the LLM is never called."""
     with patch(
@@ -62,7 +73,9 @@ async def test_judge_returns_tier_with_deterministic_active_programs(tmp_path):
     assert j.active_programs == "None active"
 
 
-async def test_judge_active_programs_lists_recruiting_phase3_deterministically(tmp_path):
+async def test_judge_active_programs_lists_recruiting_phase3_deterministically(
+    tmp_path,
+):
     """active_programs is rendered from the trials, not the LLM — a recruiting Phase 3 is named
     with a count equal to the listed ids (the semaglutide miscount fix)."""
     trials = [
@@ -88,18 +101,28 @@ async def test_judge_semaglutide_t1d_count_is_four_not_five(tmp_path):
     # Statuses use the real CT.gov underscored forms (NOT_YET_RECRUITING etc).
     trials = [
         Trial(nct_id="NCT06082063", phase="Phase 3", overall_status="RECRUITING"),
-        Trial(nct_id="NCT06909006", phase="Phase 3", overall_status="NOT_YET_RECRUITING"),
+        Trial(
+            nct_id="NCT06909006", phase="Phase 3", overall_status="NOT_YET_RECRUITING"
+        ),
         Trial(nct_id="NCT05819138", phase="Phase 3", overall_status="RECRUITING"),
         Trial(nct_id="NCT06894784", phase="Phase 3", overall_status="RECRUITING"),
-        Trial(nct_id="NCT03899402", phase="Phase 2/Phase 3", overall_status="ACTIVE_NOT_RECRUITING"),
-        Trial(nct_id="NCT06387199", phase="Phase 2/Phase 3", overall_status="RECRUITING"),
+        Trial(
+            nct_id="NCT03899402",
+            phase="Phase 2/Phase 3",
+            overall_status="ACTIVE_NOT_RECRUITING",
+        ),
+        Trial(
+            nct_id="NCT06387199", phase="Phase 2/Phase 3", overall_status="RECRUITING"
+        ),
         Trial(nct_id="NCT05537233", phase="Phase 2", overall_status="COMPLETED"),
     ]
     with patch(
         "indication_scout.services.dev_stage.query_llm",
         new=AsyncMock(return_value='{"tier": "active_phase3", "reason": "x"}'),
     ):
-        j = await judge_dev_stage(trials, tmp_path, drug="semaglutide", indication="t1d")
+        j = await judge_dev_stage(
+            trials, tmp_path, drug="semaglutide", indication="t1d"
+        )
     # The active pure-Phase-3 group count must be 3 (recruiting only) and list exactly those NCTs;
     # the NOT_YET_RECRUITING pure Phase 3 trial is reported separately, not folded in.
     assert "3 Phase 3 active" in j.active_programs
@@ -115,13 +138,27 @@ async def test_judge_semaglutide_t1d_count_is_four_not_five(tmp_path):
 
 async def test_judge_parse_failure_falls_back_to_floor(tmp_path):
     """An unparseable response defaults to untested, then the deterministic tier-floor lifts it
-    to 'early_phase' because trials are on record (a completed Phase 2/3 is not pure Phase 3)."""
+    to 'early_phase' because trials are on record (a completed Phase 2/3 is not pure Phase 3).
+    """
     with patch(
         "indication_scout.services.dev_stage.query_llm",
         new=AsyncMock(return_value="the model rambled without JSON"),
     ):
         j = await judge_dev_stage(_T, tmp_path, drug="d", indication="i")
     assert j == StageJudgment(tier="early_phase", active_programs="None active")
+
+
+async def test_judge_parse_failure_is_not_cached(tmp_path):
+    """A parse failure must not persist the floor: the next call re-asks and a parseable
+    response replaces it. Guards the poisoned-entry bug (a transient failure froze
+    metformin x heart failure at early_phase for the whole TTL)."""
+    mock = AsyncMock(side_effect=["the model rambled without JSON", _OK])
+    with patch("indication_scout.services.dev_stage.query_llm", new=mock):
+        first = await judge_dev_stage(_T, tmp_path, drug="d", indication="i")
+        second = await judge_dev_stage(_T, tmp_path, drug="d", indication="i")
+    assert first.tier == "early_phase"
+    assert second.tier == "completed_phase3"
+    assert mock.await_count == 2
 
 
 async def test_judge_caches_tier_and_does_not_recall_llm(tmp_path):
@@ -184,7 +221,8 @@ def test_floor_untested_with_no_trials_stays_untested():
 
 def test_floor_completed_phase3_band_lifts_untested():
     """A completed pure Phase 3 in the set lifts a wrong 'untested' to completed_phase3
-    (the imatinib x Leukemia bug — LLM returned untested over completed Phase 3 ALL trials)."""
+    (the imatinib x Leukemia bug — LLM returned untested over completed Phase 3 ALL trials).
+    """
     trials = [
         Trial(nct_id="N1", phase="Phase 3", overall_status="COMPLETED"),
         Trial(nct_id="N2", phase="Phase 2", overall_status="COMPLETED"),
@@ -227,14 +265,17 @@ def test_floor_demotes_unsupported_terminated_for_cause_to_completed_phase3():
         ),
         Trial(nct_id="N2", phase="Phase 3", overall_status="COMPLETED"),
     ]
-    assert _enforce_tier_floor("phase3_terminated_for_cause", trials) == "completed_phase3"
+    assert (
+        _enforce_tier_floor("phase3_terminated_for_cause", trials) == "completed_phase3"
+    )
 
 
 def test_floor_demotes_terminated_for_cause_to_unknown_only_via_real_unknown_status():
     """The diabetic-nephropathy case: an operationally-terminated (COVID) Phase 3 + a withdrawn
     Phase 3 + a genuinely UNKNOWN-status Phase 2/3. The unsupported for-cause guess demotes to
     phase3_unknown_status — justified by the real unknown-status trial, NOT by routing the
-    terminated/withdrawn ones (whose statuses are KNOWN) into the 'status unknown' bucket."""
+    terminated/withdrawn ones (whose statuses are KNOWN) into the 'status unknown' bucket.
+    """
     trials = [
         Trial(nct_id="N1", phase="Phase 2", overall_status="COMPLETED"),
         Trial(nct_id="N2", phase="Phase 4", overall_status="COMPLETED"),
@@ -247,7 +288,10 @@ def test_floor_demotes_terminated_for_cause_to_unknown_only_via_real_unknown_sta
         Trial(nct_id="N4", phase="Phase 3", overall_status="WITHDRAWN"),
         Trial(nct_id="N5", phase="Phase 2/Phase 3", overall_status="UNKNOWN"),
     ]
-    assert _enforce_tier_floor("phase3_terminated_for_cause", trials) == "phase3_unknown_status"
+    assert (
+        _enforce_tier_floor("phase3_terminated_for_cause", trials)
+        == "phase3_unknown_status"
+    )
 
 
 def test_floor_demotes_operational_terminated_phase3_to_completed_phase2_not_unknown():
@@ -264,7 +308,9 @@ def test_floor_demotes_operational_terminated_phase3_to_completed_phase2_not_unk
         Trial(nct_id="N2", phase="Phase 3", overall_status="WITHDRAWN"),
         Trial(nct_id="N3", phase="Phase 2", overall_status="COMPLETED"),
     ]
-    assert _enforce_tier_floor("phase3_terminated_for_cause", trials) == "completed_phase2"
+    assert (
+        _enforce_tier_floor("phase3_terminated_for_cause", trials) == "completed_phase2"
+    )
 
 
 def test_floor_demotes_lone_operational_terminated_phase3_to_early_phase():
@@ -326,11 +372,15 @@ def test_render_active_programs_count_equals_listed_phase3_ids():
     separately, completed/Phase-2 excluded."""
     trials = [
         Trial(nct_id="NCT06082063", phase="Phase 3", overall_status="Recruiting"),
-        Trial(nct_id="NCT06909006", phase="Phase 3", overall_status="Not yet recruiting"),
+        Trial(
+            nct_id="NCT06909006", phase="Phase 3", overall_status="Not yet recruiting"
+        ),
         Trial(nct_id="NCT05819138", phase="Phase 3", overall_status="Recruiting"),
         Trial(nct_id="NCT06894784", phase="Phase 3", overall_status="Recruiting"),
         Trial(nct_id="NCT05537233", phase="Phase 2", overall_status="COMPLETED"),
-        Trial(nct_id="NCT05205928", phase="Phase 2/Phase 3", overall_status="COMPLETED"),
+        Trial(
+            nct_id="NCT05205928", phase="Phase 2/Phase 3", overall_status="COMPLETED"
+        ),
     ]
     line = _render_active_programs(trials)
     listed = set(re.findall(r"NCT\d+", line))
@@ -344,7 +394,11 @@ def test_render_active_programs_splits_pure_and_phase2_phase3_counts():
     """Pure Phase 3 and active Phase 2/3 are reported as separate groups, each count == its ids."""
     trials = [
         Trial(nct_id="NCT1", phase="Phase 3", overall_status="Recruiting"),
-        Trial(nct_id="NCT2", phase="Phase 2/Phase 3", overall_status="Active, not recruiting"),
+        Trial(
+            nct_id="NCT2",
+            phase="Phase 2/Phase 3",
+            overall_status="Active, not recruiting",
+        ),
         Trial(nct_id="NCT3", phase="Phase 2/Phase 3", overall_status="Recruiting"),
     ]
     line = _render_active_programs(trials)

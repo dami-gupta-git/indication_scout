@@ -43,6 +43,20 @@ def test_parse_fenced_json():
     assert (j.blocker, j.key_risk, j.verdict, j.prose) == ("c", "k", "a", "p")
 
 
+def test_parse_after_prose_reasoning():
+    """The model reasons in prose, then emits the object last — the judgment must survive."""
+    j = _parse_interpretive(
+        "The stage says Phase 3 completed, so I must not name an earlier tier.\n\n"
+        + _OK
+    )
+    assert j == InterpretiveJudgment(
+        blocker="Regulatory differentiation burden",
+        key_risk="May not beat approved family member",
+        verdict="Live but bottlenecked",
+        prose="Two sentences here. And a second one.",
+    )
+
+
 def test_parse_missing_keys_default_empty():
     j = _parse_interpretive('{"constraint": "only this"}')
     assert j.blocker == "only this"

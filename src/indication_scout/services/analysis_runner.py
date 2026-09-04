@@ -364,3 +364,6 @@ async def run_analysis(
         if not _warmup_task.done():
             _warmup_task.cancel()
         db.close()
+        # Dispose the engine/pool this call created so a server handling many requests
+        # doesn't leak one per request.
+        session_factory.kw["bind"].dispose()

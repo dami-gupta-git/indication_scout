@@ -30,13 +30,12 @@ FIELD MAPPING (prompt JSON key -> CandidateBlurb field):
   prose       -> prose
 """
 
-import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
 
 from indication_scout.constants import JUDGMENT_CACHE_TTL
-from indication_scout.services.llm import query_llm
+from indication_scout.services.llm import parse_last_json_object, query_llm
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
@@ -74,7 +73,8 @@ a neutral tag (e.g. "Tested, status unconfirmed") over a decline tag. Do NOT nam
 and active programs above. If the literature direction is "contradicts", surface that the drug \
 failed / was disproven. Do NOT name a phase tier that disagrees with the stage.
 
-Respond with ONLY a JSON object: \
+Respond with the JSON object and NOTHING else — no reasoning, no preamble, no prose outside \
+the object: \
 {{"constraint":"...","key_risk":"...","assessment":"...","prose":"..."}}"""
 
 
@@ -94,19 +94,10 @@ def _parse_interpretive(text: str) -> InterpretiveJudgment | None:
     """Extract the four interpretive fields from the LLM JSON response, mapping the prompt's
     JSON keys to CandidateBlurb field names. None on parse failure (caller leaves fields empty —
     never fabricates)."""
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        parts = stripped.split("```")
-        if len(parts) >= 2:
-            stripped = parts[1]
-            if stripped.lower().startswith("json"):
-                stripped = stripped[4:]
-            stripped = stripped.strip()
-    try:
-        data = json.loads(stripped)
-    except (json.JSONDecodeError, AttributeError):
-        return None
-    if not isinstance(data, dict):
+    # The model sometimes reasons in prose before emitting the object; requiring the whole
+    # response to BE the object discarded a valid judgment and left the fields empty.
+    data = parse_last_json_object(text)
+    if data is None:
         return None
 
     def _s(key: str) -> str:

@@ -414,7 +414,8 @@ def _finalize_tools_and_closure(cutoff: date | None = None):
 async def test_fact_critic_flags_withdrawn_only_pair():
     """A pair whose ONLY on-record trial is withdrawn must surface a WITHDRAWN-before-enrolling
     clause in the critic FACT — dev_stage stays untested (withdrawn is orthogonal). Guards the
-    humira×asthma misorder: a withdrawn-only pair must not read as a live registered trial."""
+    humira×asthma misorder: a withdrawn-only pair must not read as a live registered trial.
+    """
     by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
 
     allowed_diseases["asthma"] = ("asthma", "competitor")
@@ -454,6 +455,46 @@ async def test_fact_critic_flags_withdrawn_only_pair():
     assert "WITHDRAWN before enrolling" in captured["prompt"]
     # dev_stage untouched: the withdrawn clause is additive, not a stage override.
     assert "dev_stage = untested" in captured["prompt"]
+
+
+async def test_fact_critic_accepts_repairs_after_prose_reasoning():
+    """The critic reasons in prose, then emits the object last — the repaired blurbs must be used."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    allowed_diseases["asthma"] = ("asthma", "competitor")
+    findings_local["asthma"] = {
+        "literature": _make_lit("weak", 1, 1, direction="supports"),
+        "clinical_trials": _make_ct(
+            1, 0, 0, signals=TrialSignals(dev_stage="untested")
+        ),
+    }
+
+    async def _prose_then_json(prompt: str, system: str | None = None) -> str:
+        return (
+            "The stage line contradicts the authoritative FACT, so I will repair it.\n\n"
+            + json.dumps(
+                {
+                    "ordering": "consistent",
+                    "blurbs": [{"disease": "asthma", "prose": "repaired"}],
+                }
+            )
+        )
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=_prose_then_json,
+    ):
+        out = await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": [{"disease": "asthma", "prose": "original"}]},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+
+    assert "repaired" in out.content
+    assert "original" not in out.content
 
 
 async def test_finalize_uses_critic_order_not_llm_repassed_order():
@@ -525,9 +566,10 @@ async def test_finalize_uses_critic_order_not_llm_repassed_order():
         for ln in msg.artifact["summary"].splitlines()
         if re.match(r"^\d+\.\s+", ln)
     ]
-    assert summary_ranks == ["crmo", "asthma"], (
-        f"summary rank order did not follow critic: {summary_ranks}"
-    )
+    assert summary_ranks == [
+        "crmo",
+        "asthma",
+    ], f"summary rank order did not follow critic: {summary_ranks}"
 
 
 async def test_fact_critic_no_withdrawn_note_when_live_trials_present():
@@ -574,7 +616,8 @@ async def test_fact_critic_no_withdrawn_note_when_live_trials_present():
 
 async def test_fact_critic_flags_animal_only_literature():
     """A pair whose supporting literature is animal/in-vitro only (is_animal_only=True) must surface
-    an ANIMAL/in-vitro clause in the critic FACT — the humira×asthma murine-model case."""
+    an ANIMAL/in-vitro clause in the critic FACT — the humira×asthma murine-model case.
+    """
     by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
 
     allowed_diseases["asthma"] = ("asthma", "competitor")
@@ -582,7 +625,9 @@ async def test_fact_critic_flags_animal_only_literature():
         "literature": _make_lit(
             "weak", 1, 1, direction="supports", is_animal_only=True
         ),
-        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+        "clinical_trials": _make_ct(
+            0, 0, 0, signals=TrialSignals(dev_stage="untested")
+        ),
     }
 
     captured: dict[str, str] = {}
@@ -619,12 +664,16 @@ async def test_fact_critic_no_animal_note_when_human_or_undetermined():
         "literature": _make_lit(
             "weak", 2, 2, direction="supports", is_animal_only=False
         ),
-        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+        "clinical_trials": _make_ct(
+            0, 0, 0, signals=TrialSignals(dev_stage="untested")
+        ),
     }
     allowed_diseases["psoriasis"] = ("psoriasis", "competitor")  # undetermined → None
     findings_local["psoriasis"] = {
         "literature": _make_lit("none", 0, 0, direction="none", is_animal_only=None),
-        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+        "clinical_trials": _make_ct(
+            0, 0, 0, signals=TrialSignals(dev_stage="untested")
+        ),
     }
 
     captured: dict[str, str] = {}
@@ -676,7 +725,9 @@ async def test_fact_critic_flags_indication_harm_literature():
             direction="supports",
             indication_harm=True,
         ),
-        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+        "clinical_trials": _make_ct(
+            0, 0, 0, signals=TrialSignals(dev_stage="untested")
+        ),
     }
 
     captured: dict[str, str] = {}
@@ -684,7 +735,10 @@ async def test_fact_critic_flags_indication_harm_literature():
     async def _capture(prompt: str, system: str | None = None) -> str:
         captured["prompt"] = prompt
         return json.dumps(
-            {"ordering": "consistent", "blurbs": [{"disease": "arthritis", "prose": ""}]}
+            {
+                "ordering": "consistent",
+                "blurbs": [{"disease": "arthritis", "prose": ""}],
+            }
         )
 
     with patch(
@@ -718,7 +772,9 @@ async def test_fact_critic_no_safety_note_when_no_indication_harm():
             safety_summary="drug-level withdrawal (PMID: 111)",
             indication_harm=False,
         ),
-        "clinical_trials": _make_ct(0, 0, 0, signals=TrialSignals(dev_stage="untested")),
+        "clinical_trials": _make_ct(
+            0, 0, 0, signals=TrialSignals(dev_stage="untested")
+        ),
     }
 
     captured: dict[str, str] = {}
@@ -1219,7 +1275,8 @@ def test_literature_oneliner_none_summary_returns_none():
 
 def test_literature_oneliner_indication_harm_appends_terse_flag():
     """indication_harm=True (a harm reported for THIS indication) appends the terse flag. The flag
-    is driven by the disease-specific signal, NOT the drug-level safety_summary/severity."""
+    is driven by the disease-specific signal, NOT the drug-level safety_summary/severity.
+    """
     es = EvidenceSummary(
         strength="strong",
         direction="supports",
@@ -1236,7 +1293,8 @@ def test_literature_oneliner_indication_harm_appends_terse_flag():
 
 def test_literature_oneliner_no_indication_harm_omits_flag():
     """No indication-specific harm → NO flag, even when a DRUG-LEVEL safety_summary exists (the
-    drug-level 'WITHDRAWN' signal is deliberately not surfaced in the ranking one-liner)."""
+    drug-level 'WITHDRAWN' signal is deliberately not surfaced in the ranking one-liner).
+    """
     es = EvidenceSummary(
         strength="strong",
         direction="supports",

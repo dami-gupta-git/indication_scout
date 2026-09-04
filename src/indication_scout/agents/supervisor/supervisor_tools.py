@@ -29,7 +29,7 @@ from indication_scout.services.approval_check import (
 )
 from indication_scout.services.dev_stage import DEV_STAGE_PHRASE, dev_stage_phrase
 from indication_scout.services.judge_interpretive import judge_interpretive
-from indication_scout.services.llm import query_llm, strip_markdown_fences
+from indication_scout.services.llm import parse_last_json_object, query_llm
 from indication_scout.services.progress import (
     PHASE_CANDIDATES,
     PHASE_MECHANISM,
@@ -57,7 +57,8 @@ _INDICATION_HARM_FLAG = "⚠️ safety signal reported for this indication"
 
 def _safety_flag(es) -> str:
     """Terse safety flag: fires only when a disease-specific harm was reported for this candidate
-    indication (EvidenceSummary.indication_harm). "" otherwise (no signal ≠ confirmed safe)."""
+    indication (EvidenceSummary.indication_harm). "" otherwise (no signal ≠ confirmed safe).
+    """
     if es is None or not getattr(es, "indication_harm", False):
         return ""
     return _INDICATION_HARM_FLAG
@@ -149,7 +150,7 @@ field claim there are no Phase 3 trials when the FACT says one exists. Leave tru
 the absence of a commercial/NDA/regulatory PROGRAM alone (a generic drug files no new NDA — that \
 is not the same as "no trial"). Change nothing else.
 
-Output a JSON object ONLY (no prose, no fences):
+Output a JSON object ONLY — no reasoning, no preamble, no prose before or after it, no fences:
 {"blurbs": [ <every input blurb, in your final rank order, each a full dict with the same keys; \
 fields you repaired are rewritten, all others verbatim> ]}
 Return every blurb. Preserve every key."""
@@ -1344,26 +1345,28 @@ def build_supervisor_tools(
             "[TOOL] fact_critic IN (%d candidates):\n%s", len(items), "\n".join(lines)
         )
         repaired = items
-        try:
-            data = json.loads(strip_markdown_fences(critique.strip()))
-            cand = data.get("blurbs")
-            if (
-                isinstance(cand, list)
-                and len(cand) == len(items)
-                and all(isinstance(b, dict) for b in cand)
-                and {(b.get("disease") or "").strip().lower() for b in cand}
-                == {(b.get("disease") or "").strip().lower() for b in items}
-            ):
-                repaired = cand
-            else:
-                logger.warning(
-                    "[TOOL] fact_critic: blurb set mismatch — keeping originals"
-                )
-        except (json.JSONDecodeError, AttributeError, TypeError) as e:
+        # The critic sometimes reasons in prose before emitting the object; requiring the whole
+        # response to BE the object silently discarded a valid repair set and left the blurbs
+        # unreviewed. Scan for the last balanced object instead.
+        data = parse_last_json_object(critique)
+        if data is None:
             logger.warning(
-                "[TOOL] fact_critic: unparseable critic output (%s) — keeping originals",
-                e,
+                "[TOOL] fact_critic: no JSON object in critic output — keeping originals. "
+                "Response was: %s",
+                critique,
             )
+            return repaired
+        cand = data.get("blurbs")
+        if (
+            isinstance(cand, list)
+            and len(cand) == len(items)
+            and all(isinstance(b, dict) for b in cand)
+            and {(b.get("disease") or "").strip().lower() for b in cand}
+            == {(b.get("disease") or "").strip().lower() for b in items}
+        ):
+            repaired = cand
+        else:
+            logger.warning("[TOOL] fact_critic: blurb set mismatch — keeping originals")
         return repaired
 
     @tool

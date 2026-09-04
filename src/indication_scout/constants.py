@@ -365,7 +365,9 @@ EUROPE_PMC_CITATION_BATCH: int = 40
 # Drug name matched in title or abstract; HAS_ABSTRACT:Y because extraction reads the abstract and
 # a record without one carries no signal. {drug} is the drug name, {year_clause} is either empty
 # or a publication-year bound appended under a temporal holdout.
-EUROPE_PMC_DRUG_QUERY: str = '(TITLE:"{drug}" OR ABSTRACT:"{drug}") AND HAS_ABSTRACT:Y{year_clause}'
+EUROPE_PMC_DRUG_QUERY: str = (
+    '(TITLE:"{drug}" OR ABSTRACT:"{drug}") AND HAS_ABSTRACT:Y{year_clause}'
+)
 # Appended to EUROPE_PMC_DRUG_QUERY under a temporal holdout to exclude post-cutoff papers.
 EUROPE_PMC_YEAR_CLAUSE: str = " AND (FIRST_PDATE:[1900-01-01 TO {date_before}])"
 # resultType=core is required for the abstract and for journalInfo.journal.title; the lite
@@ -381,6 +383,9 @@ EUROPE_PMC_CURSOR_START: str = "*"
 # individual paper id so an expanded pool only pays for papers not yet seen.
 EUROPE_PMC_SEARCH_NS: str = "europepmc_drug_search"
 EUROPE_PMC_EXTRACTION_NS: str = "europepmc_extraction"
+# Citation counts are keyed on the individual PMID, not on the batch: the batch composition varies
+# per run, so a batch-keyed entry would miss whenever the ranked PMID set shifted by one.
+EUROPE_PMC_CITATION_NS: str = "europepmc_citation_count"
 # System prompt for condition extraction. Paired with the instruction in
 # prompts/extract_treated_conditions.txt confining the model to the supplied abstract: the model
 # knows every holdout answer from pretraining, so an unconstrained read leaks the post-cutoff

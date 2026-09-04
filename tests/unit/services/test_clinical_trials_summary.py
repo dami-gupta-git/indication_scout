@@ -59,6 +59,17 @@ def test_parse_summary_garbage_is_none():
     assert _parse_summary("not json at all") is None
 
 
+def test_parse_summary_after_prose_reasoning():
+    """The model reasons in prose, then emits the object last — the summary must survive."""
+    s = _parse_summary(
+        "The Phase 3 was terminated, but a completed Phase 2/3 exists, so the programme "
+        "still reads as live.\n\n" + _OK
+    )
+    assert s.prose == "A completed Phase 2/Phase 3 pivotal trial (NCT1) is on record."
+    assert s.closure == "live"
+    assert s.closure_reason == "no negative readout; trials ongoing"
+
+
 async def test_judge_empty_trials_returns_none_without_llm(tmp_path):
     """No trials → None, and the LLM is never called (caller leaves summary empty)."""
     with patch(

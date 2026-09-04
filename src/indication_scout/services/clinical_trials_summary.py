@@ -15,7 +15,6 @@ owns all approval framing). `first_approval` is fed only for the "old drug, no-a
 closure" rule. Cached per the fact-tuple so a pair is summarized once within the TTL window.
 """
 
-import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -23,7 +22,7 @@ from typing import Literal
 
 from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
-from indication_scout.services.llm import query_llm
+from indication_scout.services.llm import parse_last_json_object, query_llm
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
@@ -65,7 +64,8 @@ CLOSURE (live vs closed) — judge from the RELEVANT trials only:
 Trials (relevant set):
 {trials}
 
-Respond with ONLY a JSON object:
+Respond with the JSON object and NOTHING else — no reasoning, no preamble, no prose outside \
+the object:
 {{"prose": "<the trial-section prose>", "closure": "live"|"closed"|"unknown", \
 "closure_reason": "<one short sentence>"}}"""
 
@@ -97,21 +97,14 @@ def _parse_summary(text: str) -> CTSummary | None:
     """Extract {prose, closure, closure_reason} from the LLM JSON response. None on parse
     failure or an unknown closure value (caller then leaves the summary empty — never
     fabricates)."""
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        parts = stripped.split("```")
-        if len(parts) >= 2:
-            stripped = parts[1]
-            if stripped.lower().startswith("json"):
-                stripped = stripped[4:]
-            stripped = stripped.strip()
-    try:
-        data = json.loads(stripped)
-        prose = data.get("prose")
-        closure = data.get("closure")
-        closure_reason = data.get("closure_reason")
-    except (json.JSONDecodeError, AttributeError):
+    # The model sometimes reasons in prose before emitting the object; requiring the whole
+    # response to BE the object discarded a valid summary and left the section empty.
+    data = parse_last_json_object(text)
+    if data is None:
         return None
+    prose = data.get("prose")
+    closure = data.get("closure")
+    closure_reason = data.get("closure_reason")
     if not isinstance(prose, str) or not prose.strip():
         return None
     if closure not in _CLOSURE_VALUES:
