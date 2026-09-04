@@ -1775,12 +1775,48 @@ async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
     assert result["narcolepsy"] == {"competitor_a"}
 
 
+async def test_get_drug_competitors_filters_broad_canonical_after_merge(tmp_path):
+    """A merge cannot recreate a generic candidate removed by the raw-data guard."""
+    raw = {
+        "diseases": {
+            "myalgia": {"competitor_a"},
+            "arthralgia": {"competitor_b"},
+            "psoriasis": {"competitor_c"},
+        },
+        "drug_indications": [],
+    }
+    merge_result = {
+        "merge": {"pain": ["myalgia", "arthralgia"]},
+        "remove": [],
+    }
+    mock_client = _make_open_targets_mock(raw)
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.OpenTargetsClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "indication_scout.services.retrieval.merge_duplicate_diseases",
+            new=AsyncMock(return_value=merge_result),
+        ),
+    ):
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
+
+    assert result == {"psoriasis": {"competitor_c"}}
+
+
 async def test_get_drug_competitors_returns_cached(tmp_path):
-    """When a cache entry exists, the client and LLM are not called."""
+    """A cache hit is filtered without calling the client or LLM."""
     from indication_scout.config import get_settings
     from indication_scout.utils.cache import cache_set
 
-    cached = {"depression": ["competitor_a"]}
+    cached = {
+        "depression": ["competitor_a"],
+        "pain": ["competitor_b"],
+        "arthritis": ["competitor_c"],
+        "inflammation": ["competitor_d"],
+    }
     cache_set(
         "competitors_merged",
         {

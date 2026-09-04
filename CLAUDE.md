@@ -2,19 +2,28 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Design
+When asked to propose a design for a task, make sure that the design should be as simple as appropriate. Documentation should also be brief and to the point. Do not repeat statements.
+
+## Communication
+Be brief by default. Judge for yourself what level of detail the moment calls for — a quick fix gets a quick answer, a design question gets real discussion. Cut preamble, recaps, and narration of your own process regardless of length.
+
 ## Session Startup
 
-At the start of every session, read `PROJECT_STATE.md`, the most recent `session_*.md` file in the project root, `README.md`, and `for_me/findings.md`.
+At the start of every session, read the most recent `session_*.md` file in the project root, `sessions_summary.md`, `README.md`, and `for_me/findings.md`.
 
 ## Findings Workflow
 
 - When a non-obvious finding is confirmed (API behaviour, naming discrepancy, architectural decision, pattern, project rule), append it to `for_me/findings.md` under the appropriate section with a date. Items should be short and to-the-point.
+- The test is that it must be expensive to rediscover *and* invisible from the code. Gotchas, decisions whose reasoning leaves no trace (including decisions not to build something), and standing rules qualify. Anything the code or git history already tells you does not.
+- Write only what is settled. A hypothesis that survived one test is not a finding — it needs verification across many cases, not one.
 - `for_me/findings.md` is the single source of truth for findings, decisions, and patterns — not `MEMORY.md`.
 
 ## Session File Workflow
 
-- Session files are named `session_{datetime}.md` (e.g. `session_2026-02-28_14-31.md`) and live in the project root.
-- Append to the current session file throughout the session. See `skills/session.md` for when and how.
+- Session files are named `session_{datetime}.md` (e.g. `session_2026-02-28_14-31.md`) and live in the project root, one per rotation rather than one per session.
+- Entries are **appended** to the current session file, never rewritten. See `skills/session.md` for the format and rules.
+- A context-threshold hook asks for an entry at 50 and 80 percent of the window. Write when asked, and at natural milestones without waiting.
 
 ## Build & Development Commands
 
@@ -50,10 +59,10 @@ IndicationScout is an agentic drug repurposing system. A drug name goes in; coor
 
 ### Layered structure (`src/indication_scout/`)
 
-- **data_sources/** — Async API clients for external biomedical databases. Each extends `BaseClient` (async context manager with retry/backoff). Current clients: `OpenTargetsClient` (GraphQL), `ClinicalTrialsClient` (REST), `PubMedClient` (REST+XML), `ChEMBLClient`, `FDAClient` (openFDA labels). Errors surface as `DataSourceError`.
-- **models/** — Pydantic `BaseModel` contracts between data sources and agents. Organized per source: `model_open_targets.py` (TargetData, DrugData, RichDrugData and their nested models), `model_clinical_trials.py` (Trial, Intervention, MeshTerm, PrimaryOutcome, SearchTrialsResult, CompletedTrialsResult, TerminatedTrialsResult, IndicationLandscape, CompetitorEntry, RecentStart, ApprovalCheck), `model_pubmed_abstract.py` (PubmedAbstract), `model_chembl.py` (MoleculeData, ATCDescription), `model_drug_profile.py` (DrugProfile), `model_evidence_summary.py` (EvidenceSummary). Agents never see raw API responses.
+- **data_sources/** — Async API clients for external biomedical databases. Each extends `BaseClient` (async context manager with retry/backoff). Current clients: `OpenTargetsClient` (GraphQL), `ClinicalTrialsClient` (REST), `PubMedClient` (REST+XML), `EuropePMCClient` (REST; citation counts for safety ranking, plus drug-scoped literature search), `ChEMBLClient`, `FDAClient` (openFDA labels). Errors surface as `DataSourceError`.
+- **models/** — Pydantic `BaseModel` contracts between data sources and agents. Organized per source: `model_open_targets.py` (TargetData, DrugData, RichDrugData and their nested models), `model_clinical_trials.py` (Trial, Intervention, MeshTerm, PrimaryOutcome, SearchTrialsResult, CompletedTrialsResult, TerminatedTrialsResult, IndicationLandscape, CompetitorEntry, RecentStart, ApprovalCheck), `model_pubmed_abstract.py` (PubmedAbstract), `model_europe_pmc.py` (EuropePMCArticle), `model_chembl.py` (MoleculeData, ATCDescription), `model_drug_profile.py` (DrugProfile), `model_evidence_summary.py` (EvidenceSummary). Agents never see raw API responses.
 - **agents/** — AI agents that each own a slice of analysis. Agents: `supervisor`, `literature`, `clinical_trials`, `mechanism`. Each lives in its own subpackage (`<name>_agent.py`, `<name>_tools.py`, `<name>_output.py`). The `supervisor` coordinates the specialist sub-agents via LangGraph's prebuilt `create_react_agent`. `agents/base.py` defines a `BaseAgent` ABC that is currently unused by the active ReAct-style agents.
-- **services/** — Business logic layer. Implemented: `llm.py` (Anthropic SDK), `embeddings.py` (BioLORD-2023), `disease_helper.py` (LLM disease normalization + MeSH descriptor resolver), `pubmed_query.py` (query building), `retrieval.py` (RAG pipeline), `approval_check.py` (openFDA label + LLM approval extraction).
+- **services/** — Business logic layer. Implemented: `llm.py` (Anthropic SDK), `embeddings.py` (BioLORD-2023), `disease_helper.py` (LLM disease normalization + MeSH descriptor resolver), `pubmed_query.py` (query building), `retrieval.py` (RAG pipeline), `approval_check.py` (openFDA label + LLM approval extraction), `condition_extraction.py` and `condition_grouping.py` (Europe PMC abstracts → candidate indications; built and tested but not yet called by any agent — see `design_europe_pmc.md`).
 - **api/** — FastAPI app (`api/main.py`). Routes in `api/routes/`, request/response schemas in `api/schemas/`.
 - **config.py** — `pydantic_settings.BaseSettings` loaded from `.env`. Access via `get_settings()`.
 - **constants.py** — All magic numbers, URLs, and lookup maps.
@@ -70,19 +79,30 @@ CLI/API → Supervisor → specialist agents → data source clients → externa
 ### Key patterns
 
 - **BaseClient** (`data_sources/base_client.py`): All clients use `async with Client() as c:` for session lifecycle. Provides `_rest_get()`, `_graphql()`, `_rest_get_xml()` with retry. Subclasses set `_source_name` property.
-- **File-based caching** (`cache/` dir, config-driven TTL via `CACHE_TTL`, currently 60 days) is used by all data source clients via the shared `utils.cache` helper (`cache_get`/`cache_set`) to avoid redundant API calls: Open Targets (GraphQL), ClinicalTrials (`ct_search`/`ct_landscape`/`ct_completed`/`ct_terminated`), PubMed, ChEMBL, and FDA. Open Targets additionally keeps a bespoke per-target evidences cache.
+- **File-based caching** (`cache/` dir, config-driven TTL via `CACHE_TTL`, currently 60 days) is used by all data source clients via the shared `utils.cache` helper (`cache_get`/`cache_set`) to avoid redundant API calls: Open Targets (GraphQL), ClinicalTrials (`ct_search`/`ct_landscape`/`ct_completed`/`ct_terminated`), PubMed, ChEMBL, and FDA. Europe PMC caches its drug-scoped search per query and its condition extraction per article. Open Targets additionally keeps a bespoke per-target evidences cache.
 - **pytest-asyncio** is set to `asyncio_mode = "auto"` — async test functions run automatically without `@pytest.mark.asyncio`.
 
 ## Test Layout
+
+Tests mirror the source tree: a test for `services/<module>.py` belongs in `<unit|integration>/services/`,
+one for `data_sources/<module>.py` in `<unit|integration>/data_sources/`, and so on. Some older tests
+still sit directly under `unit/` or `integration/`.
 
 ```
 tests/
 ├── conftest.py              # shared fixtures (sample_drug, sample_indication)
 ├── unit/                    # no network, no external deps
+│   ├── agents/
+│   ├── data_sources/
+│   ├── services/
 │   └── test_<module>.py
-└── integration/             # hits real external APIs
-    ├── conftest.py          # client fixtures (open_targets_client, pubmed_client, etc.)
-    └── test_<source>.py
+├── integration/             # hits real external APIs
+│   ├── conftest.py          # client fixtures (open_targets_client, pubmed_client, etc.)
+│   ├── agents/
+│   ├── data_sources/
+│   ├── services/
+│   └── test_<source>.py
+└── regression/              # snapshot/cassette harness; `regression` + `live` markers, excluded by default
 ```
 
 ## Project Rules

@@ -1,13 +1,24 @@
 ## Test Layout
 
+Tests mirror the source tree: a test for `services/<module>.py` belongs in `<unit|integration>/services/`,
+one for `data_sources/<module>.py` in `<unit|integration>/data_sources/`, and so on. Some older tests
+still sit directly under `unit/` or `integration/`.
+
 ```
 tests/
 ├── conftest.py              # shared fixtures (sample_drug, sample_indication)
 ├── unit/                    # no network, no external deps
+│   ├── agents/
+│   ├── data_sources/
+│   ├── services/
 │   └── test_<module>.py
-└── integration/             # hits real external APIs
-    ├── conftest.py          # client fixtures (open_targets_client, pubmed_client, etc.)
-    └── test_<source>.py
+├── integration/             # hits real external APIs
+│   ├── conftest.py          # client fixtures (open_targets_client, pubmed_client, etc.)
+│   ├── agents/
+│   ├── data_sources/
+│   ├── services/
+│   └── test_<source>.py
+└── regression/              # snapshot/cassette harness; `regression` + `live` markers, excluded by default
 ```
 
 ## Test Style

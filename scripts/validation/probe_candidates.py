@@ -38,11 +38,7 @@ def _load_env() -> None:
 
 _load_env()
 
-from indication_scout.constants import (  # noqa: E402
-    BROADENING_BLOCKLIST,
-    CLINICAL_STAGE_RANK,
-    DEFAULT_CACHE_DIR,
-)
+from indication_scout.constants import DEFAULT_CACHE_DIR  # noqa: E402
 from indication_scout.data_sources.chembl import resolve_drug_name  # noqa: E402
 from indication_scout.data_sources.open_targets import OpenTargetsClient  # noqa: E402
 from indication_scout.services.retrieval import RetrievalService  # noqa: E402
@@ -52,33 +48,15 @@ logger = logging.getLogger("probe")
 
 
 async def raw_ot_ranking(
-    client: OpenTargetsClient, chembl_id: str, min_stage: str = "PHASE_3"
+    client: OpenTargetsClient, chembl_id: str, cutoff: date
 ) -> list[tuple[str, int]]:
-    """Reproduce the OT sibling ranking pre-truncation: [(disease, sibling_count)].
+    """The OT sibling ranking pre-truncation: [(disease, competitor_count)].
 
-    Mirrors get_drug_competitors' ranking logic so we can see the full ordered
-    list and find where a disease ranks before the top-N prefetch cut.
+    Calls the client's own ranking method so the probe cannot drift from what the pipeline
+    computes; get_drug_competitors truncates the same ranking to the prefetch max.
     """
-    min_rank = CLINICAL_STAGE_RANK.get(min_stage, 0)
-    drug = await client.get_drug(chembl_id)
-    all_summaries = await asyncio.gather(
-        *[client.get_target_data_drug_summaries(t.target_id) for t in drug.targets]
-    )
-    siblings: dict[str, set[str]] = {}
-    for summaries in all_summaries:
-        for s in summaries:
-            if CLINICAL_STAGE_RANK.get(s.max_clinical_stage or "", 0) < min_rank:
-                continue
-            for cd in s.diseases:
-                if cd.disease_name is None:
-                    continue
-                siblings.setdefault(cd.disease_name.lower(), set()).add(s.drug_name)
-    for key in list(siblings):
-        if {w.lower() for w in key.split()} <= BROADENING_BLOCKLIST:
-            del siblings[key]
-    return sorted(
-        ((d, len(s)) for d, s in siblings.items()), key=lambda x: x[1], reverse=True
-    )
+    ranking = await client.rank_competitor_siblings(chembl_id, date_before=cutoff)
+    return [(d, len(s)) for d, s in ranking["siblings"].items()]
 
 
 async def main() -> None:
@@ -109,7 +87,7 @@ async def main() -> None:
     # If absent, show where it sat in the full pre-truncation OT ranking.
     if not hits:
         async with OpenTargetsClient(cache_dir=svc.cache_dir) as client:
-            ranking = await raw_ot_ranking(client, chembl_id)
+            ranking = await raw_ot_ranking(client, chembl_id, cutoff)
         positions = [
             (i, d, n) for i, (d, n) in enumerate(ranking) if target in d.lower()
         ]

@@ -56,3 +56,20 @@ reports.
 - NOT a fix: just appending "safety signal, adverse effects" to the existing query string. Confirmed
   ineffective end-to-end even where it changes intermediate re-ranking.
 
+## 3. Duplicated code in `src/indication_scout/` (2026-08-04, `/finddupes` scan)
+
+| Location A | Location B | Overlap | Suggested fix |
+|---|---|---|---|
+| [clinical_trials.py:777-786](../src/indication_scout/data_sources/clinical_trials.py#L777-L786) (`_normalize_phase` mapping) + [:821-831](../src/indication_scout/data_sources/clinical_trials.py#L821-L831) (`_phase_rank` dict) | [_trial_formatting.py:54-64](../src/indication_scout/agents/_trial_formatting.py#L54-L64) (`_PHASE_RANK`) | Same phase-name → rank ladder hand-copied in 3 places; `_trial_formatting.py`'s comment admits it mirrors `_phase_rank`. | Move to one constant in `constants.py`, import from all 3 sites. |
+| [pubmed.py:368-376](../src/indication_scout/data_sources/pubmed.py#L368-L376) (abstract-parts loop, article branch) | [pubmed.py:445-453](../src/indication_scout/data_sources/pubmed.py#L445-L453) (book branch) | Identical AbstractText join/label logic within `_parse_pubmed_xml`. | Extract `_extract_abstract(elem) -> str \| None`. |
+| [pubmed.py:390-401](../src/indication_scout/data_sources/pubmed.py#L390-L401) (pub-date build, article) | [pubmed.py:469-481](../src/indication_scout/data_sources/pubmed.py#L469-L481) (book) | Identical year/month/day string-concat logic. | Extract `_extract_pub_date(elem) -> str \| None`. |
+| [pubmed.py:415-418](../src/indication_scout/data_sources/pubmed.py#L415-L418) (pubtypes cache warm, article) | [pubmed.py:488-489](../src/indication_scout/data_sources/pubmed.py#L488-L489) (book) | Identical `PublicationType` extraction + `cache_set` call. | Fold into the same shared per-article parsing helper as above. |
+| [format_report.py:412](../src/indication_scout/report/format_report.py#L412) `rank_line` regex + [:436](../src/indication_scout/report/format_report.py#L436) longest-match loop | [supervisor_tools.py:1667](../src/indication_scout/agents/supervisor/supervisor_tools.py#L1667), [:1703-1705](../src/indication_scout/agents/supervisor/supervisor_tools.py#L1703-L1705), [:1726](../src/indication_scout/agents/supervisor/supervisor_tools.py#L1726) | Same "N. disease — tail" rank-line regex and "longest containing key wins" disease-match strategy, independently re-typed 3 times in `supervisor_tools.py` (comments there note the analogy to the report formatter's rule) rather than imported. `supervisor_tools.py`'s `rank_line` has an extra optional `tail` group not present in `format_report.py`'s — not byte-identical, drift already present. | Extract a shared `longest_key_match(text_lower, candidates) -> str \| None` helper; consider one shared `RANK_LINE_RE` if the tail-capture difference is intentional, document why. |
+| [chembl.py:42-108](../src/indication_scout/data_sources/chembl.py#L42-L108) (`_load_chembl_names`/`_save_chembl_names`/`_lookup_chembl_id_by_name`) | [open_targets.py:70-146](../src/indication_scout/data_sources/open_targets.py#L70-L146) (`_load_target_evidences`/`_save_target_evidences`) | Both hand-roll "one JSON file per parent ID with `cached_at`/`ttl` expiry, `mkdir(parents=True, exist_ok=True)`" — the same TTL idiom `utils/cache.py`'s `cache_get`/`cache_set` already centralizes, reimplemented instead of reused. Not identical (chembl stores a flat list; open_targets stores a per-sub-key `{efo_id: entry}` map with per-entry TTL), so a shared helper needs to support both shapes. | Extract a shared "per-key multi-entry JSON cache with per-entry TTL" helper in `utils/cache.py` that both can call. |
+
+Minor/lower-priority: `tests/unit/data_sources/test_base_client.py:11-24` duplicates
+`tests/integration/data_sources/test_base_client.py:11-24`'s `ConcreteTestClient`/`_make_client`
+verbatim — worth sharing via a test helper module. Everything else the scan surfaced (per-client
+integration fixtures, inline `Client(cache_dir=tmp_path)` in unit tests) is idiomatic pytest
+repetition, not true duplication.
+

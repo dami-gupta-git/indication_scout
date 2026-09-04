@@ -1,6 +1,17 @@
 # Literature-Only Candidate Sourcing — Design Outline
 
-Status: draft outline, not yet fleshed out. Open questions marked inline.
+Status: superseded by `design_europe_pmc.md`, which is the design that was built. This outline is
+the earlier PubMed-based draft, kept for the reasoning it records about why the existing
+disease-anchored retrieval does not answer this question.
+
+Where the two differ: the source is Europe PMC, not PubMed, so preprints and non-MEDLINE records
+are reachable and a paper is keyed by source and record id rather than PMID. Stage 1's query-shape
+question was resolved by measurement — the full date-bounded pool is taken with no publication-type
+restriction, MeSH-qualifier OR-ing, or relevance filter, because every filtering strategy tested
+lost ground truth. Stage 2's extraction question was resolved to the per-abstract LLM read; the
+MeSH-term pass was not adopted. Stage 3 storage does not arise, as the pool is cached through the
+shared file cache rather than embedded into the vector store. The invocation question in item 4
+below is still open and is tracked in `PLAN_europe_pmc.md`.
 
 ## Motivation
 

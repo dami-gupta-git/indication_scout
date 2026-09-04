@@ -64,6 +64,7 @@
     {"disease": "male pattern hair loss", "approved": "1997-12-31"}
   ],
   "baricitinib": [
+    {"disease": "rheumatoid arthritis", "approved": "2018-05-31"},
     {"disease": "alopecia areata", "approved": "2022-06-01"}
   ],
   "propranolol": [

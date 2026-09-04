@@ -152,6 +152,19 @@ class CompetitorRawData(TypedDict):
     drug_indications: list[str]
 
 
+class CompetitorRanking(TypedDict):
+    """Full sibling-disease ranking, before the prefetch truncation.
+
+    `siblings` is ordered by competitor count, descending. `disease_efo_ids` maps each surviving
+    disease name to its EFO id. `approved_indications` is the drug's own approved-indication names
+    (empty under a holdout cutoff), already removed from `siblings`.
+    """
+
+    siblings: dict[str, set[str]]
+    disease_efo_ids: dict[str, str]
+    approved_indications: set[str]
+
+
 class OpenTargetsClient(BaseClient):
     BASE_URL = OPEN_TARGETS_BASE_URL
     PAGE_SIZE = _settings.open_targets_page_size
@@ -223,38 +236,20 @@ class OpenTargetsClient(BaseClient):
 
         return drug_data
 
-    async def get_drug_competitors(
+    async def rank_competitor_siblings(
         self,
         chembl_id: str,
         min_stage: str = "PHASE_3",
         date_before: date | None = None,
-    ) -> CompetitorRawData:
-        """Fetch competitor drugs for a given drug, grouped by disease.
+    ) -> CompetitorRanking:
+        """Rank sibling diseases by how many competitor drugs share this drug's targets.
 
-        When `date_before` is set (temporal holdout mode), the OT-derived
-        approved-indications strip is suppressed: OT's `drug.indications`
-        reflects today's approval state and would leak post-cutoff
-        approvals into a holdout. The caller is expected to apply its own
-        cutoff-aware approval filter (the hardcoded approvals table) on the
-        returned competitor list.
+        The full ranking before `open_targets_competitor_prefetch_max` truncation.
+        `get_drug_competitors` calls this and then truncates; validation probes call it to see
+        where a disease fell when it did not survive the cut. `date_before` behaves as documented
+        on `get_drug_competitors`.
         """
         min_rank = CLINICAL_STAGE_RANK.get(min_stage, 0)
-
-        cache_params = {
-            "chembl_id": chembl_id,
-            "min_stage": min_stage,
-            "date_before": date_before.isoformat() if date_before else None,
-            "prefetch_max": _settings.open_targets_competitor_prefetch_max,
-        }
-        cached = cache_get("competitors_raw", cache_params, self.cache_dir)
-        if cached is not None:
-            return CompetitorRawData(
-                diseases={
-                    disease: set(drugs) for disease, drugs in cached["diseases"].items()
-                },
-                disease_efo_ids=dict(cached.get("disease_efo_ids") or {}),
-                drug_indications=cached["drug_indications"],
-            )
 
         drug = await self.get_drug(chembl_id)
         targets = drug.targets
@@ -320,6 +315,51 @@ class OpenTargetsClient(BaseClient):
             sorted(siblings.items(), key=lambda item: len(item[1]), reverse=True)
         )
 
+        return CompetitorRanking(
+            siblings=sorted_siblings,
+            disease_efo_ids={
+                canonical: efo_id for efo_id, canonical in id_to_canonical.items()
+            },
+            approved_indications=approved_indications,
+        )
+
+    async def get_drug_competitors(
+        self,
+        chembl_id: str,
+        min_stage: str = "PHASE_3",
+        date_before: date | None = None,
+    ) -> CompetitorRawData:
+        """Fetch competitor drugs for a given drug, grouped by disease.
+
+        When `date_before` is set (temporal holdout mode), the OT-derived
+        approved-indications strip is suppressed: OT's `drug.indications`
+        reflects today's approval state and would leak post-cutoff
+        approvals into a holdout. The caller is expected to apply its own
+        cutoff-aware approval filter (the hardcoded approvals table) on the
+        returned competitor list.
+        """
+        cache_params = {
+            "chembl_id": chembl_id,
+            "min_stage": min_stage,
+            "date_before": date_before.isoformat() if date_before else None,
+            "prefetch_max": _settings.open_targets_competitor_prefetch_max,
+        }
+        cached = cache_get("competitors_raw", cache_params, self.cache_dir)
+        if cached is not None:
+            return CompetitorRawData(
+                diseases={
+                    disease: set(drugs) for disease, drugs in cached["diseases"].items()
+                },
+                disease_efo_ids=dict(cached.get("disease_efo_ids") or {}),
+                drug_indications=cached["drug_indications"],
+            )
+
+        ranking = await self.rank_competitor_siblings(
+            chembl_id, min_stage=min_stage, date_before=date_before
+        )
+        sorted_siblings = ranking["siblings"]
+        approved_indications = ranking["approved_indications"]
+
         drug_indications = list(approved_indications)
         top_40 = dict(
             list(sorted_siblings.items())[
@@ -327,10 +367,10 @@ class OpenTargetsClient(BaseClient):
             ]
         )
 
-        # Inverse of id_to_canonical, scoped to the diseases that survived ranking and trimming.
+        # Scope the ranking's EFO map to the diseases that survived the prefetch truncation.
         disease_efo_ids = {
             canonical: efo_id
-            for efo_id, canonical in id_to_canonical.items()
+            for canonical, efo_id in ranking["disease_efo_ids"].items()
             if canonical in top_40
         }
 

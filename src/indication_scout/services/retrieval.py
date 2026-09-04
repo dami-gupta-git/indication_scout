@@ -19,6 +19,7 @@ from typing_extensions import deprecated
 
 from indication_scout.config import get_settings
 from indication_scout.constants import (
+    BROADENING_BLOCKLIST,
     CACHE_TTL,
     SAFETY_TOP_ADVERSE_EVENTS,
 )
@@ -53,6 +54,18 @@ logger = logging.getLogger(__name__)
 _settings = get_settings()
 
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
+
+
+def _filter_overly_broad_candidates(
+    candidates: dict[str, set[str]],
+) -> dict[str, set[str]]:
+    """Remove candidates whose words are all generic blocklisted terms."""
+    return {
+        disease: drugs
+        for disease, drugs in candidates.items()
+        if not {word.lower() for word in disease.split()} <= BROADENING_BLOCKLIST
+    }
+
 
 # Pubtype multiplicative boosts applied to semantic similarity to surface
 # primary clinical evidence (RCTs, phase trials) over reviews/commentary
@@ -193,7 +206,10 @@ class RetrievalService:
         if cached is not None and len(cached) > 0:
             # logger.warning("[COMP] cache HIT for %r, %d diseases: %s",
             #                chembl_id, len(cached), list(cached.keys()))
-            return {disease: set(drugs) for disease, drugs in cached.items()}
+            cached_candidates = {
+                disease: set(drugs) for disease, drugs in cached.items()
+            }
+            return _filter_overly_broad_candidates(cached_candidates)
 
         async with OpenTargetsClient(cache_dir=self.cache_dir) as client:
             raw: CompetitorRawData = await client.get_drug_competitors(
@@ -240,6 +256,7 @@ class RetrievalService:
             if combined:
                 top_40[canonical_lower] = combined
 
+        top_40 = _filter_overly_broad_candidates(top_40)
         sorted_data = dict(
             sorted(top_40.items(), key=lambda item: len(item[1]), reverse=True)
         )
