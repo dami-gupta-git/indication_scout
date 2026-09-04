@@ -5,8 +5,8 @@ and returns MechanismCandidate rows.
 
 Classifies each (target, disease) pair as POSITIVE when the drug's action direction aligns with the
 disease mechanism (derived from aggregated directionOnTarget + directionOnTrait across evidence records).
-Filters out FDA-approved disease names supplied by the caller. Returns the top N POSITIVE candidates
-sorted by overall score descending.
+Filters out FDA-approved disease names supplied by the caller. Returns the top N POSITIVE candidate
+diseases sorted by overall score descending — one row per disease, the highest-scoring target for it.
 """
 
 import re
@@ -105,13 +105,17 @@ def select_top_candidates(
     approved_diseases: set[str],
     limit: int,
 ) -> list[MechanismCandidate]:
-    """Filter, rank, and trim rows to the top N repurposing candidates.
+    """Filter, rank, and trim rows to the top `limit` repurposing candidate DISEASES.
 
     Each row is expected to carry the fields below — assembled upstream by whichever code is doing the OT
     fetching. Keeps only POSITIVE rows whose disease is not in `approved_diseases` (case-insensitive
-    exact match), sorts by `ranking_score` descending, takes `limit`, and returns MechanismCandidate
-    objects. No scores surfaced. `ranking_score` is OT's overall_score in production and the leak-free
-    recomputed score in holdout mode (set by build_candidate_rows).
+    exact match), sorts by `ranking_score` descending, collapses to one row per disease, takes `limit`,
+    and returns MechanismCandidate objects. No scores surfaced. `ranking_score` is OT's overall_score in
+    production and the leak-free recomputed score in holdout mode (set by build_candidate_rows).
+
+    `limit` counts distinct diseases, not rows. OT lists the same disease once per target, so a drug
+    whose targets are related (metformin's 51 mitochondrial complex I subunits) would otherwise spend
+    the whole limit on repeats of a handful of diseases.
 
     Direction aggregation uses majority voting over the row's `evidences` list (see
     `aggregate_directions`) — robust to a few outlier records contradicting a strong majority, which
@@ -147,6 +151,14 @@ def select_top_candidates(
 
     positives.sort(key=lambda r: r.get("ranking_score") or 0.0, reverse=True)
 
+    # One row per disease, keyed on the EFO ID and falling back to the name for rows OT left without one.
+    # Insertion order is score order, so the first row seen for a disease is its highest-scoring target.
+    best_by_disease: dict[str, dict] = {}
+    for row in positives:
+        key = row.get("disease_id") or row.get("disease_name", "").lower().strip()
+        if key and key not in best_by_disease:
+            best_by_disease[key] = row
+
     return [
         MechanismCandidate(
             target_symbol=row.get("target_symbol", ""),
@@ -158,7 +170,7 @@ def select_top_candidates(
                 row.get("target_function", "") or ""
             ),
         )
-        for row in positives[:limit]
+        for row in list(best_by_disease.values())[:limit]
     ]
 
 

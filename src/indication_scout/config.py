@@ -111,7 +111,8 @@ class Settings(BaseSettings):
     mechanism_associations_cap: int
     # Top-scored OT associations pulled per target before filtering.
     mechanism_associations_per_target: int
-    # Final count of POSITIVE repurposing candidates the mechanism agent surfaces.
+    # Final count of POSITIVE repurposing candidate DISEASES the mechanism agent surfaces. Counts distinct
+    # diseases, not (target, disease) rows — OT lists a disease once per target.
     mechanism_top_candidates: int
 
     # Disease helper

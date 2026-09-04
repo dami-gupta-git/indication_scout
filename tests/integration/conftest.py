@@ -51,7 +51,8 @@ def db_session():
 
     Prerequisites:
       - Docker container running (docker compose up db)
-      - scout_test DB migrated: TEST_DATABASE_URL=... alembic upgrade head
+      - scout_test DB migrated: DATABASE_URL=$TEST_DATABASE_URL alembic upgrade head
+        (alembic reads DATABASE_URL only — pointing it at TEST_DATABASE_URL migrates the main DB)
     """
     settings = get_settings()
     if settings.test_database_url is None:

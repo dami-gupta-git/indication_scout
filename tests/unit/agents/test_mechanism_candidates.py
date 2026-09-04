@@ -198,6 +198,7 @@ def _row(
     target_symbol="TGT",
     action_types=None,
     disease_name="disease x",
+    disease_id=None,
     overall_score=0.5,
     ranking_score=None,
     evidences=None,
@@ -210,6 +211,7 @@ def _row(
         "target_symbol": target_symbol,
         "action_types": action_types if action_types is not None else {"INHIBITOR"},
         "disease_name": disease_name,
+        "disease_id": disease_id,
         "overall_score": overall_score,
         "ranking_score": ranking_score if ranking_score is not None else overall_score,
         "evidences": evidences or [],
@@ -328,6 +330,72 @@ def test_select_top_candidates_builds_candidate_fields():
     assert "PubMed" not in c.target_function
     assert "ECO" not in c.target_function
     assert c.target_function.startswith("Kinase activity")
+
+
+def test_select_top_candidates_collapses_one_disease_across_targets():
+    # OT lists a disease once per target. Metformin's mitochondrial complex I subunits all associate with
+    # the same handful of diseases, so without the collapse the limit is spent on repeats.
+    rows = [
+        _row(
+            target_symbol=f"NDUF{i}",
+            disease_name="alzheimer disease",
+            disease_id="EFO_0000249",
+            overall_score=0.7,
+            evidences=[_ev("GoF", "risk")] * 5,
+        )
+        for i in range(5)
+    ] + [
+        _row(
+            target_symbol="NDUFS1",
+            disease_name="parkinson disease",
+            disease_id="MONDO_0005180",
+            overall_score=0.6,
+            evidences=[_ev("GoF", "risk")] * 5,
+        )
+    ]
+    out = select_top_candidates(rows, approved_diseases=set(), limit=5)
+    assert [c.disease_name for c in out] == ["alzheimer disease", "parkinson disease"]
+
+
+def test_select_top_candidates_collapse_keeps_highest_scoring_target():
+    rows = [
+        _row(
+            target_symbol="LOW",
+            disease_name="alzheimer disease",
+            disease_id="EFO_0000249",
+            overall_score=0.3,
+            evidences=[_ev("GoF", "risk")] * 5,
+        ),
+        _row(
+            target_symbol="HIGH",
+            disease_name="alzheimer disease",
+            disease_id="EFO_0000249",
+            overall_score=0.9,
+            evidences=[_ev("GoF", "risk")] * 5,
+        ),
+    ]
+    [c] = select_top_candidates(rows, approved_diseases=set(), limit=5)
+    assert c.target_symbol == "HIGH"
+
+
+def test_select_top_candidates_collapse_falls_back_to_name_without_id():
+    # Rows OT left without an EFO ID collapse on the lowercased name instead.
+    rows = [
+        _row(
+            target_symbol="A",
+            disease_name="Alzheimer Disease",
+            overall_score=0.9,
+            evidences=[_ev("GoF", "risk")] * 5,
+        ),
+        _row(
+            target_symbol="B",
+            disease_name="alzheimer disease",
+            overall_score=0.5,
+            evidences=[_ev("GoF", "risk")] * 5,
+        ),
+    ]
+    [c] = select_top_candidates(rows, approved_diseases=set(), limit=5)
+    assert c.target_symbol == "A"
 
 
 def test_select_top_candidates_empty_rows():
