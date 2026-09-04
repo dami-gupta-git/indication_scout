@@ -67,3 +67,4 @@ Call out anything that touches ARCHITECTURE.md or DECISIONS.md explicitly. Omit 
 ## Important
 - Skip any code marked with `no_review` from `indication_scout.markers`
 - Never fabricate file contents — only review what you have actually read
+- Do not nitpick
