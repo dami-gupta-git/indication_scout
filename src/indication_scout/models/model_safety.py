@@ -32,8 +32,8 @@ class DrugSafetyAssessment(BaseModel):
     safety_pmids: list[str]
     safety_severity: (
         Literal["withdrawn", "black_box", "serious", "moderate", "none"] | None
-    )
-    label_data_available: bool | None
+    ) = None
+    label_data_available: bool | None = None
 
     @model_validator(mode="before")
     @classmethod

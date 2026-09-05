@@ -94,8 +94,8 @@ def test_safety_pmids_coerced_to_str():
 
 
 def test_missing_safety_fields_in_old_cache_defaults_empty():
-    # Old cached JSON predates safety_search — no safety_* keys. Must default to ""/[]/False/"none"
-    # (no signal found), NOT be coerced to a fabricated "no concerns" claim.
+    # Old cached JSON predates safety_search — no safety_* keys. Must default to ""/[]/None
+    # (never assessed), NOT be coerced to a fabricated "no signal"/"no harm" claim.
     old_cache = {
         "summary": "supports (PMID: 12345678)",
         "study_count": 3,
@@ -105,8 +105,8 @@ def test_missing_safety_fields_in_old_cache_defaults_empty():
     es = EvidenceSummary(**old_cache)
     assert es.safety_summary == ""
     assert es.safety_pmids == []
-    assert es.safety_severity == "none"
-    assert es.indication_harm is False
+    assert es.safety_severity is None
+    assert es.indication_harm is None
     assert es.indication_harm_summary == ""
     assert es.indication_harm_pmids == []
 

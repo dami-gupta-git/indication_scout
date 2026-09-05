@@ -134,7 +134,7 @@ async def test_search_trials_returns_search_trials_result_artifact():
     assert t.primary_outcomes[0].measure == "pCR rate"
     assert t.primary_outcomes[0].time_frame == "4 cycles"
     assert t.references == []
-    assert "1 trials" in msg.content
+    assert "1 registry query matches" in msg.content
 
 
 async def test_search_trials_passes_date_before():
@@ -241,7 +241,7 @@ async def test_search_trials_content_notes_top_50_when_total_exceeds_shown():
             )
         )
 
-    assert "131 trials" in msg.content
+    assert "131 registry query matches" in msg.content
     assert "top 50 shown" in msg.content
 
 
@@ -296,7 +296,7 @@ async def test_get_completed_returns_completed_trials_result_artifact():
     assert msg.artifact.total_count == 12
     assert len(msg.artifact.trials) == 1
     assert msg.artifact.trials[0].nct_id == "NCT04111111"
-    assert "12 total" in msg.content
+    assert "12 registry query matches" in msg.content
     # Classification view is un-capped — no "top 50" note; all shown trials listed.
     assert "top 50 shown" not in msg.content
     assert "classify EVERY one" in msg.content
@@ -439,7 +439,7 @@ async def test_get_terminated_returns_terminated_trials_result_artifact():
     assert msg.artifact.trials[0].why_stopped == "Serious adverse events observed"
     assert msg.artifact.trials[1].nct_id == "NCT04012256"
     # 1 safety stop, 1 business → "1 safety/efficacy"
-    assert "2 total" in msg.content
+    assert "2 registry query matches" in msg.content
     assert "1 safety/efficacy" in msg.content
 
 
@@ -483,7 +483,7 @@ async def test_get_terminated_classification_view_uncapped_with_rich_columns():
             )
         )
 
-    assert "80 total" in msg.content
+    assert "80 registry query matches" in msg.content
     # Un-capped classification view — no "top 50" note.
     assert "top 50 shown" not in msg.content
     assert "classify EVERY one" in msg.content

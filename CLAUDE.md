@@ -53,6 +53,9 @@ scout find -d "metformin"
 ## Testing
 When writing or modifying any test files, first read skills/testing.md. Never run the full unit test suite, ask the user to do it. Targeted tests are fine.
 
+## Code Review
+Before reviewing code (including via `/code-review`), first read skills/code-review.md.
+
 ## Architecture
 
 IndicationScout is an agentic drug repurposing system. A drug name goes in; coordinated AI agents query multiple biomedical data sources and produce a repurposing report.

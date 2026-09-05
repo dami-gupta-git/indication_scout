@@ -418,7 +418,7 @@ async def test_safety_search_fetches_summarizes_and_classifies():
     assert es.indication_harm is True
     assert es.indication_harm_summary == HARM_SUMMARY
     assert es.indication_harm_pmids == HARM_PMIDS
-    assert "Safety signal" in msg.content
+    assert "Safety evidence" in msg.content
     assert "Indication-specific harm" in msg.content
 
 
