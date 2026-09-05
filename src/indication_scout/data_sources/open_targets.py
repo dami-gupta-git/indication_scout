@@ -20,6 +20,7 @@ from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
     CLINICAL_STAGE_RANK,
+    COMPETITOR_RANKING_LOGIC_VERSION,
     DEFAULT_CACHE_DIR,
     INTERACTION_TYPE_MAP,
     OPEN_TARGETS_BASE_URL,
@@ -278,7 +279,20 @@ class OpenTargetsClient(BaseClient):
                     summary.max_clinical_stage or "", 0
                 )
                 if stage_rank >= min_rank:
-                    drug_name = normalize_drug_name(summary.drug_name)
+                    competitor_name: str | None = None
+                    if not summary.drug_id:
+                        logger.warning(
+                            "Open Targets competitor row %r has no ChEMBL ID; retaining diseases but omitting rival",
+                            summary.id,
+                        )
+                    elif summary.drug_id != chembl_id:
+                        if summary.drug_name:
+                            competitor_name = normalize_drug_name(summary.drug_name)
+                        else:
+                            logger.warning(
+                                "Open Targets competitor %s has no display name; retaining diseases but omitting rival",
+                                summary.drug_id,
+                            )
                     for cd in summary.diseases:
                         if cd.disease_name is None:
                             continue
@@ -290,10 +304,13 @@ class OpenTargetsClient(BaseClient):
                                 id_to_canonical[cd.disease_id] = disease
                         if disease not in siblings_with_stage:
                             siblings_with_stage[disease] = {}
-                        existing = siblings_with_stage[disease].get(drug_name, 0)
-                        siblings_with_stage[disease][drug_name] = max(
-                            existing, stage_rank
-                        )
+                        if competitor_name is not None:
+                            existing = siblings_with_stage[disease].get(
+                                competitor_name, 0
+                            )
+                            siblings_with_stage[disease][competitor_name] = max(
+                                existing, stage_rank
+                            )
 
         # Remove diseases that are already approved indications for this drug.
         for key in list(siblings_with_stage):
@@ -343,6 +360,7 @@ class OpenTargetsClient(BaseClient):
             "min_stage": min_stage,
             "date_before": date_before.isoformat() if date_before else None,
             "prefetch_max": _settings.open_targets_competitor_prefetch_max,
+            "logic_version": COMPETITOR_RANKING_LOGIC_VERSION,
         }
         cached = cache_get("competitors_raw", cache_params, self.cache_dir)
         if cached is not None:

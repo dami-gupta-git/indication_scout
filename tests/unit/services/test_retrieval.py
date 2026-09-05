@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from indication_scout.constants import COMPETITOR_RANKING_LOGIC_VERSION
 from indication_scout.models.model_chembl import ATCDescription
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
@@ -1900,6 +1901,40 @@ async def test_get_drug_competitors_filters_broad_canonical_after_merge(tmp_path
     assert result == {"psoriasis": {"competitor_c"}}
 
 
+async def test_get_drug_competitors_merge_retains_empty_competitor_set(tmp_path):
+    raw = {
+        "diseases": {
+            "sleep disorder alpha": set(),
+            "sleep disorder beta": set(),
+        },
+        "drug_indications": [],
+    }
+    merge_result = {
+        "merge": {
+            "canonical sleep disorder": [
+                "sleep disorder alpha",
+                "sleep disorder beta",
+            ]
+        },
+        "remove": [],
+    }
+    mock_client = _make_open_targets_mock(raw)
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.OpenTargetsClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "indication_scout.services.retrieval.merge_duplicate_diseases",
+            new=AsyncMock(return_value=merge_result),
+        ),
+    ):
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
+
+    assert result == {"canonical sleep disorder": set()}
+
+
 async def test_get_drug_competitors_returns_cached(tmp_path):
     """A cache hit is filtered without calling the client or LLM."""
     from indication_scout.config import get_settings
@@ -1917,6 +1952,7 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
             "chembl_id": "CHEMBL1",
             "date_before": None,
             "top_k": get_settings().literature_top_k,
+            "logic_version": COMPETITOR_RANKING_LOGIC_VERSION,
         },
         cached,
         tmp_path,
@@ -1930,4 +1966,31 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
         result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert result == {"depression": {"competitor_a"}}
+    mock_client.__aenter__.assert_not_called()
+
+
+async def test_get_drug_competitors_returns_cached_empty_result(tmp_path):
+    from indication_scout.config import get_settings
+    from indication_scout.utils.cache import cache_set
+
+    cache_set(
+        "competitors_merged",
+        {
+            "chembl_id": "CHEMBL1",
+            "date_before": None,
+            "top_k": get_settings().literature_top_k,
+            "logic_version": COMPETITOR_RANKING_LOGIC_VERSION,
+        },
+        {},
+        tmp_path,
+    )
+
+    mock_client = AsyncMock()
+    with patch(
+        "indication_scout.services.retrieval.OpenTargetsClient",
+        return_value=mock_client,
+    ):
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
+
+    assert result == {}
     mock_client.__aenter__.assert_not_called()

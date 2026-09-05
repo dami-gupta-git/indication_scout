@@ -186,6 +186,7 @@ BROADENING_BLOCKLIST: frozenset[str] = frozenset(
         "inflammation",
     }
 )
+COMPETITOR_RANKING_LOGIC_VERSION: str = "self_exclusion_v1"
 
 # -- Stop-reason keywords → category (ClinicalTrials.gov) ------------------
 # Order matters: _classify_stop_reason takes the first match, so more specific

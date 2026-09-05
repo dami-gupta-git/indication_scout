@@ -2,7 +2,10 @@
 
 from unittest.mock import AsyncMock, patch
 
-from indication_scout.constants import DEFAULT_CACHE_DIR
+from indication_scout.constants import (
+    COMPETITOR_RANKING_LOGIC_VERSION,
+    DEFAULT_CACHE_DIR,
+)
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.models.model_open_targets import (
     ClinicalDisease,
@@ -121,11 +124,13 @@ async def test_get_drug_competitors_skips_summary_with_none_stage(tmp_path):
     )
     summaries = [
         DrugSummary(
+            drug_id="CHEMBL2",
             drug_name="competitor_a",
             max_clinical_stage="PHASE_3",
             diseases=[ClinicalDisease(disease_name="depression")],
         ),
         DrugSummary(
+            drug_id="CHEMBL3",
             drug_name="competitor_b",
             max_clinical_stage=None,
             diseases=[ClinicalDisease(disease_name="anxiety")],
@@ -161,11 +166,13 @@ async def test_get_drug_competitors_returns_raw_diseases(tmp_path):
     )
     summaries = [
         DrugSummary(
+            drug_id="CHEMBL2",
             drug_name="competitor_a",
             max_clinical_stage="PHASE_3",
             diseases=[ClinicalDisease(disease_name="narcolepsy")],
         ),
         DrugSummary(
+            drug_id="CHEMBL3",
             drug_name="competitor_b",
             max_clinical_stage="PHASE_3",
             diseases=[ClinicalDisease(disease_name="narcolepsy-cataplexy syndrome")],
@@ -198,6 +205,7 @@ async def test_get_drug_competitors_groups_by_disease_id(tmp_path):
     )
     summaries = [
         DrugSummary(
+            drug_id="CHEMBL2",
             drug_name="competitor_a",
             max_clinical_stage="PHASE_3",
             diseases=[
@@ -209,6 +217,7 @@ async def test_get_drug_competitors_groups_by_disease_id(tmp_path):
             ],
         ),
         DrugSummary(
+            drug_id="CHEMBL3",
             drug_name="competitor_b",
             max_clinical_stage="PHASE_3",
             diseases=[
@@ -238,6 +247,127 @@ async def test_get_drug_competitors_groups_by_disease_id(tmp_path):
         "competitor_a",
         "competitor_b",
     }
+
+
+async def test_get_drug_competitors_retains_source_only_disease(tmp_path):
+    drug = DrugData(
+        chembl_id="CHEMBL1",
+        name="testdrug",
+        targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
+    )
+    summaries = [
+        DrugSummary(
+            drug_id="CHEMBL1",
+            drug_name="unexpected source alias",
+            max_clinical_stage="PHASE_3",
+            diseases=[ClinicalDisease(disease_name="source-only disease")],
+        )
+    ]
+
+    client = OpenTargetsClient(cache_dir=tmp_path)
+    with (
+        patch.object(client, "get_drug", new=AsyncMock(return_value=drug)),
+        patch.object(
+            client,
+            "get_target_data_drug_summaries",
+            new=AsyncMock(return_value=summaries),
+        ),
+    ):
+        result = await client.get_drug_competitors("CHEMBL1")
+
+    assert result["diseases"] == {"source-only disease": set()}
+
+
+async def test_get_drug_competitors_excludes_source_by_id_and_keeps_rival(tmp_path):
+    drug = DrugData(
+        chembl_id="CHEMBL1",
+        name="testdrug",
+        targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
+    )
+    summaries = [
+        DrugSummary(
+            drug_id="CHEMBL1",
+            drug_name="source alias",
+            max_clinical_stage="PHASE_3",
+            diseases=[ClinicalDisease(disease_name="shared disease")],
+        ),
+        DrugSummary(
+            drug_id="CHEMBL2",
+            drug_name="Rival Hydrochloride",
+            max_clinical_stage="PHASE_3",
+            diseases=[ClinicalDisease(disease_name="shared disease")],
+        ),
+    ]
+
+    client = OpenTargetsClient(cache_dir=tmp_path)
+    with (
+        patch.object(client, "get_drug", new=AsyncMock(return_value=drug)),
+        patch.object(
+            client,
+            "get_target_data_drug_summaries",
+            new=AsyncMock(return_value=summaries),
+        ),
+    ):
+        result = await client.get_drug_competitors("CHEMBL1")
+
+    assert result["diseases"]["shared disease"] == {"rival"}
+
+
+async def test_get_drug_competitors_omits_row_without_drug_id(tmp_path):
+    drug = DrugData(
+        chembl_id="CHEMBL1",
+        name="testdrug",
+        targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
+    )
+    summaries = [
+        DrugSummary(
+            drug_name="unconfirmed rival",
+            max_clinical_stage="PHASE_3",
+            diseases=[ClinicalDisease(disease_name="identity-missing disease")],
+        )
+    ]
+
+    client = OpenTargetsClient(cache_dir=tmp_path)
+    with (
+        patch.object(client, "get_drug", new=AsyncMock(return_value=drug)),
+        patch.object(
+            client,
+            "get_target_data_drug_summaries",
+            new=AsyncMock(return_value=summaries),
+        ),
+    ):
+        result = await client.get_drug_competitors("CHEMBL1")
+
+    assert result["diseases"] == {"identity-missing disease": set()}
+
+
+async def test_get_drug_competitors_raw_cache_key_has_logic_version(tmp_path):
+    drug = DrugData(
+        chembl_id="CHEMBL1",
+        name="testdrug",
+        targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
+    )
+    client = OpenTargetsClient(cache_dir=tmp_path)
+    with (
+        patch.object(client, "get_drug", new=AsyncMock(return_value=drug)),
+        patch.object(
+            client,
+            "get_target_data_drug_summaries",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
+            "indication_scout.data_sources.open_targets.cache_get", return_value=None
+        ) as mock_cache_get,
+    ):
+        await client.get_drug_competitors("CHEMBL1")
+
+    raw_cache_call = next(
+        call for call in mock_cache_get.call_args_list if call.args[0] == "competitors_raw"
+    )
+    assert (
+        raw_cache_call.args[1]["logic_version"]
+        == COMPETITOR_RANKING_LOGIC_VERSION
+    )
 
 
 # --- _parse_drug_data: indication.id ---
