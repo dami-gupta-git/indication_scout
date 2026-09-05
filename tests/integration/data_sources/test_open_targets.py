@@ -1,6 +1,7 @@
 """Integration tests for OpenTargetsopen_targets_client."""
 
 import logging
+from unittest.mock import patch
 
 import pytest
 
@@ -24,12 +25,14 @@ async def test_sildenafil_drug_data(open_targets_client):
     approved = [a for a in match if a.disease_id in drug.approved_disease_ids]
     logger.info(drug.indications)
 
+
 @no_review
 async def test_imatinib_drug_data(open_targets_client):
     """Test fetching drug data and indications for semaglutide."""
     drug = await open_targets_client.get_drug("CHEMBL941")
     indications = drug.indications
     pass
+
 
 # TODO delete
 @no_review
@@ -484,6 +487,18 @@ async def test_get_drug_competitors_bupropion(open_targets_client):
     assert {"duloxetine", "milnacipran", "levomilnacipran"}.issubset(
         diseases["fibromyalgia"]
     )
+
+    all_competitors = set().union(*diseases.values())
+    assert "bupropion" not in all_competitors
+
+    with patch.object(
+        open_targets_client,
+        "rank_competitor_siblings",
+        side_effect=AssertionError("competitor result was recalculated"),
+    ):
+        cached = await open_targets_client.get_drug_competitors("CHEMBL894")
+
+    assert cached == result
 
 
 async def test_empagliflozin_candidates(open_targets_client):

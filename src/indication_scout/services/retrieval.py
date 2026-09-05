@@ -19,7 +19,6 @@ from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
-    COMPETITOR_RANKING_LOGIC_VERSION,
     SAFETY_TOP_ADVERSE_EVENTS,
 )
 from indication_scout.data_sources.base_client import DataSourceError
@@ -225,7 +224,6 @@ class RetrievalService:
             "chembl_id": chembl_id,
             "date_before": date_before.isoformat() if date_before else None,
             "top_k": _settings.literature_top_k,
-            "logic_version": COMPETITOR_RANKING_LOGIC_VERSION,
         }
         cached = cache_get("competitors_merged", cache_params, self.cache_dir)
         if cached is not None:

@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from indication_scout.constants import COMPETITOR_RANKING_LOGIC_VERSION
 from indication_scout.models.model_chembl import ATCDescription
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
@@ -1952,7 +1951,6 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
             "chembl_id": "CHEMBL1",
             "date_before": None,
             "top_k": get_settings().literature_top_k,
-            "logic_version": COMPETITOR_RANKING_LOGIC_VERSION,
         },
         cached,
         tmp_path,
@@ -1979,7 +1977,6 @@ async def test_get_drug_competitors_returns_cached_empty_result(tmp_path):
             "chembl_id": "CHEMBL1",
             "date_before": None,
             "top_k": get_settings().literature_top_k,
-            "logic_version": COMPETITOR_RANKING_LOGIC_VERSION,
         },
         {},
         tmp_path,

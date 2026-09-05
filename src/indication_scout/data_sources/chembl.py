@@ -393,3 +393,42 @@ async def get_all_drug_names(
     _save_chembl_names(chembl_id, result, cache_dir, ttl=CACHE_TTL)
 
     return result
+
+
+async def get_drug_family_chembl_ids(
+    chembl_id: str, cache_dir: Path = DEFAULT_CACHE_DIR
+) -> set[str]:
+    """Return the parent ChEMBL ID and its salt-form IDs."""
+    cache_params = {"chembl_id": chembl_id}
+    cached = cache_get("chembl_drug_family_ids", cache_params, cache_dir)
+    if cached is not None:
+        return set(cached)
+
+    async with ChEMBLClient(cache_dir=cache_dir) as client:
+        raw = await client._rest_get(
+            f"{CHEMBL_BASE_URL}/molecule.json",
+            params={
+                "molecule_hierarchy__parent_chembl_id": chembl_id,
+                "limit": 50,
+            },
+        )
+
+    if not isinstance(raw, dict):
+        raise DataSourceError(
+            "chembl", f"Unexpected molecule-family response for '{chembl_id}'"
+        )
+
+    family_ids = {chembl_id}
+    for molecule in raw.get("molecules") or []:
+        molecule_id = molecule.get("molecule_chembl_id")
+        if molecule_id:
+            family_ids.add(molecule_id)
+
+    cache_set(
+        "chembl_drug_family_ids",
+        cache_params,
+        sorted(family_ids),
+        cache_dir,
+        ttl=CACHE_TTL,
+    )
+    return family_ids

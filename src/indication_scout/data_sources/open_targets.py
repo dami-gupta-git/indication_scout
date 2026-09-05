@@ -20,7 +20,6 @@ from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
     CLINICAL_STAGE_RANK,
-    COMPETITOR_RANKING_LOGIC_VERSION,
     DEFAULT_CACHE_DIR,
     INTERACTION_TYPE_MAP,
     OPEN_TARGETS_BASE_URL,
@@ -28,7 +27,11 @@ from indication_scout.constants import (
 from indication_scout.markers import no_review
 from indication_scout.utils.cache import cache_get, cache_set
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
-from indication_scout.data_sources.chembl import ChEMBLClient, get_all_drug_names
+from indication_scout.data_sources.chembl import (
+    ChEMBLClient,
+    get_all_drug_names,
+    get_drug_family_chembl_ids,
+)
 from indication_scout.helpers.drug_helpers import normalize_drug_name
 
 from indication_scout.models.model_open_targets import (
@@ -268,6 +271,7 @@ class OpenTargetsClient(BaseClient):
 
         siblings_with_stage: dict[str, dict[str, int]] = {}
         id_to_canonical: dict[str, str] = {}
+        source_drug_ids = await get_drug_family_chembl_ids(chembl_id, self.cache_dir)
 
         all_summaries = await asyncio.gather(
             *[self.get_target_data_drug_summaries(t.target_id) for t in targets]
@@ -285,7 +289,7 @@ class OpenTargetsClient(BaseClient):
                             "Open Targets competitor row %r has no ChEMBL ID; retaining diseases but omitting rival",
                             summary.id,
                         )
-                    elif summary.drug_id != chembl_id:
+                    elif summary.drug_id not in source_drug_ids:
                         if summary.drug_name:
                             competitor_name = normalize_drug_name(summary.drug_name)
                         else:
@@ -360,7 +364,6 @@ class OpenTargetsClient(BaseClient):
             "min_stage": min_stage,
             "date_before": date_before.isoformat() if date_before else None,
             "prefetch_max": _settings.open_targets_competitor_prefetch_max,
-            "logic_version": COMPETITOR_RANKING_LOGIC_VERSION,
         }
         cached = cache_get("competitors_raw", cache_params, self.cache_dir)
         if cached is not None:

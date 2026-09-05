@@ -1,18 +1,33 @@
 """Unit tests for OpenTargetsClient."""
 
+from collections.abc import Iterator
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-from indication_scout.constants import (
-    COMPETITOR_RANKING_LOGIC_VERSION,
-    DEFAULT_CACHE_DIR,
-)
+import pytest
+
+from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.models.model_open_targets import (
     ClinicalDisease,
     DrugData,
     DrugSummary,
     DrugTarget,
+    Indication,
 )
+
+
+@pytest.fixture(autouse=True)
+def source_drug_family() -> Iterator[None]:
+    async def exact_family(chembl_id: str, cache_dir: Path) -> set[str]:
+        return {chembl_id}
+
+    with patch(
+        "indication_scout.data_sources.open_targets.get_drug_family_chembl_ids",
+        new=exact_family,
+    ):
+        yield
+
 
 # --- OpenTargetsClient configuration ---
 
@@ -254,13 +269,22 @@ async def test_get_drug_competitors_retains_source_only_disease(tmp_path):
         chembl_id="CHEMBL1",
         name="testdrug",
         targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
+        indications=[
+            Indication(
+                disease_name="approved disease",
+                max_clinical_stage="APPROVAL",
+            )
+        ],
     )
     summaries = [
         DrugSummary(
             drug_id="CHEMBL1",
             drug_name="unexpected source alias",
             max_clinical_stage="PHASE_3",
-            diseases=[ClinicalDisease(disease_name="source-only disease")],
+            diseases=[
+                ClinicalDisease(disease_name="source-only disease"),
+                ClinicalDisease(disease_name="approved disease"),
+            ],
         )
     ]
 
@@ -292,6 +316,12 @@ async def test_get_drug_competitors_excludes_source_by_id_and_keeps_rival(tmp_pa
             diseases=[ClinicalDisease(disease_name="shared disease")],
         ),
         DrugSummary(
+            drug_id="CHEMBL1703",
+            drug_name="source alias hydrochloride",
+            max_clinical_stage="PHASE_3",
+            diseases=[ClinicalDisease(disease_name="shared disease")],
+        ),
+        DrugSummary(
             drug_id="CHEMBL2",
             drug_name="Rival Hydrochloride",
             max_clinical_stage="PHASE_3",
@@ -306,6 +336,10 @@ async def test_get_drug_competitors_excludes_source_by_id_and_keeps_rival(tmp_pa
             client,
             "get_target_data_drug_summaries",
             new=AsyncMock(return_value=summaries),
+        ),
+        patch(
+            "indication_scout.data_sources.open_targets.get_drug_family_chembl_ids",
+            new=AsyncMock(return_value={"CHEMBL1", "CHEMBL1703"}),
         ),
     ):
         result = await client.get_drug_competitors("CHEMBL1")
@@ -339,35 +373,6 @@ async def test_get_drug_competitors_omits_row_without_drug_id(tmp_path):
         result = await client.get_drug_competitors("CHEMBL1")
 
     assert result["diseases"] == {"identity-missing disease": set()}
-
-
-async def test_get_drug_competitors_raw_cache_key_has_logic_version(tmp_path):
-    drug = DrugData(
-        chembl_id="CHEMBL1",
-        name="testdrug",
-        targets=[DrugTarget(target_id="ENSG001", target_symbol="TGT1")],
-    )
-    client = OpenTargetsClient(cache_dir=tmp_path)
-    with (
-        patch.object(client, "get_drug", new=AsyncMock(return_value=drug)),
-        patch.object(
-            client,
-            "get_target_data_drug_summaries",
-            new=AsyncMock(return_value=[]),
-        ),
-        patch(
-            "indication_scout.data_sources.open_targets.cache_get", return_value=None
-        ) as mock_cache_get,
-    ):
-        await client.get_drug_competitors("CHEMBL1")
-
-    raw_cache_call = next(
-        call for call in mock_cache_get.call_args_list if call.args[0] == "competitors_raw"
-    )
-    assert (
-        raw_cache_call.args[1]["logic_version"]
-        == COMPETITOR_RANKING_LOGIC_VERSION
-    )
 
 
 # --- _parse_drug_data: indication.id ---

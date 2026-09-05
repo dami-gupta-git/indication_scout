@@ -8,6 +8,7 @@ from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import (
     ChEMBLClient,
     get_all_drug_names,
+    get_drug_family_chembl_ids,
     resolve_drug_name,
 )
 from indication_scout.models.model_chembl import (
@@ -435,6 +436,21 @@ async def test_get_all_drug_names_small_molecule_with_salts(tmp_path):
         "bupropion hydrochloride",
         "aplenzin",
     ]
+
+
+async def test_get_drug_family_chembl_ids_includes_salts_and_caches(tmp_path):
+    mock_rest_get = AsyncMock(return_value=HIERARCHY_RESPONSE)
+
+    with patch(
+        "indication_scout.data_sources.chembl.ChEMBLClient._rest_get",
+        new=mock_rest_get,
+    ):
+        first = await get_drug_family_chembl_ids("CHEMBL894", cache_dir=tmp_path)
+        second = await get_drug_family_chembl_ids("CHEMBL894", cache_dir=tmp_path)
+
+    assert first == {"CHEMBL894", "CHEMBL1698", "CHEMBL1201735"}
+    assert second == first
+    mock_rest_get.assert_awaited_once()
 
 
 async def test_get_all_drug_names_biologic_no_salts(tmp_path):
