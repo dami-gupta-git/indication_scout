@@ -137,37 +137,46 @@ def build_literature_tools(
             chembl_id
         )
         store["drug_profile"] = drug_profile
-        safety_abstracts = await svc.safety_search(
+        safety_results = await svc.safety_search(
             chembl_id, date_before=date_before, disease=disease_name
         )
-        safety_summary, safety_pmids, safety_severity = await svc.summarize_safety(
+        safety = await svc.summarize_safety(
             chembl_id,
             disease_name,
             drug_profile,
-            safety_abstracts,
+            safety_results.combined,
             date_before=date_before,
         )
         # Disease-specific: does the safety literature report a harm for THIS indication?
         harm, harm_summary, harm_pmids = await svc.classify_indication_harm(
-            chembl_id, disease_name, safety_abstracts
+            chembl_id, disease_name, safety_results.disease_scoped
         )
-        store["safety_summary"] = safety_summary
-        store["safety_pmids"] = safety_pmids
-        store["safety_severity"] = safety_severity
+        store["safety_summary"] = safety.safety_summary
+        store["regulatory_safety_summary"] = safety.regulatory_summary
+        store["pharmacovigilance_summary"] = safety.pharmacovigilance_summary
+        store["literature_safety_summary"] = safety.literature_summary
+        store["label_safety_available"] = safety.label_data_available
+        store["safety_pmids"] = safety.safety_pmids
+        store["safety_severity"] = safety.safety_severity
         store["indication_harm"] = harm
         store["indication_harm_summary"] = harm_summary
         store["indication_harm_pmids"] = harm_pmids
         content = (
-            f"Safety signal ({safety_severity}): {safety_summary}"
-            if safety_summary
-            else "No safety signal found for this drug."
+            f"Safety evidence ({safety.safety_severity or 'severity unavailable'}): "
+            f"{safety.safety_summary}"
+            if safety.safety_summary
+            else "No drug-wide safety evidence available from the permitted sources."
         )
         if harm:
             content += f" | Indication-specific harm reported: {harm_summary}"
         return content, EvidenceSummary(
-            safety_summary=safety_summary,
-            safety_pmids=safety_pmids,
-            safety_severity=safety_severity,
+            safety_summary=safety.safety_summary,
+            regulatory_safety_summary=safety.regulatory_summary,
+            pharmacovigilance_summary=safety.pharmacovigilance_summary,
+            literature_safety_summary=safety.literature_summary,
+            label_safety_available=safety.label_data_available,
+            safety_pmids=safety.safety_pmids,
+            safety_severity=safety.safety_severity,
             indication_harm=harm,
             indication_harm_summary=harm_summary,
             indication_harm_pmids=harm_pmids,
@@ -195,11 +204,15 @@ def build_literature_tools(
         # when the value is "" for a no-signal drug). EvidenceSummary's own defaults stand otherwise.
         if "safety_summary" in store:
             evidence.safety_summary = store["safety_summary"]
-            evidence.safety_pmids = store.get("safety_pmids", [])
-            evidence.safety_severity = store.get("safety_severity", "none")
-            evidence.indication_harm = store.get("indication_harm", False)
-            evidence.indication_harm_summary = store.get("indication_harm_summary", "")
-            evidence.indication_harm_pmids = store.get("indication_harm_pmids", [])
+            evidence.regulatory_safety_summary = store["regulatory_safety_summary"]
+            evidence.pharmacovigilance_summary = store["pharmacovigilance_summary"]
+            evidence.literature_safety_summary = store["literature_safety_summary"]
+            evidence.label_safety_available = store["label_safety_available"]
+            evidence.safety_pmids = store["safety_pmids"]
+            evidence.safety_severity = store["safety_severity"]
+            evidence.indication_harm = store["indication_harm"]
+            evidence.indication_harm_summary = store["indication_harm_summary"]
+            evidence.indication_harm_pmids = store["indication_harm_pmids"]
         # logger.warning(
         #     "[TIMING] synthesize %s: %.1fs", disease_name, time.perf_counter() - _t0
         # )

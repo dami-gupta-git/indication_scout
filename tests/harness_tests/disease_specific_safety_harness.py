@@ -13,19 +13,13 @@ Run: .venv/bin/python tests/harness_tests/disease_specific_safety_harness.py [ru
 """
 
 import asyncio
-import sys
-from collections import Counter
-from pathlib import Path
+import logging
 
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.chembl import resolve_drug_name
-from indication_scout.services.llm import parse_last_json_object, query_llm
 from indication_scout.services.retrieval import RetrievalService
 
-RUNS = int(sys.argv[1]) if len(sys.argv) > 1 else 3
-_PROMPT = (
-    Path(__file__).parent / "prompts" / "disease_specific_safety_prompt.txt"
-).read_text()
+logger = logging.getLogger(__name__)
 
 # (drug, disease, expected harm_reported_for_indication). The reframed question: does an abstract
 # report a safety finding for the drug IN THIS INDICATION's context (not "is it unique to the
@@ -45,36 +39,36 @@ CASES: list[tuple[str, str, bool]] = [
 ]
 
 
-async def _classify(svc: RetrievalService, drug: str, disease: str) -> list[bool | None]:
+async def _classify(svc: RetrievalService, drug: str, disease: str) -> bool | None:
     chembl_id = await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
-    abstracts = await svc.safety_search(chembl_id, disease=disease)
-    formatted = "\n\n".join(
-        f"PMID {a.pmid}: {a.title}. {(a.abstract or '')[:250]}" for a in abstracts[:15]
+    safety_results = await svc.safety_search(chembl_id, disease=disease)
+    verdict, _, _ = await svc.classify_indication_harm(
+        chembl_id,
+        disease,
+        safety_results.disease_scoped,
     )
-    prompt = _PROMPT.format(drug=drug, disease=disease, abstracts=formatted)
-    out: list[bool | None] = []
-    for _ in range(RUNS):
-        resp = await query_llm(prompt)
-        data = parse_last_json_object(resp) or {}
-        out.append(data.get("harm_reported_for_indication"))
-    return out
+    return verdict
 
 
 async def main() -> None:
     svc = RetrievalService(cache_dir=DEFAULT_CACHE_DIR)
     correct = 0
     for drug, disease, expect in CASES:
-        verdicts = await _classify(svc, drug, disease)
-        modal = Counter(verdicts).most_common(1)[0][0]
-        ok = modal == expect
+        verdict = await _classify(svc, drug, disease)
+        ok = verdict == expect
         correct += ok
         mark = "OK " if ok else "XX "
-        print(
-            f"{mark}{drug:12s} x {disease:20s} expect={str(expect):5s} "
-            f"modal={str(modal):5s} runs={verdicts}"
+        logger.info(
+            "%s%-12s x %-20s expect=%-5s verdict=%-5s",
+            mark,
+            drug,
+            disease,
+            expect,
+            verdict,
         )
-    print(f"\n{correct}/{len(CASES)} correct (modal across {RUNS} runs)")
+    logger.info("%d/%d correct", correct, len(CASES))
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())

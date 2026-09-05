@@ -344,8 +344,8 @@ async def test_safety_search_fetches_drug_level_and_disease_scoped(svc):
     context safety papers the drug-level pool alone misses."""
     results = await svc.safety_search("CHEMBL122", disease="colorectal cancer")
 
-    assert len(results) > 0, "expected safety abstracts"
-    pmids = {r.pmid for r in results}
+    assert len(results.combined) > 0, "expected safety abstracts"
+    pmids = {r.pmid for r in results.combined}
     # APPROVe (the trial that got rofecoxib withdrawn) — a stable drug-level landmark.
     assert "15713943" in pmids, f"expected APPROVe (15713943); got {sorted(pmids)[:10]}"
 
@@ -357,15 +357,15 @@ async def test_summarize_safety_prod_reports_ot_signal_and_severity(svc):
     profile = await svc.build_drug_profile("CHEMBL122")
     abstracts = await svc.safety_search("CHEMBL122", disease="arthritis")
 
-    summary, pmids, severity = await svc.summarize_safety(
-        "CHEMBL122", "arthritis", profile, abstracts
+    result = await svc.summarize_safety(
+        "CHEMBL122", "arthritis", profile, abstracts.combined
     )
 
-    assert summary != "", "expected a non-empty safety summary for rofecoxib"
-    assert "cardiovascular" in summary.lower() or "withdrawn" in summary.lower()
-    assert severity == "withdrawn"  # deterministic from OT Withdrawn warning
-    pool = {r.pmid for r in abstracts}
-    assert all(p in pool for p in pmids), f"cited PMIDs not in provenance pool: {pmids}"
+    assert result.safety_summary != "", "expected a non-empty safety summary for rofecoxib"
+    assert "withdrawn" in result.regulatory_summary.lower()
+    assert "not proof of causation" in result.pharmacovigilance_summary.lower()
+    assert result.safety_severity == "withdrawn"
+    assert result.safety_pmids == []
 
 
 async def test_classify_indication_harm_true_for_colorectal(svc):
@@ -375,12 +375,12 @@ async def test_classify_indication_harm_true_for_colorectal(svc):
     abstracts = await svc.safety_search("CHEMBL122", disease="colorectal cancer")
 
     harm, summary, pmids = await svc.classify_indication_harm(
-        "CHEMBL122", "colorectal cancer", abstracts
+        "CHEMBL122", "colorectal cancer", abstracts.disease_scoped
     )
 
     assert harm is True, "expected an indication-context harm for rofecoxib × colorectal"
     assert summary != ""
-    pool = {r.pmid for r in abstracts}
+    pool = {r.pmid for r in abstracts.disease_scoped}
     assert all(p in pool for p in pmids), f"cited PMIDs not in provenance pool: {pmids}"
 
 

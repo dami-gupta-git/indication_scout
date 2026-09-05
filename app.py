@@ -130,9 +130,9 @@ st.caption(f"_Generated {datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}_")
 
 # Top-band KPIs
 total_trials = sum(
-    f.clinical_trials.search.total_count
+    f.clinical_trials.search_coverage.relevant_records
     for f in output.disease_findings
-    if f.clinical_trials and f.clinical_trials.search
+    if f.clinical_trials and f.clinical_trials.search_coverage
 )
 total_studies = sum(
     f.literature.evidence_summary.study_count
@@ -143,7 +143,7 @@ total_studies = sum(
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Candidate diseases", len(output.candidate_diseases))
 m2.metric("Investigated", len(output.disease_findings))
-m3.metric("Total trials", total_trials)
+m3.metric("Confirmed relevant trials", total_trials)
 m4.metric("Total studies", total_studies)
 
 st.markdown("---")
@@ -251,21 +251,39 @@ with tab_trials:
             if ct.summary:
                 st.write(ct.summary)
 
-            search_total = ct.search.total_count if ct.search else 0
-            by_status = ct.search.by_status if ct.search else {}
+            search_total = (
+                ct.search_coverage.relevant_records if ct.search_coverage else None
+            )
+            query_matches = ct.search.total_count if ct.search else None
+            by_status = (
+                ct.search_coverage.relevant_by_status if ct.search_coverage else {}
+            )
             a1, a2, a3 = st.columns(3)
-            a1.metric("Total trials", search_total)
-            a2.metric("Recruiting", by_status.get("RECRUITING", 0))
-            a3.metric("Active (not recruiting)", by_status.get("ACTIVE_NOT_RECRUITING", 0))
+            a1.metric("Relevant reviewed", search_total if search_total is not None else "—")
+            a2.metric("Registry query matches", query_matches if query_matches is not None else "—")
+            a3.metric("Recruiting relevant", by_status.get("RECRUITING", "—"))
 
             if by_status:
-                st.markdown("#### Status breakdown")
+                st.markdown("#### Relevant reviewed status breakdown")
                 sorted_statuses = dict(sorted(by_status.items(), key=lambda kv: -kv[1]))
                 st.bar_chart(sorted_statuses, horizontal=True)
 
-            if ct.completed and ct.completed.trials:
+            relevant_ncts = set(ct.relevant_nct_ids)
+            completed_trials = (
+                [trial for trial in ct.completed.trials if trial.nct_id in relevant_ncts]
+                if ct.completed
+                else []
+            )
+            if ct.completed and completed_trials:
+                completed_label = (
+                    str(ct.completed_coverage.relevant_records)
+                    if ct.completed_coverage and ct.completed_coverage.coverage_complete
+                    else f"at least {ct.completed_coverage.relevant_records} reviewed relevant"
+                    if ct.completed_coverage
+                    else "relevance coverage unavailable"
+                )
                 st.markdown(
-                    f"#### Completed trials ({ct.completed.total_count} total)"
+                    f"#### Completed trials ({completed_label})"
                 )
                 completed_rows = [
                     {
@@ -274,7 +292,7 @@ with tab_trials:
                         "Phase": t.phase or "Unknown",
                         "Status": t.overall_status,
                     }
-                    for t in ct.completed.trials[:25]
+                    for t in completed_trials[:25]
                 ]
                 st.dataframe(
                     completed_rows,
@@ -285,9 +303,21 @@ with tab_trials:
                     },
                 )
 
-            if ct.terminated and ct.terminated.trials:
-                st.markdown(f"#### Terminated trials ({ct.terminated.total_count})")
-                for t in ct.terminated.trials[:15]:
+            terminated_trials = (
+                [trial for trial in ct.terminated.trials if trial.nct_id in relevant_ncts]
+                if ct.terminated
+                else []
+            )
+            if ct.terminated and terminated_trials:
+                terminated_label = (
+                    str(ct.terminated_coverage.relevant_records)
+                    if ct.terminated_coverage and ct.terminated_coverage.coverage_complete
+                    else f"at least {ct.terminated_coverage.relevant_records} reviewed relevant"
+                    if ct.terminated_coverage
+                    else "relevance coverage unavailable"
+                )
+                st.markdown(f"#### Terminated trials ({terminated_label})")
+                for t in terminated_trials[:15]:
                     with st.container(border=True):
                         st.markdown(
                             f"[{t.nct_id}](https://clinicaltrials.gov/study/{t.nct_id})"

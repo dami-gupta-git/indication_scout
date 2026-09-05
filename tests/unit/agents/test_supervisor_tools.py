@@ -9,6 +9,7 @@ import pytest
 
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
+    TrialRelevanceCoverage,
     TrialSignals,
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
@@ -345,7 +346,7 @@ def _make_lit(
     is_observational: bool | None = None,
     is_animal_only: bool | None = None,
     safety_summary: str = "",
-    indication_harm: bool = False,
+    indication_harm: bool | None = None,
 ) -> LiteratureOutput:
     return LiteratureOutput(
         pmids=[str(1000000 + i) for i in range(n_pmids)],
@@ -370,10 +371,41 @@ def _make_ct(
     signals: "TrialSignals | None" = None,
     by_status: dict[str, int] | None = None,
 ) -> ClinicalTrialsOutput:
+    relevant_by_status = by_status or {}
     return ClinicalTrialsOutput(
         search=SearchTrialsResult(total_count=total, by_status=by_status or {}),
         completed=CompletedTrialsResult(total_count=completed),
         terminated=TerminatedTrialsResult(total_count=terminated),
+        search_coverage=TrialRelevanceCoverage(
+            registry_query_matches=total,
+            retrieved_records=total,
+            classified_records=total,
+            relevant_records=total,
+            contaminated_records=0,
+            unreviewed_records=0,
+            coverage_complete=True,
+            relevant_by_status=relevant_by_status,
+        ),
+        completed_coverage=TrialRelevanceCoverage(
+            registry_query_matches=completed,
+            retrieved_records=completed,
+            classified_records=completed,
+            relevant_records=completed,
+            contaminated_records=0,
+            unreviewed_records=0,
+            coverage_complete=True,
+            relevant_by_status={},
+        ),
+        terminated_coverage=TrialRelevanceCoverage(
+            registry_query_matches=terminated,
+            retrieved_records=terminated,
+            classified_records=terminated,
+            relevant_records=terminated,
+            contaminated_records=0,
+            unreviewed_records=0,
+            coverage_complete=True,
+            relevant_by_status={},
+        ),
         signals=signals,
     )
 

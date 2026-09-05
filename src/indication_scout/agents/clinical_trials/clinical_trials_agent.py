@@ -19,11 +19,17 @@ from indication_scout.agents._trial_signals import derive_trial_signals
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
     FinalizeClinicalTrialsArtifact,
+    TrialRelevanceCoverage,
 )
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     build_clinical_trials_tools,
 )
 from indication_scout.constants import DEFAULT_CACHE_DIR
+from indication_scout.models.model_clinical_trials import (
+    CompletedTrialsResult,
+    SearchTrialsResult,
+    TerminatedTrialsResult,
+)
 from indication_scout.services.clinical_trials_summary import judge_ct_summary
 from indication_scout.services.dev_stage import dev_stage_phrase, judge_dev_stage
 
@@ -58,6 +64,40 @@ def build_clinical_trials_agent(llm, date_before=None, assigned_indication=None)
         assigned_indication=assigned_indication,
     )
     return build_gated_react_loop(llm, tools, SYSTEM_PROMPT, _finalize_done)
+
+
+def _derive_relevance_coverage(
+    result: SearchTrialsResult | CompletedTrialsResult | TerminatedTrialsResult | None,
+    *,
+    relevant_nct_ids: set[str],
+    contaminated_nct_ids: set[str],
+) -> TrialRelevanceCoverage | None:
+    """Derive query coverage and reviewed relevance counts for one result scope."""
+    if result is None:
+        return None
+    trials_by_id = {trial.nct_id: trial for trial in result.trials if trial.nct_id}
+    retrieved_ids = set(trials_by_id)
+    relevant_ids = retrieved_ids & relevant_nct_ids
+    contaminated_ids = retrieved_ids & contaminated_nct_ids
+    classified_ids = relevant_ids | contaminated_ids
+    relevant_by_status: dict[str, int] = {}
+    for nct_id in relevant_ids:
+        status = (trials_by_id[nct_id].overall_status or "").strip().upper()
+        if status:
+            relevant_by_status[status] = relevant_by_status.get(status, 0) + 1
+    return TrialRelevanceCoverage(
+        registry_query_matches=result.total_count,
+        retrieved_records=len(retrieved_ids),
+        classified_records=len(classified_ids),
+        relevant_records=len(relevant_ids),
+        contaminated_records=len(contaminated_ids),
+        unreviewed_records=max(result.total_count - len(classified_ids), 0),
+        coverage_complete=(
+            result.total_count == len(retrieved_ids)
+            and len(classified_ids) == len(retrieved_ids)
+        ),
+        relevant_by_status=relevant_by_status,
+    )
 
 
 async def run_clinical_trials_agent(
@@ -219,10 +259,27 @@ async def run_clinical_trials_agent(
     # otherwise leave signals None so the supervisor knows no relevance judgment was made,
     # rather than silently filtering every trial out with an empty relevant set.
     if finalized:
+        relevant_ids = set(output.relevant_nct_ids)
+        contaminated_ids = set(output.contaminated_nct_ids)
+        output.search_coverage = _derive_relevance_coverage(
+            output.search,
+            relevant_nct_ids=relevant_ids,
+            contaminated_nct_ids=contaminated_ids,
+        )
+        output.completed_coverage = _derive_relevance_coverage(
+            output.completed,
+            relevant_nct_ids=relevant_ids,
+            contaminated_nct_ids=contaminated_ids,
+        )
+        output.terminated_coverage = _derive_relevance_coverage(
+            output.terminated,
+            relevant_nct_ids=relevant_ids,
+            contaminated_nct_ids=contaminated_ids,
+        )
         output.signals = derive_trial_signals(
             output,
-            relevant_nct_ids=set(output.relevant_nct_ids),
-            contaminated_nct_ids=set(output.contaminated_nct_ids),
+            relevant_nct_ids=relevant_ids,
+            contaminated_nct_ids=contaminated_ids,
         )
         # dev_stage is an LLM judgment (not the deterministic phase-rank, which mis-encoded
         # the Phase-4 trap). Only nct/phase/status of the relevant trials is sent. Cached per
@@ -266,6 +323,7 @@ async def run_clinical_trials_agent(
                     relevant_trials,
                     stage=stage_phrase,
                     active_programs=judgment.active_programs,
+                    coverage=output.search_coverage,
                     first_approval=first_approval,
                     cache_dir=cache_dir,
                     drug=drug_name,

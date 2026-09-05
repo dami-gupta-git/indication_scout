@@ -136,14 +136,11 @@ Calls `RetrievalService.semantic_search()`.
 
 ### `safety_search(drug_name, disease_name) -> EvidenceSummary`
 
-REQUIRED step. Produces a **two-tier** safety signal (full design in ARCHITECTURE.md → "Drug
-Safety"): a DRUG-LEVEL blurb (`RetrievalService.safety_search` + `summarize_safety`,
-OT-anchored in production / date-filtered literature in holdout, with `safety_severity`) and a
-DISEASE-SPECIFIC `indication_harm` classification (`classify_indication_harm`). Independent of
-the efficacy PMID pool — it runs its own citation-ranked adverse-event PubMed queries
-(`agents/literature/pubmed_ae.py::search_adverse_events`). Stores all six safety/harm fields so
-`synthesize` can merge them in. Empty when there is no signal (never a fabricated "safe"
-verdict).
+REQUIRED step. Produces drug-wide and indication-specific safety facts. Production drug-wide
+output keeps current openFDA label text, Open Targets warning metadata, and FAERS associations in
+separate fields. Holdout output uses only date-eligible literature. The indication classifier sees
+only disease-scoped abstracts and returns a per-PMID verdict before code aggregates confirmed
+harms. Missing or unclassifiable evidence remains unavailable.
 
 ### `synthesize(drug_name, disease_name) -> EvidenceSummary`
 
@@ -205,10 +202,14 @@ buckets. Safety fields (populated by `safety_search`, merged by `synthesize`):
 
 | Field | Type | Description |
 |---|---|---|
-| `safety_summary` | `str` | Drug-level safety blurb (drug-wide) |
+| `safety_summary` | `str` | Combined rendering of the source-separated drug-wide fields |
+| `regulatory_safety_summary` | `str` | Exact openFDA boxed-warning text plus separately labeled Open Targets metadata |
+| `pharmacovigilance_summary` | `str` | Scored FAERS associations, explicitly non-causal |
+| `literature_safety_summary` | `str` | Date-eligible literature synthesis used in holdout mode |
+| `label_safety_available` | `bool \| None` | Current label retrieval state; `None` in holdout mode |
 | `safety_pmids` | `list[str]` | PMIDs cited in `safety_summary` |
-| `safety_severity` | `Literal["withdrawn","black_box","serious","moderate","none"]` | Drug-level severity |
-| `indication_harm` | `bool` | A harm reported for this drug in THIS indication |
+| `safety_severity` | `Literal["withdrawn","black_box","serious","moderate","none"] \| None` | Drug-level severity or unavailable |
+| `indication_harm` | `bool \| None` | Confirmed harm, reviewed negative, or unavailable |
 | `indication_harm_summary` | `str` | One-line disease-specific harm summary |
 | `indication_harm_pmids` | `list[str]` | PMIDs cited for the indication harm |
 
@@ -222,9 +223,9 @@ that converts any non-string PMID values to strings (covers all PMID lists incl.
 
 Flat LLM-facing projection of `RichDrugData`. Key fields: `chembl_id`, `target_gene_symbols`,
 `mechanisms_of_action`, `atc_codes`, `atc_descriptions`, `drug_type`. Also carries the
-OpenTargets safety signal — `drug_warnings` (`list[DrugWarning]`, black-box / withdrawn) and
-`adverse_events` (`list[AdverseEvent]`, FAERS with `log_likelihood_ratio`) — used by
-`safety_search` to build targeted PubMed provenance queries. Built via
+Open Targets safety metadata — `drug_warnings` supplies warning types and toxicity categories;
+`adverse_events` supplies FAERS associations with `log_likelihood_ratio`. Open Targets rows do not
+provide current label wording or a count of distinct boxed warnings. Built via
 `DrugProfile.from_rich_drug_data()` or `RetrievalService.build_drug_profile()`.
 
 ---

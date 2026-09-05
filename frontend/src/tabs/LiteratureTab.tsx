@@ -46,6 +46,23 @@ export function LiteratureTab({
             </div>
           </div>
 
+          {lit.indication_harm === true && (
+            <div className="card" role="note">
+              <strong>⚠️ Indication-specific safety signal</strong>
+              {lit.indication_harm_summary && <p>{lit.indication_harm_summary}</p>}
+              {lit.indication_harm_pmids.length > 0 && (
+                <p className="pmid-list">
+                  {lit.indication_harm_pmids.map((p, i) => (
+                    <span key={p}>
+                      {i > 0 && " · "}
+                      <PmidLink pmid={p} />
+                    </span>
+                  ))}
+                </p>
+              )}
+            </div>
+          )}
+
           {lit.summary && (
             <>
               <h4>Summary</h4>

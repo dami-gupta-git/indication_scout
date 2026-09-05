@@ -169,4 +169,7 @@ class SupervisorOutput(BaseModel):
     # safety_summary fields (pick-first non-empty). Per-candidate DISEASE-SPECIFIC harm stays on
     # each finding.
     drug_safety_summary: str = ""
+    drug_regulatory_safety_summary: str = ""
+    drug_pharmacovigilance_summary: str = ""
+    drug_literature_safety_summary: str = ""
     drug_safety_pmids: list[str] = Field(default_factory=list)

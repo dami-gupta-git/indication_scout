@@ -3,7 +3,11 @@
 // the competitor table.
 
 import { useState } from "react";
-import type { CandidateFindings, SupervisorOutput } from "../types";
+import type {
+  CandidateFindings,
+  SupervisorOutput,
+  TrialRelevanceCoverage,
+} from "../types";
 import { NctLink } from "../components/links";
 import { CompletedTrialsTable } from "../tables/CompletedTrialsTable";
 import { CompetitorsTable } from "../tables/CompetitorsTable";
@@ -14,6 +18,14 @@ import { phaseSlices, statusSlices } from "../charts/chartData";
 import { partitionTrials } from "./trialFilter";
 
 const TERMINATED_LIMIT = 15;
+
+function coverageLabel(coverage: TrialRelevanceCoverage | null): string {
+  if (coverage === null) return "relevance coverage unavailable";
+  if (coverage.coverage_complete) {
+    return `${coverage.relevant_records} relevant; ${coverage.contaminated_records} excluded`;
+  }
+  return `at least ${coverage.relevant_records} relevant among ${coverage.classified_records} reviewed; ${coverage.registry_query_matches} query matches, ${coverage.unreviewed_records} not reviewed`;
+}
 
 export function ClinicalTrialsTab({
   result,
@@ -43,11 +55,11 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
 
   const ct = finding.clinical_trials;
 
-  // Hide trials the agent judged a different disease/drug from the tables, while
-  // keeping the verbatim total_count headers. Mirrors the markdown report.
+  // Only relevance-reviewed trials are evidence and appear in the tables.
   const contaminated = ct?.contaminated_nct_ids ?? [];
-  const completedSplit = partitionTrials(ct?.completed?.trials ?? [], contaminated);
-  const terminatedSplit = partitionTrials(ct?.terminated?.trials ?? [], contaminated);
+  const relevant = ct?.relevant_nct_ids ?? [];
+  const completedSplit = partitionTrials(ct?.completed?.trials ?? [], relevant, contaminated);
+  const terminatedSplit = partitionTrials(ct?.terminated?.trials ?? [], relevant, contaminated);
   const excludedCount = completedSplit.excluded.length + terminatedSplit.excluded.length;
 
   return (
@@ -61,27 +73,34 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
           {ct.summary && <Markdown>{ct.summary}</Markdown>}
 
           <div className="metrics">
-            <Kpi label="Total trials" value={ct.search?.total_count ?? 0} />
-            <Kpi label="Recruiting" value={ct.search?.by_status["RECRUITING"] ?? 0} />
+            <Kpi label="Relevant reviewed" value={ct.search_coverage?.relevant_records ?? "—"} />
             <Kpi
-              label="Active (not recruiting)"
-              value={ct.search?.by_status["ACTIVE_NOT_RECRUITING"] ?? 0}
+              label="Registry query matches"
+              value={ct.search_coverage?.registry_query_matches ?? ct.search?.total_count ?? "—"}
+            />
+            <Kpi
+              label="Recruiting relevant"
+              value={ct.search_coverage?.relevant_by_status["RECRUITING"] ?? "—"}
+            />
+            <Kpi
+              label="Active relevant"
+              value={ct.search_coverage?.relevant_by_status["ACTIVE_NOT_RECRUITING"] ?? "—"}
             />
           </div>
 
-          {ct.search && ct.search.total_count > 0 && (
+          {ct.search_coverage && ct.search_coverage.relevant_records > 0 && (
             <>
-              <h4>Status breakdown</h4>
+              <h4>Relevant reviewed status breakdown</h4>
               <StatusDonut
-                slices={statusSlices(ct.search.by_status)}
-                total={ct.search.total_count}
+                slices={statusSlices(ct.search_coverage.relevant_by_status)}
+                total={ct.search_coverage.relevant_records}
               />
             </>
           )}
 
           {ct.completed && completedSplit.shown.length > 0 && (
             <>
-              <h4>Completed trials ({ct.completed.total_count} total)</h4>
+              <h4>Completed trials ({coverageLabel(ct.completed_coverage)})</h4>
               <PhaseFunnel
                 slices={phaseSlices(completedSplit.shown)}
                 active={phaseFilter}
@@ -97,7 +116,7 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
 
           {ct.terminated && terminatedSplit.shown.length > 0 && (
             <>
-              <h4>Terminated trials ({ct.terminated.total_count})</h4>
+              <h4>Terminated trials ({coverageLabel(ct.terminated_coverage)})</h4>
               <div className="terminated-list">
                 {terminatedSplit.shown.slice(0, TERMINATED_LIMIT).map((t) => (
                   <div className="card" key={t.nct_id}>
@@ -141,7 +160,7 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
   );
 }
 
-function Kpi({ label, value }: { label: string; value: number }) {
+function Kpi({ label, value }: { label: string; value: number | string }) {
   return (
     <div className="metric">
       <span className="metric-label">{label}</span>

@@ -54,18 +54,23 @@ class EvidenceSummary(BaseModel):
     # DRUG-LEVEL safety blurb — the drug's drug-wide safety signal (~identical across candidates;
     # the supervisor collapses these into one shown once at the top of the report). "" = no signal.
     safety_summary: str = ""
+    regulatory_safety_summary: str = ""
+    pharmacovigilance_summary: str = ""
+    literature_safety_summary: str = ""
+    label_safety_available: bool | None = None
     safety_pmids: list[str] = []
     # Severity of the DRUG-LEVEL safety signal. Production: deterministic from OT warning_type
     # (withdrawn / black_box, else serious when an OT AE signal exists). Holdout (OT suppressed):
     # LLM-picked from pre-cutoff literature (serious / moderate). "none" = no signal.
-    safety_severity: Literal[
-        "withdrawn", "black_box", "serious", "moderate", "none"
-    ] = "none"
+    safety_severity: (
+        Literal["withdrawn", "black_box", "serious", "moderate", "none"] | None
+    ) = None
     # DISEASE-SPECIFIC safety — whether the disease-scoped literature reports a harm for THIS drug
     # IN THIS INDICATION's context (validated concrete question, not the fuzzy "unique to disease").
-    # Drives the per-candidate report/table flag. False when the indication's safety literature is
-    # efficacy-only or absent (NOT "confirmed safe").
-    indication_harm: bool = False
+    # Drives the per-candidate report/table flag. None means there was no usable disease-scoped
+    # evidence or the classification was unavailable. False means the supplied papers were
+    # successfully reviewed and none reported a concrete attributable harm.
+    indication_harm: bool | None = None
     indication_harm_summary: str = ""
     indication_harm_pmids: list[str] = []
 

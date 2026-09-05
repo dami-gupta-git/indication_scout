@@ -66,6 +66,17 @@ export interface TerminatedTrialsResult {
   trials: Trial[];
 }
 
+export interface TrialRelevanceCoverage {
+  registry_query_matches: number;
+  retrieved_records: number;
+  classified_records: number;
+  relevant_records: number;
+  contaminated_records: number;
+  unreviewed_records: number;
+  coverage_complete: boolean;
+  relevant_by_status: Record<string, number>;
+}
+
 export interface CompetitorEntry {
   sponsor: string;
   drug_name: string;
@@ -86,10 +97,12 @@ export interface ClinicalTrialsOutput {
   search: SearchTrialsResult | null;
   completed: CompletedTrialsResult | null;
   terminated: TerminatedTrialsResult | null;
+  search_coverage: TrialRelevanceCoverage | null;
+  completed_coverage: TrialRelevanceCoverage | null;
+  terminated_coverage: TrialRelevanceCoverage | null;
   landscape: IndicationLandscape | null;
   summary: string;
-  // NCTs the agent judged a different disease/drug — filtered from the trial
-  // tables (mirrors the markdown report). The total_count headers stay verbatim.
+  relevant_nct_ids: string[];
   contaminated_nct_ids: string[];
 }
 
@@ -104,6 +117,16 @@ export interface EvidenceSummary {
   contradicting_pmids: string[];
   // Relevant non-efficacy (PK/safety/mechanism) studies — cited as context, no direction.
   neutral_pmids: string[];
+  safety_summary: string;
+  regulatory_safety_summary: string;
+  pharmacovigilance_summary: string;
+  literature_safety_summary: string;
+  label_safety_available: boolean | null;
+  safety_pmids: string[];
+  safety_severity: "withdrawn" | "black_box" | "serious" | "moderate" | "none" | null;
+  indication_harm: boolean | null;
+  indication_harm_summary: string;
+  indication_harm_pmids: string[];
 }
 
 export interface LiteratureOutput {
@@ -140,6 +163,11 @@ export interface SupervisorOutput {
   disease_findings: CandidateFindings[];
   top_diseases: string[];
   summary: string;
+  drug_safety_summary: string;
+  drug_regulatory_safety_summary: string;
+  drug_pharmacovigilance_summary: string;
+  drug_literature_safety_summary: string;
+  drug_safety_pmids: string[];
 }
 
 export interface AnalysisCreated {

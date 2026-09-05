@@ -12,6 +12,7 @@ import pytest
 from langchain_core.messages import HumanMessage, ToolMessage
 
 from indication_scout.agents.clinical_trials.clinical_trials_agent import (
+    _derive_relevance_coverage,
     run_clinical_trials_agent,
 )
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
@@ -32,6 +33,59 @@ from indication_scout.models.model_clinical_trials import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def test_derive_relevance_coverage_keeps_query_matches_separate():
+    result = SearchTrialsResult(
+        total_count=5,
+        trials=[
+            Trial(nct_id="NCT_REL", overall_status="RECRUITING"),
+            Trial(nct_id="NCT_CONTAM", overall_status="COMPLETED"),
+        ],
+    )
+
+    coverage = _derive_relevance_coverage(
+        result,
+        relevant_nct_ids={"NCT_REL"},
+        contaminated_nct_ids={"NCT_CONTAM"},
+    )
+
+    assert coverage is not None
+    assert coverage.registry_query_matches == 5
+    assert coverage.retrieved_records == 2
+    assert coverage.classified_records == 2
+    assert coverage.relevant_records == 1
+    assert coverage.contaminated_records == 1
+    assert coverage.unreviewed_records == 3
+    assert coverage.coverage_complete is False
+    assert coverage.relevant_by_status == {"RECRUITING": 1}
+
+
+def test_derive_relevance_coverage_is_exact_when_all_matches_classified():
+    result = SearchTrialsResult(
+        total_count=2,
+        trials=[
+            Trial(nct_id="NCT_REL", overall_status="RECRUITING"),
+            Trial(nct_id="NCT_CONTAM", overall_status="COMPLETED"),
+        ],
+    )
+
+    coverage = _derive_relevance_coverage(
+        result,
+        relevant_nct_ids={"NCT_REL"},
+        contaminated_nct_ids={"NCT_CONTAM"},
+    )
+
+    assert coverage is not None
+    assert coverage.registry_query_matches == 2
+    assert coverage.retrieved_records == 2
+    assert coverage.classified_records == 2
+    assert coverage.relevant_records == 1
+    assert coverage.contaminated_records == 1
+    assert coverage.unreviewed_records == 0
+    assert coverage.coverage_complete is True
+    assert coverage.relevant_by_status == {"RECRUITING": 1}
+
 
 # ------------------------------------------------------------------
 # Shared test data

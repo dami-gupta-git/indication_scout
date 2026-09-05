@@ -633,10 +633,11 @@ Trial
 
 ### Pair-scoped result models
 
-These follow a consistent count + top-50 exemplars pattern. `total_count` is the exact
-number of matching trials (via `countTotal`); `trials` is the top 50 by enrollment for the
-agent to inspect. Stop-category classification is derived on read at the tool layer (no
-separate field stored).
+These follow a count plus top-50 exemplars pattern. `total_count` is the exact registry query-match
+count before relevance review; it is search coverage, not supporting evidence. `trials` is the top
+50 by enrollment for the agent to inspect. `ClinicalTrialsOutput` adds per-scope relevance coverage
+with retrieved, classified, relevant, contaminated, and unreviewed counts. Exact relevant totals
+are reported only when every query match was retrieved and classified.
 
 ```
 SearchTrialsResult
@@ -835,10 +836,13 @@ EvidenceSummary
  |-- contaminated_pmids: list[str] = []      # excluded (wrong drug/disease or approved sub-indication)
  |-- neutral_pmids: list[str] = []           # relevant but no efficacy result (PK/safety/mechanism)
  |   # --- Safety (populated by the safety_search tool; see "Drug Safety" below) ---
- |-- safety_summary: str = ""                # DRUG-LEVEL safety blurb (drug-wide; ~identical per candidate)
+ |-- safety_summary: str = ""                # combined rendering of source-separated drug-wide facts
+ |-- regulatory_safety_summary: str = ""     # exact label text + separately labeled OT metadata
+ |-- pharmacovigilance_summary: str = ""     # FAERS associations, not causality
+ |-- literature_safety_summary: str = ""     # holdout-eligible literature only
  |-- safety_pmids: list[str] = []            # PMIDs cited in safety_summary
- |-- safety_severity: "withdrawn" | "black_box" | "serious" | "moderate" | "none" = "none"
- |-- indication_harm: bool = False           # DISEASE-SPECIFIC: a harm reported for THIS drug IN THIS indication
+ |-- safety_severity: "withdrawn" | "black_box" | "serious" | "moderate" | "none" | None
+ |-- indication_harm: bool | None = None      # confirmed harm, reviewed negative, or unavailable
  |-- indication_harm_summary: str = ""
  +-- indication_harm_pmids: list[str] = []
 ```
@@ -870,26 +874,21 @@ for a toxicity query despite 1,600+ citations); Europe PMC's `citedByCount` draw
 citation graph than NCBI esummary's (blank) `pmcrefcount`. Holdout also applies the
 `_filter_pmids_by_date` `sortpubdate` post-guard (PubMed's `maxdate` trusts the unreliable `pdat`).
 
-`RetrievalService.safety_search` fetches BOTH pools (drug-level + disease-scoped) and dedupes
-drug-level-first.
+`RetrievalService.safety_search` preserves both collections. Its combined view is used only for
+drug-wide synthesis; the indication classifier receives only disease-scoped abstracts.
 
 ### Summarization
 
-- **Drug-level** — `RetrievalService.summarize_safety` (returns `(summary, pmids, severity)`).
-  PRODUCTION: OpenTargets `drugWarnings` + top FAERS `adverseEvents` are the AUTHORITATIVE signal
-  (curated regulatory / pharmacovigilance data, stated as fact); the fetched abstracts are cited
-  provenance. `safety_severity` is DETERMINISTIC from the OT `warning_type` (Withdrawn / Black Box /
-  else serious). HOLDOUT (`date_before` set): OT warnings/AEs are UNDATEABLE (OT has no date API), so
-  they are OMITTED to avoid leaking post-cutoff knowledge; the summary is built ONLY from the
-  date-filtered literature and severity is LLM-picked (serious / moderate / none).
-- **Disease-specific** — `RetrievalService.classify_indication_harm` (returns
-  `(harm, summary, pmids)`). The CONCRETE, validated question: does the disease-scoped literature
-  report a harm for the drug IN THIS indication's context? (The fuzzy "is the harm *unique* to the
-  disease" framing over-called and was rejected.) Prompt: `prompts/classify_indication_harm.txt`.
+- **Drug-level** — `RetrievalService.summarize_safety` returns a typed source-separated assessment.
+  Production boxed-warning text comes from the latest openFDA record per label set identifier.
+  Open Targets warning rows remain metadata, and FAERS values remain non-causal associations.
+  Holdout runs omit current label, Open Targets, and current pharmacovigilance data.
+- **Disease-specific** — `RetrievalService.classify_indication_harm` adjudicates each disease-scoped
+  PMID as confirmed harm, safety assessed only, irrelevant, or unclear. Confirmed harm requires a
+  named adverse outcome and an exact supporting quote present in the supplied title or abstract.
 
-Absent-signal cases return empty (`""`/`[]`/`False`/`"none"`) — never a fabricated "no concerns
-found." OT safety data is drug-level: its warning `efoTerm` names the HARM, not the indication, so
-it alone cannot answer the disease-specific question — hence the disease-scoped literature pass.
+No disease-scoped evidence, incomplete model output, and unverified source quotes produce an
+unavailable result. A reviewed negative is not rendered as evidence that the drug is safe.
 
 ### Report rendering & ranking
 

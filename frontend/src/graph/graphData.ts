@@ -104,12 +104,12 @@ export function buildGraph(result: SupervisorOutput): GraphData {
   // Disease nodes (one per investigated candidate disease) + target→disease edges.
   for (const disease of diseaseInfo.keys()) {
     const f = findingByDisease.get(disease)!;
-    const search = f.clinical_trials?.search ?? null;
+    const coverage = f.clinical_trials?.search_coverage ?? null;
     nodes.push({
       id: nodeId("disease", disease),
       kind: "disease",
       label: disease,
-      trialCount: search ? search.total_count : 0,
+      trialCount: coverage ? coverage.relevant_records : 0,
       source: f.source,
       verdict: f.blurb?.verdict ?? "",
       strength: f.literature?.evidence_summary?.strength ?? null,

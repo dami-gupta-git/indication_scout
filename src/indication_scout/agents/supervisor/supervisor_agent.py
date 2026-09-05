@@ -366,6 +366,9 @@ async def run_supervisor_agent(
     # top-first disease_findings order). PMIDs: order-preserving union across candidates (the per-
     # candidate lists overlap heavily but differ in order; union keeps the anchor stable run-to-run).
     drug_safety_summary = ""
+    drug_regulatory_safety_summary = ""
+    drug_pharmacovigilance_summary = ""
+    drug_literature_safety_summary = ""
     drug_safety_pmids: list[str] = []
     for finding in disease_findings:
         es = finding.literature.evidence_summary if finding.literature else None
@@ -373,6 +376,12 @@ async def run_supervisor_agent(
             continue
         if not drug_safety_summary and es.safety_summary:
             drug_safety_summary = es.safety_summary
+        if not drug_regulatory_safety_summary and es.regulatory_safety_summary:
+            drug_regulatory_safety_summary = es.regulatory_safety_summary
+        if not drug_pharmacovigilance_summary and es.pharmacovigilance_summary:
+            drug_pharmacovigilance_summary = es.pharmacovigilance_summary
+        if not drug_literature_safety_summary and es.literature_safety_summary:
+            drug_literature_safety_summary = es.literature_safety_summary
         for pmid in es.safety_pmids:
             if pmid not in drug_safety_pmids:
                 drug_safety_pmids.append(pmid)
@@ -386,5 +395,8 @@ async def run_supervisor_agent(
         summary=summary,
         date_before=date_before,
         drug_safety_summary=drug_safety_summary,
+        drug_regulatory_safety_summary=drug_regulatory_safety_summary,
+        drug_pharmacovigilance_summary=drug_pharmacovigilance_summary,
+        drug_literature_safety_summary=drug_literature_safety_summary,
         drug_safety_pmids=drug_safety_pmids,
     )

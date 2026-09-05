@@ -20,22 +20,37 @@ function trial(nctId: string): Trial {
 describe("partitionTrials", () => {
   it("splits contaminated NCTs out while preserving order of the rest", () => {
     const trials = [trial("NCT1"), trial("NCT2"), trial("NCT3")];
-    const { shown, excluded } = partitionTrials(trials, ["NCT2"]);
+    const { shown, excluded } = partitionTrials(
+      trials,
+      ["NCT1", "NCT3"],
+      ["NCT2"],
+    );
     expect(shown.map((t) => t.nct_id)).toEqual(["NCT1", "NCT3"]);
     expect(excluded.map((t) => t.nct_id)).toEqual(["NCT2"]);
   });
 
   it("returns all trials as shown when nothing is contaminated", () => {
     const trials = [trial("NCT1"), trial("NCT2")];
-    const { shown, excluded } = partitionTrials(trials, []);
+    const { shown, excluded } = partitionTrials(trials, ["NCT1", "NCT2"], []);
     expect(shown.map((t) => t.nct_id)).toEqual(["NCT1", "NCT2"]);
     expect(excluded).toEqual([]);
   });
 
   it("excludes every trial when all are contaminated", () => {
     const trials = [trial("NCT1"), trial("NCT2")];
-    const { shown, excluded } = partitionTrials(trials, ["NCT1", "NCT2"]);
+    const { shown, excluded } = partitionTrials(
+      trials,
+      [],
+      ["NCT1", "NCT2"],
+    );
     expect(shown).toEqual([]);
     expect(excluded.map((t) => t.nct_id)).toEqual(["NCT1", "NCT2"]);
+  });
+
+  it("hides records that were not relevance-classified", () => {
+    const trials = [trial("NCT1"), trial("NCT2")];
+    const { shown, excluded } = partitionTrials(trials, ["NCT1"], []);
+    expect(shown.map((t) => t.nct_id)).toEqual(["NCT1"]);
+    expect(excluded).toEqual([]);
   });
 });

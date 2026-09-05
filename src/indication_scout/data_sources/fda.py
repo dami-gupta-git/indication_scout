@@ -13,6 +13,7 @@ from indication_scout.constants import (
     OPENFDA_LABEL_LIMIT,
 )
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
+from indication_scout.models.model_fda import FDALabelSafetyRecord
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
@@ -137,3 +138,128 @@ class FDAClient(BaseClient):
             all_indications.extend(result)
 
         return list(dict.fromkeys(all_indications))
+
+    async def get_label_safety(self, drug_name: str) -> list[FDALabelSafetyRecord]:
+        """Fetch typed warning fields from openFDA labels matching one drug name."""
+        cache_params = {
+            "drug_name": drug_name.lower(),
+            "limit": OPENFDA_LABEL_LIMIT,
+            "shape": "label_safety_v1",
+        }
+        cached = cache_get("fda_label_safety", cache_params, self.cache_dir)
+        if cached is not None:
+            return [FDALabelSafetyRecord(**record) for record in cached]
+
+        params: dict[str, str | int] = {
+            "search": (
+                f'(openfda.brand_name:"{drug_name}"'
+                f' OR openfda.generic_name:"{drug_name}")'
+            ),
+            "limit": OPENFDA_LABEL_LIMIT,
+        }
+        if _settings.openfda_api_key:
+            params["api_key"] = _settings.openfda_api_key
+
+        try:
+            data = await self._rest_get(OPENFDA_BASE_URL, params=params)
+        except DataSourceError as exc:
+            if exc.status_code == 404:
+                cache_set(
+                    "fda_label_safety",
+                    cache_params,
+                    [],
+                    self.cache_dir,
+                    ttl=OPENFDA_EMPTY_LABEL_TTL,
+                )
+                return []
+            raise
+
+        results = data.get("results", []) if isinstance(data, dict) else []
+        records = [
+            FDALabelSafetyRecord(
+                set_id=result.get("set_id"),
+                effective_time=result.get("effective_time"),
+                brand_names=[
+                    str(name)
+                    for name in (result.get("openfda", {}).get("brand_name") or [])
+                    if name
+                ],
+                generic_names=[
+                    str(name)
+                    for name in (result.get("openfda", {}).get("generic_name") or [])
+                    if name
+                ],
+                boxed_warnings=[
+                    str(text) for text in (result.get("boxed_warning") or []) if text
+                ],
+                warnings=list(
+                    dict.fromkeys(
+                        str(text)
+                        for text in (
+                            (result.get("warnings") or [])
+                            + (result.get("warnings_and_cautions") or [])
+                        )
+                        if text
+                    )
+                ),
+            )
+            for result in results
+        ]
+        ttl = CACHE_TTL if records else OPENFDA_EMPTY_LABEL_TTL
+        cache_set(
+            "fda_label_safety",
+            cache_params,
+            [record.model_dump(mode="json") for record in records],
+            self.cache_dir,
+            ttl=ttl,
+        )
+        return records
+
+    async def get_all_label_safety(
+        self, drug_names: list[str]
+    ) -> list[FDALabelSafetyRecord]:
+        """Fetch and deduplicate label-safety records across resolved drug names."""
+        if not drug_names:
+            return []
+
+        results = await asyncio.gather(
+            *(self.get_label_safety(name) for name in drug_names),
+            return_exceptions=True,
+        )
+        records: list[FDALabelSafetyRecord] = []
+        for index, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.warning(
+                    "openFDA label-safety fetch failed for %r: %s",
+                    drug_names[index],
+                    result,
+                )
+                raise result
+            records.extend(result)
+
+        deduplicated: dict[
+            tuple[str | None, str | None, tuple[str, ...], tuple[str, ...]],
+            FDALabelSafetyRecord,
+        ] = {}
+        for record in records:
+            key = (
+                record.set_id,
+                record.effective_time,
+                tuple(record.boxed_warnings),
+                tuple(record.warnings),
+            )
+            deduplicated.setdefault(key, record)
+        unique_records = list(deduplicated.values())
+        latest_effective_time: dict[str, str] = {}
+        for record in unique_records:
+            if record.set_id and record.effective_time:
+                current = latest_effective_time.get(record.set_id)
+                if current is None or record.effective_time > current:
+                    latest_effective_time[record.set_id] = record.effective_time
+        return [
+            record
+            for record in unique_records
+            if not record.set_id
+            or not record.effective_time
+            or latest_effective_time.get(record.set_id) == record.effective_time
+        ]

@@ -20,6 +20,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from indication_scout.agents.clinical_trials.clinical_trials_output import (
+    TrialRelevanceCoverage,
+)
 from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
 from indication_scout.services.llm import parse_last_json_object, query_llm
@@ -39,6 +42,7 @@ closed). You must NOT re-judge or contradict the stage.
 GIVEN (ground truth — do not contradict):
 - stage: {stage}
 - active_programs: {active_programs}
+- reviewed trial coverage: {coverage}
 - first_approval (year the drug was first approved anywhere; "unknown" if not known): \
 {first_approval}
 
@@ -83,6 +87,23 @@ def _format_trials(trials: list[Trial]) -> str:
     return "\n".join(lines)
 
 
+def _format_coverage(coverage: TrialRelevanceCoverage | None) -> str:
+    if coverage is None:
+        return "unavailable"
+    if coverage.coverage_complete:
+        return (
+            f"{coverage.relevant_records} relevant and "
+            f"{coverage.contaminated_records} excluded; complete coverage of "
+            f"{coverage.registry_query_matches} registry query matches"
+        )
+    return (
+        f"at least {coverage.relevant_records} relevant among "
+        f"{coverage.classified_records} reviewed; "
+        f"{coverage.registry_query_matches} registry query matches and "
+        f"{coverage.unreviewed_records} not reviewed"
+    )
+
+
 @dataclass(frozen=True)
 class CTSummary:
     """The CT agent's isolated trial-section output: human-report prose plus a TYPED closure
@@ -118,6 +139,7 @@ async def judge_ct_summary(
     *,
     stage: str,
     active_programs: str,
+    coverage: TrialRelevanceCoverage | None = None,
     first_approval: int | None,
     cache_dir: Path,
     drug: str = "",
@@ -147,6 +169,7 @@ async def judge_ct_summary(
         "indication": indication,
         "stage": stage,
         "active_programs": active_programs,
+        "coverage": coverage.model_dump(mode="json") if coverage else None,
         "first_approval": first_approval_str,
         "trials": facts,
     }
@@ -161,6 +184,7 @@ async def judge_ct_summary(
     prompt = _CT_SUMMARY_PROMPT.format(
         stage=stage,
         active_programs=active_programs,
+        coverage=_format_coverage(coverage),
         first_approval=first_approval_str,
         trials=_format_trials(relevant_trials),
     )

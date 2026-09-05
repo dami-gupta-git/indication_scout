@@ -8,38 +8,41 @@ import time
 from datetime import date
 from pathlib import Path
 
-from pydantic import BaseModel
-
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
-from typing import Any
-
 from typing_extensions import deprecated
 
+from indication_scout.agents.literature.pubmed_ae import search_adverse_events
 from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
     SAFETY_TOP_ADVERSE_EVENTS,
 )
+from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import ChEMBLClient, get_all_drug_names
+from indication_scout.data_sources.fda import FDAClient
 from indication_scout.data_sources.open_targets import (
     CompetitorRawData,
     OpenTargetsClient,
+)
+from indication_scout.data_sources.pubmed import PubMedClient
+from indication_scout.models.model_drug_profile import DrugProfile
+from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.models.model_fda import FDALabelSafetyRecord
+from indication_scout.models.model_open_targets import AdverseEvent, DrugWarning
+from indication_scout.models.model_pubmed_abstract import PubmedAbstract
+from indication_scout.models.model_safety import (
+    DrugSafetyAssessment,
+    SafetyPaperVerdict,
 )
 from indication_scout.services.disease_helper import (
     llm_normalize_disease_batch,
     merge_duplicate_diseases,
 )
-from indication_scout.data_sources.pubmed import PubMedClient
-from indication_scout.agents.literature.pubmed_ae import search_adverse_events
-from indication_scout.models.model_drug_profile import DrugProfile
-from indication_scout.models.model_pubmed_abstract import PubmedAbstract
-from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
 from indication_scout.services.embeddings import embed_async
-from indication_scout.services.progress import PHASE_LITERATURE, emit_progress
-from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.llm import (
     parse_last_json_object,
     parse_llm_response,
@@ -47,6 +50,8 @@ from indication_scout.services.llm import (
     query_small_llm,
     strip_markdown_fences,
 )
+from indication_scout.services.progress import PHASE_LITERATURE, emit_progress
+from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
@@ -143,6 +148,21 @@ class AbstractResult(BaseModel):
     pubtype: list[str] = []
 
 
+class SafetySearchResult(BaseModel):
+    """Adverse-event abstracts with retrieval provenance preserved."""
+
+    drug_level: list[AbstractResult]
+    disease_scoped: list[AbstractResult]
+
+    @property
+    def combined(self) -> list[AbstractResult]:
+        """Return an order-preserving union for drug-wide safety synthesis."""
+        by_pmid: dict[str, AbstractResult] = {}
+        for abstract in self.drug_level + self.disease_scoped:
+            by_pmid.setdefault(abstract.pmid, abstract)
+        return list(by_pmid.values())
+
+
 class RetrievalService:
     """Stateful retrieval service bound to a specific cache directory.
 
@@ -153,6 +173,9 @@ class RetrievalService:
     def __init__(self, cache_dir: Path) -> None:
         self.cache_dir = cache_dir
         cache_dir.mkdir(parents=True, exist_ok=True)
+        self._label_safety_tasks: dict[
+            str, asyncio.Task[list[FDALabelSafetyRecord]]
+        ] = {}
 
     # @deprecated
     # async def _normalize_disease_groups(
@@ -1025,8 +1048,8 @@ class RetrievalService:
         chembl_id: str,
         date_before: date | None = None,
         disease: str | None = None,
-    ) -> list[AbstractResult]:
-        """Fetch adverse-event abstracts (provenance for the safety summary), holdout-clean.
+    ) -> SafetySearchResult:
+        """Fetch adverse-event abstracts while preserving query provenance.
 
         Delegates to `pubmed_ae.search_adverse_events`, ranked by Europe PMC citation count with
         `date_before` honored by the underlying PubMed search. Fetches TWO pools and dedupes:
@@ -1034,32 +1057,39 @@ class RetrievalService:
           - DISEASE-SCOPED (when `disease` is set) — indication-specific safety papers the drug-level
             pool misses (e.g. rofecoxib×colorectal → APPROVe).
 
-        Returns [] when there is no adverse-event literature (no fabrication).
+        Empty collections mean no adverse-event literature was retrieved.
         """
         pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
 
         drug_level = await search_adverse_events(
             pref_name, self.cache_dir, date_before=date_before
         )
-        disease_scoped: list = []
+        disease_scoped: list[PubmedAbstract] = []
         if disease:
             disease_scoped = await search_adverse_events(
                 pref_name, self.cache_dir, date_before=date_before, disease=disease
             )
 
-        # Order-preserving dedup: drug-level first (drug-wide signal), then indication-specific.
-        by_pmid: dict[str, Any] = {}
-        for a in drug_level + disease_scoped:
-            by_pmid.setdefault(a.pmid, a)
-        return [
-            AbstractResult(
-                pmid=a.pmid,
-                title=a.title or "",
-                abstract=a.abstract or "",
-                similarity=0.0,
-            )
-            for a in by_pmid.values()
-        ]
+        def _convert(items: list[PubmedAbstract]) -> list[AbstractResult]:
+            by_pmid: dict[str, AbstractResult] = {}
+            for item in items:
+                if not item.pmid or not item.abstract:
+                    continue
+                by_pmid.setdefault(
+                    item.pmid,
+                    AbstractResult(
+                        pmid=item.pmid,
+                        title=item.title,
+                        abstract=item.abstract,
+                        similarity=0.0,
+                    ),
+                )
+            return list(by_pmid.values())
+
+        return SafetySearchResult(
+            drug_level=_convert(drug_level),
+            disease_scoped=_convert(disease_scoped),
+        )
 
     async def summarize_safety(
         self,
@@ -1068,155 +1098,199 @@ class RetrievalService:
         drug_profile: DrugProfile,
         safety_abstracts: list[AbstractResult],
         date_before: date | None = None,
-    ) -> tuple[str, list[str], str]:
-        """Summarize the drug's safety signal for a candidate disease using an LLM.
+    ) -> DrugSafetyAssessment:
+        """Build a source-separated drug-wide safety assessment.
 
-        PRODUCTION (date_before is None): OpenTargets warnings + top adverse events are the
-        AUTHORITATIVE signal (curated regulatory / FAERS data, stated as fact); `safety_abstracts`
-        are supporting PubMed provenance cited where they back a claim.
-
-        HOLDOUT (date_before set): the OT warnings/adverse-events are UNDATEABLE (OT has no date
-        API), so they would leak post-cutoff knowledge (e.g. a 2001 withdrawal in a pre-2001 run).
-        They are OMITTED; the summary is built ONLY from the date-filtered `safety_abstracts`.
-
-        Returns (safety_summary, safety_pmids, safety_severity). safety_severity drives the terse
-        ranking flag: production is DETERMINISTIC from the OT warning_type (withdrawn / black_box /
-        serious); holdout is LLM-picked from the pre-cutoff literature (serious / moderate / none).
-        Returns ("", [], "none") when there is no signal (no fabricated "no concerns found").
+        Current production reports use exact openFDA boxed-warning text and deterministic
+        Open Targets/FAERS metadata. Holdout reports use only date-filtered literature.
         """
         holdout = date_before is not None
         if holdout:
             warnings = []
             top_aes = []
+            label_records = []
+            label_data_available = None
         else:
             warnings = drug_profile.drug_warnings
             top_aes = sorted(
-                drug_profile.adverse_events,
-                key=lambda a: a.log_likelihood_ratio or 0.0,
+                [
+                    event
+                    for event in drug_profile.adverse_events
+                    if event.log_likelihood_ratio is not None
+                ],
+                key=lambda event: event.log_likelihood_ratio,
                 reverse=True,
             )[:SAFETY_TOP_ADVERSE_EVENTS]
+            try:
+                label_records = await self._get_label_safety_records(chembl_id)
+                label_data_available = True
+            except DataSourceError as exc:
+                logger.warning(
+                    "summarize_safety: openFDA label safety unavailable for %s: %s",
+                    chembl_id,
+                    exc,
+                )
+                label_records = []
+                label_data_available = False
 
-        # Nothing to ground a summary on → no safety summary. In production this means no OT signal;
-        # in holdout it means the date-filtered AE literature came back empty. Absence is not a
-        # fabricated "safe" verdict; downstream renders nothing.
-        if not warnings and not top_aes and not safety_abstracts:
-            return "", [], "none"
-
-        # PRODUCTION severity is deterministic from the OT warning_type (can't be wrong): Withdrawn
-        # outranks Black Box Warning; with an OT AE signal but no formal warning → "serious". In
-        # holdout there is no OT signal, so severity is deferred to the LLM (parsed below).
-        prod_severity = self._ot_warning_severity(warnings, top_aes)
+        regulatory_summary = self._format_regulatory_safety(label_records, warnings)
+        pharmacovigilance_summary = self._format_pharmacovigilance(top_aes)
 
         cache_params = {
             "chembl_id": chembl_id,
             "disease": disease,
+            "logic_version": "source_separated_safety_v1",
             "warnings": sorted(
                 f"{w.warning_type}|{w.description or ''}|{w.toxicity_class or ''}"
                 for w in warnings
             ),
-            "adverse_events": sorted(a.name for a in top_aes),
+            "adverse_events": sorted(
+                f"{a.name}|{a.count}|{a.log_likelihood_ratio}" for a in top_aes
+            ),
+            "label_records": sorted(
+                f"{record.set_id}|{record.effective_time}|{'|'.join(record.boxed_warnings)}"
+                for record in label_records
+            ),
+            "label_data_available": label_data_available,
             "pmids": sorted(r.pmid for r in safety_abstracts),
-            "date_before": date_before,
+            "date_before": date_before.isoformat() if date_before else None,
             "llm_model": _settings.llm_model,
         }
         cached = cache_get("summarize_safety", cache_params, self.cache_dir)
         if cached is not None:
-            return (
-                cached["safety_summary"],
-                cached["safety_pmids"],
-                cached.get("safety_severity", "none"),
-            )
+            return DrugSafetyAssessment(**cached)
 
-        pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
-
-        warnings_block = "\n".join(
-            f"- [{w.warning_type}] {w.description or ''}"
-            + (f" (toxicity class: {w.toxicity_class})" if w.toxicity_class else "")
-            + (f" (year: {w.year})" if w.year else "")
-            for w in warnings
-        ) or "(none)"
-        # count / log_likelihood_ratio are Optional on AdverseEvent — coerce to 0 for the prompt
-        # (mirrors the `or 0.0` in the sort above) so a null field can't crash the format string.
-        adverse_events_block = "\n".join(
-            f"- {a.name} (reports: {a.count or 0}, signal logLR: {(a.log_likelihood_ratio or 0.0):.1f})"
-            for a in top_aes
-        ) or "(none)"
-        abstracts_block = "\n\n".join(
-            f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
-            for r in safety_abstracts
-        ) or "(no supporting abstracts retrieved)"
-
-        template = (_PROMPTS_DIR / "summarize_safety.txt").read_text()
-        prompt = template.format(
-            drug_name=pref_name,
-            disease_name=disease,
-            warnings=warnings_block,
-            adverse_events=adverse_events_block,
-            abstracts=abstracts_block,
-        )
-
-        response = await query_llm(prompt)
-        data = parse_last_json_object(response)
-        if data is None:
-            logger.error(
-                "summarize_safety: could not parse a JSON object for %s / %s; returning no "
-                "safety summary. Response was: %s",
-                chembl_id,
-                disease,
-                response,
-            )
-            data = {"safety_summary": "", "safety_pmids": [], "safety_severity": "none"}
-
-        safety_summary = str(data.get("safety_summary") or "")
-        safety_pmids = [str(p) for p in (data.get("safety_pmids") or [])]
-
-        # Production: deterministic OT severity. Holdout: LLM-picked from the literature, clamped to
-        # the holdout-legal set (serious / moderate / none — never withdrawn/black_box, which are
-        # OT regulatory facts unavailable in holdout).
+        literature_summary = ""
+        safety_pmids: list[str] = []
+        safety_severity: str | None
+        cacheable = True
         if holdout:
-            llm_sev = str(data.get("safety_severity") or "none").strip().lower()
-            safety_severity = (
-                llm_sev if llm_sev in ("serious", "moderate", "none") else "none"
-            )
+            if safety_abstracts:
+                pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
+                abstracts_block = "\n\n".join(
+                    f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
+                    for r in safety_abstracts
+                )
+                template = (_PROMPTS_DIR / "summarize_safety.txt").read_text()
+                prompt = template.format(
+                    drug_name=pref_name,
+                    disease_name=disease,
+                    abstracts=abstracts_block,
+                )
+                response = await query_llm(prompt)
+                data = parse_last_json_object(response)
+                if not isinstance(data, dict) or not isinstance(
+                    data.get("verdicts"), list
+                ):
+                    logger.error(
+                        "summarize_safety: unparseable holdout response for %s / %s: %s",
+                        chembl_id,
+                        disease,
+                        response,
+                    )
+                    cacheable = False
+                    safety_severity = None
+                else:
+                    try:
+                        verdicts = [
+                            SafetyPaperVerdict(**item) for item in data["verdicts"]
+                        ]
+                    except (TypeError, ValidationError):
+                        verdicts = []
+                        cacheable = False
+                    abstracts_by_pmid = {
+                        abstract.pmid: abstract for abstract in safety_abstracts
+                    }
+                    if {verdict.pmid for verdict in verdicts} != set(
+                        abstracts_by_pmid
+                    ) or len(verdicts) != len(abstracts_by_pmid):
+                        cacheable = False
+                    else:
+                        confirmed_quotes = []
+                        for verdict in verdicts:
+                            if verdict.status != "confirmed_harm":
+                                continue
+                            source = abstracts_by_pmid[verdict.pmid]
+                            quote = (verdict.evidence_quote or "").strip()
+                            outcome = (verdict.adverse_outcome or "").strip()
+                            source_text = (
+                                f"{source.title}\n{source.abstract}".casefold()
+                            )
+                            if (
+                                outcome
+                                and quote
+                                and len(quote.split()) <= 40
+                                and quote.casefold() in source_text
+                            ):
+                                confirmed_quotes.append(quote)
+                                safety_pmids.append(verdict.pmid)
+                            else:
+                                cacheable = False
+                        if confirmed_quotes:
+                            literature_summary = (
+                                "Date-eligible literature reported: "
+                                f'"{"; ".join(dict.fromkeys(confirmed_quotes))}" '
+                                f"(PMID{'s' if len(safety_pmids) != 1 else ''}: "
+                                f"{', '.join(safety_pmids)})."
+                            )
+                    safety_severity = None
+            else:
+                safety_severity = None
         else:
-            safety_severity = prod_severity
-        # An empty summary carries no signal, so force severity to none regardless of source.
-        if not safety_summary:
-            safety_severity = "none"
+            safety_severity = self._ot_warning_severity(
+                warnings,
+                top_aes,
+                has_boxed_warning=any(
+                    record.set_id and record.boxed_warnings for record in label_records
+                ),
+            )
 
-        cache_set(
-            "summarize_safety",
-            cache_params,
-            {
-                "safety_summary": safety_summary,
-                "safety_pmids": safety_pmids,
-                "safety_severity": safety_severity,
-            },
-            self.cache_dir,
-            ttl=CACHE_TTL,
+        safety_summary = "\n\n".join(
+            section
+            for section in (
+                regulatory_summary,
+                pharmacovigilance_summary,
+                literature_summary,
+            )
+            if section
         )
-        return safety_summary, safety_pmids, safety_severity
+        if not safety_summary and safety_severity == "none":
+            safety_severity = None
+
+        assessment = DrugSafetyAssessment(
+            regulatory_summary=regulatory_summary,
+            pharmacovigilance_summary=pharmacovigilance_summary,
+            literature_summary=literature_summary,
+            safety_summary=safety_summary,
+            safety_pmids=safety_pmids,
+            safety_severity=safety_severity,
+            label_data_available=label_data_available,
+        )
+
+        if cacheable:
+            cache_set(
+                "summarize_safety",
+                cache_params,
+                assessment.model_dump(mode="json"),
+                self.cache_dir,
+                ttl=CACHE_TTL,
+            )
+        return assessment
 
     async def classify_indication_harm(
         self,
         chembl_id: str,
         disease: str,
         safety_abstracts: list[AbstractResult],
-    ) -> tuple[bool, str, list[str]]:
-        """Does the safety literature report a harm for this drug IN THIS INDICATION's context?
-
-        The CONCRETE question (validated in the disease_specific_safety harness to be reliable,
-        unlike the fuzzy "is the harm unique to the disease" framing which over-called): is there an
-        abstract reporting an adverse event / toxicity / trial-stopped-for-safety for the drug used
-        for `disease`. Returns (harm_reported, one_line_summary, pmids). ("", []) / False when the
-        indication's safety literature is efficacy-only or absent (NOT "confirmed safe"). Cached.
-        """
+    ) -> tuple[bool | None, str, list[str]]:
+        """Adjudicate each disease-scoped abstract and aggregate confirmed harms."""
         if not safety_abstracts:
-            return False, "", []
+            return None, "", []
 
         cache_params = {
             "chembl_id": chembl_id,
             "disease": disease,
+            "logic_version": "per_pmid_indication_harm_v1",
             "pmids": sorted(r.pmid for r in safety_abstracts),
             "llm_model": _settings.llm_model,
         }
@@ -1230,19 +1304,87 @@ class RetrievalService:
 
         pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
         formatted = "\n\n".join(
-            f"PMID {r.pmid}: {r.title}. {(r.abstract or '')[:250]}"
+            f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
             for r in safety_abstracts
         )
         template = (_PROMPTS_DIR / "classify_indication_harm.txt").read_text()
-        prompt = template.format(
-            drug=pref_name, disease=disease, abstracts=formatted
-        )
+        prompt = template.format(drug=pref_name, disease=disease, abstracts=formatted)
 
         response = await query_llm(prompt)
-        data = parse_last_json_object(response) or {}
-        harm = bool(data.get("harm_reported_for_indication"))
-        pmids = [str(p) for p in (data.get("pmids") or [])] if harm else []
-        summary = str(data.get("reason") or "") if harm else ""
+        data = parse_last_json_object(response)
+        if not isinstance(data, dict) or not isinstance(data.get("verdicts"), list):
+            logger.warning(
+                "classify_indication_harm: unparseable response for %s / %s: %s",
+                chembl_id,
+                disease,
+                response,
+            )
+            return None, "", []
+
+        try:
+            verdicts = [SafetyPaperVerdict(**item) for item in data["verdicts"]]
+        except (TypeError, ValidationError) as exc:
+            logger.warning(
+                "classify_indication_harm: invalid verdicts for %s / %s: %s",
+                chembl_id,
+                disease,
+                exc,
+            )
+            return None, "", []
+
+        abstracts_by_pmid = {abstract.pmid: abstract for abstract in safety_abstracts}
+        verdict_pmids = [verdict.pmid for verdict in verdicts]
+        if len(verdict_pmids) != len(set(verdict_pmids)) or set(verdict_pmids) != set(
+            abstracts_by_pmid
+        ):
+            logger.warning(
+                "classify_indication_harm: PMID coverage mismatch for %s / %s",
+                chembl_id,
+                disease,
+            )
+            return None, "", []
+
+        confirmed: list[SafetyPaperVerdict] = []
+        has_unclear = False
+        for verdict in verdicts:
+            if verdict.status == "unclear":
+                has_unclear = True
+                continue
+            if verdict.status != "confirmed_harm":
+                continue
+            source = abstracts_by_pmid[verdict.pmid]
+            quote = (verdict.evidence_quote or "").strip()
+            outcome = (verdict.adverse_outcome or "").strip()
+            searchable_text = f"{source.title}\n{source.abstract}".casefold()
+            if (
+                not outcome
+                or not quote
+                or len(quote.split()) > 40
+                or quote.casefold() not in searchable_text
+            ):
+                has_unclear = True
+                continue
+            confirmed.append(verdict)
+
+        if confirmed:
+            pmids = [verdict.pmid for verdict in confirmed]
+            quotes = [
+                verdict.evidence_quote.strip()
+                for verdict in confirmed
+                if verdict.evidence_quote
+            ]
+            summary = (
+                f"Disease-scoped literature for {pref_name} in {disease} reported: "
+                f'"{"; ".join(dict.fromkeys(quotes))}" '
+                f"(PMID{'s' if len(pmids) != 1 else ''}: {', '.join(pmids)})."
+            )
+            harm: bool | None = True
+        elif has_unclear:
+            return None, "", []
+        else:
+            harm = False
+            summary = ""
+            pmids = []
 
         cache_set(
             "classify_indication_harm",
@@ -1257,14 +1399,105 @@ class RetrievalService:
         )
         return harm, summary, pmids
 
+    async def _get_label_safety_records(
+        self, chembl_id: str
+    ) -> list[FDALabelSafetyRecord]:
+        """Fetch label safety once per retrieval service and ChEMBL identifier."""
+        task = self._label_safety_tasks.get(chembl_id)
+        if task is None:
+
+            async def _fetch() -> list[FDALabelSafetyRecord]:
+                drug_names = await get_all_drug_names(chembl_id, self.cache_dir)
+                async with FDAClient(cache_dir=self.cache_dir) as client:
+                    return await client.get_all_label_safety(drug_names)
+
+            task = asyncio.create_task(_fetch())
+            self._label_safety_tasks[chembl_id] = task
+        try:
+            return await task
+        except Exception:
+            self._label_safety_tasks.pop(chembl_id, None)
+            raise
+
     @staticmethod
-    def _ot_warning_severity(warnings: list, top_aes: list) -> str:
+    def _format_regulatory_safety(
+        label_records: list[FDALabelSafetyRecord], warnings: list[DrugWarning]
+    ) -> str:
+        """Format label text and Open Targets warning metadata without conflating them."""
+        boxed_warnings = list(
+            dict.fromkeys(
+                text.strip()
+                for record in label_records
+                if record.set_id
+                for text in record.boxed_warnings
+                if text.strip()
+            )
+        )
+        sections: list[str] = []
+        if boxed_warnings:
+            sections.append(
+                "FDA label boxed-warning text:\n"
+                + "\n".join(f"- {text}" for text in boxed_warnings)
+            )
+
+        warning_types = sorted(
+            {
+                warning.warning_type.strip()
+                for warning in warnings
+                if warning.warning_type
+            }
+        )
+        toxicity_classes = sorted(
+            {
+                warning.toxicity_class.strip()
+                for warning in warnings
+                if warning.toxicity_class
+            }
+        )
+        if warning_types or toxicity_classes:
+            metadata_parts = []
+            if warning_types:
+                metadata_parts.append(f"warning type: {', '.join(warning_types)}")
+            if toxicity_classes:
+                metadata_parts.append(
+                    f"toxicity categories: {', '.join(toxicity_classes)}"
+                )
+            sections.append(
+                "Open Targets warning metadata: " + "; ".join(metadata_parts) + "."
+            )
+        return "\n\n".join(sections)
+
+    @staticmethod
+    def _format_pharmacovigilance(top_aes: list[AdverseEvent]) -> str:
+        """Format scored Open Targets/FAERS signals without causal language or zero fills."""
+        if not top_aes:
+            return ""
+        terms = []
+        for event in top_aes:
+            details = [f"logLR {event.log_likelihood_ratio:.1f}"]
+            if event.count is not None:
+                details.append(f"{event.count} reports")
+            terms.append(f"{event.name} ({'; '.join(details)})")
+        return (
+            "Open Targets/FAERS pharmacovigilance signals: "
+            + ", ".join(terms)
+            + ". These are reporting associations, not proof of causation."
+        )
+
+    @staticmethod
+    def _ot_warning_severity(
+        warnings: list[DrugWarning],
+        top_aes: list[AdverseEvent],
+        *,
+        has_boxed_warning: bool,
+    ) -> str:
         """Deterministic production safety severity from OT warning_type. Withdrawn outranks Black
-        Box Warning; an OT adverse-event signal with no formal warning → 'serious'; else 'none'."""
+        Box Warning; an OT adverse-event signal with no formal warning → 'serious'; else 'none'.
+        """
         types = {(w.warning_type or "").strip().lower() for w in warnings}
         if "withdrawn" in types:
             return "withdrawn"
-        if "black box warning" in types:
+        if has_boxed_warning or "black box warning" in types:
             return "black_box"
         if warnings or top_aes:
             return "serious"

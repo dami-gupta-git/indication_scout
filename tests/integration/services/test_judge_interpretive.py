@@ -95,7 +95,10 @@ _CASES = [
 @pytest.mark.parametrize("label,facts", _CASES, ids=[c[0] for c in _CASES])
 async def test_judge_interpretive_no_contradiction_live(label, facts, test_cache_dir):
     j = await judge_interpretive(
-        **{"trials_on_record": 3, **facts},
+        **{
+            "trial_evidence": "3 relevant trials, complete review of 3 registry query matches",
+            **facts,
+        },
         cache_dir=test_cache_dir,
         drug="td",
         indication=label,

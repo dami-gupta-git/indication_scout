@@ -39,7 +39,7 @@ DEV_STAGE_PHRASE = {
         "development program for this indication)"
     ),
     "early_phase": "Early-phase only, no completed pivotal readout",
-    "untested": "No registry (ClinicalTrials.gov) trials on record for this indication",
+    "untested": "No relevant trials found among reviewed ClinicalTrials.gov records",
 }
 
 DEV_STAGE_TIERS = tuple(DEV_STAGE_PHRASE)
@@ -232,7 +232,7 @@ def _enforce_tier_floor(tier: str, trials: list[Trial]) -> str:
     """Deterministic floor over the LLM tier — code owns the clinical-accuracy invariants the
     prompt must not be trusted to honor at scale:
 
-    1. trials exist -> the tier can NEVER be 'untested' (that means zero trials on record).
+    1. relevant trials exist -> the tier can NEVER be 'untested'.
     2. a completed pure Phase-3-band trial exists -> the tier is at least 'completed_phase3'.
     3. an active pure Phase-3-band trial exists -> the tier is at least 'active_phase3'
        (unless a completed Phase 3 already raised it higher — completed outranks active).

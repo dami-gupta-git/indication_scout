@@ -287,25 +287,22 @@ async def test_safety_search(db_session_truncating, test_cache_dir):
 
     evidence: EvidenceSummary = msg.artifact
     assert isinstance(evidence, EvidenceSummary)
-    # DRUG-LEVEL: real OT signal for semaglutide → non-empty, grounded, cited, severity set. The
-    # summary is disease-flavored (NASH), so assert grounding (cited + severity), not a fixed term.
+    # Production drug-wide safety uses source-separated deterministic regulatory and
+    # pharmacovigilance facts. Literature synthesis is reserved for holdout mode.
     assert evidence.safety_summary != ""
-    assert len(evidence.safety_pmids) > 0
-    assert all(p.isdigit() for p in evidence.safety_pmids)
-    # Every cited drug-level PMID appears in the summary text (grounded, not fabricated).
-    assert all(p in evidence.safety_summary for p in evidence.safety_pmids)
+    assert evidence.safety_pmids == []
+    assert "not proof of causation" in evidence.pharmacovigilance_summary
     assert evidence.safety_severity in (
         "withdrawn",
         "black_box",
         "serious",
         "moderate",
     )
-    # DISEASE-SPECIFIC: indication_harm is a bool; when True it carries a summary + cited PMIDs.
-    assert isinstance(evidence.indication_harm, bool)
-    if evidence.indication_harm:
+    # DISEASE-SPECIFIC: unavailable remains None; confirmed harm carries source PMIDs.
+    if evidence.indication_harm is True:
         assert evidence.indication_harm_summary != ""
         assert all(p.isdigit() for p in evidence.indication_harm_pmids)
-    assert msg.content.startswith("Safety signal")
+    assert msg.content.startswith("Safety evidence")
 
 
 async def test_finalize_analysis(db_session_truncating, test_cache_dir):

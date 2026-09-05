@@ -198,7 +198,7 @@ def build_clinical_trials_tools(
             f"unknown={bs.get('UNKNOWN', 0)})"
         )
         header = (
-            f"Search for {drug} × {indication}: {result.total_count} trials"
+            f"Search for {drug} × {indication}: {result.total_count} registry query matches"
             f"{status_breakdown}{cap_note}{scrub_note}\n"
             f"Resolved query MeSH: {mesh_term} ({mesh_id}) — compare each trial's mesh "
             f"column against this descriptor to judge relevance vs contamination."
@@ -300,7 +300,7 @@ def build_clinical_trials_tools(
             else ""
         )
         header = (
-            f"Completed for {drug} × {indication}: {result.total_count} total"
+            f"Completed for {drug} × {indication}: {result.total_count} registry query matches"
             f"{scrub_note}\n"
             f"Judge relevance from the drugs (is {drug} the studied drug?), title, and "
             f"summary — is the disease THIS indication, not a distinct subtype?"
@@ -394,7 +394,7 @@ def build_clinical_trials_tools(
         )
 
         header = (
-            f"Terminated for {drug} × {indication}: {result.total_count} total "
+            f"Terminated for {drug} × {indication}: {result.total_count} registry query matches "
             f"({safety_efficacy} safety/efficacy in shown set){scrub_note}\n"
             f"Judge relevance from the drugs (is {drug} the studied drug?), title, and "
             f"summary — is the disease THIS indication, not a distinct subtype?"

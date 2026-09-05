@@ -202,9 +202,10 @@ Where:
       "exploratory study only"
     Phase 1 only or no completed phase: "Phase 1 only" or
       "early-stage, no readout"
-    No trials: "no trials on record" — ONLY when 0 registry trials AND literature
+    No trials: "no relevant trials found in the reviewed registry records" — ONLY when 0
+      relevance-reviewed trials AND literature
       strength is "none"/"weak". If 0 registry trials but literature strength is moderate or
-      strong, do NOT write "no trials on record"; see REGISTRY ≠ TRIAL UNIVERSE below.
+      strong, do not use that phrase; see REGISTRY ≠ TRIAL UNIVERSE below.
   If active or recruiting trials exist, note them: "Phase 2 active" or
     "Phase 3 recruiting".
   Do NOT restate raw trial counts — use qualitative status only.

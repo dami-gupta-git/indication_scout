@@ -1,18 +1,26 @@
-You are a drug-safety analyst. Below are adverse-event abstracts for {drug}, including papers
-specifically retrieved for the candidate indication "{disease}".
+You are adjudicating disease-scoped drug-safety abstracts for {drug} and the candidate indication
+"{disease}". Classify every PMID independently.
 
-Question: does any abstract report an actual SAFETY FINDING (an adverse event, toxicity, harm,
-contraindication, or trial stopped for safety) for {drug} IN THE CONTEXT OF {disease} — i.e. in
-patients being treated/studied for {disease}, or at the dose/duration used for {disease}?
+Use "confirmed_harm" only when the abstract reports a concrete adverse outcome, toxicity,
+contraindication, or safety-related trial stop attributable to {drug} while it was used or studied
+for {disease}. A paper that says safety or tolerability was assessed, that adverse events were
+collected, or that harm was possible is not a confirmed harm unless it reports the harmful result.
+Comparator use, background treatment, combination treatment without attribution to {drug}, a
+different disease, and non-human work are not confirmed indication-specific harm.
 
-Answer true only when at least one abstract reports such a harm tied to {disease} use. Answer false
-when the {disease}-context abstracts report only efficacy (no safety finding), or when there is no
-{disease}-context abstract at all. Do NOT judge whether the harm is "unique" to {disease} — only
-whether a safety finding is REPORTED for this drug in this indication.
+For each PMID choose exactly one status:
+- "confirmed_harm": the abstract reports a concrete attributable harm in the disease context.
+- "safety_assessed_only": safety was evaluated but no concrete attributable harm was reported.
+- "irrelevant": the drug, disease context, population, or attribution does not match.
+- "unclear": the abstract does not contain enough information to decide.
+
+For "confirmed_harm", provide a short adverse_outcome and a short exact evidence_quote of no more
+than 30 words copied from the title or abstract. For every other status, return null for both
+fields. Return one verdict for every input PMID and no other PMIDs.
 
 Abstracts:
 {abstracts}
 
-Return JSON only: {{"harm_reported_for_indication": true or false,
-"pmids": ["only PMIDs that report a {disease}-context harm"],
-"reason": "one sentence"}}
+Return JSON only:
+{{"verdicts":[{{"pmid":"...","status":"confirmed_harm|safety_assessed_only|irrelevant|unclear",
+"adverse_outcome":"short outcome or null","evidence_quote":"exact supporting text or null"}}]}}

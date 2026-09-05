@@ -6,6 +6,7 @@ import pytest
 
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.fda import FDAClient
+from indication_scout.models.model_fda import FDALabelSafetyRecord
 
 WEGOVY_LABEL_FIXTURE = {
     "results": [
@@ -201,3 +202,87 @@ async def test_get_all_label_indications_reraises_non_404_failures(tmp_path):
     with patch.object(client, "get_label_indications", side_effect=mock_get_label):
         with pytest.raises(DataSourceError):
             await client.get_all_label_indications(["BadBrand", "GoodBrand"])
+
+
+async def test_get_label_safety_returns_typed_warning_fields(tmp_path):
+    client = FDAClient(cache_dir=tmp_path)
+    fixture = {
+        "results": [
+            {
+                "set_id": "set-1",
+                "effective_time": "20260101",
+                "openfda": {
+                    "brand_name": ["Glucophage"],
+                    "generic_name": ["metformin hydrochloride"],
+                },
+                "boxed_warning": ["WARNING: LACTIC ACIDOSIS"],
+                "warnings": ["Renal impairment increases the risk."],
+            }
+        ]
+    }
+    with patch.object(client, "_rest_get", new=AsyncMock(return_value=fixture)):
+        result = await client.get_label_safety("metformin")
+
+    assert result == [
+        FDALabelSafetyRecord(
+            set_id="set-1",
+            effective_time="20260101",
+            brand_names=["Glucophage"],
+            generic_names=["metformin hydrochloride"],
+            boxed_warnings=["WARNING: LACTIC ACIDOSIS"],
+            warnings=["Renal impairment increases the risk."],
+        )
+    ]
+
+
+async def test_get_label_safety_reraises_non_404(tmp_path):
+    client = FDAClient(cache_dir=tmp_path)
+    with patch.object(
+        client,
+        "_rest_get",
+        new=AsyncMock(side_effect=DataSourceError("openfda", "HTTP 500", 500)),
+    ):
+        with pytest.raises(DataSourceError):
+            await client.get_label_safety("metformin")
+
+
+async def test_get_all_label_safety_deduplicates_identical_records(tmp_path):
+    client = FDAClient(cache_dir=tmp_path)
+    record = FDALabelSafetyRecord(
+        set_id="set-1",
+        effective_time="20260101",
+        brand_names=["Glucophage"],
+        generic_names=["metformin hydrochloride"],
+        boxed_warnings=["WARNING: LACTIC ACIDOSIS"],
+        warnings=[],
+    )
+    with patch.object(
+        client,
+        "get_label_safety",
+        new=AsyncMock(return_value=[record]),
+    ):
+        result = await client.get_all_label_safety(["metformin", "Glucophage"])
+
+    assert result == [record]
+
+
+async def test_get_all_label_safety_keeps_latest_effective_record_per_set_id(tmp_path):
+    client = FDAClient(cache_dir=tmp_path)
+    older = FDALabelSafetyRecord(
+        set_id="set-1",
+        effective_time="20200101",
+        boxed_warnings=["Older wording"],
+    )
+    newer = FDALabelSafetyRecord(
+        set_id="set-1",
+        effective_time="20260101",
+        boxed_warnings=["Current wording"],
+    )
+    with patch.object(
+        client,
+        "get_label_safety",
+        new=AsyncMock(side_effect=[[older], [newer]]),
+    ):
+        result = await client.get_all_label_safety(["metformin", "Glucophage"])
+
+    assert result == [newer]

@@ -95,8 +95,8 @@ class Trial(BaseModel):
 class SearchTrialsResult(BaseModel):
     """All-status trial query for a drug × indication pair.
 
-    `total_count` is the exact number of trials matching the pair (via
-    countTotal). `by_status` carries per-status counts for RECRUITING,
+    `total_count` is the exact number of registry query matches (via countTotal), before the
+    downstream relevance review. `by_status` carries query-match counts for RECRUITING,
     ACTIVE_NOT_RECRUITING, WITHDRAWN, and UNKNOWN. TERMINATED and COMPLETED
     counts live on TerminatedTrialsResult and CompletedTrialsResult to avoid
     double-counting. `trials` is the top 50 by enrollment for the agent
@@ -119,8 +119,8 @@ class SearchTrialsResult(BaseModel):
 class CompletedTrialsResult(BaseModel):
     """Status=COMPLETED trial query for a drug × indication pair.
 
-    `total_count` is all completed trials for the pair. `trials` is the top
-    50 by enrollment; the agent reads phase information off each trial.
+    `total_count` is the completed-scope registry query-match count before relevance review.
+    `trials` is the top 50 by enrollment; the agent reads phase information off each trial.
     """
 
     total_count: int = 0
@@ -138,8 +138,8 @@ class CompletedTrialsResult(BaseModel):
 class TerminatedTrialsResult(BaseModel):
     """Status=TERMINATED trial query for a drug × indication pair.
 
-    `total_count` is all terminated trials for the pair. `trials` is the
-    top 50 by enrollment, each carrying `why_stopped` text. Stop-category
+    `total_count` is the terminated-scope registry query-match count before relevance review.
+    `trials` is the top 50 by enrollment, each carrying `why_stopped` text. Stop-category
     classification is derived on read at the tool layer (no separate
     field stored).
     """

@@ -51,6 +51,19 @@ class TrialSignals(BaseModel):
     active_programs: str = "None active"
 
 
+class TrialRelevanceCoverage(BaseModel):
+    """Coverage and relevance counts for one ClinicalTrials.gov query scope."""
+
+    registry_query_matches: int
+    retrieved_records: int
+    classified_records: int
+    relevant_records: int
+    contaminated_records: int
+    unreviewed_records: int
+    coverage_complete: bool
+    relevant_by_status: dict[str, int]
+
+
 class ClinicalTrialsOutput(BaseModel):
     """Final assembled output from a single clinical trials agent run."""
 
@@ -76,6 +89,21 @@ class ClinicalTrialsOutput(BaseModel):
             "TERMINATED trial query for the pair: total + top 50 trials by "
             "enrollment. Stop-category counts are computed at the tool layer."
         ),
+    )
+
+    search_coverage: TrialRelevanceCoverage | None = Field(
+        default=None,
+        description="Relevance coverage for the all-status registry query.",
+    )
+
+    completed_coverage: TrialRelevanceCoverage | None = Field(
+        default=None,
+        description="Relevance coverage for the completed-trial registry query.",
+    )
+
+    terminated_coverage: TrialRelevanceCoverage | None = Field(
+        default=None,
+        description="Relevance coverage for the terminated-trial registry query.",
     )
 
     landscape: IndicationLandscape | None = Field(

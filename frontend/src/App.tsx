@@ -280,7 +280,7 @@ function StatusBanner({ status, error }: { status: string; error: string | null 
 function KpiBand({ result }: { result: SupervisorOutput }) {
   // Mirrors app.py's top-band metrics.
   const totalTrials = result.disease_findings.reduce(
-    (sum, f) => sum + (f.clinical_trials?.search?.total_count ?? 0),
+    (sum, f) => sum + (f.clinical_trials?.search_coverage?.relevant_records ?? 0),
     0,
   );
   const totalStudies = result.disease_findings.reduce(
@@ -291,7 +291,7 @@ function KpiBand({ result }: { result: SupervisorOutput }) {
     <div className="kpis">
       <Kpi label="Candidate diseases" value={String(result.candidate_diseases.length)} />
       <Kpi label="Investigated" value={String(result.disease_findings.length)} />
-      <Kpi label="Total trials" value={String(totalTrials)} />
+      <Kpi label="Confirmed relevant trials" value={String(totalTrials)} />
       <Kpi label="Total studies" value={String(totalStudies)} />
     </div>
   );

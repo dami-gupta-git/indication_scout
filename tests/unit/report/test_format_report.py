@@ -8,6 +8,7 @@ import pytest
 
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
+    TrialRelevanceCoverage,
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.supervisor.supervisor_output import (
@@ -30,6 +31,22 @@ from indication_scout.report.format_report import (
     _fmt_literature,
     format_report,
 )
+
+
+def _coverage(
+    *, total: int, relevant: int, contaminated: int, retrieved: int
+) -> TrialRelevanceCoverage:
+    classified = relevant + contaminated
+    return TrialRelevanceCoverage(
+        registry_query_matches=total,
+        retrieved_records=retrieved,
+        classified_records=classified,
+        relevant_records=relevant,
+        contaminated_records=contaminated,
+        unreviewed_records=max(total - classified, 0),
+        coverage_complete=total == retrieved == classified,
+        relevant_by_status={},
+    )
 
 
 def test_fmt_literature_renders_direction_and_both_pmid_lists():
@@ -149,20 +166,23 @@ def test_fmt_clinical_trials_search_renders_total():
             total_count=12,
             by_status={"RECRUITING": 5, "ACTIVE_NOT_RECRUITING": 4, "WITHDRAWN": 3},
             trials=[],
-        )
+        ),
+        search_coverage=_coverage(total=12, relevant=0, contaminated=0, retrieved=0),
     )
     rendered = _fmt_clinical_trials(out)
-    assert "**Trial activity:** 12 total trial(s) for this pair" in rendered
+    assert "**Trial activity:** at least 0 relevant among 0 reviewed" in rendered
+    assert "12 registry query matches, 12 not reviewed" in rendered
     assert "recruiting" not in rendered.lower()
     assert "withdrawn" not in rendered.lower()
 
 
 def test_fmt_clinical_trials_search_whitespace():
     out = ClinicalTrialsOutput(
-        search=SearchTrialsResult(total_count=0, by_status={}, trials=[])
+        search=SearchTrialsResult(total_count=0, by_status={}, trials=[]),
+        search_coverage=_coverage(total=0, relevant=0, contaminated=0, retrieved=0),
     )
     rendered = _fmt_clinical_trials(out)
-    assert "**Trial activity:** 0 total trial(s) for this pair" in rendered
+    assert "**Trial activity:** 0 relevant trial(s); 0 excluded" in rendered
     assert "Whitespace: no trials found for this drug × indication pair." in rendered
 
 
@@ -177,12 +197,13 @@ def test_fmt_clinical_trials_completed_renders_count_and_top_trials():
         completed=CompletedTrialsResult(
             total_count=7,
             trials=[trial],
-        )
+        ),
+        completed_coverage=_coverage(total=7, relevant=1, contaminated=0, retrieved=1),
+        relevant_nct_ids=["NCT04567890"],
     )
     rendered = _fmt_clinical_trials(out)
-    # 7 on record but only 1 fetched, none hidden → reconciling slice clause, no false subtract.
-    assert "**Completed trials (7 total on record):**" in rendered
-    assert "showing 1 of the first 1 fetched" in rendered
+    assert "**Completed trials:** at least 1 relevant among 1 reviewed" in rendered
+    assert "7 registry query matches, 6 not reviewed" in rendered
     assert (
         "[NCT04567890](https://clinicaltrials.gov/study/NCT04567890) — Semaglutide in NASH (Phase 3, Completed)"
         in rendered
@@ -200,7 +221,11 @@ def test_fmt_clinical_trials_completed_caps_at_ten():
         for i in range(15)
     ]
     out = ClinicalTrialsOutput(
-        completed=CompletedTrialsResult(total_count=15, trials=trials)
+        completed=CompletedTrialsResult(total_count=15, trials=trials),
+        completed_coverage=_coverage(
+            total=15, relevant=15, contaminated=0, retrieved=15
+        ),
+        relevant_nct_ids=[trial.nct_id for trial in trials],
     )
     rendered = _fmt_clinical_trials(out)
     assert "NCT00000009" in rendered
@@ -209,7 +234,7 @@ def test_fmt_clinical_trials_completed_caps_at_ten():
 
 def test_fmt_clinical_trials_completed_skips_contaminated_examples():
     # The CT agent flagged the two PAH trials as contamination (different indication).
-    # The rendered examples must skip them, but the total_count header stays verbatim.
+    # The rendered examples must skip them, and the header must distinguish evidence from query coverage.
     pah_a = Trial(
         nct_id="NCT00303459",
         title="Bosentan + Sildenafil in PAH",
@@ -234,15 +259,12 @@ def test_fmt_clinical_trials_completed_skips_contaminated_examples():
             trials=[pah_a, pah_b, systemic],
         ),
         contaminated_nct_ids=["NCT00303459", "NCT00644605"],
+        relevant_nct_ids=["NCT00150358"],
+        completed_coverage=_coverage(total=64, relevant=1, contaminated=2, retrieved=3),
     )
     rendered = _fmt_clinical_trials(out)
-    # Header states the authoritative total on record; the clause reconciles the FETCHED slice
-    # (3 fetched, 2 hidden → 1 shown) WITHOUT implying 64 - 2 = 62 visible.
-    assert "**Completed trials (64 total on record):**" in rendered
-    assert (
-        "showing 1 relevant of the first 3 fetched "
-        "(2 of those fetched hidden as a different indication)." in rendered
-    )
+    assert "**Completed trials:** at least 1 relevant among 3 reviewed" in rendered
+    assert "64 registry query matches, 61 not reviewed" in rendered
     # Contaminated PAH trials are still named in the "excluded" line at the top, but NOT
     # rendered as completed-trial examples. Scope the check to the trial-table region.
     table = rendered.split("**Completed trials")[1]
@@ -304,14 +326,14 @@ def test_fmt_clinical_trials_terminated_skips_contaminated_examples():
     out = ClinicalTrialsOutput(
         terminated=TerminatedTrialsResult(total_count=18, trials=[pah, systemic]),
         contaminated_nct_ids=["NCT02060487"],
+        relevant_nct_ids=["NCT01392638"],
+        terminated_coverage=_coverage(
+            total=18, relevant=1, contaminated=1, retrieved=2
+        ),
     )
     rendered = _fmt_clinical_trials(out)
-    # 18 on record; 2 fetched, 1 hidden → 1 shown, reconciled against the fetched slice.
-    assert "**Terminated trials (18 total on record):**" in rendered
-    assert (
-        "showing 1 relevant of the first 2 fetched "
-        "(1 of those fetched hidden as a different indication)." in rendered
-    )
+    assert "**Terminated trials:** at least 1 relevant among 2 reviewed" in rendered
+    assert "18 registry query matches, 16 not reviewed" in rendered
     table = rendered.split("**Terminated trials")[1]
     assert "NCT02060487" not in table
     assert "NCT01392638" in table
@@ -337,10 +359,11 @@ def test_fmt_clinical_trials_filters_contaminated_examples_but_lists_relevant():
     out = ClinicalTrialsOutput(
         completed=CompletedTrialsResult(total_count=64, trials=[pah, systemic]),
         contaminated_nct_ids=["NCT00323297"],
+        relevant_nct_ids=["NCT00223717"],
+        completed_coverage=_coverage(total=64, relevant=1, contaminated=1, retrieved=2),
     )
     rendered = _fmt_clinical_trials(out, "hypertension")
-    # Verbatim total is still reported, table is NOT suppressed.
-    assert "**Completed trials (64 total on record):**" in rendered
+    assert "**Completed trials:** at least 1 relevant among 2 reviewed" in rendered
     assert "overlaps an approved related indication" not in rendered
     # The relevant systemic-HTN trial IS listed as an example.
     assert "NCT00223717" in rendered
@@ -359,7 +382,9 @@ def test_fmt_clinical_trials_lists_trials_normally():
         overall_status="Completed",
     )
     out = ClinicalTrialsOutput(
-        completed=CompletedTrialsResult(total_count=3, trials=[trial])
+        completed=CompletedTrialsResult(total_count=3, trials=[trial]),
+        completed_coverage=_coverage(total=3, relevant=1, contaminated=0, retrieved=1),
+        relevant_nct_ids=["NCT04567890"],
     )
     rendered = _fmt_clinical_trials(out, "crohn's disease")
     assert "NCT04567890" in rendered
@@ -373,11 +398,12 @@ def test_fmt_clinical_trials_terminated_with_why_stopped():
         why_stopped="Sponsor decision due to slow enrollment",
     )
     out = ClinicalTrialsOutput(
-        terminated=TerminatedTrialsResult(total_count=1, trials=[trial])
+        terminated=TerminatedTrialsResult(total_count=1, trials=[trial]),
+        terminated_coverage=_coverage(total=1, relevant=1, contaminated=0, retrieved=1),
+        relevant_nct_ids=["NCT01112233"],
     )
     rendered = _fmt_clinical_trials(out)
-    # 1 on record, 1 fetched, none hidden → all fetched, no reconciling clause needed.
-    assert "**Terminated trials (1 total on record):**" in rendered
+    assert "**Terminated trials:** 1 relevant trial(s); 0 excluded" in rendered
     assert (
         "[NCT01112233](https://clinicaltrials.gov/study/NCT01112233) Cardio Trial (Phase 2)"
         " [enrollment] — *Sponsor decision due to slow enrollment*" in rendered
@@ -387,7 +413,9 @@ def test_fmt_clinical_trials_terminated_with_why_stopped():
 def test_fmt_clinical_trials_terminated_unknown_when_no_why_stopped():
     trial = Trial(nct_id="NCT09998888", title="Mystery Stop", phase="Phase 1")
     out = ClinicalTrialsOutput(
-        terminated=TerminatedTrialsResult(total_count=1, trials=[trial])
+        terminated=TerminatedTrialsResult(total_count=1, trials=[trial]),
+        terminated_coverage=_coverage(total=1, relevant=1, contaminated=0, retrieved=1),
+        relevant_nct_ids=["NCT09998888"],
     )
     rendered = _fmt_clinical_trials(out)
     assert (
@@ -465,6 +493,9 @@ def test_format_report_full_assembly():
                         by_status={"RECRUITING": 2, "ACTIVE_NOT_RECRUITING": 3},
                         trials=[],
                     ),
+                    search_coverage=_coverage(
+                        total=5, relevant=0, contaminated=0, retrieved=0
+                    ),
                 ),
                 blurb=CandidateBlurb(
                     stage="Phase 3",
@@ -495,7 +526,8 @@ def test_format_report_full_assembly():
     assert "**Evidence strength:** moderate" in rendered
     assert "[12345678](https://pubmed.ncbi.nlm.nih.gov/12345678/)" in rendered
     assert "#### Clinical Trials" in rendered
-    assert "**Trial activity:** 5 total trial(s) for this pair" in rendered
+    assert "**Trial activity:** at least 0 relevant among 0 reviewed" in rendered
+    assert "5 registry query matches, 5 not reviewed" in rendered
 
 
 def test_format_report_summary_ranks_top_diseases_in_order():
@@ -584,6 +616,10 @@ def test_fmt_clinical_trials_truncates_with_disclosure():
     ]
     out = ClinicalTrialsOutput(
         completed=CompletedTrialsResult(total_count=18, trials=trials),
+        completed_coverage=_coverage(
+            total=18, relevant=18, contaminated=0, retrieved=18
+        ),
+        relevant_nct_ids=[trial.nct_id for trial in trials],
     )
     rendered = _fmt_clinical_trials(out)
     # First 10 listed, 11th not.
@@ -607,6 +643,10 @@ def test_fmt_clinical_trials_no_truncation_note_at_or_below_cap():
     ]
     out = ClinicalTrialsOutput(
         completed=CompletedTrialsResult(total_count=10, trials=trials),
+        completed_coverage=_coverage(
+            total=10, relevant=10, contaminated=0, retrieved=10
+        ),
+        relevant_nct_ids=[trial.nct_id for trial in trials],
     )
     rendered = _fmt_clinical_trials(out)
     assert "more relevant completed trial(s) not listed" not in rendered

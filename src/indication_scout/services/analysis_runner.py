@@ -78,7 +78,10 @@ async def run_pair_analysis(
         CandidateBlurb,
         CandidateFindings,
     )
-    from indication_scout.agents.supervisor.supervisor_tools import _literature_oneliner
+    from indication_scout.agents.supervisor.supervisor_tools import (
+        _literature_oneliner,
+        _trial_evidence_text,
+    )
     from indication_scout.helpers.drug_helpers import seed_drug_intake
     from indication_scout.services.approval_check import (
         get_approved_indications,
@@ -211,10 +214,8 @@ async def run_pair_analysis(
                     else None
                 )
             )
-            trials_on_record = (
-                clinical_trials.search.total_count
-                if (clinical_trials is not None and clinical_trials.search is not None)
-                else 0
+            trial_evidence = _trial_evidence_text(
+                clinical_trials.search_coverage if clinical_trials else None
             )
             judgment = await judge_interpretive(
                 stage=stage_phrase,
@@ -222,7 +223,7 @@ async def run_pair_analysis(
                 literature=lit_oneliner,
                 relationship=approval_relationship,
                 approved_indication=approved_ind,
-                trials_on_record=trials_on_record,
+                trial_evidence=trial_evidence,
                 cache_dir=DEFAULT_CACHE_DIR,
                 drug=drug,
                 indication=disease_name,
@@ -253,6 +254,31 @@ async def run_pair_analysis(
             top_diseases=[disease_name],
             summary="",
             is_investigate=True,
+            drug_safety_summary=(
+                literature.evidence_summary.safety_summary
+                if literature and literature.evidence_summary
+                else ""
+            ),
+            drug_regulatory_safety_summary=(
+                literature.evidence_summary.regulatory_safety_summary
+                if literature and literature.evidence_summary
+                else ""
+            ),
+            drug_pharmacovigilance_summary=(
+                literature.evidence_summary.pharmacovigilance_summary
+                if literature and literature.evidence_summary
+                else ""
+            ),
+            drug_literature_safety_summary=(
+                literature.evidence_summary.literature_safety_summary
+                if literature and literature.evidence_summary
+                else ""
+            ),
+            drug_safety_pmids=(
+                literature.evidence_summary.safety_pmids
+                if literature and literature.evidence_summary
+                else []
+            ),
         )
         return output, format_report(output)
     finally:

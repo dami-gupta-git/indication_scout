@@ -23,10 +23,9 @@ class DrugProfile(BaseModel):
     atc_codes: list[str] = []
     atc_descriptions: list[str] = []
     drug_type: str = ""
-    # OpenTargets curated safety signal, carried through from RichDrugData (already fetched by
-    # build_drug_profile). drug_warnings = black-box/withdrawn regulatory signals; adverse_events =
-    # FAERS pharmacovigilance with log_likelihood_ratio. Used by safety_search to build targeted
-    # PubMed provenance queries. Empty when OT has no safety data for the drug.
+    # Open Targets safety metadata, carried through from RichDrugData. Warning rows describe
+    # warning types and toxicity categories but do not establish distinct label-warning counts or
+    # wording. adverse_events contains FAERS pharmacovigilance associations with logLR values.
     drug_warnings: list[DrugWarning] = []
     adverse_events: list[AdverseEvent] = []
 

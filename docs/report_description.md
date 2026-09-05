@@ -48,7 +48,7 @@ parsing. `format_report` (see §2) is only invoked server-side for the download.
 | Scope disclaimer caption | none | Static copy |
 | **Candidate diseases** KPI | `result.candidate_diseases.length` | Merged allowlist (deterministic): competitor scan (OpenTargets, drugs sharing same target) + mechanism-promoted diseases. Built in `agents/supervisor/supervisor_tools.py::find_candidates` + `merge_and_dedup`. Not LLM-authored. |
 | **Investigated** KPI | `result.disease_findings.length` | Subset of the allowlist the supervisor LLM chose to call `analyze_literature` / `analyze_clinical_trials` on |
-| **Total trials** KPI | sum of `finding.clinical_trials.search.total_count` over `disease_findings` | clinical_trials agent (`search_trials` tool → ClinicalTrials.gov via `ClinicalTrialsClient`) |
+| **Confirmed relevant trials** KPI | sum of `finding.clinical_trials.search_coverage.relevant_records` over `disease_findings` | clinical_trials agent relevance review |
 | **Total studies** KPI | sum of `finding.literature.evidence_summary.study_count` over `disease_findings` | literature agent (`synthesize` tool → judgment over PubMed abstracts retrieved by `PubMedClient` + ranked by `RetrievalService`) |
 | Tab nav (Overview / Mechanism / Clinical Trials / Literature) | none | Static labels; keyboard-accessible |
 | Sidebar **focus disease** radio group | `finding.disease` per `disease_findings` | Local UI state; filters the Clinical Trials and Literature tabs to one disease. "All" resets. |
@@ -80,7 +80,7 @@ demoted / prose-only entries.
 | **Disease** | `finding.disease` | merged allowlist (clickable → sets focus disease) |
 | **Verdict** | `finding.blurb.verdict` | supervisor LLM (`VerdictTag` badge) |
 | **Evidence** | `finding.literature.evidence_summary.strength` | literature agent (`StrengthBadge`) |
-| **Trials** | `finding.clinical_trials.search.total_count` | clinical_trials agent |
+| **Trials** | `finding.clinical_trials.search_coverage.relevant_records` | clinical_trials agent relevance review |
 | **Competitors** | `finding.clinical_trials.landscape.competitors.length` | clinical_trials agent |
 | **Recruiting** | `finding.clinical_trials.search.by_status["RECRUITING"]` | clinical_trials agent |
 
@@ -123,7 +123,7 @@ keys that have a candidate edge; disease nodes = intersection of
 `candidates[].disease_name` and `disease_findings[].disease` (grounded +
 investigated only). Drug→target edges labelled with `action_type`; target→disease
 edges from `candidates`. Disease node colour by `finding.source`
-(competitor / mechanism / both), size by `clinical_trials.search.total_count`.
+(competitor / mechanism / both), size by `clinical_trials.search_coverage.relevant_records`.
 Clicking a disease node sets the focus disease.
 
 ### 1.4 Clinical Trials tab — `tabs/ClinicalTrialsTab.tsx` (focus disease only)
@@ -135,14 +135,14 @@ focused disease — **clinical_trials agent**
 | UI element | Pydantic field | Source |
 |---|---|---|
 | `Source: {tag}` caption | `finding.source` (`"competitor" \| "mechanism" \| "both"`) | Allowlist tag, not an agent |
-| **Total trials** / **Recruiting** / **Active (not recruiting)** KPIs | `ct.search.total_count`, `ct.search.by_status["RECRUITING"]`, `ct.search.by_status["ACTIVE_NOT_RECRUITING"]` (`SearchTrialsResult`) | clinical_trials agent → `search_trials` |
+| **Relevant reviewed** / **Registry query matches** / relevant status KPIs | `ct.search_coverage`; raw `ct.search.total_count` is shown only as query coverage | clinical_trials agent relevance review |
 | Summary paragraph | `ct.summary` | clinical_trials agent's final LLM message |
 | **Status breakdown** donut (`charts/StatusDonut.tsx`) | `ct.search.by_status` (slices, largest first, zeros dropped — `chartData.ts`) | same |
 | **Phase funnel** (`charts/PhaseFunnel.tsx`) | `ct.completed.trials[].phase` counts, ordered early→late (`chartData.ts`) | clicking a bar filters the completed table |
 | **Completed trials** table (`tables/CompletedTrialsTable.tsx`) | `ct.completed.trials` minus `ct.contaminated_nct_ids` (max 25 shown) — NCT, Title, Phase, Status | clinical_trials agent → `get_completed_trials`; sortable, phase/status filter chips |
 | **Terminated trials** cards | `ct.terminated.trials` minus contaminated (first 15) — NCT, title, phase, `why_stopped` | clinical_trials agent → `get_terminated_trials` |
 | **Competitive landscape** table (`tables/CompetitorsTable.tsx`) | `ct.landscape.competitors` (max 25) — Drug, Sponsor, Max phase, Trials | clinical_trials agent → `get_indication_landscape`; sortable |
-| **Excluded trials** disclosure | `ct.completed`/`ct.terminated` trials in `ct.contaminated_nct_ids` | trials the agent judged a different indication/drug; hidden from tables but still counted in `total_count` (`trialFilter.ts`) |
+| **Excluded trials** disclosure | `ct.completed`/`ct.terminated` trials in `ct.contaminated_nct_ids` | trials judged a different indication or drug; only `relevant_nct_ids` appear in evidence tables |
 
 FDA approval (`ct.approval`) is rendered in the Markdown report (§2.4.3) but is
 **not** shown as a block in the React UI.
@@ -220,6 +220,15 @@ substring shadowing), not the LLM itself. `_title_case_disease`
 (`format_report.py:60-64`) title-cases individual names (drug, candidate list,
 finding headers) while preserving acronyms and possessives.
 
+### 2.2.1 Drug Safety section
+
+The drug-wide safety block is rendered once. `drug_regulatory_safety_summary` contains exact
+openFDA boxed-warning text and separately labeled Open Targets warning metadata.
+`drug_pharmacovigilance_summary` contains scored FAERS associations and states that they do not
+prove causation. `drug_literature_safety_summary` is populated only from date-eligible literature
+in holdout mode. Candidate-specific warnings remain in each Literature subsection and render only
+when `indication_harm` is `True`.
+
 ### 2.3 Diseases Considered section — `format_report.py:457-469`
 
 | Markdown element | Pydantic field | Source |
@@ -271,17 +280,16 @@ All fields come from `finding.clinical_trials` (`ClinicalTrialsOutput`) —
 | `**FDA approval:** Approved ({matched_indication})` | `ct.approval` with `label_found=True`, `is_approved=True` | clinical_trials agent → `check_fda_approval` → openFDA labels + LLM indication-match in `services/approval_check.py` |
 | `**FDA approval:** Not found on FDA label for this indication` | `ct.approval` with `label_found=True`, `is_approved=False` | same |
 | `**FDA approval:** No FDA label found for {drug_names} — status undetermined` | `ct.approval.drug_names_checked` with `label_found=False` | same |
-| `**Trial activity:** {n} total trial(s) for this pair` | `ct.search.total_count` (`SearchTrialsResult`) | clinical_trials agent → `search_trials` |
+| `**Trial activity:** {coverage}` | `ct.search_coverage` | exact relevant count when complete; lower bound and query coverage otherwise |
 | `- _Whitespace: no trials found…_` (zero-trials hint) | none | formatter, when `total_count == 0` |
-| `**Completed trials ({n} total on record):**{count clause}` heading | `ct.completed.total_count` (`CompletedTrialsResult`) | clinical_trials agent → `get_completed_trials` |
-| Completed trial bullets `- [NCT…](url) — {title} ({phase}, {status})` | `ct.completed.trials` minus `contaminated_nct_ids`, first 10 (`_TRIAL_RENDER_CAP`) | same; `- _…and {n} more…_` line when truncated |
-| `**Terminated trials ({n} total on record):**{count clause}` heading | `ct.terminated.total_count` (`TerminatedTrialsResult`) | clinical_trials agent → `get_terminated_trials` |
-| Terminated trial bullets `- [NCT…](url) {title} ({phase})[{category}] — *{why_stopped}*` | `ct.terminated.trials` minus contaminated, first 10 — `[category]` is `_classify_stop_reason(why_stopped)`, deterministic Python in `clinical_trials_tools.py`, NOT LLM | same; category is post-processing |
+| `**Completed trials:** {coverage}` heading | `ct.completed_coverage` | clinical_trials agent relevance review |
+| Completed trial bullets `- [NCT…](url) — {title} ({phase}, {status})` | `ct.completed.trials` intersected with `relevant_nct_ids`, first 10 (`_TRIAL_RENDER_CAP`) | same; `- _…and {n} more…_` line when truncated |
+| `**Terminated trials:** {coverage}` heading | `ct.terminated_coverage` | clinical_trials agent relevance review |
+| Terminated trial bullets `- [NCT…](url) {title} ({phase})[{category}] — *{why_stopped}*` | `ct.terminated.trials` intersected with `relevant_nct_ids`, first 10 | same; category is deterministic Python |
 | `_No clinical trials data available._` (fallback) | none | formatter, when no other lines emitted |
 
-The `{count clause}` on the trial-section headers is `_trial_count_clause`
-(`format_report.py:26-57`): it reports how many trials were shown vs. hidden as a
-different indication, and whether only a slice of the on-record total was fetched.
+Coverage text comes from the per-scope `TrialRelevanceCoverage`. Incomplete retrieval states the
+confirmed relevant count as a lower bound and keeps the unreviewed query remainder explicit.
 
 **Contaminated-relationship suppression.** When `finding.blurb.approval_relationship`
 is in `_CONTAMINATED_RELATIONSHIPS` (`broader_distinct` / `broader_overlapping`),

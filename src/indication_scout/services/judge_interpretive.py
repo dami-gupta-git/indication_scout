@@ -47,12 +47,13 @@ do NOT restate, re-derive, or contradict them.
 AUTHORITATIVE FACTS (ground truth):
 - Development stage: {stage}
 - Active programs (what is still moving): {active_programs}
-- Registry trials on record (any status): {trials_on_record}
+- Relevance-reviewed trial evidence: {trial_evidence}
 - Literature: {literature}
 - Approval relationship (how this candidate relates to an approved use): {relationship}
 - Drug's approved indication that this relates to: {approved_indication}
 
-A nonzero trial count means the hypothesis WAS studied — do not call it untested or abandoned.
+When the reviewed evidence reports one or more relevant trials, the hypothesis WAS studied. Do not
+call it untested or abandoned. Registry query matches are search coverage, not supporting trials.
 "None active" means no trial is currently recruiting — state that as the status; do not infer a \
 cause (sponsor disengagement, commercial failure, abandonment) you were not given.
 
@@ -135,7 +136,7 @@ async def judge_interpretive(
     literature: str,
     relationship: str,
     approved_indication: str | None,
-    trials_on_record: int,
+    trial_evidence: str,
     cache_dir: Path,
     drug: str = "",
     indication: str = "",
@@ -144,10 +145,9 @@ async def judge_interpretive(
     parse failure (the caller then leaves the fields empty — one source of truth, no fabrication).
 
     Cached per the fact-tuple (stage, active_programs, literature, relationship,
-    approved_indication, trials_on_record) so a candidate is judged once within the TTL window.
+    approved_indication, trial_evidence) so a candidate is judged once within the TTL window.
     `relationship` is the upstream FDA label (e.g. "contaminated" / "combination_only" / "none")
-    — not prose. `trials_on_record` is the registry trial count for the pair (any status) so the
-    judge does not call a multi-trial candidate untested when its literature is empty.
+    — not prose. `trial_evidence` states the relevance-reviewed count and coverage limit.
     """
     approved = approved_indication or "none"
     cache_params = {
@@ -158,7 +158,7 @@ async def judge_interpretive(
         "literature": literature,
         "relationship": relationship or "none",
         "approved_indication": approved,
-        "trials_on_record": trials_on_record,
+        "trial_evidence": trial_evidence,
     }
     cached = cache_get("interpretive", cache_params, cache_dir)
     if isinstance(cached, dict):
@@ -180,7 +180,7 @@ async def judge_interpretive(
         literature=literature,
         relationship=relationship_phrase,
         approved_indication=approved,
-        trials_on_record=trials_on_record,
+        trial_evidence=trial_evidence,
     )
     response = await query_llm(prompt)
     judgment = _parse_interpretive(response)

@@ -181,7 +181,6 @@ from indication_scout.agents._trial_formatting import (
     _phase_distribution,
 )
 from indication_scout.agents._trial_signals import (
-    derive_trial_signals,
     format_derived_signals,
 )
 from indication_scout.agents.clinical_trials.clinical_trials_agent import (
@@ -190,6 +189,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_agent import (
 )
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
+    TrialRelevanceCoverage,
 )
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     _classify_stop_reason,
@@ -205,6 +205,23 @@ from indication_scout.agents.mechanism.mechanism_agent import (
 )
 from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 from indication_scout.services.retrieval import RetrievalService
+
+
+def _trial_evidence_text(coverage: TrialRelevanceCoverage | None) -> str:
+    """Describe reviewed relevant trials without promoting raw query matches."""
+    if coverage is None:
+        return "relevance-reviewed trial count unavailable"
+    if coverage.coverage_complete:
+        return (
+            f"{coverage.relevant_records} relevant trial(s), complete review of "
+            f"{coverage.registry_query_matches} registry query match(es)"
+        )
+    return (
+        f"at least {coverage.relevant_records} relevant among "
+        f"{coverage.classified_records} reviewed; "
+        f"{coverage.registry_query_matches} registry query match(es), "
+        f"{coverage.unreviewed_records} not reviewed"
+    )
 
 
 def build_supervisor_tools(
@@ -799,42 +816,57 @@ def build_supervisor_tools(
             if matched.lower().strip() not in existing:
                 entry["approved_indications"].append(matched)
 
-        # Normal path: counts come from the new exact-count tools (countTotal API). Each scope owns its own count; no
-        # cross-scope summing.
-        search = output.search
         completed = output.completed
         terminated = output.terminated
-
-        n_total = search.total_count if search else 0
-        n_recruiting = search.by_status.get("RECRUITING", 0) if search else 0
-        n_active_not_recruiting = (
-            search.by_status.get("ACTIVE_NOT_RECRUITING", 0) if search else 0
+        search_coverage = output.search_coverage
+        completed_coverage = output.completed_coverage
+        terminated_coverage = output.terminated_coverage
+        n_recruiting = (
+            search_coverage.relevant_by_status.get("RECRUITING", 0)
+            if search_coverage
+            else None
         )
-        n_withdrawn = search.by_status.get("WITHDRAWN", 0) if search else 0
-        n_completed = completed.total_count if completed else 0
-        n_terminated = terminated.total_count if terminated else 0
-        # safety/efficacy classification is computed from the top-50 shown terminated trials; if total_count > len(trials)
-        # this is a floor.
+        n_active_not_recruiting = (
+            search_coverage.relevant_by_status.get("ACTIVE_NOT_RECRUITING", 0)
+            if search_coverage
+            else None
+        )
+        n_withdrawn = (
+            search_coverage.relevant_by_status.get("WITHDRAWN", 0)
+            if search_coverage
+            else None
+        )
+        relevant_ids = set(output.relevant_nct_ids)
+        completed_trials = (
+            [trial for trial in completed.trials if trial.nct_id in relevant_ids]
+            if completed
+            else []
+        )
+        terminated_trials = (
+            [trial for trial in terminated.trials if trial.nct_id in relevant_ids]
+            if terminated
+            else []
+        )
         n_safety_efficacy_shown = (
             sum(
                 1
-                for t in terminated.trials
+                for t in terminated_trials
                 if _classify_stop_reason(t.why_stopped) in {"safety", "efficacy"}
             )
-            if terminated
-            else 0
+            if terminated_coverage
+            else None
         )
         header = (
             f"Clinical trials for {drug_name} × {disease_name}: "
-            f"{n_total} total ({n_recruiting} recruiting, "
-            f"{n_active_not_recruiting} active, {n_withdrawn} withdrawn). "
-            f"{n_completed} completed. "
-            f"{n_terminated} terminated "
-            f"({n_safety_efficacy_shown} safety/efficacy in shown set)."
+            f"all-status {_trial_evidence_text(search_coverage)}. "
+            f"Relevant reviewed statuses: {n_recruiting if n_recruiting is not None else 'unavailable'} recruiting, "
+            f"{n_active_not_recruiting if n_active_not_recruiting is not None else 'unavailable'} active, "
+            f"{n_withdrawn if n_withdrawn is not None else 'unavailable'} withdrawn. "
+            f"Completed scope: {_trial_evidence_text(completed_coverage)}. "
+            f"Terminated scope: {_trial_evidence_text(terminated_coverage)}; "
+            f"{n_safety_efficacy_shown if n_safety_efficacy_shown is not None else 'unavailable'} "
+            "reviewed relevant safety/efficacy stops."
         )
-
-        completed_trials = completed.trials if completed else []
-        terminated_trials = terminated.trials if terminated else []
 
         completed_phase_dist = _phase_distribution(completed_trials)
         terminated_phase_dist = _phase_distribution(terminated_trials)
@@ -881,12 +913,12 @@ def build_supervisor_tools(
             f"{terminated_table}"
         )
 
-        # Authoritative reasoning basis: the sub-agent's relevance-filtered signals + its closure verdict (carried in the
-        # prose). The supervisor reasons over THESE, not the raw counts above and not by re-deriving phase/closure from
-        # prose. When the sub-agent didn't classify relevance (signals None), fall back to all-trial facts so the phase is
-        # still surfaced rather than silently dropped.
-        signals = output.signals or derive_trial_signals(output)
-        signals_block = format_derived_signals(signals)
+        signals = output.signals
+        signals_block = (
+            format_derived_signals(signals)
+            if signals is not None
+            else "Relevance-filtered trial signals unavailable."
+        )
         if output.contaminated_nct_ids:
             signals_block += (
                 f"\n  contaminated_excluded: {len(output.contaminated_nct_ids)} trial(s) "
@@ -1131,36 +1163,24 @@ def build_supervisor_tools(
             safety_flag = _safety_flag(
                 lit_artifact.evidence_summary if lit_artifact else None
             )
-            n_total = (
-                ct_artifact.search.total_count
-                if ct_artifact and ct_artifact.search
-                else 0
+            search_coverage = ct_artifact.search_coverage if ct_artifact else None
+            completed_coverage = ct_artifact.completed_coverage if ct_artifact else None
+            terminated_coverage = (
+                ct_artifact.terminated_coverage if ct_artifact else None
             )
+            n_total = search_coverage.relevant_records if search_coverage else None
             n_completed = (
-                ct_artifact.completed.total_count
-                if ct_artifact and ct_artifact.completed
-                else 0
+                completed_coverage.relevant_records if completed_coverage else None
             )
             n_terminated = (
-                ct_artifact.terminated.total_count
-                if ct_artifact and ct_artifact.terminated
-                else 0
+                terminated_coverage.relevant_records if terminated_coverage else None
             )
-            # Withdrawn-before-enrolling count from the all-status search breakdown. A withdrawn trial never dosed a
-            # patient, so it is NOT a phase signal (dev_stage stays untested) — it's a separate registry-outcome fact
-            # the ranker needs so a withdrawn-only pair isn't read as a live registered trial.
             n_withdrawn = (
-                ct_artifact.search.by_status.get("WITHDRAWN", 0)
-                if ct_artifact and ct_artifact.search
-                else 0
-            )
-            # Relevance-filtered signals (sub-agent judgment) — the phase facts the supervisor ranks on, not the raw counts.
-            # None when the sub-agent didn't classify; fall back to all-trial facts so the phase is still surfaced.
-            ct_signals = (
-                (ct_artifact.signals or derive_trial_signals(ct_artifact))
-                if ct_artifact
+                search_coverage.relevant_by_status.get("WITHDRAWN", 0)
+                if search_coverage
                 else None
             )
+            ct_signals = ct_artifact.signals if ct_artifact else None
             relevant_highest_phase = (
                 ct_signals.highest_completed_phase if ct_signals else None
             )
@@ -1178,6 +1198,7 @@ def build_supervisor_tools(
                 "trials_completed": n_completed,
                 "trials_terminated": n_terminated,
                 "trials_withdrawn": n_withdrawn,
+                "trial_evidence": _trial_evidence_text(search_coverage),
                 "relevant_highest_phase": relevant_highest_phase,
                 "relevant_phase3_terminated_for_cause": relevant_phase3_terminated,
                 # Authoritative development-stage tier — seed the LLM's ranking with the same fact the downstream
@@ -1242,10 +1263,10 @@ def build_supervisor_tools(
             )
             # Withdrawn-before-enrolling note. Flagged only when the pair's ONLY on-record trials are withdrawn (total
             # equals withdrawn) — that pair has no live/completed trial and must not read as a registered candidate.
-            n_withdrawn = a.get("trials_withdrawn", 0)
+            n_withdrawn = a.get("trials_withdrawn")
             withdrawn_note = (
-                "; ALL on-record trial(s) WITHDRAWN before enrolling (never dosed a patient)"
-                if n_withdrawn and a.get("trials_total", 0) == n_withdrawn
+                "; ALL relevance-reviewed trial(s) WITHDRAWN before enrolling (never dosed a patient)"
+                if n_withdrawn and a.get("trials_total") == n_withdrawn
                 else (f"; {n_withdrawn} withdrawn" if n_withdrawn else "")
             )
             # Animal-only literature note. Only True fires a note — False (has human data) and None (nothing to grade)
@@ -1260,8 +1281,9 @@ def build_supervisor_tools(
             safety_note = f"; {_sflag}" if _sflag else ""
             lines.append(
                 f"  - {a['disease']}: literature {a['literature_strength']}{dir_note}, "
-                f"{a['literature_pmids']} PMIDs; trials {a['trials_total']} total, "
-                f"{a['trials_completed']} completed, {a['trials_terminated']} terminated; "
+                f"{a['literature_pmids']} PMIDs; trials {a['trial_evidence']}; "
+                f"{a['trials_completed'] if a['trials_completed'] is not None else 'unavailable'} relevant completed, "
+                f"{a['trials_terminated'] if a['trials_terminated'] is not None else 'unavailable'} relevant terminated; "
                 f"relevant highest phase {phase}{term_note}{stage_note}{withdrawn_note}{animal_note}{safety_note}"
             )
         return "\n".join(lines), artifacts
@@ -1293,18 +1315,14 @@ def build_supervisor_tools(
                 )
             else:
                 fact = "no trial signal available"
-            # Withdrawn-before-enrolling clause. Orthogonal to dev_stage (a withdrawn trial never dosed a patient, so
-            # the pair stays untested) — surfaced so the critic doesn't read a withdrawn-only pair as a live registered
-            # trial. Flagged only when EVERY on-record trial is withdrawn (total == withdrawn).
-            # Reads ct.search directly, mirroring the _invest dict's trials_withdrawn/trials_total (same ct.search
-            # source) — keep both in sync if the dict's source ever moves off ct.search.
-            n_total = ct.search.total_count if ct and ct.search else 0
+            coverage = ct.search_coverage if ct else None
+            n_total = coverage.relevant_records if coverage else None
             n_withdrawn = (
-                ct.search.by_status.get("WITHDRAWN", 0) if ct and ct.search else 0
+                coverage.relevant_by_status.get("WITHDRAWN", 0) if coverage else None
             )
             if n_withdrawn and n_total == n_withdrawn:
                 fact += (
-                    f"; all {n_withdrawn} on-record trial(s) WITHDRAWN before enrolling "
+                    f"; all {n_withdrawn} relevance-reviewed trial(s) WITHDRAWN before enrolling "
                     "(never dosed a patient — not a live registered trial)"
                 )
             # Animal-only literature clause. Only True adds a clause — False (has human data) and None (nothing to
@@ -1498,11 +1516,8 @@ def build_supervisor_tools(
             lit = slot.get("literature")
             ct = slot.get("clinical_trials")
             n_pmids = len(lit.pmids) if lit else 0
-            n_trials = (
-                ct.search.total_count
-                if (ct is not None and ct.search is not None)
-                else 0
-            )
+            coverage = ct.search_coverage if ct is not None else None
+            n_trials = coverage.relevant_records if coverage is not None else 0
             lit_strength = (
                 lit.evidence_summary.strength if lit and lit.evidence_summary else None
             )
@@ -1592,9 +1607,7 @@ def build_supervisor_tools(
                         disease.lower().strip(), "none"
                     ),
                     "approved_indication": approved_ind,
-                    # Registry trial count so the judge doesn't call a multi-trial candidate untested/abandoned when its
-                    # literature came back empty.
-                    "trials_on_record": n_trials,
+                    "trial_evidence": _trial_evidence_text(coverage),
                 }
                 if stage_phrase is not None
                 else None

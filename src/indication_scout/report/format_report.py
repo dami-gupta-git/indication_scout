@@ -5,6 +5,7 @@ from datetime import datetime
 
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
+    TrialRelevanceCoverage,
 )
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     _classify_stop_reason,
@@ -23,38 +24,21 @@ from indication_scout.services.dev_stage import dev_stage_phrase
 _TRIAL_RENDER_CAP = 10
 
 
-def _trial_count_clause(total_on_record: int, n_fetched: int, n_shown: int) -> str:
-    """Build a reconciling clause for a completed/terminated trial header.
-
-    The header already states `total_on_record` (the raw API pair total — pre-filter). The OLD
-    formatter then appended ", N hidden as a different indication" where N was contamination
-    counted WITHIN the fetched (≤50) slice — a DIFFERENT population from total_on_record, so the
-    two read as if they subtracted ("64 total, 45 hidden" → looks like 19 visible, but 5 show).
-
-    This clause keeps every number against the SAME population it belongs to and only states what
-    is actually true of the fetched slice:
-      - all `total_on_record` trials were fetched (n_fetched == total_on_record): say how many of
-        them are relevant vs hidden-as-a-different-indication;
-      - only a slice was fetched (n_fetched < total_on_record): say "showing N relevant of the
-        first M fetched" so the rendered list count is never read against the full total.
-    Returns "" when there is nothing to disclose (everything fetched, nothing hidden).
-    """
-    n_hidden = n_fetched - n_shown
-    if n_fetched >= total_on_record:
-        # The full population was fetched, so hidden+shown reconcile against total_on_record.
-        if n_hidden:
-            return (
-                f" {n_shown} relevant; {n_hidden} hidden as a different indication"
-                f" (of {total_on_record})."
-            )
-        return ""
-    # Only a slice was fetched; never imply the shown count subtracts from total_on_record.
-    if n_hidden:
+def _trial_coverage_text(coverage: TrialRelevanceCoverage | None) -> str:
+    """Render relevant evidence separately from raw registry query coverage."""
+    if coverage is None:
+        return "Relevance coverage unavailable"
+    if coverage.coverage_complete:
         return (
-            f" showing {n_shown} relevant of the first {n_fetched} fetched"
-            f" ({n_hidden} of those fetched hidden as a different indication)."
+            f"{coverage.relevant_records} relevant trial(s); "
+            f"{coverage.contaminated_records} excluded"
         )
-    return f" showing {n_shown} of the first {n_fetched} fetched."
+    return (
+        f"at least {coverage.relevant_records} relevant among "
+        f"{coverage.classified_records} reviewed; "
+        f"{coverage.registry_query_matches} registry query matches, "
+        f"{coverage.unreviewed_records} not reviewed"
+    )
 
 
 def _title_case_disease(name: str) -> str:
@@ -75,9 +59,7 @@ def _linkify_pmids(text: str) -> str:
     def _repl(m: re.Match) -> str:
         label = m.group(1)
         ids = [i.strip() for i in m.group(2).split(",") if i.strip()]
-        links = ", ".join(
-            f"[{i}](https://pubmed.ncbi.nlm.nih.gov/{i}/)" for i in ids
-        )
+        links = ", ".join(f"[{i}](https://pubmed.ncbi.nlm.nih.gov/{i}/)" for i in ids)
         return f"{label}: {links}"
 
     return _PMID_INLINE.sub(_repl, text)
@@ -224,28 +206,31 @@ def _fmt_clinical_trials(
     if ct.search:
         s = ct.search
         lines.append(
-            f"\n**Trial activity:** {s.total_count} total trial(s) for this pair"
+            f"\n**Trial activity:** {_trial_coverage_text(ct.search_coverage)}"
         )
-        if s.total_count == 0:
+        if ct.search_coverage is None:
+            lines.append(f"- **Registry query matches:** {s.total_count}")
+        elif ct.search_coverage.coverage_complete:
+            lines.append(
+                f"- **Registry query matches:** {ct.search_coverage.registry_query_matches}"
+            )
+        if (
+            ct.search_coverage
+            and ct.search_coverage.coverage_complete
+            and s.total_count == 0
+        ):
             lines.append(
                 "- _Whitespace: no trials found for this drug × indication pair._"
             )
 
-    # Rendered example trials skip contamination — the per-trial relevance gate (including the
-    # approval-aware TEST 1) already tagged approved-sub-indication / different-indication trials
-    # as contaminated_nct_ids, so the filtered `shown` list below is clean for THIS candidate even
-    # when the candidate is approval-relationship "contaminated". (We no longer blanket-suppress the
-    # whole table for contaminated candidates — that discarded the trials the gate had already
-    # cleanly isolated. The total_count header stays verbatim; only contaminated examples are
-    # filtered, and `_trial_count_clause` discloses the gap.)
-    contaminated = set(ct.contaminated_nct_ids)
+    # Rendered examples include only trials the relevance gate accepted for this candidate.
+    relevant = set(ct.relevant_nct_ids)
 
     if ct.completed:
         c = ct.completed
-        shown = [t for t in c.trials if t.nct_id not in contaminated]
+        shown = [t for t in c.trials if t.nct_id in relevant]
         lines.append(
-            f"\n**Completed trials ({c.total_count} total on record):**"
-            f"{_trial_count_clause(c.total_count, len(c.trials), len(shown))}"
+            f"\n**Completed trials:** {_trial_coverage_text(ct.completed_coverage)}"
         )
         for trial in shown[:_TRIAL_RENDER_CAP]:
             phase = trial.phase or "Unknown phase"
@@ -271,10 +256,9 @@ def _fmt_clinical_trials(
     if ct.terminated:
         term = ct.terminated
         if term.total_count:
-            shown = [t for t in term.trials if t.nct_id not in contaminated]
+            shown = [t for t in term.trials if t.nct_id in relevant]
             lines.append(
-                f"\n**Terminated trials ({term.total_count} total on record):**"
-                f"{_trial_count_clause(term.total_count, len(term.trials), len(shown))}"
+                f"\n**Terminated trials:** {_trial_coverage_text(ct.terminated_coverage)}"
             )
             for t in shown[:_TRIAL_RENDER_CAP]:
                 reason = f" — *{t.why_stopped}*" if t.why_stopped else ""
@@ -520,6 +504,9 @@ def format_report(output: SupervisorOutput) -> str:
     # pick-first-summary / union-PMIDs collapse for legacy payloads (e.g. frozen gold snapshots)
     # written before the supervisor carried these fields.
     drug_safety = output.drug_safety_summary
+    regulatory_safety = output.drug_regulatory_safety_summary
+    pharmacovigilance = output.drug_pharmacovigilance_summary
+    literature_safety = output.drug_literature_safety_summary
     drug_safety_pmids = list(output.drug_safety_pmids)
     if not drug_safety:
         for f in output.disease_findings:
@@ -528,17 +515,34 @@ def format_report(output: SupervisorOutput) -> str:
                 continue
             if not drug_safety and es.safety_summary:
                 drug_safety = es.safety_summary
+            if not regulatory_safety and es.regulatory_safety_summary:
+                regulatory_safety = es.regulatory_safety_summary
+            if not pharmacovigilance and es.pharmacovigilance_summary:
+                pharmacovigilance = es.pharmacovigilance_summary
+            if not literature_safety and es.literature_safety_summary:
+                literature_safety = es.literature_safety_summary
             for pmid in es.safety_pmids:
                 if pmid not in drug_safety_pmids:
                     drug_safety_pmids.append(pmid)
-    if drug_safety:
+    if drug_safety or regulatory_safety or pharmacovigilance or literature_safety:
         lines += ["## Drug Safety", ""]
         lines.append(
             "_Drug-wide safety signal — applies to the drug generally, not to any single "
             "candidate indication below._"
         )
         lines.append("")
-        lines.append(f"**Safety:** {_linkify_pmids(drug_safety)}")
+        if regulatory_safety:
+            lines.append(f"**Regulatory label:** {_linkify_pmids(regulatory_safety)}")
+        if pharmacovigilance:
+            lines.append(
+                f"\n**Pharmacovigilance:** {_linkify_pmids(pharmacovigilance)}"
+            )
+        if literature_safety:
+            lines.append(f"\n**Literature:** {_linkify_pmids(literature_safety)}")
+        if drug_safety and not (
+            regulatory_safety or pharmacovigilance or literature_safety
+        ):
+            lines.append(f"**Safety:** {_linkify_pmids(drug_safety)}")
         if drug_safety_pmids:
             pmid_links = ", ".join(
                 f"[{pmid}](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)"

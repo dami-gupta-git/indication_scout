@@ -9,7 +9,8 @@ from langchain_core.messages import ToolCall
 from indication_scout.agents.literature.literature_tools import build_literature_tools
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
-from indication_scout.services.retrieval import AbstractResult
+from indication_scout.models.model_safety import DrugSafetyAssessment
+from indication_scout.services.retrieval import AbstractResult, SafetySearchResult
 
 logger = logging.getLogger(__name__)
 
@@ -55,15 +56,33 @@ EVIDENCE = EvidenceSummary(
 
 SAFETY_ABSTRACTS = [
     AbstractResult(
-        pmid="111", title="Metformin lactic acidosis risk", abstract="Study C.", similarity=0.7
+        pmid="111",
+        title="Metformin lactic acidosis risk",
+        abstract="Study C.",
+        similarity=0.7,
     ),
 ]
+SAFETY_RESULTS = SafetySearchResult(
+    drug_level=SAFETY_ABSTRACTS,
+    disease_scoped=SAFETY_ABSTRACTS,
+)
 
-SAFETY_SUMMARY = "Metformin carries a lactic acidosis risk in renal impairment (PMID: 111)."
+SAFETY_SUMMARY = (
+    "Metformin carries a lactic acidosis risk in renal impairment (PMID: 111)."
+)
 SAFETY_PMIDS = ["111"]
 SAFETY_SEVERITY = "serious"
 HARM_SUMMARY = "Lactic acidosis reported in T2D patients (PMID: 111)."
 HARM_PMIDS = ["111"]
+SAFETY_ASSESSMENT = DrugSafetyAssessment(
+    regulatory_summary="FDA label boxed-warning text: lactic acidosis.",
+    pharmacovigilance_summary="",
+    literature_summary="",
+    safety_summary=SAFETY_SUMMARY,
+    safety_pmids=SAFETY_PMIDS,
+    safety_severity=SAFETY_SEVERITY,
+    label_data_available=True,
+)
 
 
 def _make_svc() -> MagicMock:
@@ -73,10 +92,8 @@ def _make_svc() -> MagicMock:
     svc.expand_search_terms = AsyncMock(return_value=SEARCH_TERMS)
     svc.fetch_and_cache = AsyncMock(return_value=PMIDS)
     svc.semantic_search = AsyncMock(return_value=SEMANTIC_RESULTS)
-    svc.safety_search = AsyncMock(return_value=SAFETY_ABSTRACTS)
-    svc.summarize_safety = AsyncMock(
-        return_value=(SAFETY_SUMMARY, SAFETY_PMIDS, SAFETY_SEVERITY)
-    )
+    svc.safety_search = AsyncMock(return_value=SAFETY_RESULTS)
+    svc.summarize_safety = AsyncMock(return_value=SAFETY_ASSESSMENT)
     svc.classify_indication_harm = AsyncMock(
         return_value=(True, HARM_SUMMARY, HARM_PMIDS)
     )
@@ -351,8 +368,8 @@ async def test_semantic_search_returns_empty_when_no_pmids():
 
 async def test_safety_search_fetches_summarizes_and_classifies():
     """safety_search: builds/uses the drug profile, calls svc.safety_search(chembl_id, date_before,
-    disease), svc.summarize_safety (drug-level 3-tuple), and svc.classify_indication_harm
-    (disease-specific), returning an EvidenceSummary carrying BOTH."""
+    disease), source-separated drug-wide summarization, and disease-scoped harm classification,
+    returning an EvidenceSummary carrying both."""
     svc = _make_svc()
     tools = build_literature_tools(svc=svc, db=MagicMock())
     tool_map = {t.name: t for t in tools}
@@ -381,10 +398,14 @@ async def test_safety_search_fetches_summarizes_and_classifies():
         CHEMBL_ID, date_before=None, disease="colorectal cancer"
     )
     svc.summarize_safety.assert_awaited_once_with(
-        CHEMBL_ID, "colorectal cancer", DRUG_PROFILE, SAFETY_ABSTRACTS, date_before=None
+        CHEMBL_ID,
+        "colorectal cancer",
+        DRUG_PROFILE,
+        SAFETY_RESULTS.combined,
+        date_before=None,
     )
     svc.classify_indication_harm.assert_awaited_once_with(
-        CHEMBL_ID, "colorectal cancer", SAFETY_ABSTRACTS
+        CHEMBL_ID, "colorectal cancer", SAFETY_RESULTS.disease_scoped
     )
 
     es = msg.artifact
@@ -426,8 +447,18 @@ async def test_safety_search_builds_profile_when_store_empty():
 async def test_safety_search_no_signal_content_is_explicit():
     """No drug-level signal AND no indication harm → content says so explicitly."""
     svc = _make_svc()
-    svc.summarize_safety = AsyncMock(return_value=("", [], "none"))
-    svc.classify_indication_harm = AsyncMock(return_value=(False, "", []))
+    svc.summarize_safety = AsyncMock(
+        return_value=DrugSafetyAssessment(
+            regulatory_summary="",
+            pharmacovigilance_summary="",
+            literature_summary="",
+            safety_summary="",
+            safety_pmids=[],
+            safety_severity=None,
+            label_data_available=False,
+        )
+    )
+    svc.classify_indication_harm = AsyncMock(return_value=(None, "", []))
     tool_map = _build(svc)
     with _patch_resolve():
         msg = await tool_map["safety_search"].ainvoke(
@@ -441,8 +472,8 @@ async def test_safety_search_no_signal_content_is_explicit():
 
     assert msg.artifact.safety_summary == ""
     assert msg.artifact.safety_pmids == []
-    assert msg.artifact.indication_harm is False
-    assert "No safety signal found" in msg.content
+    assert msg.artifact.indication_harm is None
+    assert "No drug-wide safety evidence available" in msg.content
 
 
 # ------------------------------------------------------------------
@@ -588,5 +619,5 @@ async def test_synthesize_defaults_safety_fields_when_safety_search_skipped():
 
     assert msg.artifact.safety_summary == ""
     assert msg.artifact.safety_pmids == []
-    assert msg.artifact.indication_harm is False
+    assert msg.artifact.indication_harm is None
     assert msg.artifact.indication_harm_pmids == []

@@ -11,9 +11,9 @@ export interface GridRow {
   source: "competitor" | "mechanism" | "both";
   verdict: string; // "" when no blurb / un-ranked candidate
   strength: EvidenceStrength | null; // null when no literature evidence summary
-  totalTrials: number | null; // null when no clinical-trials search ran
+  totalTrials: number | null; // relevance-reviewed count; null when unavailable
   competitors: number | null; // null when no landscape data
-  recruiting: number | null; // null when no search / no RECRUITING bucket
+  recruiting: number | null; // relevance-reviewed count; null when unavailable
 }
 
 export type SortKey = keyof GridRow;
@@ -47,18 +47,18 @@ export function buildGridRows(result: SupervisorOutput): GridRow[] {
   return result.disease_findings
     .filter((f) => f.blurb != null && hasStructuredBlurb(f.blurb))
     .map((f) => {
-      const search = f.clinical_trials?.search ?? null;
+      const coverage = f.clinical_trials?.search_coverage ?? null;
       return {
         rank: rankByDisease.get(f.disease) ?? unranked,
         disease: f.disease,
         source: f.source,
         verdict: f.blurb?.verdict ?? "",
         strength: f.literature?.evidence_summary?.strength ?? null,
-        totalTrials: search ? search.total_count : null,
+        totalTrials: coverage ? coverage.relevant_records : null,
         competitors: f.clinical_trials?.landscape
           ? f.clinical_trials.landscape.competitors.length
           : null,
-        recruiting: search ? (search.by_status["RECRUITING"] ?? 0) : null,
+        recruiting: coverage ? (coverage.relevant_by_status["RECRUITING"] ?? 0) : null,
       };
     });
 }

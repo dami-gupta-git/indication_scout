@@ -3,7 +3,22 @@ import { buildGridRows, sortGridRows } from "./gridRows";
 import sample from "../fixtures/sample-output.json";
 import type { SupervisorOutput } from "../types";
 
-const result = sample as unknown as SupervisorOutput;
+const result = structuredClone(sample) as unknown as SupervisorOutput;
+for (const finding of result.disease_findings) {
+  const search = finding.clinical_trials?.search;
+  if (search && finding.clinical_trials) {
+    finding.clinical_trials.search_coverage = {
+      registry_query_matches: search.total_count,
+      retrieved_records: search.total_count,
+      classified_records: search.total_count,
+      relevant_records: search.total_count,
+      contaminated_records: 0,
+      unreviewed_records: 0,
+      coverage_complete: true,
+      relevant_by_status: search.by_status,
+    };
+  }
+}
 
 describe("buildGridRows", () => {
   const rows = buildGridRows(result);
