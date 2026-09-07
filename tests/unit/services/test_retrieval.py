@@ -1689,6 +1689,42 @@ async def test_summarize_safety_prod_uses_ot_signal_and_severity(svc):
     assert result.label_data_available is True
 
 
+def test_format_regulatory_safety_names_other_products_instead_of_repeating_text():
+    """Multiple approved products' near-duplicate boxed warnings collapse to one full quote
+    (the most recent label) plus the other products named, not every near-duplicate repeated."""
+    from indication_scout.models.model_fda import FDALabelSafetyRecord
+
+    label_records = [
+        FDALabelSafetyRecord(
+            set_id="set-old",
+            effective_time="20240101",
+            brand_names=["WELLBUTRIN SR"],
+            boxed_warnings=["WARNING: older wording of the same warning."],
+        ),
+        FDALabelSafetyRecord(
+            set_id="set-new",
+            effective_time="20260101",
+            brand_names=["Bupropion Hydrochloride XL"],
+            boxed_warnings=["WARNING: newest wording of the same warning."],
+        ),
+        FDALabelSafetyRecord(
+            set_id="set-mid",
+            effective_time="20250101",
+            generic_names=["BUPROPION HCL ER (XL)"],
+            boxed_warnings=["WARNING: mid wording of the same warning."],
+        ),
+    ]
+
+    result = RetrievalService._format_regulatory_safety(label_records, warnings=[])
+
+    assert result == (
+        "FDA label boxed-warning text (Bupropion Hydrochloride XL, most recent label):\n"
+        "WARNING: newest wording of the same warning.\n"
+        "2 other FDA-approved product label(s) also carry a boxed warning "
+        "(wording may vary by revision date): BUPROPION HCL ER (XL), WELLBUTRIN SR."
+    )
+
+
 async def test_summarize_safety_holdout_omits_ot_signal(svc):
     """Holdout (date_before set): OT warnings/AEs are OMITTED from the prompt (undateable → would
     leak); literature findings require a source-verifiable exact quote."""

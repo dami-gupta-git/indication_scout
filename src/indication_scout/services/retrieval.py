@@ -1434,22 +1434,51 @@ class RetrievalService:
     def _format_regulatory_safety(
         label_records: list[FDALabelSafetyRecord], warnings: list[DrugWarning]
     ) -> str:
-        """Format label text and Open Targets warning metadata without conflating them."""
-        boxed_warnings = list(
-            dict.fromkeys(
-                text.strip()
-                for record in label_records
-                if record.set_id
-                for text in record.boxed_warnings
-                if text.strip()
+        """Format label text and Open Targets warning metadata without conflating them.
+
+        Each approved product (brand + every generic manufacturer) has its own openFDA label
+        record with near-identical but not byte-identical boxed-warning text (FDA requires
+        generics to carry substantially the same safety info as the reference product). Quote
+        the most recent product's text in full and name the rest, rather than repeating every
+        near-duplicate or merging them into one — merging could silently drop a genuinely
+        different warning if one product's ever differs.
+        """
+        boxed_by_set: dict[str, tuple[str, str, list[str]]] = {}
+        for record in label_records:
+            if not record.set_id:
+                continue
+            text = next((t.strip() for t in record.boxed_warnings if t.strip()), None)
+            if text is None:
+                continue
+            boxed_by_set[record.set_id] = (
+                text,
+                record.effective_time or "",
+                record.brand_names or record.generic_names or ["unnamed product"],
             )
-        )
+
         sections: list[str] = []
-        if boxed_warnings:
-            sections.append(
-                "FDA label boxed-warning text:\n"
-                + "\n".join(f"- {text}" for text in boxed_warnings)
+        if boxed_by_set:
+            most_recent_set_id = max(
+                boxed_by_set, key=lambda set_id: boxed_by_set[set_id][1]
             )
+            chosen_text, _, chosen_names = boxed_by_set[most_recent_set_id]
+            other_names = sorted(
+                names[0]
+                for set_id, (_, _, names) in boxed_by_set.items()
+                if set_id != most_recent_set_id
+            )
+            lines = [
+                f"FDA label boxed-warning text ({chosen_names[0]}, most recent label):",
+                chosen_text,
+            ]
+            if other_names:
+                lines.append(
+                    f"{len(other_names)} other FDA-approved product label(s) also carry a "
+                    "boxed warning (wording may vary by revision date): "
+                    + ", ".join(other_names)
+                    + "."
+                )
+            sections.append("\n".join(lines))
 
         warning_types = sorted(
             {
