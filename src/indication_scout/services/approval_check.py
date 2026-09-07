@@ -166,6 +166,16 @@ def _save_drug_approvals(
 # --------------------------------------------------------------------------
 
 
+def _reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    """object_pairs_hook that raises on a repeated key instead of keeping the last value."""
+    seen: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in seen:
+            raise ValueError(f"Duplicate drug key {key!r} in drug approvals table")
+        seen[key] = value
+    return seen
+
+
 @lru_cache(maxsize=1)
 def _load_drug_approvals_table() -> dict[str, list[dict[str, str]]]:
     """Load the hardcoded approvals JSON file once per process."""
@@ -175,7 +185,9 @@ def _load_drug_approvals_table() -> dict[str, list[dict[str, str]]]:
             DRUG_APPROVALS_PATH,
         )
         return {}
-    raw = json.loads(DRUG_APPROVALS_PATH.read_text())
+    raw = json.loads(
+        DRUG_APPROVALS_PATH.read_text(), object_pairs_hook=_reject_duplicate_keys
+    )
     if not isinstance(raw, dict):
         logger.error(
             "drug approvals table at %s is not a JSON object; ignoring",

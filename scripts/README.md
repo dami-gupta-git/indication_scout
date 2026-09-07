@@ -82,4 +82,5 @@ read against `runbook.txt`. Outputs go to `results/holdout_validation/`.
 
 - **runbook.txt** — CSV (`drug,indication,date`) of known approvals; input for
   `gen_seed_candidate_recall.py` and `probe_rank.py`.
-- **drug_approvals.json** — Per-drug `{disease, approved}` approval records.
+- **drug_approvals.json** — Per-drug `{disease, approved}` approval records. Read from the project
+  root's canonical `drug_approvals.json`; there is no separate copy under `scripts/validation/`.

@@ -464,6 +464,24 @@ async def test_get_approved_indications_uncurated_drug_returns_empty(caplog):
     )
 
 
+def test_load_drug_approvals_table_rejects_duplicate_key(tmp_path):
+    """A repeated top-level drug key must raise, not silently keep the last value."""
+    bad_table = tmp_path / "drug_approvals.json"
+    bad_table.write_text(
+        """
+        {
+          "methotrexate": [{"disease": "psoriasis", "approved": "1972-12-31"}],
+          "methotrexate": [{"disease": "rheumatoid arthritis", "approved": "1988-12-31"}]
+        }
+        """
+    )
+    with patch(
+        "indication_scout.services.approval_check.DRUG_APPROVALS_PATH", bad_table
+    ):
+        with pytest.raises(ValueError, match="methotrexate"):
+            _load_drug_approvals_table()
+
+
 # --- list_approved_indications_at ------------------------------------------
 
 
