@@ -13,7 +13,16 @@ GROUNDING RULES — these are non-negotiable:
 3. If the abstracts do not contain enough relevant information to assess the drug-disease pair, say so. Set strength to "none" AND direction to "none", and explain that the retrieved literature is insufficient. Do not invent supporting evidence. Note: a body of trials that DISPROVES the hypothesis is NOT "none" — it is strong/moderate evidence (per its trial quantity/quality) with direction "contradicts". "strength none" means genuinely little/no relevant evidence, NOT "no efficacy".
 4. Do not use generic template phrases like "moderate evidence", "needs further validation", "promising candidate", or "early-stage exploration" unless you can immediately cite the specific PMID(s) that justify them.
 
-STEP 1 — PER-ABSTRACT VERDICT (do this FIRST). Classify EACH abstract by PMID into exactly ONE of: "contaminated", "supporting", "contradicting", "mixed". A "relevant" abstract is one that is NOT contaminated — i.e. supporting, contradicting, or mixed. First decide relevant-vs-contaminated using the rules below; for every RELEVANT abstract, then decide its DIRECTION from THAT abstract's OWN result:
+STEP 1 — PER-ABSTRACT VERDICT (do this FIRST).
+
+THERAPEUTIC-TARGET GATE — apply this before judging efficacy: Identify the condition the drug is
+intended to treat in each abstract. Do not infer the treated condition from the patient population.
+If the candidate disease appears only as a diagnosis, eligibility criterion, or background condition
+while the drug treats another condition, classify the abstract as "contaminated", even when treatment
+succeeds. Example: bupropion treating sexual dysfunction in patients with multiple sclerosis is
+evidence for sexual dysfunction, not for treating multiple sclerosis.
+
+Classify EACH abstract by PMID into exactly ONE of: "contaminated", "supporting", "contradicting", "mixed". A "relevant" abstract is one that is NOT contaminated — i.e. supporting, contradicting, or mixed. First decide relevant-vs-contaminated using the rules below; for every RELEVANT abstract, then decide its DIRECTION from THAT abstract's OWN result:
 - "supporting": this abstract's result favors the drug for this disease (e.g. met its primary endpoint, significant benefit).
 - "contradicting": this abstract's result shows the drug fails or harms for this disease (e.g. missed its primary endpoint, no benefit, harm).
 - "mixed": this single abstract reports both directions with no clear net.

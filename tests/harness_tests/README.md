@@ -23,6 +23,8 @@ ignorance, is the failure mode.
 - **literature_strength_harness.py** — isolated call: grades DRUG-SPECIFIC literature strength without
   inflating to "strong" on class-level (other-drug) RCTs. `evidence_basis="class_level"` vs `drug_specific`.
   Real abstracts by PMID.
+- **literature_relevance_intent_harness.py** — runs the production `synthesize.txt` prompt against
+  therapeutic-intent mismatches and a direct-treatment control using real abstracts from pgvector.
 - **approval_aware_literature_harness.py** — extension to `judge_literature_strength`: papers on an
   APPROVED sub-indication of a broad candidate must not count toward its strength (`evidence_basis="approved"`).
 
