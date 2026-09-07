@@ -103,4 +103,7 @@ tests/eval.py
 uv.lock
 metrics/
 # Validation per-run scout logs (transient)
+!scripts/validation/
+scripts/validation/*
+!scripts/validation/probe_ot_score_rank.py
 validation/logs/

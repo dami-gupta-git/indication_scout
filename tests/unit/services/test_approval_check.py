@@ -32,6 +32,7 @@ from indication_scout.services.approval_check import (
 def test_coerce_label(value, expected):
     assert _coerce_label(value) == expected
 
+
 # --- extract_approved_from_labels ---
 
 
@@ -467,19 +468,26 @@ async def test_get_approved_indications_uncurated_drug_returns_empty(caplog):
 def test_load_drug_approvals_table_rejects_duplicate_key(tmp_path):
     """A repeated top-level drug key must raise, not silently keep the last value."""
     bad_table = tmp_path / "drug_approvals.json"
-    bad_table.write_text(
-        """
+    bad_table.write_text("""
         {
           "methotrexate": [{"disease": "psoriasis", "approved": "1972-12-31"}],
           "methotrexate": [{"disease": "rheumatoid arthritis", "approved": "1988-12-31"}]
         }
-        """
-    )
+        """)
     with patch(
         "indication_scout.services.approval_check.DRUG_APPROVALS_PATH", bad_table
     ):
         with pytest.raises(ValueError, match="methotrexate"):
             _load_drug_approvals_table()
+
+
+def test_load_drug_approvals_table_has_verified_finasteride_records():
+    table = _load_drug_approvals_table()
+
+    assert table["finasteride"] == [
+        {"disease": "benign prostatic hyperplasia", "approved": "1992-06-19"},
+        {"disease": "male pattern hair loss", "approved": "1997-12-19"},
+    ]
 
 
 # --- list_approved_indications_at ------------------------------------------
