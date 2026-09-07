@@ -102,5 +102,8 @@
     {"disease": "cardiovascular death reduction in type 2 diabetes", "approved": "2016-12-02"},
     {"disease": "heart failure", "approved": "2021-08-18"},
     {"disease": "chronic kidney disease", "approved": "2023-09-28"}
+  ],
+  "rituximab": [
+    {"disease": "pemphigus vulgaris", "approved": "2018-06-07"}
   ]
 }

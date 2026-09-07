@@ -55,6 +55,7 @@ class EvidenceSummary(BaseModel):
     # the supervisor collapses these into one shown once at the top of the report). "" = no signal.
     safety_summary: str = ""
     regulatory_safety_summary: str = ""
+    regulatory_safety_full_labels: str = ""
     pharmacovigilance_summary: str = ""
     literature_safety_summary: str = ""
     label_safety_available: bool | None = None

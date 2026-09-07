@@ -1144,13 +1144,12 @@ class RetrievalService:
                 label_records = []
                 label_data_available = False
 
-        regulatory_summary = self._format_regulatory_safety(label_records, warnings)
         pharmacovigilance_summary = self._format_pharmacovigilance(top_aes)
 
         cache_params = {
             "chembl_id": chembl_id,
             "disease": disease,
-            "logic_version": "source_separated_safety_v1",
+            "logic_version": "source_separated_safety_v2",
             "warnings": sorted(
                 f"{w.warning_type}|{w.description or ''}|{w.toxicity_class or ''}"
                 for w in warnings
@@ -1170,6 +1169,10 @@ class RetrievalService:
         cached = cache_get("summarize_safety", cache_params, self.cache_dir)
         if cached is not None:
             return DrugSafetyAssessment(**cached)
+
+        regulatory_summary, regulatory_full_labels = (
+            await self._format_regulatory_safety(chembl_id, label_records, warnings)
+        )
 
         literature_summary = ""
         safety_pmids: list[str] = []
@@ -1270,6 +1273,7 @@ class RetrievalService:
 
         assessment = DrugSafetyAssessment(
             regulatory_summary=regulatory_summary,
+            regulatory_full_labels=regulatory_full_labels,
             pharmacovigilance_summary=pharmacovigilance_summary,
             literature_summary=literature_summary,
             safety_summary=safety_summary,
@@ -1431,18 +1435,10 @@ class RetrievalService:
             raise
 
     @staticmethod
-    def _format_regulatory_safety(
-        label_records: list[FDALabelSafetyRecord], warnings: list[DrugWarning]
-    ) -> str:
-        """Format label text and Open Targets warning metadata without conflating them.
-
-        Each approved product (brand + every generic manufacturer) has its own openFDA label
-        record with near-identical but not byte-identical boxed-warning text (FDA requires
-        generics to carry substantially the same safety info as the reference product). Quote
-        the most recent product's text in full and name the rest, rather than repeating every
-        near-duplicate or merging them into one — merging could silently drop a genuinely
-        different warning if one product's ever differs.
-        """
+    def _collect_boxed_warnings(
+        label_records: list[FDALabelSafetyRecord],
+    ) -> dict[str, tuple[str, str, list[str]]]:
+        """One entry per approved product's openFDA label record: (text, effective_time, names)."""
         boxed_by_set: dict[str, tuple[str, str, list[str]]] = {}
         for record in label_records:
             if not record.set_id:
@@ -1455,30 +1451,110 @@ class RetrievalService:
                 record.effective_time or "",
                 record.brand_names or record.generic_names or ["unnamed product"],
             )
+        return boxed_by_set
+
+    @staticmethod
+    def _format_boxed_warnings_appendix(
+        boxed_by_set: dict[str, tuple[str, str, list[str]]],
+    ) -> str:
+        """Full verbatim boxed-warning text per product, newest first — the source of record
+        for the LLM-summarized digest shown in the Drug Safety section."""
+        if not boxed_by_set:
+            return ""
+        ordered = sorted(
+            boxed_by_set.values(), key=lambda entry: entry[1], reverse=True
+        )
+        blocks = []
+        for warning_text, effective_time, names in ordered:
+            header = f"{names[0]} (effective {effective_time or 'unknown'})"
+            blocks.append(f"{header}:\n{warning_text}")
+        return "\n\n".join(blocks)
+
+    async def _summarize_boxed_warnings(
+        self, chembl_id: str, boxed_by_set: dict[str, tuple[str, str, list[str]]]
+    ) -> str:
+        """LLM digest of every distinct boxed-warning text, calling out any label that differs
+        in substance rather than blending it away. The verbatim texts remain available via
+        `_format_boxed_warnings_appendix` — this is a readability aid, not the source of record.
+
+        Only resolves a drug display name (a network/cache call) and calls the LLM when there
+        is more than one distinct text to reconcile — the common single-label-text case stays
+        fully deterministic and network-free.
+        """
+        if not boxed_by_set:
+            return ""
+
+        by_text: dict[str, list[str]] = {}
+        for warning_text, _effective_time, names in boxed_by_set.values():
+            by_text.setdefault(warning_text, []).append(names[0])
+        distinct_texts = list(by_text.items())
+
+        if len(distinct_texts) == 1:
+            warning_text, _names = distinct_texts[0]
+            n = len(boxed_by_set)
+            agreement = (
+                f"all {n} FDA-approved product labels"
+                if n > 1
+                else "the FDA-approved product label"
+            )
+            return (
+                f"FDA label boxed-warning text ({agreement} agree verbatim):\n"
+                f"{warning_text}"
+            )
+
+        cache_params = {
+            "chembl_id": chembl_id,
+            "logic_version": "summarize_boxed_warnings_v1",
+            "distinct_texts": sorted(t for t, _names in distinct_texts),
+            "llm_model": _settings.llm_model,
+        }
+        cached = cache_get("summarize_boxed_warnings", cache_params, self.cache_dir)
+        if cached is not None:
+            return cached
+
+        drug_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
+        label_blocks = "\n\n".join(
+            f"Product(s): {', '.join(names)}\n{t}" for t, names in distinct_texts
+        )
+        template = (_PROMPTS_DIR / "summarize_boxed_warnings.txt").read_text()
+        prompt = template.format(
+            n=len(boxed_by_set),
+            drug_name=drug_name,
+            label_blocks=label_blocks,
+        )
+        response = await query_llm(prompt)
+        summary = response.strip()
+
+        result = f"FDA label boxed-warning text ({len(boxed_by_set)} product labels, LLM-summarized — see appendix for verbatim text):\n{summary}"
+        cache_set(
+            "summarize_boxed_warnings",
+            cache_params,
+            result,
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return result
+
+    async def _format_regulatory_safety(
+        self,
+        chembl_id: str,
+        label_records: list[FDALabelSafetyRecord],
+        warnings: list[DrugWarning],
+    ) -> tuple[str, str]:
+        """Format label text and Open Targets warning metadata without conflating them.
+
+        Returns (regulatory_summary, regulatory_full_labels): the summary is an LLM digest of
+        every distinct boxed-warning text (or the text itself, when every label agrees
+        verbatim); regulatory_full_labels is the complete verbatim list for the report's
+        appendix, so nothing from the source labels is lost to the summarization step.
+        """
+        boxed_by_set = self._collect_boxed_warnings(label_records)
+        full_labels = self._format_boxed_warnings_appendix(boxed_by_set)
 
         sections: list[str] = []
-        if boxed_by_set:
-            most_recent_set_id = max(
-                boxed_by_set, key=lambda set_id: boxed_by_set[set_id][1]
-            )
-            chosen_text, _, chosen_names = boxed_by_set[most_recent_set_id]
-            other_names = sorted(
-                names[0]
-                for set_id, (_, _, names) in boxed_by_set.items()
-                if set_id != most_recent_set_id
-            )
-            lines = [
-                f"FDA label boxed-warning text ({chosen_names[0]}, most recent label):",
-                chosen_text,
-            ]
-            if other_names:
-                lines.append(
-                    f"{len(other_names)} other FDA-approved product label(s) also carry a "
-                    "boxed warning (wording may vary by revision date): "
-                    + ", ".join(other_names)
-                    + "."
-                )
-            sections.append("\n".join(lines))
+        boxed_summary = await self._summarize_boxed_warnings(chembl_id, boxed_by_set)
+        if boxed_summary:
+            sections.append(boxed_summary)
 
         warning_types = sorted(
             {
@@ -1505,7 +1581,7 @@ class RetrievalService:
             sections.append(
                 "Open Targets warning metadata: " + "; ".join(metadata_parts) + "."
             )
-        return "\n\n".join(sections)
+        return "\n\n".join(sections), full_labels
 
     @staticmethod
     def _format_pharmacovigilance(top_aes: list[AdverseEvent]) -> str:

@@ -1,0 +1,14 @@
+You are a clinical safety reviewer. Below are the FDA-required boxed warning texts from {n} separate FDA-approved product labels for {drug_name} (same drug, different manufacturers/formulations/revisions). FDA requires a generic's label to carry substantially the same safety information as the reference product, so these texts are usually near-duplicates that differ only in wording or formatting — but not always.
+
+Write a single concise paragraph (3-5 sentences) that:
+- States the core boxed-warning hazard(s) that ALL or MOST of the labels agree on.
+- If one or more labels differ from the others in actual clinical substance — a different risk population, a different age cutoff, a different direction of effect, an additional hazard not mentioned elsewhere — and NOT just wording, explicitly name which product's label differs and state the difference. Do not blend a substantive difference into one averaged statement.
+- Does not omit any distinct hazard mentioned in any of the labels.
+- Does not invent, soften, or generalize beyond what the labels state.
+
+The full verbatim text of every label is listed elsewhere in the report, so this paragraph is a readable digest, not the source of record.
+
+Labels:
+{label_blocks}
+
+Return only the summary paragraph. No preamble, no headers, no bullet points.

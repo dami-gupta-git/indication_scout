@@ -505,6 +505,7 @@ def format_report(output: SupervisorOutput) -> str:
     # written before the supervisor carried these fields.
     drug_safety = output.drug_safety_summary
     regulatory_safety = output.drug_regulatory_safety_summary
+    regulatory_full_labels = output.drug_regulatory_safety_full_labels
     pharmacovigilance = output.drug_pharmacovigilance_summary
     literature_safety = output.drug_literature_safety_summary
     drug_safety_pmids = list(output.drug_safety_pmids)
@@ -517,6 +518,8 @@ def format_report(output: SupervisorOutput) -> str:
                 drug_safety = es.safety_summary
             if not regulatory_safety and es.regulatory_safety_summary:
                 regulatory_safety = es.regulatory_safety_summary
+            if not regulatory_full_labels and es.regulatory_safety_full_labels:
+                regulatory_full_labels = es.regulatory_safety_full_labels
             if not pharmacovigilance and es.pharmacovigilance_summary:
                 pharmacovigilance = es.pharmacovigilance_summary
             if not literature_safety and es.literature_safety_summary:
@@ -602,5 +605,16 @@ def format_report(output: SupervisorOutput) -> str:
             lines.append("")
     else:
         lines.append("_No candidate findings produced._")
+
+    if regulatory_full_labels:
+        lines += [
+            "## Appendix: Full FDA Boxed Warning Labels",
+            "",
+            "_Verbatim boxed-warning text per approved product label — the source of "
+            "record for the LLM-summarized digest in the Drug Safety section above._",
+            "",
+            regulatory_full_labels,
+            "",
+        ]
 
     return "\n".join(lines)

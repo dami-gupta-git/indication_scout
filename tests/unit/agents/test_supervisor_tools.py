@@ -228,6 +228,92 @@ async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order
     svc.build_drug_profile.assert_awaited_once_with("CHEMBL1431")
 
 
+async def test_concurrent_literature_calls_use_distinct_sessions():
+    """Concurrent candidate literature work checks out and closes separate sessions."""
+    call_dbs = [MagicMock(name="call_db_1"), MagicMock(name="call_db_2")]
+    contexts = [
+        MagicMock(name="session_context_1"),
+        MagicMock(name="session_context_2"),
+    ]
+    for context, call_db in zip(contexts, call_dbs):
+        context.__enter__.return_value = call_db
+        context.__exit__.return_value = False
+    session_factory = MagicMock(side_effect=contexts)
+
+    both_started = asyncio.Event()
+    release = asyncio.Event()
+    active = 0
+    maximum_active = 0
+    used_dbs: list[Any] = []
+
+    def build_literature(**kwargs):
+        return kwargs["db"]
+
+    async def run_literature(agent, drug_name, disease_name):
+        nonlocal active, maximum_active
+        used_dbs.append(agent)
+        active += 1
+        maximum_active = max(maximum_active, active)
+        if active == 2:
+            both_started.set()
+        await release.wait()
+        active -= 1
+        return LiteratureOutput()
+
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.build_mechanism_agent",
+            return_value=MagicMock(),
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.build_literature_agent",
+            side_effect=build_literature,
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.run_literature_agent",
+            new=AsyncMock(side_effect=run_literature),
+        ),
+    ):
+        tools, _, _, _ = build_supervisor_tools(
+            llm=MagicMock(),
+            svc=MagicMock(),
+            db=MagicMock(),
+            session_factory=session_factory,
+        )
+        analyze = {tool.name: tool for tool in tools}["analyze_literature"]
+        closure = dict(
+            zip(analyze.coroutine.__code__.co_freevars, analyze.coroutine.__closure__)
+        )
+        closure["allowed_diseases"].cell_contents.update(
+            {
+                "disease a": ("Disease A", "competitor"),
+                "disease b": ("Disease B", "competitor"),
+            }
+        )
+        closure["find_candidates_done"].cell_contents.set()
+        closure["analyze_mechanism_done"].cell_contents.set()
+        drug_entry = closure["_ensure_drug_entry"].cell_contents("metformin")
+        drug_entry["drug_profile"] = DrugProfile(chembl_id="CHEMBL1431")
+
+        tasks = [
+            asyncio.create_task(analyze.coroutine("metformin", disease))
+            for disease in ("Disease A", "Disease B")
+        ]
+        await asyncio.wait_for(both_started.wait(), timeout=1)
+        release.set()
+        results = await asyncio.gather(*tasks)
+
+    assert maximum_active == 2
+    assert used_dbs == call_dbs
+    assert [artifact for _, artifact in results] == [
+        LiteratureOutput(),
+        LiteratureOutput(),
+    ]
+    assert session_factory.call_count == 2
+    for context in contexts:
+        context.__exit__.assert_called_once()
+
+
 # --- analyze_mechanism merge: EFO ID dedup against competitor allowlist --------
 
 

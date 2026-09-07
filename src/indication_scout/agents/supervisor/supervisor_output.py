@@ -170,6 +170,7 @@ class SupervisorOutput(BaseModel):
     # each finding.
     drug_safety_summary: str = ""
     drug_regulatory_safety_summary: str = ""
+    drug_regulatory_safety_full_labels: str = ""
     drug_pharmacovigilance_summary: str = ""
     drug_literature_safety_summary: str = ""
     drug_safety_pmids: list[str] = Field(default_factory=list)

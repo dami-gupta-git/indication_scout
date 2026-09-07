@@ -367,6 +367,7 @@ async def run_supervisor_agent(
     # candidate lists overlap heavily but differ in order; union keeps the anchor stable run-to-run).
     drug_safety_summary = ""
     drug_regulatory_safety_summary = ""
+    drug_regulatory_safety_full_labels = ""
     drug_pharmacovigilance_summary = ""
     drug_literature_safety_summary = ""
     drug_safety_pmids: list[str] = []
@@ -378,6 +379,8 @@ async def run_supervisor_agent(
             drug_safety_summary = es.safety_summary
         if not drug_regulatory_safety_summary and es.regulatory_safety_summary:
             drug_regulatory_safety_summary = es.regulatory_safety_summary
+        if not drug_regulatory_safety_full_labels and es.regulatory_safety_full_labels:
+            drug_regulatory_safety_full_labels = es.regulatory_safety_full_labels
         if not drug_pharmacovigilance_summary and es.pharmacovigilance_summary:
             drug_pharmacovigilance_summary = es.pharmacovigilance_summary
         if not drug_literature_safety_summary and es.literature_safety_summary:
@@ -396,6 +399,7 @@ async def run_supervisor_agent(
         date_before=date_before,
         drug_safety_summary=drug_safety_summary,
         drug_regulatory_safety_summary=drug_regulatory_safety_summary,
+        drug_regulatory_safety_full_labels=drug_regulatory_safety_full_labels,
         drug_pharmacovigilance_summary=drug_pharmacovigilance_summary,
         drug_literature_safety_summary=drug_literature_safety_summary,
         drug_safety_pmids=drug_safety_pmids,

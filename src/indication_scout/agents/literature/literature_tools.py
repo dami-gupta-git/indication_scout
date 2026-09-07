@@ -166,6 +166,7 @@ def build_literature_tools(
         )
         store["safety_summary"] = safety.safety_summary
         store["regulatory_safety_summary"] = safety.regulatory_summary
+        store["regulatory_safety_full_labels"] = safety.regulatory_full_labels
         store["pharmacovigilance_summary"] = safety.pharmacovigilance_summary
         store["literature_safety_summary"] = safety.literature_summary
         store["label_safety_available"] = safety.label_data_available
@@ -185,6 +186,7 @@ def build_literature_tools(
         return content, EvidenceSummary(
             safety_summary=safety.safety_summary,
             regulatory_safety_summary=safety.regulatory_summary,
+            regulatory_safety_full_labels=safety.regulatory_full_labels,
             pharmacovigilance_summary=safety.pharmacovigilance_summary,
             literature_safety_summary=safety.literature_summary,
             label_safety_available=safety.label_data_available,
@@ -218,6 +220,9 @@ def build_literature_tools(
         if "safety_summary" in store:
             evidence.safety_summary = store["safety_summary"]
             evidence.regulatory_safety_summary = store["regulatory_safety_summary"]
+            evidence.regulatory_safety_full_labels = store[
+                "regulatory_safety_full_labels"
+            ]
             evidence.pharmacovigilance_summary = store["pharmacovigilance_summary"]
             evidence.literature_safety_summary = store["literature_safety_summary"]
             evidence.label_safety_available = store["label_safety_available"]

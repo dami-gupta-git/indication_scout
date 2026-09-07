@@ -1689,9 +1689,54 @@ async def test_summarize_safety_prod_uses_ot_signal_and_severity(svc):
     assert result.label_data_available is True
 
 
-def test_format_regulatory_safety_names_other_products_instead_of_repeating_text():
-    """Multiple approved products' near-duplicate boxed warnings collapse to one full quote
-    (the most recent label) plus the other products named, not every near-duplicate repeated."""
+async def test_format_regulatory_safety_single_text_skips_llm(svc):
+    """When every label agrees verbatim, no LLM call is needed — return the text directly."""
+    from indication_scout.models.model_fda import FDALabelSafetyRecord
+
+    label_records = [
+        FDALabelSafetyRecord(
+            set_id="set-old",
+            effective_time="20240101",
+            brand_names=["WELLBUTRIN SR"],
+            boxed_warnings=["WARNING: the same warning."],
+        ),
+        FDALabelSafetyRecord(
+            set_id="set-new",
+            effective_time="20260101",
+            brand_names=["Bupropion Hydrochloride XL"],
+            boxed_warnings=["WARNING: the same warning."],
+        ),
+    ]
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(side_effect=AssertionError("query_llm must not be called")),
+        ),
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(
+                side_effect=AssertionError("get_all_drug_names must not be called")
+            ),
+        ),
+    ):
+        summary, full_labels = await svc._format_regulatory_safety(
+            "CHEMBL894", label_records, warnings=[]
+        )
+
+    assert summary == (
+        "FDA label boxed-warning text (all 2 FDA-approved product labels agree "
+        "verbatim):\nWARNING: the same warning."
+    )
+    assert "WELLBUTRIN SR" in full_labels
+    assert "Bupropion Hydrochloride XL" in full_labels
+    assert full_labels.count("WARNING: the same warning.") == 2
+
+
+async def test_format_regulatory_safety_digests_distinct_texts_via_llm(svc):
+    """Distinct boxed-warning texts across products go to the LLM for a summarized digest;
+    the full verbatim text of every product is still returned separately for the appendix.
+    """
     from indication_scout.models.model_fda import FDALabelSafetyRecord
 
     label_records = [
@@ -1705,24 +1750,35 @@ def test_format_regulatory_safety_names_other_products_instead_of_repeating_text
             set_id="set-new",
             effective_time="20260101",
             brand_names=["Bupropion Hydrochloride XL"],
-            boxed_warnings=["WARNING: newest wording of the same warning."],
-        ),
-        FDALabelSafetyRecord(
-            set_id="set-mid",
-            effective_time="20250101",
-            generic_names=["BUPROPION HCL ER (XL)"],
-            boxed_warnings=["WARNING: mid wording of the same warning."],
+            boxed_warnings=["WARNING: newest wording, with a differing age cutoff."],
         ),
     ]
+    captured = {}
 
-    result = RetrievalService._format_regulatory_safety(label_records, warnings=[])
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return "Both labels warn of suicidality risk; the newest label differs on age cutoff."
 
-    assert result == (
-        "FDA label boxed-warning text (Bupropion Hydrochloride XL, most recent label):\n"
-        "WARNING: newest wording of the same warning.\n"
-        "2 other FDA-approved product label(s) also carry a boxed warning "
-        "(wording may vary by revision date): BUPROPION HCL ER (XL), WELLBUTRIN SR."
-    )
+    with (
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["bupropion", "wellbutrin"]),
+        ),
+    ):
+        summary, full_labels = await svc._format_regulatory_safety(
+            "CHEMBL894", label_records, warnings=[]
+        )
+
+    assert "bupropion" in captured["prompt"]
+    assert "WARNING: older wording of the same warning." in captured["prompt"]
+    assert "WARNING: newest wording, with a differing age cutoff." in captured["prompt"]
+    assert "2 product labels, LLM-summarized" in summary
+    assert "differs on age cutoff" in summary
+    assert "WELLBUTRIN SR" in full_labels
+    assert "Bupropion Hydrochloride XL" in full_labels
+    assert "WARNING: older wording of the same warning." in full_labels
+    assert "WARNING: newest wording, with a differing age cutoff." in full_labels
 
 
 async def test_summarize_safety_holdout_omits_ot_signal(svc):

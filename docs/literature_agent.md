@@ -7,12 +7,57 @@ ranked abstracts).
 
 ---
 
+## How It Works
+
+The literature agent coordinates a fixed sequence of tools. It retrieves and ranks PubMed
+abstracts, but the agent loop does not decide which papers count as evidence. That decision is made
+inside `RetrievalService.synthesize()`.
+
+```
+Candidate drug and disease
+        |
+        v
+Generate PubMed queries
+        |
+        v
+Fetch abstracts and cache their embeddings
+        |
+        v
+Rank abstracts by topical similarity
+        |
+        v
+Run the separate safety assessment
+        |
+        v
+Classify every PMID and synthesize the evidence,
+then merge the stored safety fields
+        |
+        v
+Return LiteratureOutput to the supervisor
+```
+
+`semantic_search` measures topical similarity. It does not determine whether the candidate disease
+is the condition being treated. `RetrievalService.synthesize()` asks the model to classify each PMID
+as contaminated, supporting, contradicting, or mixed. Its therapeutic-intent rule requires papers
+about a different condition in patients with the candidate disease to be classified as contaminated.
+
+Code then derives the PMID groups, study count, and overall direction from those verdicts. A separate
+model call may correct the direction of a PMID already considered relevant, but it does not reconsider
+relevance. The final strength guard forces strength and direction to `none` when the synthesis result
+does not claim drug-specific evidence. It cannot detect an incorrect `drug_specific` classification.
+
+The synthesis result is cached by drug, disease, selected PMIDs, approved indications, and model. The
+prompt text is not part of the cache key, so the synthesis cache must be cleared after changing the
+relevance prompt.
+
+---
+
 ## Architecture
 
 ```
 build_literature_agent()
     +-- build_literature_tools()  <-- closure-scoped wrappers around RetrievalService
-    +-- build_gated_react_loop()  (agents/_react_loop.py)
+    +-- create_react_agent()
          model node: ChatAnthropic + tools, with Anthropic prompt-caching breakpoints
          tools node: build_drug_profile -> expand_search_terms -> fetch_and_cache
                       -> semantic_search -> safety_search -> synthesize -> finalize_analysis
@@ -31,7 +76,7 @@ run_literature_agent()
 | `agents/literature/literature_tools.py` | `@tool`-decorated wrappers around `RetrievalService`, closure-scoped store |
 | `agents/literature/literature_output.py` | `LiteratureOutput` — the structured return value |
 | `agents/literature/pubmed_ae.py` | Citation-ranked adverse-event PubMed search used by `safety_search` |
-| `agents/_react_loop.py` | Shared gated ReAct loop + Anthropic prompt-caching helpers (also used by `clinical_trials` and `supervisor`) |
+| `agents/_react_loop.py` | Shared Anthropic system-message and history-caching helpers |
 | `services/retrieval.py` | `RetrievalService` — executes every tool operation |
 | `models/model_evidence_summary.py` | `EvidenceSummary` — the structured evidence output |
 | `models/model_drug_profile.py` | `DrugProfile` — input to query expansion and safety search |
@@ -42,7 +87,7 @@ run_literature_agent()
 ## Entry Point
 
 ```python
-def build_literature_agent(llm, svc, db, date_before=None, approved_indications=None)
+def build_literature_agent(llm, svc, db, date_before=None, approved_indications=None, drug_profile=None)
 async def run_literature_agent(agent, drug_name: str, disease_name: str) -> LiteratureOutput
 ```
 
@@ -55,9 +100,10 @@ async def run_literature_agent(agent, drug_name: str, disease_name: str) -> Lite
 | `db` | SQLAlchemy `Session` | Yes — connected to the pgvector DB, one per call (not shared across concurrent candidates) |
 | `date_before` | `date \| None` | No — temporal holdout cutoff |
 | `approved_indications` | `list[str] \| None` | No — drug's FDA-approved indications, forwarded to `synthesize` so the strength judge excludes papers about an already-approved sub-indication |
+| `drug_profile` | `DrugProfile \| None` | No — run-scoped profile supplied by the supervisor so it is not rebuilt per candidate |
 
-`svc`, `db`, `date_before`, and `approved_indications` are captured via closure at tool-build
-time, so the LLM never sees them as tool parameters.
+`svc`, `db`, `date_before`, `approved_indications`, and `drug_profile` are captured via closure at
+tool-build time, so the LLM never sees them as tool parameters.
 
 **Output:** `LiteratureOutput` — see Data Models below.
 
@@ -68,12 +114,9 @@ agent + DB session per drug-disease call) and `services/analysis_runner.py`.
 
 ## ReAct Loop
 
-The agent runs on `build_gated_react_loop()` (`agents/_react_loop.py`), the same construct
-used by the `clinical_trials` and `supervisor` agents: a minimal two-node LangGraph
-(model + tools) that mirrors `create_react_agent`, except the loop ends as soon as
-`finalize_analysis` succeeds instead of feeding its result back to the model for a discarded
-trailing turn. `literature`'s `finalize_analysis` tool is `return_direct=True` with no reject
-path, so termination is unconditional on that tool succeeding.
+The agent runs on LangGraph's `create_react_agent()`. The shared `_react_loop.py` module supplies
+the cached system message and the history pre-model hook. `finalize_analysis` uses
+`return_direct=True`, so its successful tool result ends the loop.
 
 Two Anthropic prompt-caching breakpoints keep repeat turns cheap: one on the static system
 prompt + tool definitions (`cached_system_message`), one on the tail of the growing message
@@ -98,7 +141,7 @@ If no evidence is found, `synthesize` and `finalize_analysis` are still called.
 ## Tools
 
 Tools are thin async wrappers around `RetrievalService` methods, defined in
-`agents/literature_tools.py` via `build_literature_tools(svc, db, date_before, approved_indications)`.
+`agents/literature/literature_tools.py` via `build_literature_tools()`.
 All use `@tool(response_format="content_and_artifact")` so the typed return value survives on
 `ToolMessage.artifact` (the string content is only the LLM-facing summary). Tools share
 inter-call data through a closure-scoped `store` dict — the LLM never passes PMIDs, queries,
@@ -145,9 +188,9 @@ harms. Missing or unclassifiable evidence remains unavailable.
 ### `synthesize(drug_name, disease_name) -> EvidenceSummary`
 
 Passes the ranked abstracts (from the store) and `approved_indications` to the LLM and
-returns a structured `EvidenceSummary`. If `safety_search` already populated the store, its
-six safety/harm fields are merged onto the result — order-independent even if the LLM calls
-`synthesize` before `safety_search` in a given run.
+returns a structured `EvidenceSummary`. If `safety_search` has already populated the store, its
+safety and indication-harm fields are merged onto the result. The system prompt therefore requires
+`safety_search` to run before `synthesize`.
 
 Calls `RetrievalService.synthesize()`.
 
@@ -235,7 +278,8 @@ provide current label wording or a count of distinct boxed warnings. Built via
 | Component | Role |
 |-----------|------|
 | `RetrievalService` | Executes all tool operations (query expansion, fetch, search, safety, synthesis) |
-| `build_gated_react_loop` (`agents/_react_loop.py`) | Shared ReAct loop + prompt-caching, also used by `clinical_trials` and `supervisor` |
+| LangGraph `create_react_agent` | Runs the literature tool loop |
+| `_react_loop.py` caching helpers | Supply the cached system message and history pre-model hook |
 | `DrugProfile` | Provides drug context for query expansion + the OT safety signal |
 | `EvidenceSummary` | Output model |
 | `SQLAlchemy Session` | pgvector DB access for abstract storage and retrieval |
@@ -253,8 +297,8 @@ provide current label wording or a count of distinct boxed warnings. Built via
 | Finalize reject path | Yes — empty-summary / critique-not-run loops back to the model | None — `finalize_analysis` is `return_direct=True`, terminates unconditionally |
 | Output model | `ClinicalTrialsOutput` (multi-field, built from `FinalizeClinicalTrialsArtifact`) | `LiteratureOutput` (flat, wraps `EvidenceSummary` + intermediate artifacts) |
 | Output model file | `agents/clinical_trials/clinical_trials_output.py` | `agents/literature/literature_output.py` |
-| Additional inputs | `date_before`, `assigned_indication` | `svc`, `db`, `date_before`, `approved_indications` |
-| Loop construct | `build_gated_react_loop` | `build_gated_react_loop` (same shared helper) |
+| Additional inputs | `date_before`, `assigned_indication` | `svc`, `db`, `date_before`, `approved_indications`, `drug_profile` |
+| Loop construct | `build_gated_react_loop` | LangGraph `create_react_agent` with shared caching hooks |
 
 ---
 

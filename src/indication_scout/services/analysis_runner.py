@@ -264,6 +264,11 @@ async def run_pair_analysis(
                 if literature and literature.evidence_summary
                 else ""
             ),
+            drug_regulatory_safety_full_labels=(
+                literature.evidence_summary.regulatory_safety_full_labels
+                if literature and literature.evidence_summary
+                else ""
+            ),
             drug_pharmacovigilance_summary=(
                 literature.evidence_summary.pharmacovigilance_summary
                 if literature and literature.evidence_summary

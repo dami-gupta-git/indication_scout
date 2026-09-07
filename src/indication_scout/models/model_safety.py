@@ -26,6 +26,7 @@ class DrugSafetyAssessment(BaseModel):
     """Source-separated drug-wide safety facts for report consumers."""
 
     regulatory_summary: str
+    regulatory_full_labels: str = ""
     pharmacovigilance_summary: str
     literature_summary: str
     safety_summary: str
