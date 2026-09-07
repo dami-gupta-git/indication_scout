@@ -28,6 +28,7 @@ def build_literature_tools(
     db: Session,
     date_before: date | None = None,
     approved_indications: list[str] | None = None,
+    drug_profile: DrugProfile | None = None,
 ) -> list:
     """Build tools that share data via a closure-scoped store dict.
 
@@ -36,9 +37,14 @@ def build_literature_tools(
 
     `approved_indications` is the drug's FDA-approved indication list, threaded into synthesize so
     the strength judge can exclude papers about an approved sub-indication of a broad candidate.
+    `drug_profile` seeds this candidate's local store when the supervisor already built it.
     """
 
     store: dict = {}
+    if drug_profile is not None:
+        store["drug_profile"] = drug_profile
+        if drug_profile.chembl_id:
+            store["chembl_id"] = drug_profile.chembl_id
 
     async def _get_chembl(drug_name: str) -> str:
         chembl_id = store.get("chembl_id")
@@ -52,9 +58,13 @@ def build_literature_tools(
         """Fetch pharmacological profile (gene targets, mechanisms, ATC codes) for a drug. Call
         before expand_search_terms for richer queries."""
         _t0 = time.perf_counter()
-        chembl_id = await _get_chembl(drug_name)
-        profile = await svc.build_drug_profile(chembl_id)
-        store["drug_profile"] = profile
+        profile = store.get("drug_profile")
+        if profile is None:
+            chembl_id = await _get_chembl(drug_name)
+            profile = await svc.build_drug_profile(chembl_id)
+            store["drug_profile"] = profile
+        else:
+            chembl_id = profile.chembl_id
         logger.info(
             "[TIMING] build_drug_profile %s: %.1fs",
             drug_name,
@@ -75,7 +85,10 @@ def build_literature_tools(
         builds one on the fly."""
         _t0 = time.perf_counter()
         chembl_id = await _get_chembl(drug_name)
-        profile = store.get("drug_profile") or await svc.build_drug_profile(chembl_id)
+        profile = store.get("drug_profile")
+        if profile is None:
+            profile = await svc.build_drug_profile(chembl_id)
+            store["drug_profile"] = profile
         queries = await svc.expand_search_terms(chembl_id, disease_name, profile)
         store["queries"] = queries
         # logger.warning(

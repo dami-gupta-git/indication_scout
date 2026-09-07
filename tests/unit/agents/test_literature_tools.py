@@ -143,6 +143,27 @@ async def test_build_drug_profile_calls_svc_and_returns_artifact():
     assert CHEMBL_ID in msg.content
 
 
+async def test_build_drug_profile_reuses_injected_profile():
+    """A run-scoped profile is returned without rebuilding it for this candidate."""
+    svc = _make_svc()
+    tool_map = _build(svc, drug_profile=DRUG_PROFILE)
+
+    msg = await tool_map["build_drug_profile"].ainvoke(
+        ToolCall(
+            name="build_drug_profile",
+            args={"drug_name": "metformin"},
+            id="tc_injected",
+            type="tool_call",
+        )
+    )
+
+    svc.build_drug_profile.assert_not_awaited()
+    assert msg.artifact == DRUG_PROFILE
+    assert msg.content == (
+        "Profile for metformin (CHEMBL1431): 1 targets, 1 mechanisms"
+    )
+
+
 # ------------------------------------------------------------------
 # expand_search_terms
 # ------------------------------------------------------------------

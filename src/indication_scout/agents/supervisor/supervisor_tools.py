@@ -320,6 +320,8 @@ def build_supervisor_tools(
         if key not in drug_facts:
             drug_facts[key] = {
                 "drug_name": key,
+                "chembl_id": None,
+                "drug_profile": None,
                 "drug_aliases": [],  # ChEMBL trade/generic names
                 "approved_indications": [],  # list of indication strings
                 "mechanism_targets": [],  # list of (gene, action_type)
@@ -395,6 +397,7 @@ def build_supervisor_tools(
         diseases = list(competitors.keys())
 
         entry = _ensure_drug_entry(drug_name)
+        entry["chembl_id"] = chembl_id
         entry["drug_aliases"] = intake.aliases
         entry["first_approval"] = intake.first_approval
         existing = {ind.lower().strip() for ind in entry["approved_indications"]}
@@ -687,6 +690,7 @@ def build_supervisor_tools(
         approved_indications = list(
             _ensure_drug_entry(drug_name)["approved_indications"]
         )
+        drug_profile = _ensure_drug_entry(drug_name)["drug_profile"]
         _t0 = time.perf_counter()
         with session_factory() as call_db:
             lit_agent = build_literature_agent(
@@ -695,6 +699,7 @@ def build_supervisor_tools(
                 db=call_db,
                 date_before=date_before,
                 approved_indications=approved_indications,
+                drug_profile=drug_profile,
             )
             output = await run_literature_agent(lit_agent, drug_name, disease_name)
         # logger.warning(
@@ -1080,6 +1085,14 @@ def build_supervisor_tools(
             return "No candidates in allowlist; nothing to investigate.", []
 
         canonical_diseases = [canonical for _, (canonical, _) in top_n]
+        drug_entry = _ensure_drug_entry(drug_name)
+        chembl_id = drug_entry["chembl_id"]
+        if chembl_id is None:
+            raise RuntimeError(
+                f"Missing ChEMBL ID for {drug_name} after candidate discovery"
+            )
+        if drug_entry["drug_profile"] is None:
+            drug_entry["drug_profile"] = await svc.build_drug_profile(chembl_id)
         candidate_semaphore = asyncio.Semaphore(investigation_concurrency)
         _log_disease_banner(
             f"INVESTIGATING top candidates for {drug_name} (lit + trials in parallel)",

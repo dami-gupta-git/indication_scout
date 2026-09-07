@@ -16,6 +16,7 @@ from indication_scout.agents._react_loop import (
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.literature.literature_tools import build_literature_tools
+from indication_scout.models.model_drug_profile import DrugProfile
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +31,20 @@ def build_literature_agent(
     db,
     date_before=None,
     approved_indications=None,
+    drug_profile: DrugProfile | None = None,
 ):
     """Return a compiled ReAct agent. No graph wiring required.
 
     `approved_indications` is the drug's FDA-approved indication list, forwarded to the synthesize
     tool so the strength judge can exclude approved-sub-indication papers from a broad candidate.
+    `drug_profile` is an optional profile already built for the current supervisor run.
     """
     tools = build_literature_tools(
         svc,
         db,
         date_before=date_before,
         approved_indications=approved_indications,
+        drug_profile=drug_profile,
     )
     return create_react_agent(
         model=llm,

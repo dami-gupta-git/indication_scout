@@ -26,6 +26,7 @@ from indication_scout.models.model_clinical_trials import (
     TerminatedTrialsResult,
 )
 from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.models.model_drug_profile import DrugProfile
 
 
 @pytest.fixture(autouse=True)
@@ -149,6 +150,9 @@ async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order
             "supervisor_investigation_concurrency": 2,
         }
     )
+    drug_profile = DrugProfile(chembl_id="CHEMBL1431")
+    svc = MagicMock()
+    svc.build_drug_profile = AsyncMock(return_value=drug_profile)
     with (
         patch(
             "indication_scout.agents.supervisor.supervisor_tools.get_settings",
@@ -160,7 +164,7 @@ async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order
         ),
     ):
         tools, _, _, _ = build_supervisor_tools(
-            llm=MagicMock(), svc=MagicMock(), db=MagicMock()
+            llm=MagicMock(), svc=svc, db=MagicMock()
         )
 
     investigate = {tool.name: tool for tool in tools}["investigate_top_candidates"]
@@ -177,6 +181,8 @@ async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order
     )
     closure["find_candidates_done"].cell_contents.set()
     closure["analyze_mechanism_done"].cell_contents.set()
+    drug_entry = closure["_ensure_drug_entry"].cell_contents("metformin")
+    drug_entry["chembl_id"] = "CHEMBL1431"
 
     active = 0
     maximum_active = 0
@@ -219,6 +225,7 @@ async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order
     assert maximum_active == 2
     assert started == diseases
     assert [artifact["disease"] for artifact in artifacts] == diseases
+    svc.build_drug_profile.assert_awaited_once_with("CHEMBL1431")
 
 
 # --- analyze_mechanism merge: EFO ID dedup against competitor allowlist --------
