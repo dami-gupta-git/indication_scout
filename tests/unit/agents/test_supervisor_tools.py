@@ -1,8 +1,10 @@
 """Unit tests for supervisor_tools — briefing rendering."""
 
+import asyncio
 import json
 import re
 from datetime import date
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -17,6 +19,7 @@ from indication_scout.agents.mechanism.mechanism_output import (
     MechanismCandidate,
 )
 from indication_scout.agents.supervisor.supervisor_tools import build_supervisor_tools
+from indication_scout.config import get_settings
 from indication_scout.models.model_clinical_trials import (
     CompletedTrialsResult,
     SearchTrialsResult,
@@ -135,6 +138,87 @@ def test_briefing_handles_unknown_drug_gracefully():
 
     assert "DRUG INTAKE: metformin" in briefing
     assert "no facts collected yet" in briefing
+
+
+async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order():
+    """The candidate cap controls coverage while the concurrency setting bounds active work."""
+    settings = get_settings().model_copy(
+        update={
+            "supervisor_fanout": True,
+            "supervisor_investigation_cap": 4,
+            "supervisor_investigation_concurrency": 2,
+        }
+    )
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_settings",
+            return_value=settings,
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.build_mechanism_agent",
+            return_value=MagicMock(),
+        ),
+    ):
+        tools, _, _, _ = build_supervisor_tools(
+            llm=MagicMock(), svc=MagicMock(), db=MagicMock()
+        )
+
+    investigate = {tool.name: tool for tool in tools}["investigate_top_candidates"]
+    closure = dict(
+        zip(
+            investigate.coroutine.__code__.co_freevars,
+            investigate.coroutine.__closure__,
+        )
+    )
+    diseases = ["Disease A", "Disease B", "Disease C", "Disease D"]
+    allowed_diseases = closure["allowed_diseases"].cell_contents
+    allowed_diseases.update(
+        {disease.lower(): (disease, "competitor") for disease in diseases}
+    )
+    closure["find_candidates_done"].cell_contents.set()
+    closure["analyze_mechanism_done"].cell_contents.set()
+
+    active = 0
+    maximum_active = 0
+    started: list[str] = []
+    first_batch_started = asyncio.Event()
+    release_first_batch = asyncio.Event()
+
+    async def run_literature(tool_call: dict[str, Any]) -> MagicMock:
+        nonlocal active, maximum_active
+        disease = tool_call["args"]["disease_name"]
+        active += 1
+        maximum_active = max(maximum_active, active)
+        started.append(disease)
+        if len(started) == 2:
+            first_batch_started.set()
+        await release_first_batch.wait()
+        active -= 1
+        return MagicMock(artifact=LiteratureOutput())
+
+    async def run_trials(tool_call: dict[str, Any]) -> MagicMock:
+        return MagicMock(artifact=ClinicalTrialsOutput())
+
+    literature_tool = closure["analyze_literature"].cell_contents
+
+    async def run_tool(
+        tool_instance: Any, tool_call: dict[str, Any], *args: Any, **kwargs: Any
+    ) -> MagicMock:
+        if tool_instance.name == "analyze_literature":
+            return await run_literature(tool_call)
+        return await run_trials(tool_call)
+
+    with patch.object(type(literature_tool), "ainvoke", new=run_tool):
+        task = asyncio.create_task(investigate.coroutine("metformin"))
+        await asyncio.wait_for(first_batch_started.wait(), timeout=1)
+        assert active == 2
+        assert started == diseases[:2]
+        release_first_batch.set()
+        _, artifacts = await task
+
+    assert maximum_active == 2
+    assert started == diseases
+    assert [artifact["disease"] for artifact in artifacts] == diseases
 
 
 # --- analyze_mechanism merge: EFO ID dedup against competitor allowlist --------

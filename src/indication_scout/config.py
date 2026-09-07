@@ -15,6 +15,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
+from pydantic import Field
 from pydantic_settings import BaseSettings
 
 # Project root (config.py -> indication_scout -> src -> root).
@@ -77,9 +78,8 @@ class Settings(BaseSettings):
     default_max_retries: int
 
     # Database connection pool. Must comfortably exceed the run's peak concurrent DB
-    # sessions: 1 (the run-level session held for the whole run) + supervisor_investigation_cap
-    # (each analyze_literature call in the investigate_top_candidates fan-out checks out its own
-    # session). Too small and the fan-out times out waiting for a connection.
+    # sessions: 1 run-level session plus supervisor_investigation_concurrency literature
+    # sessions. Too small and the fan-out times out waiting for a connection.
     db_pool_size: int
     db_max_overflow: int
 
@@ -107,6 +107,9 @@ class Settings(BaseSettings):
     # evidence for (the deep-dive fan-out). Independent of supervisor_candidate_cap, which only
     # trims the final ranked list. Raise to investigate more diseases per run (more cost/time).
     supervisor_investigation_cap: int
+    # Maximum candidate investigations active at once. Coverage remains controlled by
+    # supervisor_investigation_cap.
+    supervisor_investigation_concurrency: int = Field(gt=0)
     # When true, the supervisor exposes investigate_top_candidates and the prompt
     # directs the LLM to call it once instead of investigating each candidate
     # serially. Trades the per-candidate ReAct loop for a single parallel fan-out.

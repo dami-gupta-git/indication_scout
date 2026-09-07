@@ -1049,7 +1049,9 @@ def build_supervisor_tools(
     # instructions, so we remove the LLM's ability to skip by auto-investigating the top-N
     # (settings.supervisor_investigation_cap). Env-tunable via .env.constants (SUPERVISOR_INVESTIGATION_CAP) so a validation
     # run can widen coverage.
-    investigation_cap = get_settings().supervisor_investigation_cap
+    settings = get_settings()
+    investigation_cap = settings.supervisor_investigation_cap
+    investigation_concurrency = settings.supervisor_investigation_concurrency
 
     @tool(response_format="content_and_artifact")
     async def investigate_top_candidates(
@@ -1078,6 +1080,7 @@ def build_supervisor_tools(
             return "No candidates in allowlist; nothing to investigate.", []
 
         canonical_diseases = [canonical for _, (canonical, _) in top_n]
+        candidate_semaphore = asyncio.Semaphore(investigation_concurrency)
         _log_disease_banner(
             f"INVESTIGATING top candidates for {drug_name} (lit + trials in parallel)",
             canonical_diseases,
@@ -1223,7 +1226,8 @@ def build_supervisor_tools(
 
         async def _invest_tracked(disease: str) -> tuple[str, dict]:
             nonlocal _done_count
-            result = await _invest(disease)
+            async with candidate_semaphore:
+                result = await _invest(disease)
             _done_count += 1
             emit_progress(
                 PHASE_TRIALS,
