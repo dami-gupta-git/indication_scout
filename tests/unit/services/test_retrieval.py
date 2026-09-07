@@ -1,6 +1,7 @@
 """Unit tests for services/retrieval — no network, no LLM calls."""
 
 import json
+from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -598,6 +599,28 @@ def test_get_stored_pmids_passes_pmids_to_query(svc):
     assert params["pmids"] == pmids
 
 
+async def test_filter_pmids_by_date_releases_db_before_esummary(svc):
+    """The publication-date read transaction ends before the PubMed fallback."""
+    mock_db = MagicMock()
+    mock_db.execute.return_value.fetchall.return_value = [("111", "2020-01-01")]
+    mock_client = AsyncMock()
+
+    async def filter_after_release(pmids, date_before):
+        mock_db.rollback.assert_called_once_with()
+        return ["222"]
+
+    mock_client._filter_pmids_by_date = AsyncMock(side_effect=filter_after_release)
+
+    result = await svc._filter_pmids_by_date(
+        ["111", "222"], date(2021, 1, 1), mock_db, mock_client
+    )
+
+    assert result == ["111", "222"]
+    mock_client._filter_pmids_by_date.assert_awaited_once_with(
+        ["222"], date(2021, 1, 1)
+    )
+
+
 # --- fetch_new_abstracts ---
 
 
@@ -877,6 +900,31 @@ async def test_fetch_and_cache_empty_queries_returns_empty(svc):
     mock_client.search.assert_not_called()
 
 
+async def test_fetch_and_cache_releases_db_before_fetching_abstracts(svc):
+    """The stored-PMID read transaction ends before the PubMed fetch starts."""
+    mock_db = MagicMock()
+    mock_db.execute.return_value.fetchall.return_value = []
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+    mock_client.search = AsyncMock(return_value=["111"])
+
+    async def fetch_after_release(pmids):
+        mock_db.rollback.assert_called_once_with()
+        return []
+
+    mock_client.fetch_abstracts = AsyncMock(side_effect=fetch_after_release)
+
+    with patch(
+        "indication_scout.services.retrieval.PubMedClient", return_value=mock_client
+    ):
+        result = await svc.fetch_and_cache(["query"], mock_db)
+
+    assert result == ["111"]
+    mock_client.fetch_abstracts.assert_awaited_once_with(["111"])
+
+
 # --- semantic_search ---
 
 
@@ -1071,6 +1119,50 @@ async def test_semantic_search_similarity_is_float(svc, mock_pubtypes_empty):
 
     assert isinstance(result[0].similarity, float)
     assert result[0].similarity == float(Decimal("0.8765"))
+
+
+async def test_semantic_search_releases_db_before_fetching_pubtypes(svc):
+    """The pgvector read transaction ends before the PubMed request starts."""
+    db_rows = [("111", "Title", "Abstract", 0.9)]
+    mock_db = _make_db_with_rows(db_rows)
+    mock_vector = [0.1] * 768
+
+    mock_client = AsyncMock()
+    mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+    mock_client.__aexit__ = AsyncMock(return_value=None)
+
+    async def fetch_after_release(pmids):
+        mock_db.rollback.assert_called_once_with()
+        return {}
+
+    mock_client.fetch_pubtypes = AsyncMock(side_effect=fetch_after_release)
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.PubMedClient",
+            return_value=mock_client,
+        ),
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[mock_vector],
+        ),
+    ):
+        result = await svc.semantic_search("diabetes", "CHEMBL1431", ["111"], mock_db)
+
+    assert result == [
+        AbstractResult(
+            pmid="111",
+            title="Title",
+            abstract="Abstract",
+            similarity=0.9,
+            pubtype=[],
+        )
+    ]
+    mock_client.fetch_pubtypes.assert_awaited_once_with(["111"])
 
 
 # --- synthesize ---

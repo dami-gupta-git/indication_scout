@@ -546,6 +546,9 @@ class RetrievalService:
             return []
 
         known = self._read_pub_dates_from_db(pmids, db)
+        # The SELECT starts a transaction. End it before the possible PubMed
+        # request below so the connection returns to the pool while awaiting I/O.
+        db.rollback()
         from_db_kept: list[str] = []
         unknown: list[str] = []
         for pmid in pmids:
@@ -646,6 +649,9 @@ class RetrievalService:
 
             # 2. Single bulk check against pgvector
             stored = self.get_stored_pmids(all_pmids, db)
+            # Release the read transaction before fetching abstracts or embedding
+            # them. The later insert starts and commits its own transaction.
+            db.rollback()
 
             # 3. Single fetch for all new abstracts
             _t_fetch = time.perf_counter()
@@ -775,6 +781,9 @@ class RetrievalService:
                 "rerank_cap": rerank_cap,
             },
         ).fetchall()
+        # Rows are fully materialized, so the read transaction is no longer
+        # needed while PubMed and the literature agent perform awaited work.
+        db.rollback()
         # logger.warning(
         #     "[TIMING] semantic_search %s pgvector_scan: %.1fs (%d pmids in)",
         #     disease,
