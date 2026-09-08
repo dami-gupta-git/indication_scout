@@ -11,6 +11,7 @@ import logging
 import re
 import time
 from datetime import date
+from pathlib import Path
 from typing import Any, Literal
 
 from langchain_core.tools import tool
@@ -22,7 +23,11 @@ from indication_scout.agents.supervisor.candidate_dedup import (
 from indication_scout.config import get_settings
 from indication_scout.constants import SUPERVISOR_MIN_PMIDS_NO_TRIALS
 from indication_scout.data_sources.open_targets import OpenTargetsClient
-from indication_scout.helpers.drug_helpers import normalize_drug_name, seed_drug_intake
+from indication_scout.helpers.drug_helpers import (
+    DrugIntake,
+    normalize_drug_name,
+    seed_drug_intake,
+)
 from indication_scout.services.approval_check import (
     get_approved_indications,
     get_fda_approved_disease_mapping,
@@ -44,6 +49,23 @@ logger = logging.getLogger(__name__)
 # home shared with the report formatter). Aliased to the local names used throughout.
 _DEV_STAGE_PHRASE = DEV_STAGE_PHRASE
 _dev_stage_phrase = dev_stage_phrase
+
+
+async def _get_shared_drug_intake(
+    tasks: dict[str, asyncio.Task[DrugIntake]],
+    drug_name: str,
+    cache_dir: Path,
+    date_before: date | None,
+) -> DrugIntake:
+    """Return one run-scoped drug-intake result per normalized drug name."""
+    normalized = normalize_drug_name(drug_name)
+    task = tasks.get(normalized)
+    if task is None:
+        task = asyncio.create_task(
+            seed_drug_intake(normalized, cache_dir, date_before=date_before)
+        )
+        tasks[normalized] = task
+    return await task
 
 
 # Terse safety flag for the ranking blurbs / critic facts. Driven by the DISEASE-SPECIFIC
@@ -289,6 +311,7 @@ def build_supervisor_tools(
     # Drug-level shared store. Populated by sub-agents as they run; surfaced to the supervisor via get_drug_briefing. Keyed
     # by normalized drug name. See supervisor_ideas.md for rationale.
     drug_facts: dict[str, dict] = {}
+    drug_intake_tasks: dict[str, asyncio.Task[DrugIntake]] = {}
 
     # Fan-out only: artifacts produced by investigate_top_candidates. The tool invokes analyze_literature/
     # analyze_clinical_trials directly (not through the LangGraph ReAct loop), so their tool messages don't reach
@@ -329,6 +352,27 @@ def build_supervisor_tools(
                 "first_approval": None,  # year first approved anywhere (ChEMBL), or None
             }
         return drug_facts[key]
+
+    async def _get_drug_intake(drug_name: str) -> DrugIntake:
+        """Await the run's shared intake task and store its result once available."""
+        normalized = normalize_drug_name(drug_name)
+        intake = await _get_shared_drug_intake(
+            drug_intake_tasks,
+            normalized,
+            svc.cache_dir,
+            date_before,
+        )
+        entry = _ensure_drug_entry(normalized)
+        entry["chembl_id"] = intake.chembl_id
+        entry["drug_aliases"] = list(intake.aliases)
+        entry["first_approval"] = intake.first_approval
+        existing = {ind.lower().strip() for ind in entry["approved_indications"]}
+        for indication in intake.approved_indications:
+            key = indication.lower().strip()
+            if key not in existing:
+                entry["approved_indications"].append(indication)
+                existing.add(key)
+        return intake
 
     def _render_briefing(drug_name: str) -> str:
         """Render drug_facts[drug_name] as a markdown briefing."""
@@ -389,21 +433,12 @@ def build_supervisor_tools(
         # Drug-level intake: resolve the drug and gather aliases, first_approval, and the drug's own FDA-approved
         # indications. Extracted into the shared seed_drug_intake helper (also used by the CLI pair-runner). The
         # approved-DROP filter over competitor diseases (below) is NOT part of this and stays here.
-        intake = await seed_drug_intake(
-            drug_name, svc.cache_dir, date_before=date_before
-        )
+        intake = await _get_drug_intake(drug_name)
         chembl_id = intake.chembl_id
         competitors = await svc.get_drug_competitors(chembl_id, date_before=date_before)
         diseases = list(competitors.keys())
 
         entry = _ensure_drug_entry(drug_name)
-        entry["chembl_id"] = chembl_id
-        entry["drug_aliases"] = intake.aliases
-        entry["first_approval"] = intake.first_approval
-        existing = {ind.lower().strip() for ind in entry["approved_indications"]}
-        for ind in intake.approved_indications:
-            if ind.lower().strip() not in existing:
-                entry["approved_indications"].append(ind)
 
         # Drop competitor diseases already approved for this drug. Same swap as above: hardcoded table when date_before is
         # set, live FDA otherwise.
@@ -964,6 +999,7 @@ def build_supervisor_tools(
 
     async def _analyze_mechanism_impl(drug_name: str) -> tuple[str, MechanismOutput]:
         drug_name = normalize_drug_name(drug_name)
+        await _get_drug_intake(drug_name)
         _t0 = time.perf_counter()
         output = await run_mechanism_agent(
             mech_agent, drug_name, date_before=date_before

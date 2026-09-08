@@ -4,6 +4,7 @@ import asyncio
 import json
 import re
 from datetime import date
+from pathlib import Path
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -18,15 +19,19 @@ from indication_scout.agents.literature.literature_output import LiteratureOutpu
 from indication_scout.agents.mechanism.mechanism_output import (
     MechanismCandidate,
 )
-from indication_scout.agents.supervisor.supervisor_tools import build_supervisor_tools
+from indication_scout.agents.supervisor.supervisor_tools import (
+    _get_shared_drug_intake,
+    build_supervisor_tools,
+)
 from indication_scout.config import get_settings
+from indication_scout.helpers.drug_helpers import DrugIntake
 from indication_scout.models.model_clinical_trials import (
     CompletedTrialsResult,
     SearchTrialsResult,
     TerminatedTrialsResult,
 )
-from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.models.model_drug_profile import DrugProfile
+from indication_scout.models.model_evidence_summary import EvidenceSummary
 
 
 @pytest.fixture(autouse=True)
@@ -95,6 +100,65 @@ def _build_tools_with_drug_facts(
         "mechanism_disease_associations": [],
     }
     return by_name, drug_facts
+
+
+async def test_shared_drug_intake_runs_seed_once_for_concurrent_callers(
+    tmp_path: Path,
+) -> None:
+    """Concurrent aliases of one drug await the same run-scoped intake task."""
+    started = asyncio.Event()
+    release = asyncio.Event()
+    intake = DrugIntake(
+        chembl_id="CHEMBL1431",
+        aliases=["metformin", "Glucophage"],
+        first_approval=1957,
+        approved_indications=["type 2 diabetes mellitus"],
+    )
+
+    async def seed_once(
+        drug_name: str,
+        cache_dir: Path,
+        date_before: date | None = None,
+    ) -> DrugIntake:
+        assert drug_name == "metformin"
+        assert cache_dir == tmp_path
+        assert date_before is None
+        started.set()
+        await release.wait()
+        return intake
+
+    tasks: dict[str, asyncio.Task[DrugIntake]] = {}
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.seed_drug_intake",
+        new=AsyncMock(side_effect=seed_once),
+    ) as seed_mock:
+        first_task = asyncio.create_task(
+            _get_shared_drug_intake(
+                tasks,
+                "Metformin hydrochloride",
+                tmp_path,
+                None,
+            )
+        )
+        await asyncio.wait_for(started.wait(), timeout=1)
+        second_task = asyncio.create_task(
+            _get_shared_drug_intake(tasks, "metformin", tmp_path, None)
+        )
+        await asyncio.sleep(0)
+        release.set()
+        first, second = await asyncio.gather(first_task, second_task)
+
+    seed_mock.assert_awaited_once_with("metformin", tmp_path, date_before=None)
+    assert len(tasks) == 1
+    assert list(tasks) == ["metformin"]
+    assert first is intake
+    assert second is intake
+    assert first.model_dump() == {
+        "chembl_id": "CHEMBL1431",
+        "aliases": ["metformin", "Glucophage"],
+        "first_approval": 1957,
+        "approved_indications": ["type 2 diabetes mellitus"],
+    }
 
 
 def test_semaglutide_briefing_lists_mash_when_seeded():
