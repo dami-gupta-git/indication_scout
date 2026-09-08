@@ -724,7 +724,7 @@ that consumes it. The contract is a four-way `ApprovalLabel` (`services/approval
 |-------|---------|-------------|
 | `approved` | Drug is already approved for this exact indication | **Dropped** upstream; never reaches findings |
 | `combination_only` | Approved for this disease ONLY as a fixed-dose combination product, never as monotherapy | **Demoted** — not a monotherapy repurposing lead |
-| `contaminated` | A real, broader repurposing target whose trial/literature counts are polluted by an approved narrower subset | **Kept and ranked**, but trial tables suppressed |
+| `contaminated` | A broader candidate containing an approved narrower indication, or an exact curated query-collision case | **Kept and ranked**; approval overlap is disclosed |
 | `none` | No relationship to an approved indication | **Kept**, clean signal |
 
 `get_fda_approved_disease_mapping(drug_name, candidate_diseases, approved_indications)` returns one
@@ -761,9 +761,10 @@ is not dropped.
   `CandidateFindings.approval_relationship` from this map (matching on both the canonical and the
   finding's own disease string) — **not** from any LLM-authored field. The approval relationship was
   removed from `CandidateBlurb` entirely; the model never decides it.
-- **Trial level.** A `contaminated` candidate has its trial tables suppressed in
-  `format_report.py` (the verbatim total counts stay, but the example trial list is replaced with
-  "overlaps an approved related indication and cannot be cleanly separated").
+- **Report level.** A `contaminated` candidate is identified as overlapping an approved indication
+  in its FDA-approval line and in the facts supplied to the interpretive judge. Trial examples are
+  still selected independently from `relevant_nct_ids`; the candidate-level label does not suppress
+  the whole table.
 
 ### Approval-aware relevance at the trial & literature level
 

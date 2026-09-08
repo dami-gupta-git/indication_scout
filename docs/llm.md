@@ -42,9 +42,9 @@ This module also exposes JSON-parsing helpers used by callers:
 
 | Line | Function | Model | Purpose |
 |------|----------|-------|---------|
-| 303 | `list_approved_indications_from_labels()` | Main | Extracts approved indications from raw FDA label text |
-| 369 | `extract_approved_from_labels()` | Small | Identifies which candidate diseases appear as approved indications in label text |
-| 528 | `get_fda_approved_disease_mapping()` | Main | Per-candidate approved/not-approved verdict for missing candidates |
+| 410 | `list_approved_indications_from_labels()` | Main | Extracts approved indications from raw FDA label text |
+| 479 | `extract_approved_from_labels()` | Small | Identifies which candidate diseases appear as approved indications in label text |
+| 558 | `get_fda_approved_disease_mapping()` | Main | Structured four-way approval relationship for uncached candidates, with exact approved-indication anchors for contamination |
 
 ## Summary
 

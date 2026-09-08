@@ -292,13 +292,18 @@ then handed down — not something re-decided per surface.
 |---|---|---|
 | **approved** | The candidate is the same disease, a synonym, or a **narrower child** of an approved indication. | **Dropped entirely** — never appears as a candidate. |
 | **combination_only** | Approved only as part of a combination product. | Kept but demoted. |
-| **contaminated** | A genuine repurposing target, **but** its trial/registry counts are polluted by an approved sibling or child. | **Kept and ranked**; its trial/paper counts are treated as suspect and filtered (below). |
-| **none** | A sibling, a broader indication with an uncovered population, or unrelated. | Kept and ranked normally. |
+| **contaminated** | A broader candidate contains an approved narrower indication, or an exact curated entry records a verified query collision. | Kept and ranked; the approval overlap is disclosed. |
+| **none** | A sibling, related disease, or unrelated disease. | Kept and ranked normally. |
 
 Only **approved** removes a candidate. The deciding test is *"would prescribing the drug for this
 candidate be on-label — do its patients already fall inside the approved population?"* Yes → `approved`
-(dropped); No → `none` (kept). So a clinically-named subtype of a broad approval is dropped, but a
-*distinct* disease that merely causes the approved condition is kept.
+(dropped); No means the candidate is kept. A kept broader parent is `contaminated`; a kept sibling,
+related disease, or unrelated disease is `none`. A clinically named subtype of a broad approval is
+dropped, but a distinct disease that merely causes the approved condition is kept.
+
+For `contaminated`, the candidate must contain an exact indication from the approved-indication
+list. Distinct siblings are `none`. Verified search collisions outside that clinical hierarchy are
+recorded as exact curated drug-candidate pairs.
 
 ### The directional rule (shared by trials and literature)
 

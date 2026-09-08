@@ -5,10 +5,10 @@ counting evidence toward a drug×disease repurposing candidate. It is not comorb
 covers any hit (a clinical trial, an FDA-label mapping, or a PubMed abstract) that superficially
 matches a search but is actually about the wrong drug, a wrong/distinct disease, an already
 FDA-approved indication, or the drug being used for a comorbidity rather than the target disease.
-Contamination is computed independently at three levels — per-NCT in clinical trials, per-candidate
-disease against the FDA approval mapping, and per-PMID in literature synthesis — and in every case
-flows downstream into filtering (excluded from signals/evidence counts) and into user-facing
-"N hidden/excluded" disclosure notes in the final report.
+Contamination is computed independently at three levels: per-NCT in clinical trials, per-candidate
+disease against the FDA approval mapping, and per-PMID in literature synthesis. NCT and PMID
+verdicts filter evidence records. The candidate-level relationship is retained as context for report
+rendering and interpretation.
 
 ## 1. Clinical trials: NCT-level contamination
 
@@ -48,23 +48,23 @@ incomplete/unknown verdict sets (`clinical_trials_tools.py:597-633`).
 
 ## 2. FDA approval-relationship contamination (candidate-level)
 
-**Definition**: a candidate disease itself is labeled `"contaminated"` (one of
-`ApprovalLabel = Literal["approved","combination_only","contaminated","none"]`,
-`src/indication_scout/services/approval_check.py:50`) when it's a real, distinct repurposing target
-but a registry/literature search for it would pull in the drug's *already-approved* trials/evidence —
-e.g. broad umbrella term vs. an approved narrower subtype, or a sibling disease sharing a search term
-with an approved indication (`src/indication_scout/prompts/extract_fda_approval_single.txt:22-34`).
+**Definition**: a candidate disease is labeled `"contaminated"` when it is a broader clinical
+category containing at least one indication from the run's approved-indication list. Distinct
+siblings, related diseases, shared mechanisms, and shared treatment classes are `"none"`. A small
+curated table covers verified production-query collisions that are not clinical parent-child
+relationships, such as sildenafil systemic hypertension queries retrieving approved pulmonary
+hypertension trials.
 
 **Computed by**: `get_fda_approved_disease_mapping()` in
-`src/indication_scout/services/approval_check.py:454-501` — curated short-circuit against
-`CURATED_FDA_CONTAMINATED_CANDIDATES` (`src/indication_scout/constants.py:429-438`) first, else LLM
-classification.
+`src/indication_scout/services/approval_check.py`. The curated exact-match lists are checked first.
+Remaining candidates are classified against the FDA labels and the approved-indication list. The
+model returns a structured decision, and a contaminated decision is accepted only when it names an
+approved indication from that list exactly. Invalid decisions are not cached.
 
-**Downstream use**: `supervisor_output.py:100-104` (`approval_relationship` field), consumed by
-`supervisor_tools.py:259,388,743-866` to demote/annotate candidates and count
-`contaminated_nct_ids` for the report note (`supervisor_tools.py:863-866`); rendered in
-`format_report.py:161` and mapped to user-facing prose in `judge_interpretive.py:125-157` (internal
-label never shown verbatim to the user).
+**Downstream use**: the accepted label is stored on
+`CandidateFindings.approval_relationship`. The report identifies the FDA-label overlap and supplies
+it to the interpretive judge. Individual trial and literature records are classified separately;
+the candidate-level label does not determine their relevance verdicts.
 
 ## 3. Literature/PubMed evidence contamination (per-PMID)
 

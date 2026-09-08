@@ -21,7 +21,7 @@ The fix: classify every candidate disease against the drug's FDA label, once, up
 approved — same disease or a narrower subtype/variant of what's approved → dropped entirely. Test: "would prescribing the drug for this candidate be within the existing FDA label?" If yes (it's just a finer-grained version of the approved condition, e.g. diabetic kidney disease under approved CKD), it's not new — drop it.
 none — a genuinely distinct disease, even if related (e.g. it can cause the approved condition, like polycystic kidney disease causing CKD, but isn't the same diagnosis) → kept and ranked as real evidence.
 combination_only — approved only as part of a combination product → demoted, not dropped.
-contaminated — a real repurposing target, but its trial/paper counts are polluted by data actually about the approved sibling/subtype → kept and ranked, but counts are flagged as unreliable.
+contaminated — a broader candidate containing an approved narrower indication, or a curated verified query-collision case → kept and ranked, with the overlap disclosed.
 Why this matters: this same "is it the approved thing or a subtype (exclude) vs a distinct-but-related thing (keep)" logic is applied consistently at every downstream stage — trial relevance, literature relevance, development-stage tiering, and final ranking — so the report doesn't contradict itself (e.g. summary text and trial counts disagreeing about whether something is approved).
 
 Engineering pattern: only a small set of clinical-safety-critical rules are hardcoded in Python (e.g. "if evidence isn't drug-specific, cap the strength score"); everything else is left to LLM judgment, but fed these upstream labels so it can't re-derive or contradict them.
@@ -55,27 +55,32 @@ classifies each candidate against the drug's FDA label into ONE of four labels:
 |--------------------|-------------------------------------------------------------------------|-----------------------------------------|
 | `approved`         | same disease, a synonym, or a narrower CHILD of an approved indication   | **DROP** upstream (never a candidate)   |
 | `combination_only` | labeled only as part of a combination product                           | demote                                  |
-| `contaminated`     | a real repurposing target, but trial/registry counts are polluted by an approved sibling/child | **KEEP + rank**; trial counts suspect   |
-| `none`             | sibling / related / broader-with-uncovered-population / unrelated        | **KEEP**, rank normally                 |
+| `contaminated`     | a broader candidate containing an approved child, or a curated verified query collision | **KEEP + rank**; disclose overlap |
+| `none`             | sibling, related, or unrelated                                             | **KEEP**, rank normally          |
 
 Only `approved` removes a candidate. `contaminated` and `none` are both kept and ranked.
 
-### The on-label test (how `approved` vs `none` is decided)
+### The on-label test
 
 > Would prescribing the drug for the candidate be **on-label** — i.e. do the candidate's patients
 > already fall within the approved population?
 
 - **Yes → `approved`.** A clinically-named SUBTYPE or CAUSE-VARIANT of a broad approval is on-label
   (e.g. diabetic kidney disease ⊂ approved CKD → `approved`, drop).
-- **No → `none`.** A DISTINCT disease that merely *causes* the approved condition is NOT on-label —
-  keep it (e.g. polycystic kidney disease or glomerulonephritis, which cause CKD but are distinct
-  diseases). The model's distinct-disease judgment here is usually more correct than a naive
-  "it's related, demote it" heuristic.
+- **No → keep the candidate.** A broader candidate that contains a supplied approved indication
+  is `contaminated`. A distinct sibling, related disease, or unrelated disease is `none`. For
+  example, polycystic kidney disease and glomerulonephritis cause CKD but remain distinct diseases.
 
 The prompt lives in `prompts/extract_fda_approval_single.txt`. Curated short-circuits (for known
 cases) live in `constants.py` (`CURATED_FDA_APPROVED_CANDIDATES`,
 `CURATED_FDA_CONTAMINATED_CANDIDATES`, `CURATED_FDA_COMBINATION_ONLY_CANDIDATES`,
 `CURATED_FDA_REJECTED_CANDIDATES`).
+
+The approved-indication list is produced by the shared drug-intake task and supplied to the
+classifier. A contaminated response must name one item from that list exactly. The parser rejects
+invalid response shapes and contaminated labels with an unverified anchor, and those decisions are
+not cached. The general prompt does not infer registry-search collisions from sibling or related
+diseases; verified exceptions are exact curated entries.
 
 ### Why upstream, once
 
@@ -309,8 +314,9 @@ CT.gov drift doesn't flake them. Deterministic logic (floors, renders, parsing) 
 
 By stage:
 
-- **Approval labeling** — `tests/integration/services/test_approval_check.py`: semaglutide T2DM=approved,
-  NAFLD=contaminated, unrelated=none; label extraction from Ozempic/Wegovy.
+- **Approval labeling** — `tests/integration/services/test_approval_check.py`: semaglutide
+  T2DM=approved, NAFLD=contaminated, unrelated=none, and certolizumab IBD=contaminated while
+  ulcerative colitis=none; label extraction from Ozempic/Wegovy.
 - **Trial gate** — `tests/integration/agents/clinical_trials/test_approval_aware_relevance_e2e.py`:
   sildenafil PAH list-driven contamination; bupropion approved-SAD via rule; semaglutide
   multi-condition "T2DM with NASH" contaminated; imatinib Ph+ CML contaminated / CLL relevant.
@@ -329,7 +335,7 @@ By stage:
 - **Supervisor (full agent)** — `tests/integration/agents/supervisor/test_supervisor_agent.py`:
   semaglutide sibling-kept + contaminated labels; sildenafil systemic-HTN kept + PAH tagged.
 
-Validation harnesses (not pytest; run manually under `scratch/`): `approval_relationship_harness.py`,
+Validation harnesses (not pytest; run manually under `tests/harness_tests/`): `approval_relationship_harness.py`,
 `approval_aware_trials_harness.py`, `approval_aware_literature_harness.py`,
 `trial_relevance_test1_harness.py`, `ranking_judgment_harness.py`, `watch_nct_harness.py`,
 `dev_stage_judgment_harness.py`.

@@ -206,7 +206,7 @@ in `src/indication_scout/prompts/supervisor.txt`:
 | Per-candidate 2-column table — row **Assessment** | `CandidateBlurb.verdict` (renamed "Assessment") | supervisor LLM | `# WRITING THE BLURBS` |
 | `**Watch:** ...` line | `CandidateBlurb.watch` | supervisor LLM | `# WRITING THE BLURBS` (NCT id and/or expected timing if known; empty if no scheduled readout — do not invent timing) |
 | Italic 2-sentence paragraph | `CandidateBlurb.prose` | supervisor LLM | `# WRITING THE BLURBS` (exactly 2 sentences of interpretive synthesis) |
-| `Demoted — approval relationship: ...` footer | within `output.summary` | supervisor LLM | `# APPROVAL RELATIONSHIPS` (`supervisor.txt:151`) — sub-templates `same` / `narrower` / `broader_overlapping` / `broader_distinct` / `combination` |
+| `Demoted — approval relationship: ...` footer, when present | within `output.summary` | upstream relationship facts consumed during supervisor finalization | `# APPROVAL RELATIONSHIPS` |
 | `Closed signals: ...` footer (when present) | within `output.summary` | supervisor LLM | `# WRITING THE SUMMARY` |
 | `Evidence gate exclusions: ...` footer | within `output.summary` | supervisor LLM | `# WRITING THE SUMMARY` (substantive gate rule: zero trials AND <5 PMIDs, OR zero trials AND strength=none) |
 | Footer precedence (each candidate in exactly one footer) | within `output.summary` | supervisor LLM | approval-relationship demotions > closed signals > evidence gate exclusions |
@@ -291,12 +291,10 @@ All fields come from `finding.clinical_trials` (`ClinicalTrialsOutput`) —
 Coverage text comes from the per-scope `TrialRelevanceCoverage`. Incomplete retrieval states the
 confirmed relevant count as a lower bound and keeps the unreviewed query remainder explicit.
 
-**Contaminated-relationship suppression.** When `finding.blurb.approval_relationship`
-is in `_CONTAMINATED_RELATIONSHIPS` (`broader_distinct` / `broader_overlapping`),
-`_fmt_clinical_trials` omits the completed/terminated trial tables and emits a
-short note (`…not listed — trial record contaminated by approved subtype…`)
-instead, because the trial record is dominated by the already-approved subtype.
-Total counts are still shown.
+**Candidate approval relationship.** When `finding.approval_relationship` is `contaminated`,
+`_fmt_clinical_trials` states that the exact candidate term is not on the FDA label but overlaps an
+approved indication. This relationship does not suppress the completed or terminated tables.
+Those tables independently include only trials whose NCT IDs are present in `relevant_nct_ids`.
 
 Note: `ct.landscape` (`IndicationLandscape`) is populated by the clinical_trials
 agent but is **not** rendered as a separate block by the Markdown formatter — it

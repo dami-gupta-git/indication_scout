@@ -65,8 +65,10 @@ data; the ranking is **deterministic, post-LLM**:
      GoF-driven / inconclusive.
    - Keeps only **POSITIVE** rows where the drug's action direction *opposes* the
      disease-driving direction (LoF drug ↔ GoF-driven, GoF drug ↔ LoF-driven).
-   - Drops rows whose disease is FDA-approved (via `get_fda_approved_disease_mapping`) or in
-     `BROADENING_BLOCKLIST`.
+   - Drops rows whose disease is FDA-approved via
+     `get_fda_approved_disease_mapping(drug_name, candidate_diseases, approved_indications)` or is
+     in `BROADENING_BLOCKLIST`. The approved-indication list comes from the run's shared drug
+     intake.
    - Sorts by `ranking_score` (OT's `overall_score` in production; a leak-free recomputed
      score that drops `clinical_precedence` in holdout mode), trims to
      `MECHANISM_TOP_CANDIDATES`.
