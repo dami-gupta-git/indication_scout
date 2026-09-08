@@ -1021,7 +1021,6 @@ Settings:
     rag_disease_concurrency: int
     europe_pmc_extraction_concurrency: int  # in-flight condition-extraction LLM calls
     clinical_trials_landscape_max_trials: int
-    clinical_trials_cap: int
     supervisor_candidate_cap: int          # trims the final ranked candidate list
     supervisor_investigation_cap: int      # how many top candidates the deep-dive fan-out investigates
     supervisor_fanout: bool                # expose investigate_top_candidates in non-holdout runs

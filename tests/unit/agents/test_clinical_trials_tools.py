@@ -245,6 +245,55 @@ async def test_search_trials_content_notes_top_50_when_total_exceeds_shown():
     assert "top 50 shown" in msg.content
 
 
+async def test_search_trials_renders_every_trial_it_records_for_classification():
+    """The search classification view is un-capped: every trial recorded in the finalize
+    classification set is rendered, so no trial gets a blind verdict."""
+    trials = [
+        Trial(
+            nct_id=f"NCT{i:08d}",
+            title=f"Trial {i}",
+            phase="Phase 3",
+            overall_status="RECRUITING",
+            sponsor="S",
+            brief_summary=f"A study {i}.",
+            mesh_conditions=[MeshTerm(id="D011236", term="Prediabetic State")],
+            interventions=[
+                Intervention(intervention_type="Drug", intervention_name="Metformin"),
+            ],
+        )
+        for i in range(1, 26)
+    ]
+    mock_result = SearchTrialsResult(total_count=25, trials=trials)
+    mock_client = _mock_client(search_trials=mock_result)
+    tools = build_clinical_trials_tools(date_before=None)
+
+    with (
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+            new=AsyncMock(return_value=("D011236", "Prediabetic State")),
+        ),
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+            return_value=mock_client,
+        ),
+    ):
+        msg = await _get_tool(tools, "search_trials").ainvoke(
+            LCToolCall(
+                name="search_trials",
+                args={"drug": "metformin", "indication": "prediabetes syndrome"},
+                id="tc_search_uncapped",
+                type="tool_call",
+            )
+        )
+
+    assert "Trials shown (all 25 — classify EVERY one):" in msg.content
+    assert "top 50 shown" not in msg.content
+    # Every recorded NCT is rendered — including those past the old 20-row cap.
+    for trial in trials:
+        assert trial.nct_id in msg.content
+    assert len([ln for ln in msg.content.splitlines() if ln.startswith("  NCT")]) == 25
+
+
 # ------------------------------------------------------------------
 # get_completed
 # ------------------------------------------------------------------

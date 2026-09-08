@@ -248,18 +248,21 @@ def build_clinical_trials_tools(
                 "brief_summary",
                 "title",
             ),
-            cap=_settings.clinical_trials_cap,
+            cap=len(result.trials),
         )
         content = (
             f"{header}\n"
             f"Phase distribution (shown): {phase_dist}\n"
-            f"Trials shown (top {_settings.clinical_trials_cap} by enrollment):\n"
+            f"Trials shown (all {shown} — classify EVERY one):\n"
             f"{table}"
         )
         # Record the search-pool trials in the classification set too, so the relevance gate
         # forces a verdict on them at finalize. Without this, search trials (which feed the
         # active / dev-stage signal) bypass the gate and a contaminated active trial — e.g. a
         # PAH trial under a systemic-hypertension query — leaks into the "Phase 3 active" signal.
+        # The table above is rendered un-capped for the same reason: recording a trial here that
+        # the agent was never shown forces a blind verdict on it, and a blind verdict reads
+        # "relevant" — which is how an unshown wrong-drug trial reached the active/stage signals.
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )

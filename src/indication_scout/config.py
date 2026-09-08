@@ -99,7 +99,6 @@ class Settings(BaseSettings):
 
     # Clinical trials
     clinical_trials_landscape_max_trials: int
-    clinical_trials_cap: int
 
     # Supervisor
     supervisor_candidate_cap: int
