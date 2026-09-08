@@ -51,6 +51,8 @@ ignorance, is the failure mode.
 ### Approval relationship
 - **approval_relationship_harness.py** — proposed upstream 4-way classifier (approved / combination_only
   / contaminated / none); only "approved" drops a candidate. Kills the "demoted a real candidate" bugs.
+- **approval_contamination_only_harness.py** — tests the proposed narrower `contaminated` and `none`
+  rules against broader-parent, sibling, related, and unrelated disease controls before production use.
 - **approval_input_harness.py** — runs the interpretive call with production-shaped approval inputs;
   checks no phase-tier understatement and no false "approved for this indication" claim.
 
