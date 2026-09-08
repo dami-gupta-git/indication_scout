@@ -1928,6 +1928,7 @@ async def test_classify_indication_harm_parses_true(svc):
                 {
                     "pmid": "11696466",
                     "status": "confirmed_harm",
+                    "study_subjects": "patients",
                     "adverse_outcome": "increased cardiovascular thrombotic events",
                     "evidence_quote": (
                         "Rofecoxib increased cardiovascular thrombotic events versus placebo."
@@ -1967,6 +1968,7 @@ async def test_classify_indication_harm_false_clears_summary_and_pmids(svc):
                 {
                     "pmid": "11696466",
                     "status": "safety_assessed_only",
+                    "study_subjects": "patients",
                     "adverse_outcome": None,
                     "evidence_quote": None,
                 }
@@ -2015,6 +2017,7 @@ async def test_classify_indication_harm_rejects_unverified_quote(svc):
                 {
                     "pmid": "11696466",
                     "status": "confirmed_harm",
+                    "study_subjects": "patients",
                     "adverse_outcome": "renal failure",
                     "evidence_quote": "Metformin caused renal failure.",
                 }
@@ -2040,6 +2043,43 @@ async def test_classify_indication_harm_rejects_unverified_quote(svc):
     assert summary == ""
     assert pmids == []
     mock_cache_set.assert_not_called()
+
+
+@pytest.mark.parametrize("subjects", ["animals", "cells_or_tissue", "unclear", None])
+async def test_classify_indication_harm_rejects_non_patient_study(svc, subjects):
+    """A verified harm from non-human work is not patient risk for the indication."""
+    resp = json.dumps(
+        {
+            "verdicts": [
+                {
+                    "pmid": "11696466",
+                    "status": "confirmed_harm",
+                    "study_subjects": subjects,
+                    "adverse_outcome": "increased cardiovascular thrombotic events",
+                    "evidence_quote": (
+                        "Rofecoxib increased cardiovascular thrombotic events versus placebo."
+                    ),
+                }
+            ]
+        }
+    )
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["rofecoxib"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=resp),
+        ),
+    ):
+        harm, summary, pmids = await svc.classify_indication_harm(
+            "CHEMBL122", "colorectal cancer", _SAFETY_ABSTRACTS
+        )
+
+    assert harm is False
+    assert summary == ""
+    assert pmids == []
 
 
 # --- get_drug_competitors ---

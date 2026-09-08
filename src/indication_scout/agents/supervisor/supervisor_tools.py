@@ -230,6 +230,39 @@ from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 from indication_scout.services.retrieval import RetrievalService
 
 
+def _closure_text(ct: "ClinicalTrialsOutput | None") -> str:
+    """Render the clinical-trials agent's typed live/closed verdict as a sentence for the interpretive writer.
+
+    The verdict is decided upstream; the writer was previously not given it and judged closure itself, producing a
+    summary that called a closed signal open.
+    """
+    if ct is None or ct.closure == "unknown":
+        # Must not read as "the hypothesis is not established" — that phrasing was turned into a "Closed signal"
+        # assessment for a candidate with no trials at all, which is the opposite of what an undecided verdict means.
+        return "NOT DECIDED — no closure verdict was reached; do NOT describe the signal as closed"
+    reason = ct.closure_reason.strip()
+    state = (
+        "CLOSED — the signal is not live"
+        if ct.closure == "closed"
+        else "LIVE — not closed"
+    )
+    return f"{state}{f' ({reason})' if reason else ''}"
+
+
+def _terminations_text(sig) -> str:
+    """State whether a late-stage trial was terminated for safety or efficacy.
+
+    The development stage names the furthest trial reached, and its terminated-for-cause tier only applies when no
+    completed Phase 3 exists — so a programme that completed one Phase 3 and killed the rest reads as plain
+    "Phase 3 completed". Passing this separately keeps the stage untouched while the summary can still say it.
+    """
+    if sig is None:
+        return "none reported"
+    if getattr(sig, "phase3_terminated_for_cause", False):
+        return "a Phase 3-band trial was TERMINATED for a safety or benefit:risk reason"
+    return "none reported"
+
+
 def _trial_evidence_text(coverage: TrialRelevanceCoverage | None) -> str:
     """Describe reviewed relevant trials without promoting raw query matches."""
     if coverage is None:
@@ -1629,6 +1662,11 @@ def build_supervisor_tools(
                 len(critic_blurbs),
             )
         validated: list[dict] = []
+        # Diseases the evidence gate below actually dropped, as (disease, reason). The summary's
+        # "Evidence gate exclusions:" footer is rebuilt from THIS list, not from the LLM's prose —
+        # the LLM has been observed naming a candidate it kept (semaglutide × hypoglycemia) on a
+        # criterion it invented, which claims an exclusion that never happened.
+        gate_excluded: list[tuple[str, str]] = []
         structured_keys = (
             "stage",
             "literature",
@@ -1699,6 +1737,14 @@ def build_supervisor_tools(
                     lit_direction,
                     lit_study_count,
                 )
+                gate_excluded.append(
+                    (
+                        disease,
+                        f"0 relevant trials and no usable literature signal "
+                        f"(direction={lit_direction or 'unavailable'}, "
+                        f"study_count={lit_study_count if lit_study_count is not None else 'unavailable'})",
+                    )
+                )
                 continue
             # Deterministic STAGE override: the development-stage tier is a fact the LLM must NOT author. The clinical-trials
             # sub-agent computed an authoritative dev_stage from the relevance-filtered signals; render its phrase verbatim,
@@ -1755,6 +1801,11 @@ def build_supervisor_tools(
                     ),
                     "approved_indication": approved_ind,
                     "trial_evidence": _trial_evidence_text(coverage),
+                    # Closure and late-stage terminations are decided upstream but were not reaching the writer, so it
+                    # judged closure itself ("uncertain but not closed" on a pair already graded closed) and read the
+                    # stage alone (a completed Phase 3 outranks the terminated-for-cause tier, hiding the stops).
+                    "closure": _closure_text(ct),
+                    "terminations": _terminations_text(sig),
                 }
                 if stage_phrase is not None
                 else None
@@ -1866,6 +1917,9 @@ def build_supervisor_tools(
         rank_line = re.compile(
             r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)(?:\s+—\s+(?P<tail>.+))?$"
         )
+        gate_exclusions_line = re.compile(
+            r"^\s*Evidence\s+gate\s+exclusions\s*:", re.IGNORECASE
+        )
         # Normalize the heading line so the report uses "signals" instead of "candidates" / "opportunities" / "indications"
         # regardless of what the LLM wrote.
         heading_line = re.compile(
@@ -1907,8 +1961,11 @@ def build_supervisor_tools(
                 continue
             m = rank_line.match(line)
             if m is None:
-                # Non-ranked line (e.g. a demotion footer entry). Correct a false stage clause against the authoritative
-                # dev_stage before passing it through.
+                # The LLM's own "Evidence gate exclusions:" line is discarded — it is rebuilt below from the gate's actual
+                # decisions. Everything else (demotion footer entries) passes through with a false stage clause corrected
+                # against the authoritative dev_stage.
+                if gate_exclusions_line.match(line):
+                    continue
                 passthrough.append(_repair_footer_stage(line))
                 continue
             matched = _match_validated(m.group("head").lower())
@@ -1947,6 +2004,14 @@ def build_supervisor_tools(
                 filtered_lines.extend(ranked_lines)
             else:
                 filtered_lines.append(item)
+
+        # Derived exclusions footer. Omitted entirely when the gate dropped nothing — an absent line says nothing, whereas
+        # the LLM's version could assert an exclusion that never happened.
+        if gate_excluded:
+            filtered_lines.append(
+                "Evidence gate exclusions: "
+                + "; ".join(f"{disease} — {reason}" for disease, reason in gate_excluded)
+            )
         filtered_summary = "\n".join(filtered_lines)
 
         artifact = {"summary": filtered_summary, "blurbs": validated}

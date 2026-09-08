@@ -10,6 +10,11 @@ class SafetyPaperVerdict(BaseModel):
 
     pmid: str
     status: Literal["confirmed_harm", "safety_assessed_only", "irrelevant", "unclear"]
+    # Only the disease-scoped harm classifier asks for this; the holdout drug-level prompt
+    # does not, and an absent answer is treated there as "not established as patient harm".
+    study_subjects: (
+        Literal["patients", "animals", "cells_or_tissue", "unclear"] | None
+    ) = None
     adverse_outcome: str | None = None
     evidence_quote: str | None = None
 

@@ -1347,7 +1347,7 @@ class RetrievalService:
         cache_params = {
             "chembl_id": chembl_id,
             "disease": disease,
-            "logic_version": "per_pmid_indication_harm_v1",
+            "logic_version": "per_pmid_indication_harm_v2",
             "pmids": sorted(r.pmid for r in safety_abstracts),
             "llm_model": _settings.llm_model,
         }
@@ -1408,6 +1408,17 @@ class RetrievalService:
                 has_unclear = True
                 continue
             if verdict.status != "confirmed_harm":
+                continue
+            if verdict.study_subjects != "patients":
+                # Non-human work is not patient risk; the model must name what it read before a
+                # harm counts, and only "patients" survives.
+                logger.info(
+                    "classify_indication_harm: dropping non-patient harm PMID %s (%s) for %s / %s",
+                    verdict.pmid,
+                    verdict.study_subjects,
+                    chembl_id,
+                    disease,
+                )
                 continue
             source = abstracts_by_pmid[verdict.pmid]
             quote = (verdict.evidence_quote or "").strip()

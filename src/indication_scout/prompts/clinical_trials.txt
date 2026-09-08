@@ -93,6 +93,11 @@ relevant.
   2a — DISTINCT DISEASE. Is the trial's condition a DISTINCT disease that merely shares a parent
   term with the candidate (e.g. a systemic "Hypertension" query pulling in "Pulmonary Arterial
   Hypertension" / PAH trials — PAH is a SEPARATE disease)?
+    A shared WORD is not a shared disease. Two names built on the same root can be different
+    conditions with different tissue, presentation, and trial populations. Read the trial's
+    condition as its own disease name, not as a variant spelling of the candidate.
+    e.g. candidate "lichen planopilaris" (scarring hair loss) vs a trial in "cutaneous lichen
+    planus" (a skin rash) — SEPARATE diseases => CONTAMINATION.
 
   2b — CANDIDATE IS ONLY THE POPULATION. What is the trial TREATING — name it. Is that treatment
   target the candidate disease itself, or is the candidate merely naming WHICH PATIENTS were

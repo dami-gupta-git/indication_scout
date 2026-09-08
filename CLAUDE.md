@@ -237,3 +237,10 @@ drug = Drug(**{"name": None, "synonyms": None, "year_approved": None})
 - Prefer a smaller, correct report over a larger one that includes hallucinated or unverified
   entries.
 
+
+## Report Conventions (not bugs)
+
+- A PMID may appear in BOTH the supporting and contradicting lists for the same indication. One
+  paper can report a supportive result on one endpoint and a contradicting one on another (e.g. a
+  trial that improves depression scores but shows a switch-to-mania rate). This is intended — do not
+  report it as a bug or "fix" it by forcing each PMID to one side.

@@ -79,7 +79,9 @@ async def run_pair_analysis(
         CandidateFindings,
     )
     from indication_scout.agents.supervisor.supervisor_tools import (
+        _closure_text,
         _literature_oneliner,
+        _terminations_text,
         _trial_evidence_text,
     )
     from indication_scout.helpers.drug_helpers import seed_drug_intake
@@ -233,6 +235,8 @@ async def run_pair_analysis(
                 relationship=approval_relationship,
                 approved_indication=approved_ind,
                 trial_evidence=trial_evidence,
+                closure=_closure_text(clinical_trials),
+                terminations=_terminations_text(sig),
                 cache_dir=DEFAULT_CACHE_DIR,
                 drug=drug,
                 indication=disease_name,

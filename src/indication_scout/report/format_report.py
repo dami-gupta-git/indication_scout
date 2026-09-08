@@ -393,7 +393,12 @@ def _splice_blurbs_into_summary(summary: str, findings: list[CandidateFindings])
     # (before em-dash). Any leading whitespace the LLM emitted is dropped — the rank
     # line is rebuilt flush-left so it lines up with the field/prose lines rendered
     # below it (and so CommonMark doesn't treat 4+ leading spaces as a code block).
-    rank_line = re.compile(r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)\s+—\s+.+$")
+    # The em-dash tail is OPTIONAL: finalize_supervisor rebuilds the ranked block from the validated
+    # blurbs and carries over whatever tail the LLM wrote, which is "" when the LLM never emitted a
+    # proper ranked line for that disease. A tail-less line ("14. hypoglycemia") must still be
+    # recognized, or its blurb is never spliced and the entry renders as a bare heading. The tail is
+    # discarded either way — the blurb replaces it.
+    rank_line = re.compile(r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)(?:\s+—\s+.+)?$")
     footer_line = re.compile(
         r"^\s*(?:Demoted\s+—|Closed\s+signals\s*:|Evidence\s+gate\s+exclusions\s*:)",
         re.IGNORECASE,

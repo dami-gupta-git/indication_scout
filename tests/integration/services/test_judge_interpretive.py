@@ -52,7 +52,7 @@ _CASES = [
             stage="Phase 3 completed for this indication",
             active_programs="Phase 3 recruiting (NCT06082063, NCT05819138)",
             literature="moderate, supports, RCT-backed / controlled",
-            relationship="related_family",
+            relationship="contaminated",
             approved_indication="Type 2 Diabetes Mellitus",
         ),
     ),
@@ -75,7 +75,7 @@ _CASES = [
             ),
             active_programs="None active",
             literature="weak, observational",
-            relationship="related_family",
+            relationship="contaminated",
             approved_indication="Type 2 Diabetes Mellitus",
         ),
     ),
@@ -85,7 +85,7 @@ _CASES = [
             stage="Active Phase 3 development on record for this indication",
             active_programs="Phase 3 recruiting (NCT_A)",
             literature="moderate, supports",
-            relationship="related_family",
+            relationship="contaminated",
             approved_indication=None,
         ),
     ),
@@ -97,6 +97,12 @@ async def test_judge_interpretive_no_contradiction_live(label, facts, test_cache
     j = await judge_interpretive(
         **{
             "trial_evidence": "3 relevant trials, complete review of 3 registry query matches",
+            # The strings _closure_text / _terminations_text emit when the trials agent reached no
+            # closure verdict and no late-stage trial was stopped for cause.
+            "closure": (
+                "NOT DECIDED — no closure verdict was reached; do NOT describe the signal as closed"
+            ),
+            "terminations": "none reported",
             **facts,
         },
         cache_dir=test_cache_dir,

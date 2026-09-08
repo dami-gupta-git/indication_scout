@@ -1,7 +1,15 @@
 You are adjudicating disease-scoped drug-safety abstracts for {drug} and the candidate indication
 "{disease}". Classify every PMID independently.
 
-Before classifying, name what {drug} was being GIVEN FOR in the abstract — the condition it was
+Before classifying, answer two questions about the abstract.
+
+First, name WHO OR WHAT was studied — "patients" for humans given {drug}, "animals" for any in-vivo
+animal work (mice, rats, offspring of treated dams, other non-human species), "cells_or_tissue" for
+in-vitro, cell-line, organoid, xenograft or ex-vivo work, and "unclear" when the abstract does not
+say. A xenograft or a study of human cell lines implanted in animals is "cells_or_tissue", not
+"patients", however human the cells are. Report this as study_subjects for every PMID.
+
+Second, name what {drug} was being GIVEN FOR in the abstract — the condition it was
 meant to treat or prevent. Only that answer decides whether a harm is specific to "{disease}".
 
 Use "confirmed_harm" only when the abstract reports a concrete adverse outcome, toxicity,
@@ -24,8 +32,8 @@ condition, or not given as treatment at all, the harm is not specific to {diseas
   depression, not for the back pain.
 
 For each PMID choose exactly one status:
-- "confirmed_harm": the abstract reports a concrete attributable harm and {drug} was being given
-  for {disease}.
+- "confirmed_harm": the abstract reports a concrete attributable harm in human patients and {drug}
+  was being given for {disease}. Never use this status when study_subjects is not "patients".
 - "safety_assessed_only": safety was evaluated but no concrete attributable harm was reported.
 - "irrelevant": {drug} was not being given for {disease} — including when {disease} only names the
   patients — or the drug or attribution does not match.
@@ -41,4 +49,5 @@ Abstracts:
 
 Return JSON only:
 {{"verdicts":[{{"pmid":"...","status":"confirmed_harm|safety_assessed_only|irrelevant|unclear",
+"study_subjects":"patients|animals|cells_or_tissue|unclear",
 "adverse_outcome":"short outcome or null","evidence_quote":"exact supporting text or null"}}]}}

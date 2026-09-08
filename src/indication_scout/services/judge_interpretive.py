@@ -51,6 +51,18 @@ AUTHORITATIVE FACTS (ground truth):
 - Literature: {literature}
 - Approval relationship (how this candidate relates to an approved use): {relationship}
 - Drug's approved indication that this relates to: {approved_indication}
+- Closure verdict (whether the signal is still live): {closure}
+- Late-stage terminations: {terminations}
+
+The closure verdict comes from the trial review. When it says CLOSED, say so in the assessment and
+prose; never call a closed signal open, uncertain, or still to be resolved. When it says NOT DECIDED,
+no closure judgement was reached — never call the signal closed on that basis. Absence of trials is
+not closure; a signal closes on a negative result, not on never having been tested.
+
+A late-stage termination for safety or benefit:risk is a closure signal even when a completed
+Phase 3 also exists — the development stage names the furthest trial reached, not the fate of the
+programme. When terminations are reported above, the prose and key_risk must reflect them rather
+than reading the stage alone.
 
 When the reviewed evidence reports one or more relevant trials, the hypothesis WAS studied. Do not
 call it untested or abandoned. Registry query matches are search coverage, not supporting trials.
@@ -137,6 +149,8 @@ async def judge_interpretive(
     relationship: str,
     approved_indication: str | None,
     trial_evidence: str,
+    closure: str,
+    terminations: str,
     cache_dir: Path,
     drug: str = "",
     indication: str = "",
@@ -145,7 +159,11 @@ async def judge_interpretive(
     parse failure (the caller then leaves the fields empty — one source of truth, no fabrication).
 
     Cached per the fact-tuple (stage, active_programs, literature, relationship,
-    approved_indication, trial_evidence) so a candidate is judged once within the TTL window.
+    approved_indication, trial_evidence, closure, terminations) so a candidate is judged once within
+    the TTL window. `closure` is the clinical-trials agent's typed live/closed verdict, rendered as a
+    sentence — without it the writer judged closure itself and contradicted the trial section.
+    `terminations` names any late-stage stop for safety or efficacy, which the development stage
+    hides whenever a completed Phase 3 also exists.
     `relationship` is the upstream FDA label (e.g. "contaminated" / "combination_only" / "none")
     — not prose. `trial_evidence` states the relevance-reviewed count and coverage limit.
     """
@@ -159,6 +177,8 @@ async def judge_interpretive(
         "relationship": relationship or "none",
         "approved_indication": approved,
         "trial_evidence": trial_evidence,
+        "closure": closure,
+        "terminations": terminations,
     }
     cached = cache_get("interpretive", cache_params, cache_dir)
     if isinstance(cached, dict):
@@ -181,6 +201,8 @@ async def judge_interpretive(
         relationship=relationship_phrase,
         approved_indication=approved,
         trial_evidence=trial_evidence,
+        closure=closure,
+        terminations=terminations,
     )
     response = await query_llm(prompt)
     judgment = _parse_interpretive(response)

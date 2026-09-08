@@ -21,6 +21,7 @@ from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     DEFAULT_CACHE_DIR,
+    DISEASE_SYNONYM_CANONICAL,
     MESH_RESOLVER_MAX_CONCURRENT,
     MESH_RESOLVER_TTL_SECONDS,
     NCBI_ESEARCH_URL,
@@ -466,7 +467,31 @@ def _mesh_semaphore() -> asyncio.Semaphore:
 
 
 async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
-    """Resolve an indication to (descriptor_id, preferred_term) via MeSH ATM.
+    """Resolve an indication to (descriptor_id, preferred_term), retrying on its canonical synonym.
+
+    MeSH registers one vocabulary; candidate names arrive in another. "cocaine use disorder" (DSM-5) has no MeSH
+    entry, while its synonym "cocaine dependence" resolves to Cocaine-Related Disorders (D019970) — so a direct
+    miss silently yields zero trials for an indication that has them. On a miss, retry once with the name
+    `DISEASE_SYNONYM_CANONICAL` maps this one to. Misses are not cached, so the retry costs nothing on the hit path.
+    """
+    direct = await _resolve_mesh_id_direct(indication)
+    if direct is not None:
+        return direct
+
+    canonical = DISEASE_SYNONYM_CANONICAL.get(indication.strip().lower())
+    if canonical is None or canonical.strip().lower() == indication.strip().lower():
+        return None
+
+    logger.info(
+        "MeSH resolver: '%s' unresolved; retrying as canonical synonym '%s'",
+        indication,
+        canonical,
+    )
+    return await _resolve_mesh_id_direct(canonical)
+
+
+async def _resolve_mesh_id_direct(indication: str) -> tuple[str, str] | None:
+    """Resolve an indication to (descriptor_id, preferred_term) via MeSH ATM, with no synonym retry.
 
     esearch (sorted by relevance) returns candidate MeSH record UIDs; esummary
     on each yields its descriptor id (`ds_meshui`, the canonical D-number) and

@@ -23,6 +23,8 @@ _FACTS = dict(
     relationship="related_family",
     approved_indication="Type 2 Diabetes",
     trial_evidence="4 relevant trials, complete review of 4 registry query matches",
+    closure="LIVE",
+    terminations="none reported",
 )
 
 

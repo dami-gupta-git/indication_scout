@@ -180,10 +180,13 @@ async def test_approval_mapping_keeps_crohn_sibling_uncontaminated(test_cache_di
     "drug_aliases, must_contain_substrings",
     [
         # Semaglutide aliases (Ozempic = T2DM; Wegovy = chronic weight management
-        # / obesity + cardiovascular risk reduction; Wegovy 2024 expansion = MASH).
+        # / obesity + cardiovascular risk reduction).
         # We do not pin exact strings because the LLM controls phrasing — instead
         # we assert that each well-known approved indication has at least one
         # substring match in the returned list.
+        # The Aug-2025 Wegovy MASH approval is NOT asserted: no semaglutide label in
+        # openFDA mentions MASH/steatohepatitis (the Wegovy record served is dated
+        # 2024-04), so asserting it would test the feed's freshness, not extraction.
         (
             ["Ozempic", "Wegovy", "semaglutide"],
             [
@@ -191,7 +194,6 @@ async def test_approval_mapping_keeps_crohn_sibling_uncontaminated(test_cache_di
                 ["weight", "obesity"],  # chronic weight management / obesity
                 ["cardiovascular", "cv"],  # 2020 MACE risk reduction approval
                 ["kidney", "renal"],  # 2025 FLOW / CKD approval
-                ["mash", "steatohepatitis", "fatty liver"],  # 2024 Wegovy MASH approval
             ],
         ),
         # Metformin: established T2DM approval. Single, unambiguous indication

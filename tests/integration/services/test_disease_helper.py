@@ -21,7 +21,8 @@ logger = logging.getLogger(__name__)
 async def test_resolve_mesh_id_covid_picks_disease_not_testing():
     """B1 regression: bare "covid-19" free-text-matched sub-concepts and resolved to
     "COVID-19 Testing" (D000086742), causing silent false-zero trial counts. The
-    "[MeSH Terms]" qualifier must return the disease descriptor "COVID-19" (D000086382)."""
+    "[MeSH Terms]" qualifier must return the disease descriptor "COVID-19" (D000086382).
+    """
     result = await resolve_mesh_id("covid-19")
     assert result == ("D000086382", "COVID-19")
 
@@ -111,6 +112,7 @@ async def test_multiple_drug_disease_normalizer(disease, drug, required_keyword)
     assert any(
         required_keyword in t for t in result_terms
     ), f"Expected '{required_keyword}' in result terms {result_terms} for {drug} + {disease}"
+
 
 @pytest.mark.parametrize(
     "d1, d2, d3, d4",
@@ -213,7 +215,11 @@ async def test_llm_normalize_disease_batch_returns_correct_forms(tmp_path):
     """llm_normalize_disease_batch returns correct normalised forms for known disease terms.
 
     Uses a tmp_path cache so this test is isolated from production cache state.
-    Run once, observe the output, then fill in the expected values below.
+
+    Asserts the properties the prompt specifies rather than one observed string: the subtype
+    qualifier is dropped (the prompt removes subtypes, and a broader PubMed term is intended —
+    relevance is filtered downstream), the organ/disease word is kept, and no broader disease class
+    is substituted. Pinning the exact phrasing failed on a rewording that still obeyed every rule.
     """
     with patch("indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path):
         result = await llm_normalize_disease_batch(
@@ -224,8 +230,13 @@ async def test_llm_normalize_disease_batch_returns_correct_forms(tmp_path):
         "type 2 diabetes mellitus",
         "narcolepsy-cataplexy syndrome",
     }
-    assert result["type 2 diabetes mellitus"] == "type 2 diabetes OR diabetes mellitus"
-    assert result["narcolepsy-cataplexy syndrome"] == "narcolepsy"
+    diabetes = result["type 2 diabetes mellitus"].lower()
+    assert "diabetes" in diabetes
+    assert "type 2" not in diabetes and "type ii" not in diabetes
+
+    narcolepsy = result["narcolepsy-cataplexy syndrome"].lower()
+    assert "narcolepsy" in narcolepsy
+    assert "cataplexy" not in narcolepsy
 
 
 async def test_llm_normalize_disease_batch_second_call_uses_cache(tmp_path):
