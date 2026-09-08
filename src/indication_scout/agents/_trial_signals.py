@@ -26,6 +26,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
     TrialSignals,
 )
+from indication_scout.constants import NON_THERAPEUTIC_INTERVENTION_TYPES
 from indication_scout.models.model_clinical_trials import Trial
 
 # Stop categories that constitute a genuine cause-termination: an explicit safety or
@@ -33,6 +34,26 @@ from indication_scout.models.model_clinical_trials import Trial
 # reason is NOT evidence of a safety/efficacy stop and must not set the flag — absence of a
 # stated reason is not a negative signal.
 _CAUSE_STOP_CATEGORIES = {"safety", "efficacy"}
+
+
+def is_non_therapeutic_study(trial: Trial) -> bool:
+    """True when EVERY typed intervention is non-therapeutic (diagnostic test, device, tracer,
+    procedure).
+
+    Such a trial studies that object, not the drug: the drug may be administered, but no arm
+    delivers it as treatment and no clinical outcome is registered. The judgment is
+    disease-independent — the answer is the same for every candidate indication — so it is settled
+    once in code rather than re-asked per candidate, which is how the same trial came out relevant
+    under one indication and contaminated under another.
+
+    A trial with no interventions, or none carrying a type, returns False: absence of a type is not
+    evidence of a non-therapeutic study, so the trial stays in and the relevance gate judges it.
+    """
+    typed = [i.intervention_type for i in trial.interventions if i.intervention_type]
+    if not typed:
+        return False
+    return all(t in NON_THERAPEUTIC_INTERVENTION_TYPES for t in typed)
+
 
 # Statuses that count an active/ongoing program. overall_status carries display-cased strings
 # ("Recruiting", "Active, not recruiting") as well as the API enum form; normalize

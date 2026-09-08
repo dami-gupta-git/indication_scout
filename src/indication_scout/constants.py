@@ -115,6 +115,13 @@ CLINICAL_TRIALS_FETCH_MAX: int = 50
 CLINICAL_TRIALS_CACHE_TTL: int = (
     60 * 86400
 )  # 60 days (relaxed: portfolio project, save time/tokens)
+# Registry intervention types that cannot be a therapeutic agent. A trial whose interventions are
+# ALL of these types is studying the diagnostic/device/tracer/procedure itself — the drug may be
+# administered, but no arm delivers it as treatment and no clinical outcome is registered. Stored
+# title-cased to match ClinicalTrialsClient's normalization of the API's SCREAMING_SNAKE types.
+NON_THERAPEUTIC_INTERVENTION_TYPES: frozenset[str] = frozenset(
+    {"Diagnostic Test", "Device", "Radiation", "Procedure"}
+)
 
 # -- PubMed / NCBI ----------------------------------------------------------
 NCBI_BASE_URL: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"

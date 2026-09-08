@@ -8,13 +8,14 @@ from indication_scout.agents._trial_formatting import (
     _format_trial_table,
     _phase_distribution,
 )
+from indication_scout.agents._trial_signals import is_non_therapeutic_study
+from indication_scout.agents.clinical_trials.clinical_trials_output import (
+    FinalizeClinicalTrialsArtifact,
+)
 from indication_scout.config import get_settings
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
-from indication_scout.agents.clinical_trials.clinical_trials_output import (
-    FinalizeClinicalTrialsArtifact,
-)
 from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
 from indication_scout.data_sources.fda import FDAClient
 from indication_scout.models.model_clinical_trials import (
@@ -114,6 +115,30 @@ def build_clinical_trials_tools(
     # disables the check (callers that don't pin an indication).
     _assigned = (assigned_indication or "").lower().strip()
 
+    def _drop_non_therapeutic(
+        trials: list, scope: str, drug: str, indication: str
+    ) -> list:
+        """Remove trials whose every typed intervention is non-therapeutic, logging what went.
+
+        Applied at fetch, before the classification set is recorded, so the trial reaches no
+        candidate at all. Dropping here (rather than letting each candidate's relevance gate
+        decide) is what makes the verdict identical across candidates: the check is
+        disease-independent, so re-asking it per candidate can only introduce disagreement.
+        """
+        kept = [t for t in trials if not is_non_therapeutic_study(t)]
+        dropped = [t.nct_id for t in trials if is_non_therapeutic_study(t)]
+        if dropped:
+            logger.info(
+                "%s: dropped %d non-therapeutic trial(s) for %s x %s (all interventions are "
+                "diagnostic/device/tracer/procedure): %s",
+                scope,
+                len(dropped),
+                drug,
+                indication,
+                ", ".join(dropped),
+            )
+        return kept
+
     def _indication_mismatch(indication: str) -> str | None:
         """REJECTED message when `indication` differs from the assigned one, else None."""
         if not _assigned:
@@ -163,6 +188,9 @@ def build_clinical_trials_tools(
                 mesh_term,
                 date_before=date_before,
             )
+        result.trials = _drop_non_therapeutic(
+            result.trials, "search_trials", drug, indication
+        )
 
         # Holdout scrubber: when date_before is set, strip outcome fields
         # for trials that completed/terminated AFTER the cutoff so the
@@ -270,6 +298,9 @@ def build_clinical_trials_tools(
                 mesh_term,
                 date_before=date_before,
             )
+        result.trials = _drop_non_therapeutic(
+            result.trials, "get_completed", drug, indication
+        )
 
         # Holdout drop: a trial that completed AFTER the cutoff was not
         # completed at the cutoff, so it does not belong in this scope.
@@ -357,6 +388,9 @@ def build_clinical_trials_tools(
                 mesh_term,
                 date_before=date_before,
             )
+        result.trials = _drop_non_therapeutic(
+            result.trials, "get_terminated", drug, indication
+        )
 
         # Holdout drop: a trial that terminated AFTER the cutoff was not
         # terminated at the cutoff. Drop from this scope (search_trials
