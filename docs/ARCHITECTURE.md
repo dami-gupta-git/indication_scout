@@ -727,22 +727,30 @@ that consumes it. The contract is a four-way `ApprovalLabel` (`services/approval
 | `contaminated` | A real, broader repurposing target whose trial/literature counts are polluted by an approved narrower subset | **Kept and ranked**, but trial tables suppressed |
 | `none` | No relationship to an approved indication | **Kept**, clean signal |
 
-`get_fda_approved_disease_mapping(drug_name, candidate_diseases)` returns one `ApprovalLabel` per
-candidate via a two-tier lookup:
+`get_fda_approved_disease_mapping(drug_name, candidate_diseases, approved_indications)` returns one
+`ApprovalLabel` per candidate via a two-tier lookup. The approved-indication input comes from the
+run-scoped drug intake task:
 
 1. **Curated short-circuit** — exact, case-sensitive match against the drug's curated lists in
    `constants.py` (`CURATED_FDA_APPROVED_CANDIDATES`, `CURATED_FDA_COMBINATION_ONLY_CANDIDATES`,
    `CURATED_FDA_CONTAMINATED_CANDIDATES`, `CURATED_FDA_REJECTED_CANDIDATES`). Skips the LLM. Used
-   where the bare disease term mis-leads the label-grounded LLM (e.g. `sotorasib` × colorectal
-   cancer is approved only for KRAS-G12C mCRC → `contaminated`; `bupropion` × obesity is approved
-   only as Contrave → `combination_only`).
+   where the bare disease term misleads the label-grounded LLM or a verified trial query has a
+   non-clinical collision. For example, `sotorasib` × colorectal cancer is approved only for
+   KRAS-G12C mCRC and is `contaminated`; `sildenafil` × hypertension is `contaminated` because the
+   production MeSH query also retrieves pulmonary-hypertension trials; `bupropion` × obesity is
+   `combination_only` because the approval is for Contrave.
 2. **LLM fallback** — remaining candidates: the drug is expanded to all ChEMBL aliases, all matching
-   openFDA labels are fetched, and the candidates are batched into one label-grounded LLM call.
+   openFDA labels are fetched, and the candidates are batched into one label-grounded LLM call. A
+   candidate is contaminated only when it is a broader clinical category containing a supplied
+   approved indication. Distinct siblings, related diseases, and shared treatment classes are
+   `none`.
 
 Labels are cached per-drug (`cache/fda_drug_disease_approval/`, one file per drug, per-disease TTL).
-`_coerce_label` validates every value from both the LLM-parse and the cache loader — an invalid or
-legacy (bool-shaped) value is **skipped, never silently coerced**. Any failure (ChEMBL, FDA fetch,
-LLM parse) defaults a candidate to `none` so a failure can never *drop* a candidate.
+The LLM returns a structured decision with a one-sentence reason. A contaminated decision must name
+one supplied approved indication exactly. Invalid shapes and unverified anchors are not cached.
+`_coerce_label` also validates every cache value; invalid or legacy bool-shaped values are skipped.
+Any failure in ChEMBL, FDA retrieval, or LLM parsing leaves the candidate as `none` so the candidate
+is not dropped.
 
 ### Threading the label down
 

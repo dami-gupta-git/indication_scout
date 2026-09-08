@@ -50,8 +50,9 @@ A **Supervisor** agent orchestrates three specialist sub-agents:
 
 - **Contamination handling.** A four-way FDA approval label per candidate — `approved` (dropped),
   `combination_only` (demoted), `contaminated` (kept, trial tables suppressed), `none` — decided
-  once from the FDA label and threaded down to the trial and literature relevance gates. Filters
-  approved indications, wrong-drug trials, and comorbid conditions out of a candidate's evidence.
+  once from the FDA label and the run's extracted approved-indication list. A contaminated decision
+  must identify an exact approved indication contained by the broader candidate. The label is
+  threaded down to the trial and literature relevance gates.
 
 - **Temporal holdouts.** Run the system "as of" a past cutoff date to test whether it would have
   surfaced an opportunity before it was validated. PubMed and trial queries are restricted to
