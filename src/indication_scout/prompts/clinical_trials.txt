@@ -102,7 +102,15 @@ relevant is worse than omitting a borderline one.
 
 finalize_analysis REQUIRES a verdict for EVERY shown trial — search, completed, AND terminated
 — it rejects the call if any shown trial is missing. Pass `verdicts` as a list of
-{"nct": "<NCT id>", "verdict": "relevant"|"contaminated"}.
+{"nct": "<NCT id>", "studied_drug": "<drug the trial is ABOUT>", "verdict": "relevant"|"contaminated"}.
+
+studied_drug is TEST 0's answer, recorded per trial: the agent the trial evaluates, read off its
+title, interventions and summary. It is NOT every drug the trial administers — a drug present only
+as a comparator, background or active control is not the studied drug, so name the other one.
+Answer it for each trial before you assign that trial's verdict.
+
+The call is REJECTED when a verdict omits studied_drug, and when a verdict is "relevant" while its
+studied_drug names an agent other than this drug. Both send you back to fix the entry.
 
 A termination only counts as a closing signal if the terminated trial is RELEVANT. A
 termination in a contaminating trial says nothing about this pair.

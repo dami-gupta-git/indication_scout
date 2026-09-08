@@ -91,6 +91,34 @@ def _scrub_post_cutoff_outcome(trial: Trial, cutoff: date) -> tuple[Trial, bool]
     return scrubbed, True
 
 
+def _normalize_drug_name(name: str) -> str:
+    """Lowercase; collapse each run of non-alphanumerics to a single space."""
+    out: list[str] = []
+    for c in (name or "").lower():
+        if c.isalnum():
+            out.append(c)
+        elif out and out[-1] != " ":
+            out.append(" ")
+    return "".join(out).strip()
+
+
+def _names_this_drug(studied_drug: str, queried_drugs: set[str]) -> bool:
+    """True when `studied_drug` names one of the drugs the tools were queried under.
+
+    Substring either way, so a combination or brand form containing the queried name
+    ("Dapagliflozin/Metformin", "metformin hydrochloride") still matches — only a genuinely
+    different agent ("dapagliflozin", "green tea extract", "exercise") fails.
+    """
+    studied = _normalize_drug_name(studied_drug)
+    if not studied:
+        return False
+    for queried in queried_drugs:
+        q = _normalize_drug_name(queried)
+        if q and (q in studied or studied in q):
+            return True
+    return False
+
+
 def build_clinical_trials_tools(
     date_before: date | None = None,
     assigned_indication: str | None = None,
@@ -107,6 +135,11 @@ def build_clinical_trials_tools(
     # indication keeps a re-call rewriting the same set, tolerates drug-name variants, and still
     # separates distinct indications (the cross-pair-reuse guard).
     shown_by_indication: dict[str, set[str]] = {}
+
+    # Drug names the trial tools were queried under, for the finalize studied-drug check.
+    # A pair may be queried under several name variants (e.g. "bupropion" and the combo alias
+    # "naltrexone bupropion"), so a match against ANY of them counts.
+    queried_drugs: set[str] = set()
 
     # The indication this agent instance was launched to investigate. The trial tools
     # reject a call for any OTHER indication so a drifting LLM (e.g. querying "smoking
@@ -265,6 +298,7 @@ def build_clinical_trials_tools(
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
+        queried_drugs.add(drug)
         return content, result
 
     @tool(response_format="content_and_artifact")
@@ -325,6 +359,7 @@ def build_clinical_trials_tools(
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
+        queried_drugs.add(drug)
 
         scrub_note = (
             f"; dropped {scrub_dropped} post-cutoff completion(s) "
@@ -428,6 +463,7 @@ def build_clinical_trials_tools(
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
+        queried_drugs.add(drug)
 
         header = (
             f"Terminated for {drug} × {indication}: {result.total_count} registry query matches "
@@ -619,19 +655,24 @@ def build_clinical_trials_tools(
 
         Call this as the very last step. Pass:
         - verdicts: one entry PER trial shown to you — across the search, completed, AND
-          terminated scopes — each a dict {"nct": "<NCT id>", "verdict": "relevant" |
-          "contaminated"}. You MUST classify EVERY shown trial — omit none. "relevant" =
-          studies this drug for THIS exact indication (a narrower NON-approved subtype rolls up).
-          "contaminated" = the condition is an APPROVED indication of this drug (or a narrower form
-          of one) — already-approved evidence, not repurposing; OR a DISTINCT disease (e.g.
-          pulmonary vs systemic hypertension); OR a different drug's trial.
+          terminated scopes — each a dict {"nct": "<NCT id>", "studied_drug": "<drug this
+          trial is ABOUT>", "verdict": "relevant" | "contaminated"}. You MUST classify EVERY
+          shown trial — omit none.
+          studied_drug is the agent the trial evaluates, read off its title, interventions and
+          summary — NOT every drug it administers. A drug present only as a comparator,
+          background or active control is not the studied drug; name the other one.
+          "relevant" = studies this drug for THIS exact indication (a narrower NON-approved
+          subtype rolls up). "contaminated" = the condition is an APPROVED indication of this
+          drug (or a narrower form of one) — already-approved evidence, not repurposing; OR a
+          DISTINCT disease (e.g. pulmonary vs systemic hypertension); OR a different drug's trial.
         - relevance_reasoning: 1-2 sentences justifying the split.
 
         Do NOT write a prose summary — the trial-section prose is authored separately after
         the development stage is resolved. This terminates the agent loop.
 
-        Rejected (re-call to fix) when: any shown trial is missing a verdict; or a verdict
-        names an NCT that was not shown.
+        Rejected (re-call to fix) when: any shown trial is missing a verdict; a verdict names
+        an NCT that was not shown; a verdict omits studied_drug; or a verdict is "relevant"
+        while its studied_drug is a different agent.
         """
         # The supervisor builds a fresh agent (fresh, empty shown_by_indication) per
         # analyze_clinical_trials call, so this instance investigates ONE indication —
@@ -665,6 +706,42 @@ def build_clinical_trials_tools(
             return (
                 f"REJECTED: verdicts name {len(unknown)} trial(s) that were not shown: "
                 f"{', '.join(sorted(unknown))}. Only classify shown trials and re-call.",
+                "",
+            )
+
+        # studied_drug is required per trial: naming the agent a trial evaluates forces the
+        # wrong-drug question to be answered once per trial instead of once per batch, which is
+        # how comparator-arm trials (metformin as the control in a dapagliflozin study) were
+        # reaching the relevant set.
+        no_studied = sorted(
+            v["nct"]
+            for v in verdicts
+            if v.get("nct") and not (v.get("studied_drug") or "").strip()
+        )
+        if no_studied:
+            return (
+                f"REJECTED: {len(no_studied)} verdict(s) omit studied_drug: "
+                f"{', '.join(no_studied)}. Name the drug each trial is ABOUT "
+                f"(not every drug it administers) and re-call.",
+                "",
+            )
+
+        # A trial can only be this drug's own evidence if the agent it studies IS this drug.
+        # Checked in code because the two answers are given side by side, so a mismatch is
+        # mechanical. Rejecting sends it back to reconsider — either the verdict or the name.
+        mismatched = sorted(
+            v["nct"]
+            for v in verdicts
+            if v.get("verdict") == "relevant"
+            and v.get("nct")
+            and not _names_this_drug(v.get("studied_drug", ""), queried_drugs)
+        )
+        if mismatched:
+            return (
+                f"REJECTED: {len(mismatched)} trial(s) marked relevant while studied_drug "
+                f"names a different agent: {', '.join(mismatched)}. A trial whose studied "
+                f"agent is not {', '.join(sorted(queried_drugs)) or 'this drug'} is "
+                f"contaminated. Re-call with corrected verdicts.",
                 "",
             )
 
