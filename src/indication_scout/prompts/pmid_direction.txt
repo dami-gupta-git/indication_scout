@@ -8,8 +8,10 @@ different drug in the abstract) show benefit for {disease} in THIS abstract?
   improvement in the disease's own outcome, favorable result attributable to {drug}).
 - "contradicting": {drug} did NOT help / failed / harmed for {disease} (missed the primary endpoint,
   no significant difference, no measurable/meaningful activity, worsened the outcome).
-- "mixed": this single abstract reports BOTH a benefit and a failure for {drug} in {disease}
-  (e.g. met the primary endpoint but missed all key secondary endpoints).
+- "mixed": this single abstract reports BOTH a benefit and a failure for {drug} in {disease}, in
+  either order and on any analysis the abstract itself reports — met the primary endpoint but missed
+  all key secondary endpoints, or missed the primary endpoint while a secondary, subgroup or pooled
+  analysis reported in the same abstract showed a significant benefit.
 - "neutral": the abstract has NO efficacy result for {disease} — e.g. a pharmacokinetics /
   dose-finding / safety-only / mechanism / pharmacology study. It neither supports nor contradicts.
   Use this whenever there is no outcome showing the drug helped or failed for the disease. Do NOT
@@ -20,7 +22,9 @@ Rules:
   glucose, lipids) is NOT benefit for {disease} unless the disease's defined endpoint improved.
 - If the benefit in the abstract belongs to a DIFFERENT drug (a comparator that outperformed {drug}),
   that is "contradicting" for {drug}.
-- Judge each abstract by its OWN result, never by the overall program or a sibling trial.
+- Judge each abstract by its OWN reported results, never by the overall program or by a
+  separate publication. An analysis the abstract itself reports (including a pooled or
+  post-hoc analysis combining its patients with earlier trials) IS its own result.
 
 Abstracts:
 {abstracts}
