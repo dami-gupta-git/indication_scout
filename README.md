@@ -41,7 +41,8 @@ A **Supervisor** agent orchestrates three specialist sub-agents:
 
 - **Multi-agent, live-data-first.** Real-time queries to Open Targets, ClinicalTrials.gov, PubMed,
   Europe PMC, ChEMBL, and openFDA — parsed into Pydantic contracts at every boundary; agents never
-  see raw API responses.
+  see raw API responses. Drug identity, aliases, first approval year, and FDA-approved indications
+  are built once per run and shared across candidate discovery and mechanism analysis.
 
 - **Explicit safety reasoning.** A drug-wide safety summary (deterministic severity — withdrawn /
   black-box / serious) from Open Targets warnings and FAERS signals, plus a per-indication harm

@@ -162,6 +162,12 @@ when `supervisor_fanout` is on; in pure fan-out mode the per-candidate `analyze_
 `analyze_clinical_trials` tools are removed so the LLM must use the parallel path.
 `finalize_supervisor` is rejected until `critique_ranking` has run this turn.
 
+Candidate discovery and mechanism analysis share one run-scoped drug-intake task keyed by the
+normalized drug name. The task resolves the ChEMBL ID, aliases, first approval year, and FDA-approved
+indications once. Both seed tools await the same result, which is written to the existing supervisor
+drug-facts entry before either path uses those facts. This task is held in memory for one supervisor
+run; persistent API and model-response caching remains in the data-source and service layers.
+
 When `date_before` is set, the supervisor (which always loads `prompts/supervisor.txt`)
 forwards the cutoff to the literature and clinical-trials sub-agents. Mechanism analysis
 (Open Targets) is always current because there is no date-filtering API.
