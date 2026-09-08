@@ -324,7 +324,15 @@ async def test_concurrent_literature_calls_use_distinct_sessions():
         active -= 1
         return LiteratureOutput()
 
+    # analyze_literature is only exposed as a supervisor tool when fan-out is off; with fan-out on it is invoked directly by
+    # investigate_top_candidates instead. Pin the setting so the tool is in the returned list.
+    settings = get_settings().model_copy(update={"supervisor_fanout": False})
+
     with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_settings",
+            return_value=settings,
+        ),
         patch(
             "indication_scout.agents.supervisor.supervisor_tools.build_mechanism_agent",
             return_value=MagicMock(),

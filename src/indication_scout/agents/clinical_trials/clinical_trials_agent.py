@@ -51,15 +51,21 @@ def _finalize_done(messages: list) -> bool:
     return False
 
 
-def build_clinical_trials_agent(llm, date_before=None, assigned_indication=None):
+def build_clinical_trials_agent(
+    llm, date_before=None, assigned_indication=None, target_drug=None
+):
     """Return a compiled ReAct agent.
 
     `assigned_indication` pins the tools to one indication; a call for any other is
     soft-rejected so a drifting agent self-corrects instead of crashing at finalize.
+
+    `target_drug` pins the drug the finalize drug-role check is asked about, so the model
+    cannot widen it through its own tool arguments.
     """
     tools = build_clinical_trials_tools(
         date_before=date_before,
         assigned_indication=assigned_indication,
+        target_drug=target_drug,
     )
     return build_gated_react_loop(llm, tools, SYSTEM_PROMPT, _finalize_done)
 

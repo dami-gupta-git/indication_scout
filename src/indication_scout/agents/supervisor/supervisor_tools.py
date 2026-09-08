@@ -17,9 +17,7 @@ from typing import Any, Literal
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session, sessionmaker
 
-from indication_scout.agents.supervisor.candidate_dedup import (
-    run_hierarchical_dedup,
-)
+from indication_scout.agents.supervisor.candidate_dedup import collapse_synonym_entries
 from indication_scout.config import get_settings
 from indication_scout.constants import SUPERVISOR_MIN_PMIDS_NO_TRIALS
 from indication_scout.data_sources.open_targets import OpenTargetsClient
@@ -252,7 +250,7 @@ def build_supervisor_tools(
     db: Session,
     session_factory: "sessionmaker | None" = None,
     date_before: date | None = None,
-) -> tuple[list, "callable", "callable"]:
+) -> tuple[list, "callable", "callable", "callable"]:
     """Build supervisor tools that close over the sub-agents.
 
     The literature and clinical trials agents are compiled once here and reused across calls.
@@ -265,8 +263,9 @@ def build_supervisor_tools(
     `date_before` is forwarded to the literature and clinical trials sub-agents so all PubMed and ClinicalTrials.gov queries
     share the same temporal cutoff. The mechanism sub-agent doesn't accept it (OpenTargets has no date-filtering API).
 
-    Returns (tools, get_merged_allowlist) where get_merged_allowlist() snapshots the post-merge competitor + mechanism
-    disease allowlist (lowercase name → (canonical_name, source)), intended to be read after the agent loop has finished.
+    Returns (tools, get_merged_allowlist, get_auto_findings, get_approval_labels) where get_merged_allowlist() snapshots the
+    post-merge competitor + mechanism disease allowlist (lowercase name → (canonical_name, source)), intended to be read
+    after the agent loop has finished.
     """
     # Reuse the run db's engine when no shared factory was passed (single-threaded callers, tests). Binding to db.get_bind()
     # means no new engine/pool is created.
@@ -560,7 +559,9 @@ def build_supervisor_tools(
              entry's source to "both".
           2. Exact name match — drop if lowercased name already in allowed_diseases; upgrade to "both".
           3. OT name-resolve — resolve unresolved mechanism candidate names to EFO IDs; retry step 1 against allowed_efo_ids.
-          4. Hierarchical LLM pass — over the full merged list, identify super/subtype overlaps the exact-match passes can't
+          4. Synonym collapse — merge entries that are the same disease under two names, per the hardcoded
+             DISEASE_SYNONYM_CANONICAL table.
+          5. Hierarchical LLM pass — over the full merged list, identify super/subtype overlaps the exact-match passes can't
              catch (UC ⊂ IBD, T2DM ⊂ DM); pick one survivor each.
 
         Sets find_candidates_done before returning so downstream readers (analyze_literature, analyze_clinical_trials,
@@ -615,7 +616,16 @@ def build_supervisor_tools(
                 promoted,
             )
 
-        # Step 4: hierarchical LLM pass — temporarily disabled while we revisit the case that motivated it. The dedup was
+        # Step 4: deterministic synonym collapse — merge entries that are the same disease under two names, from the
+        # hardcoded DISEASE_SYNONYM_CANONICAL table. Exact synonyms only; parent/child pairs are not in the table.
+        collapsed = collapse_synonym_entries(allowed_diseases, allowed_efo_ids)
+        if collapsed:
+            _log_disease_banner(
+                f"SYNONYM-COLLAPSED candidates for {drug_name}",
+                [f"{dropped} → {survivor}" for dropped, survivor in collapsed],
+            )
+
+        # Step 5: hierarchical LLM pass — temporarily disabled while we revisit the case that motivated it. The dedup was
         # collapsing actionable subtype candidates (e.g. PCOS, gestational diabetes) into broad parents (metabolic disease)
         # for broadly-acting drugs like metformin. Keep all candidates from the exact-match dedup until we decide on a
         # hardcoded equivalence-group approach.
@@ -827,7 +837,10 @@ def build_supervisor_tools(
         # Fresh agent per call — isolates the tools' closure-scoped shown_by_pair so concurrent candidate investigations
         # don't accumulate each other's trials into this pair's contaminated set (see the build-site note above).
         ct_agent = build_clinical_trials_agent(
-            llm=llm, date_before=date_before, assigned_indication=disease_name
+            llm=llm,
+            date_before=date_before,
+            assigned_indication=disease_name,
+            target_drug=drug_name,
         )
         # Approved indications fully seeded by find_candidates before fan-out (label-grounded; see
         # PLAN_approval_aware_relevance.md §A). Threaded into the task so the relevance gate's TEST 1 treats an approved

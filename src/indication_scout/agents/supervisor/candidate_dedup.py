@@ -14,6 +14,7 @@ import logging
 
 from pydantic import BaseModel, Field, model_validator
 
+from indication_scout.constants import DISEASE_SYNONYM_CANONICAL
 from indication_scout.services.llm import parse_last_json_object, query_llm
 
 logger = logging.getLogger(__name__)
@@ -228,3 +229,55 @@ If there are NO hierarchical overlaps, return {{"decisions": []}}.
 
 Return only the JSON object. Do not include any other text.
 """
+
+
+def collapse_synonym_entries(
+    allowed_diseases: dict[str, tuple[str, str]],
+    allowed_efo_ids: dict[str, str],
+) -> list[tuple[str, str]]:
+    """Collapse allowlist entries that are the same disease under two names.
+
+    Deterministic counterpart to `run_hierarchical_dedup`, driven by the hardcoded
+    `DISEASE_SYNONYM_CANONICAL` table rather than an LLM. Only exact synonyms collapse; parent/child pairs are
+    not in the table and are left alone.
+
+    Acts only where a group has TWO OR MORE entries in the list. A group with one entry present is untouched,
+    so a lone entry is never renamed — the candidate name is what downstream literature and trial searches use.
+
+    Survivor is the entry carrying the group's canonical name if present, otherwise the earliest entry in
+    insertion order (competitor entries are inserted in score order, so this keeps the best-ranked spelling).
+    Sources merge to "both" when the collapsed entries came from different routes, matching the exact-match
+    passes. EFO IDs pointing at a dropped key are repointed at the survivor so later ID lookups still resolve.
+
+    Mutates both dicts in place. Returns (dropped_name, survivor_name) pairs in collapse order, for logging.
+    """
+    groups: dict[str, list[str]] = {}
+    for key in allowed_diseases:
+        canonical = DISEASE_SYNONYM_CANONICAL.get(key)
+        if canonical is not None:
+            groups.setdefault(canonical, []).append(key)
+
+    collapsed: list[tuple[str, str]] = []
+    for canonical, keys in groups.items():
+        if len(keys) < 2:
+            continue
+
+        canonical_key = canonical.lower().strip()
+        survivor_key = canonical_key if canonical_key in keys else keys[0]
+
+        survivor_name, survivor_source = allowed_diseases[survivor_key]
+        sources = {allowed_diseases[k][1] for k in keys}
+        if len(sources) > 1:
+            survivor_source = "both"
+        allowed_diseases[survivor_key] = (survivor_name, survivor_source)
+
+        for key in keys:
+            if key == survivor_key:
+                continue
+            dropped_name = allowed_diseases[key][0]
+            for efo_id in [e for e, v in allowed_efo_ids.items() if v == key]:
+                allowed_efo_ids[efo_id] = survivor_key
+            allowed_diseases.pop(key, None)
+            collapsed.append((dropped_name, survivor_name))
+
+    return collapsed

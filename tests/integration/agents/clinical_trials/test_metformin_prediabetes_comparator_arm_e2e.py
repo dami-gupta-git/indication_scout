@@ -25,7 +25,9 @@ _STUDIED_AGENT_TRIALS = {"NCT00038727", "NCT01779362", "NCT01779375"}
 
 async def test_metformin_prediabetes_comparator_arm_trials_are_contaminated():
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
-    agent = build_clinical_trials_agent(llm, assigned_indication="prediabetes syndrome")
+    agent = build_clinical_trials_agent(
+        llm, assigned_indication="prediabetes syndrome", target_drug="metformin"
+    )
 
     output = await run_clinical_trials_agent(agent, "metformin", "prediabetes syndrome")
 

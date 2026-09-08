@@ -8,7 +8,6 @@ import pytest
 from langchain_core.messages import ToolCall as LCToolCall
 
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
-    _names_this_drug,
     build_clinical_trials_tools,
 )
 from indication_scout.data_sources.base_client import DataSourceError
@@ -1153,13 +1152,9 @@ async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():
     msg = await _finalize(
         tools,
         verdicts=[
-            {"nct": "NCT00000001", "studied_drug": "sildenafil", "verdict": "relevant"},
-            {"nct": "NCT00000002", "studied_drug": "sildenafil", "verdict": "relevant"},
-            {
-                "nct": "NCT00000099",
-                "studied_drug": "sildenafil",
-                "verdict": "contaminated",
-            },
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
+            {"nct": "NCT00000002", "drug_role": "studied", "verdict": "relevant"},
+            {"nct": "NCT00000099", "drug_role": "absent", "verdict": "contaminated"},
         ],
         relevance_reasoning="NCT99 is a PAH trial; the query is systemic hypertension.",
     )
@@ -1174,76 +1169,94 @@ async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():
     assert "Analysis complete" in msg.content
 
 
-async def test_finalize_analysis_rejects_verdict_without_studied_drug():
-    """A verdict that omits studied_drug is rejected, so the wrong-drug question is answered
-    once per trial rather than once per batch."""
-    tools = build_clinical_trials_tools(date_before=None)
-    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
-
-    msg = await _finalize(
-        tools,
-        verdicts=[
-            {"nct": "NCT00000001", "studied_drug": "sildenafil", "verdict": "relevant"},
-            {"nct": "NCT00000002", "verdict": "relevant"},
-        ],
-        relevance_reasoning="both relevant",
-    )
-
-    assert msg.artifact == ""
-    assert "REJECTED: 1 verdict(s) omit studied_drug: NCT00000002" in msg.content
-
-
-async def test_finalize_analysis_rejects_relevant_verdict_for_another_drug():
-    """A comparator-arm trial marked relevant is rejected when studied_drug names a different
-    agent. The same trial marked contaminated is accepted."""
-    tools = build_clinical_trials_tools(date_before=None)
+async def test_finalize_analysis_rejects_relevant_verdict_when_drug_is_not_studied():
+    """A comparator-arm trial marked relevant is rejected; marked contaminated it is accepted.
+    The rejection names the pinned drug and the role given."""
+    tools = build_clinical_trials_tools(date_before=None, target_drug="metformin")
     await _populate_shown(tools, completed=["NCT00000001", "NCT03968224"])
 
     msg = await _finalize(
         tools,
         verdicts=[
-            {"nct": "NCT00000001", "studied_drug": "sildenafil", "verdict": "relevant"},
-            {
-                "nct": "NCT03968224",
-                "studied_drug": "dapagliflozin",
-                "verdict": "relevant",
-            },
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
+            {"nct": "NCT03968224", "drug_role": "comparator", "verdict": "relevant"},
         ],
         relevance_reasoning="both relevant",
     )
     assert msg.artifact == ""
-    assert "1 trial(s) marked relevant while studied_drug" in msg.content
-    assert "NCT03968224" in msg.content
+    assert "1 trial(s) marked relevant while metformin is not the studied agent" in (
+        msg.content
+    )
+    assert "NCT03968224 (comparator)" in msg.content
 
     msg = await _finalize(
         tools,
         verdicts=[
-            {"nct": "NCT00000001", "studied_drug": "sildenafil", "verdict": "relevant"},
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
             {
                 "nct": "NCT03968224",
-                "studied_drug": "dapagliflozin",
+                "drug_role": "comparator",
                 "verdict": "contaminated",
             },
         ],
-        relevance_reasoning="NCT03968224 studies dapagliflozin; sildenafil is the comparator.",
+        relevance_reasoning="NCT03968224 studies dapagliflozin; metformin is the comparator.",
     )
     assert msg.artifact.relevant_ncts == ["NCT00000001"]
     assert msg.artifact.contaminated_ncts == ["NCT03968224"]
 
 
 @pytest.mark.parametrize(
-    "studied_drug, expected",
+    "bad_entry, expected_field",
     [
-        ("metformin", True),
-        ("Metformin Hydrochloride 500 MG", True),
-        ("Dapagliflozin/Metformin", True),
-        ("dapagliflozin", False),
-        ("green tea leaf extract", False),
+        ({"nct": "NCT00000002", "verdict": "relevant"}, "drug_role"),
+        ({"nct": "NCT00000002", "drug_role": "studied"}, "verdict"),
+        (
+            {"nct": "NCT00000002", "drug_role": "studied", "verdict": "Relevant"},
+            "verdict",
+        ),
+        (
+            {"nct": "NCT00000002", "drug_role": "control", "verdict": "relevant"},
+            "drug_role",
+        ),
     ],
 )
-def test_names_this_drug(studied_drug: str, expected: bool):
-    """A combination or brand form containing the queried name matches; a different agent does not."""
-    assert _names_this_drug(studied_drug, {"metformin"}) is expected
+async def test_finalize_analysis_rejects_malformed_entry(
+    bad_entry: dict, expected_field: str
+):
+    """A missing or misspelled field is rejected. Left unvalidated, such an entry matched
+    neither verdict filter and dropped its trial from both sets."""
+    tools = build_clinical_trials_tools(date_before=None, target_drug="sildenafil")
+    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
+
+    msg = await _finalize(
+        tools,
+        verdicts=[
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
+            bad_entry,
+        ],
+        relevance_reasoning="both relevant",
+    )
+
+    assert msg.artifact == ""
+    assert f"NCT00000002 ({expected_field})" in msg.content
+
+
+async def test_finalize_analysis_rejects_duplicate_entries_for_one_trial():
+    """Two entries for the same trial are rejected rather than landing it in both sets."""
+    tools = build_clinical_trials_tools(date_before=None, target_drug="sildenafil")
+    await _populate_shown(tools, completed=["NCT00000001"])
+
+    msg = await _finalize(
+        tools,
+        verdicts=[
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
+            {"nct": "NCT00000001", "drug_role": "absent", "verdict": "contaminated"},
+        ],
+        relevance_reasoning="conflicting",
+    )
+
+    assert msg.artifact == ""
+    assert "1 trial(s) have more than one entry: NCT00000001" in msg.content
 
 
 async def test_finalize_analysis_rejects_missing_verdict():
@@ -1255,7 +1268,7 @@ async def test_finalize_analysis_rejects_missing_verdict():
     msg = await _finalize(
         tools,
         verdicts=[
-            {"nct": "NCT00000001", "studied_drug": "sildenafil", "verdict": "relevant"}
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"}
         ],
         relevance_reasoning="r",
     )
@@ -1273,12 +1286,8 @@ async def test_finalize_analysis_rejects_unknown_nct():
     msg = await _finalize(
         tools,
         verdicts=[
-            {"nct": "NCT00000001", "studied_drug": "sildenafil", "verdict": "relevant"},
-            {
-                "nct": "NCT09999999",
-                "studied_drug": "sildenafil",
-                "verdict": "contaminated",
-            },
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
+            {"nct": "NCT09999999", "drug_role": "absent", "verdict": "contaminated"},
         ],
         relevance_reasoning="r",
     )
@@ -1362,7 +1371,7 @@ async def _run_pair(tools, drug: str, indication: str, mesh_term: str, ncts: lis
     return await _finalize(
         tools,
         verdicts=[
-            {"nct": n, "studied_drug": drug, "verdict": "relevant"} for n in ncts
+            {"nct": n, "drug_role": "studied", "verdict": "relevant"} for n in ncts
         ],
         relevance_reasoning="all relevant to this pair",
     )
@@ -1442,9 +1451,7 @@ async def test_shared_instance_across_pairs_raises_not_leaks():
     with pytest.raises(DataSourceError) as exc:
         await _finalize(
             shared,
-            verdicts=[
-                {"nct": "NCT_A1", "studied_drug": "metformin", "verdict": "relevant"}
-            ],
+            verdicts=[{"nct": "NCT_A1", "drug_role": "studied", "verdict": "relevant"}],
             relevance_reasoning="relevant to T1D",
         )
     assert "reused across indications" in str(exc.value)

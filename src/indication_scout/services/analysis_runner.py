@@ -130,7 +130,10 @@ async def run_pair_analysis(
 
     async def _run_clinical_trials() -> object:
         ct_agent = build_clinical_trials_agent(
-            llm=llm, date_before=date_before, assigned_indication=disease_name
+            llm=llm,
+            date_before=date_before,
+            assigned_indication=disease_name,
+            target_drug=drug,
         )
         return await run_clinical_trials_agent(
             ct_agent,

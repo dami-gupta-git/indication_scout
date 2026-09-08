@@ -12,9 +12,9 @@ import pytest
 from indication_scout.agents.supervisor.candidate_dedup import (
     HierarchyDecision,
     HierarchyDedupOutput,
+    collapse_synonym_entries,
     run_hierarchical_dedup,
 )
-
 
 CANDIDATES_UC_IBD = [
     ("inflammatory bowel disease", "competitor", "EFO_0003767"),
@@ -220,3 +220,87 @@ def test_hierarchy_dedup_output_coerce_nones():
     """coerce_nones validator replaces None decisions with empty list."""
     o = HierarchyDedupOutput(decisions=None)
     assert o.decisions == []
+
+
+def test_collapse_merges_two_names_for_one_disease():
+    """Two names in one synonym group collapse onto the canonical entry, merging source and EFO IDs."""
+    allowed = {
+        "obesity": ("Obesity", "competitor"),
+        "obesity disorder": ("Obesity Disorder", "mechanism"),
+        "psoriasis": ("Psoriasis", "competitor"),
+    }
+    efo_ids = {
+        "EFO_0001073": "obesity",
+        "MONDO_0011122": "obesity disorder",
+        "EFO_0000676": "psoriasis",
+    }
+
+    collapsed = collapse_synonym_entries(allowed, efo_ids)
+
+    assert collapsed == [("Obesity Disorder", "Obesity")]
+    assert allowed == {
+        "obesity": ("Obesity", "both"),
+        "psoriasis": ("Psoriasis", "competitor"),
+    }
+    assert efo_ids == {
+        "EFO_0001073": "obesity",
+        "MONDO_0011122": "obesity",
+        "EFO_0000676": "psoriasis",
+    }
+
+
+def test_collapse_leaves_lone_and_distinct_entries_untouched():
+    """A lone alias and clinically distinct disease terms are never collapsed."""
+    allowed = {
+        "obesity disorder": ("Obesity Disorder", "mechanism"),
+        "type 2 diabetes mellitus": ("Type 2 Diabetes Mellitus", "competitor"),
+        "diabetes mellitus": ("Diabetes Mellitus", "competitor"),
+        "anxiety": ("Anxiety", "competitor"),
+        "anxiety disorder": ("Anxiety Disorder", "mechanism"),
+        "non-alcoholic fatty liver disease": (
+            "Non-alcoholic Fatty Liver Disease",
+            "competitor",
+        ),
+        "metabolic dysfunction-associated fatty liver disease": (
+            "Metabolic Dysfunction-associated Fatty Liver Disease",
+            "mechanism",
+        ),
+    }
+    efo_ids = {"MONDO_0011122": "obesity disorder"}
+
+    collapsed = collapse_synonym_entries(allowed, efo_ids)
+
+    assert collapsed == []
+    assert allowed == {
+        "obesity disorder": ("Obesity Disorder", "mechanism"),
+        "type 2 diabetes mellitus": ("Type 2 Diabetes Mellitus", "competitor"),
+        "diabetes mellitus": ("Diabetes Mellitus", "competitor"),
+        "anxiety": ("Anxiety", "competitor"),
+        "anxiety disorder": ("Anxiety Disorder", "mechanism"),
+        "non-alcoholic fatty liver disease": (
+            "Non-alcoholic Fatty Liver Disease",
+            "competitor",
+        ),
+        "metabolic dysfunction-associated fatty liver disease": (
+            "Metabolic Dysfunction-associated Fatty Liver Disease",
+            "mechanism",
+        ),
+    }
+    assert efo_ids == {"MONDO_0011122": "obesity disorder"}
+
+
+def test_collapse_without_canonical_name_keeps_earliest_entry():
+    """When no entry carries the canonical name, the earliest-inserted alias survives under its own name."""
+    allowed = {
+        "graft vs host disease": ("Graft vs Host Disease", "competitor"),
+        "graft-versus-host disease": ("Graft-Versus-Host Disease", "mechanism"),
+    }
+    efo_ids = {"EFO_0000530": "graft-versus-host disease"}
+
+    collapsed = collapse_synonym_entries(allowed, efo_ids)
+
+    assert collapsed == [("Graft-Versus-Host Disease", "Graft vs Host Disease")]
+    assert allowed == {
+        "graft vs host disease": ("Graft vs Host Disease", "both"),
+    }
+    assert efo_ids == {"EFO_0000530": "graft vs host disease"}

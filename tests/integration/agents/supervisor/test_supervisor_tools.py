@@ -27,6 +27,7 @@ from indication_scout.services.retrieval import RetrievalService
 from indication_scout.config import get_settings
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
+    DISEASE_SYNONYM_CANONICAL,
 )
 
 logger = logging.getLogger(__name__)
@@ -231,7 +232,12 @@ async def test_find_candidates_metformin(llm, db_session_truncating, test_cache_
     ],
 )
 async def test_analyze_rejects_unlisted_disease(
-    llm, db_session_truncating, test_cache_dir, no_fanout, tool_name, empty_artifact_type
+    llm,
+    db_session_truncating,
+    test_cache_dir,
+    no_fanout,
+    tool_name,
+    empty_artifact_type,
 ):
     """analyze_literature / analyze_clinical_trials must reject any disease that wasn't
     surfaced by find_candidates or promoted by analyze_mechanism. Returns an empty artifact
@@ -332,6 +338,59 @@ async def test_analyze_mechanism_dedups_against_competitor_allowlist(
         f"Expected at least one disease tagged 'both' after analyze_mechanism, "
         f"got sources: {sorted(set(sources))}"
     )
+
+
+# ------------------------------------------------------------------
+# Synonym collapse — one disease reaching the allowlist under two names.
+#
+# Metformin's competitor list carries "obesity" while the mechanism route
+# surfaces "obesity disorder": Open Targets gives them different disease IDs,
+# so neither the ID nor the exact-name pass merges them. Both names appeared
+# in the candidate list of all 8 metformin snapshots taken between
+# 2026-09-03 and 2026-09-08. DISEASE_SYNONYM_CANONICAL groups them, so only
+# the canonical name may survive the merge.
+# ------------------------------------------------------------------
+
+
+_SYNONYM_DRUG = "metformin"
+
+
+async def test_synonym_named_disease_collapses_to_one_allowlist_row(
+    llm, db_session_truncating, test_cache_dir
+):
+    """Two names for one disease must leave exactly one allowlist row, tagged as seen by both routes."""
+    svc = RetrievalService(test_cache_dir)
+    tools_list, _, _ = build_supervisor_tools(
+        llm=llm, svc=svc, db=db_session_truncating
+    )
+    tools = _tool_map(tools_list)
+
+    await asyncio.gather(
+        tools["find_candidates"].ainvoke(
+            _tc("find_candidates", drug_name=_SYNONYM_DRUG)
+        ),
+        tools["analyze_mechanism"].ainvoke(
+            _tc("analyze_mechanism", drug_name=_SYNONYM_DRUG)
+        ),
+    )
+
+    allowed_diseases, allowed_efo_ids = _allowlist_state(tools)
+
+    assert "obesity" in allowed_diseases
+    assert "obesity disorder" not in allowed_diseases
+    assert allowed_diseases["obesity"] == ("obesity", "both")
+
+    # Every EFO ID that pointed at the dropped name must now resolve to the survivor.
+    assert "obesity disorder" not in allowed_efo_ids.values()
+
+    # No synonym group may hold more than one row anywhere in the merged list.
+    by_canonical: dict[str, list[str]] = {}
+    for key in allowed_diseases:
+        canonical = DISEASE_SYNONYM_CANONICAL.get(key)
+        if canonical is not None:
+            by_canonical.setdefault(canonical, []).append(key)
+    uncollapsed = {c: keys for c, keys in by_canonical.items() if len(keys) > 1}
+    assert not uncollapsed, f"synonym groups left uncollapsed: {uncollapsed}"
 
 
 # ------------------------------------------------------------------

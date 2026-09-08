@@ -100,17 +100,22 @@ these separate systemic from pulmonary disease and catch other-drug trials. Do n
 disease name alone. When genuinely unsure, prefer "contaminated" — surfacing a wrong trial as
 relevant is worse than omitting a borderline one.
 
-finalize_analysis REQUIRES a verdict for EVERY shown trial — search, completed, AND terminated
-— it rejects the call if any shown trial is missing. Pass `verdicts` as a list of
-{"nct": "<NCT id>", "studied_drug": "<drug the trial is ABOUT>", "verdict": "relevant"|"contaminated"}.
+finalize_analysis REQUIRES an entry for EVERY shown trial — search, completed, AND terminated —
+and exactly one per trial. Pass `verdicts` as a list of
+{"nct": "<NCT id>", "drug_role": "studied"|"comparator"|"background"|"absent", "verdict": "relevant"|"contaminated"}.
 
-studied_drug is TEST 0's answer, recorded per trial: the agent the trial evaluates, read off its
-title, interventions and summary. It is NOT every drug the trial administers — a drug present only
-as a comparator, background or active control is not the studied drug, so name the other one.
-Answer it for each trial before you assign that trial's verdict.
+drug_role is TEST 0's answer, recorded per trial: the part THIS DRUG plays in that trial, read off
+its title, interventions and summary.
+  - "studied" — the trial evaluates this drug. Only this role can carry a "relevant" verdict.
+  - "comparator" — the studied agent is measured against this drug (e.g. "green tea versus
+    metformin therapy alone", or a title naming another drug while this one is the control arm).
+  - "background" — given to every arm as standard care, not the variable under test.
+  - "absent" — this drug is not administered at all.
+Answer drug_role for each trial before assigning that trial's verdict. This drug appearing in the
+interventions list does NOT make the role "studied".
 
-The call is REJECTED when a verdict omits studied_drug, and when a verdict is "relevant" while its
-studied_drug names an agent other than this drug. Both send you back to fix the entry.
+The call is REJECTED when an entry is malformed or uses a value outside those listed, when a trial
+has more than one entry, and when an entry is "relevant" while drug_role is not "studied".
 
 A termination only counts as a closing signal if the terminated trial is RELEVANT. A
 termination in a contaminating trial says nothing about this pair.

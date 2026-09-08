@@ -197,6 +197,60 @@ BROADENING_BLOCKLIST: frozenset[str] = frozenset(
         "inflammation",
     }
 )
+# -- Candidate disease synonym groups --------------------------------------
+# Lowercased alias → canonical disease name. Two candidate-list entries that map to the same canonical
+# name are the same disease under two names and collapse to one entry. Synonyms ONLY: a name here must
+# denote the same disease with the same trial population. Parent/child pairs (diabetes mellitus vs type
+# 2 diabetes mellitus) and disease/symptom pairs (chronic fatigue syndrome vs fatigue) do NOT belong —
+# they have different populations and merging them would move evidence between them.
+DISEASE_SYNONYM_CANONICAL: dict[str, str] = {
+    "obesity": "obesity",
+    "obesity disorder": "obesity",
+    "infertility": "infertility",
+    "infertility disorder": "infertility",
+    "lipid metabolism disorder": "lipid metabolism disorder",
+    "disorder of lipid metabolism": "lipid metabolism disorder",
+    "non-small cell lung cancer": "non-small cell lung cancer",
+    "non-small cell lung carcinoma": "non-small cell lung cancer",
+    "nsclc": "non-small cell lung cancer",
+    "chronic fatigue syndrome": "chronic fatigue syndrome",
+    "myalgic encephalomyelitis": "chronic fatigue syndrome",
+    "me/cfs": "chronic fatigue syndrome",
+    "myalgic encephalomeyelitis/chronic fatigue syndrome": "chronic fatigue syndrome",
+    "myalgic encephalomyelitis/chronic fatigue syndrome": "chronic fatigue syndrome",
+    "covid-19": "COVID-19",
+    "coronavirus disease 2019": "COVID-19",
+    "chronic obstructive pulmonary disease": "chronic obstructive pulmonary disease",
+    "copd": "chronic obstructive pulmonary disease",
+    "polycystic ovary syndrome": "polycystic ovary syndrome",
+    "pcos": "polycystic ovary syndrome",
+    "autosomal dominant polycystic kidney disease": "autosomal dominant polycystic kidney disease",
+    "adpkd": "autosomal dominant polycystic kidney disease",
+    "benign prostatic hyperplasia": "benign prostatic hyperplasia",
+    "bph": "benign prostatic hyperplasia",
+    "coronary artery disease": "coronary artery disease",
+    "coronary artery disorder": "coronary artery disease",
+    "stroke": "stroke",
+    "stroke disorder": "stroke",
+    "plasma cell myeloma": "plasma cell myeloma",
+    "multiple myeloma": "plasma cell myeloma",
+    "atopic dermatitis": "atopic dermatitis",
+    "atopic eczema": "atopic dermatitis",
+    "graft versus host disease": "graft versus host disease",
+    "graft vs host disease": "graft versus host disease",
+    "graft-versus-host disease": "graft versus host disease",
+    "gvhd": "graft versus host disease",
+    "obstructive sleep apnea": "obstructive sleep apnea",
+    "obstructive sleep apnea syndrome": "obstructive sleep apnea",
+    "osa": "obstructive sleep apnea",
+    "pseudotumor cerebri": "pseudotumor cerebri",
+    "idiopathic intracranial hypertension": "pseudotumor cerebri",
+    "alzheimer disease": "alzheimer disease",
+    "alzheimer's disease": "alzheimer disease",
+    "parkinson disease": "parkinson disease",
+    "parkinson's disease": "parkinson disease",
+}
+
 # -- Stop-reason keywords → category (ClinicalTrials.gov) ------------------
 # Order matters: _classify_stop_reason takes the first match, so more specific
 # phrases must appear before broader ones. Examples observed in real CT.gov

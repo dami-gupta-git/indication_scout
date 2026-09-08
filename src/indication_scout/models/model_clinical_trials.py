@@ -5,6 +5,8 @@ These are the data contracts between the ClinicalTrials.gov client and the agent
 Agents never see raw API responses.
 """
 
+from typing import Literal
+
 from pydantic import BaseModel, model_validator
 
 # ------------------------------------------------------------------
@@ -154,6 +156,29 @@ class TerminatedTrialsResult(BaseModel):
             if values.get(field_name) is None and field_info.default is not None:
                 values[field_name] = field_info.default
         return values
+
+
+# ------------------------------------------------------------------
+# Relevance verdicts
+# ------------------------------------------------------------------
+
+
+class TrialVerdict(BaseModel):
+    """One trial's relevance verdict, as returned by the clinical-trials agent's finalize call.
+
+    `drug_role` is the part the pinned target drug plays in THIS trial, judged from its title,
+    interventions and summary. Only "studied" can carry a "relevant" verdict — a comparator,
+    background or absent drug makes the trial someone else's evidence. Asking for the role
+    rather than a drug name keeps the check off string matching, which cannot separate
+    "metformin" from "Dapagliflozin/Metformin".
+
+    All three fields are required: an unparseable entry is rejected at finalize rather than
+    silently dropping the trial from both the relevant and contaminated sets.
+    """
+
+    nct: str
+    drug_role: Literal["studied", "comparator", "background", "absent"]
+    verdict: Literal["relevant", "contaminated"]
 
 
 # ------------------------------------------------------------------
