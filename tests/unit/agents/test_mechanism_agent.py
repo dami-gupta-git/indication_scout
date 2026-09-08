@@ -86,7 +86,11 @@ async def test_run_mechanism_agent_assembles_all_fields():
     ]
     agent = _make_agent(messages)
 
-    output = await run_mechanism_agent(agent, "metformin")
+    output = await run_mechanism_agent(
+        agent,
+        "metformin",
+        approved_indications=[],
+    )
 
     assert isinstance(output, MechanismOutput)
     assert output.mechanisms_of_action == MECHANISMS_OF_ACTION
@@ -109,7 +113,11 @@ async def test_run_mechanism_agent_ignores_non_tool_messages():
     ]
     agent = _make_agent(messages)
 
-    output = await run_mechanism_agent(agent, "metformin")
+    output = await run_mechanism_agent(
+        agent,
+        "metformin",
+        approved_indications=[],
+    )
 
     assert output.drug_targets == {
         "PRKAA1": "ENSG00000132356",
@@ -143,7 +151,11 @@ async def test_run_mechanism_agent_missing_tool_leaves_default(
     ]
     agent = _make_agent(messages)
 
-    output = await run_mechanism_agent(agent, "metformin")
+    output = await run_mechanism_agent(
+        agent,
+        "metformin",
+        approved_indications=[],
+    )
 
     assert getattr(output, field) == default
 
@@ -165,7 +177,10 @@ def _patch_assemble_deps():
     select_top_candidates is stubbed to echo the approved set back for assertion.
     """
     live = AsyncMock(
-        return_value={"systemic mastocytosis": "approved", "glioblastoma": "not_approved"}
+        return_value={
+            "systemic mastocytosis": "approved",
+            "glioblastoma": "not_approved",
+        }
     )
     table = AsyncMock(return_value={"systemic mastocytosis"})
     captured: dict = {}
@@ -202,6 +217,7 @@ async def test_assemble_candidates_uses_date_gated_table_in_holdout(
         "imatinib",
         {"KIT": "ENSG00000157404"},
         MECHANISMS_OF_ACTION,
+        approved_indications=["chronic myeloid leukemia"],
         date_before=cutoff,
     )
 
@@ -219,9 +235,11 @@ async def test_assemble_candidates_uses_live_fda_when_no_cutoff(_patch_assemble_
         "imatinib",
         {"KIT": "ENSG00000157404"},
         MECHANISMS_OF_ACTION,
+        approved_indications=["chronic myeloid leukemia"],
         date_before=None,
     )
 
     live.assert_awaited_once()
+    assert live.call_args.kwargs["approved_indications"] == ["chronic myeloid leukemia"]
     table.assert_not_called()
     assert captured["approved"] == {"systemic mastocytosis"}

@@ -68,7 +68,11 @@ def build_mechanism_agent(llm, date_before: date | None = None) -> object:
 
 
 async def run_mechanism_agent(
-    agent, drug_name: str, date_before: date | None = None
+    agent,
+    drug_name: str,
+    *,
+    approved_indications: list[str],
+    date_before: date | None = None,
 ) -> MechanismOutput:
     """Invoke the agent and assemble a MechanismOutput from the run.
 
@@ -171,7 +175,11 @@ async def run_mechanism_agent(
 
     _asm_t0 = time.perf_counter()
     candidates = await _assemble_candidates(
-        drug_name, assemble_targets, mechanisms_of_action, date_before=date_before
+        drug_name,
+        assemble_targets,
+        mechanisms_of_action,
+        approved_indications=approved_indications,
+        date_before=date_before,
     )
     logger.warning(
         "[TIMING] mechanism %s: _assemble_candidates (%d of %d targets) took %.1fs",
@@ -193,6 +201,8 @@ async def _assemble_candidates(
     drug_name: str,
     drug_targets: dict[str, str],
     mechanisms_of_action: list[MechanismOfAction],
+    *,
+    approved_indications: list[str],
     date_before: date | None = None,
 ) -> list:
     """Fetch per-target rows, filter approved indications, classify.
@@ -259,6 +269,7 @@ async def _assemble_candidates(
                 mapping = await get_fda_approved_disease_mapping(
                     drug_name=drug_name,
                     candidate_diseases=candidate_names,
+                    approved_indications=approved_indications,
                 )
                 approved = {
                     disease for disease, label in mapping.items() if label == "approved"

@@ -1,5 +1,7 @@
 You are a clinical pharmacology expert. Given FDA label text for ONE drug and a list of candidate diseases, classify EACH candidate independently into exactly one label. Only "approved" removes a candidate; the other three are KEPT and ranked.
 
+MANDATORY CONTAMINATION GATE: before using "contaminated", identify one supplied approved indication that is clinically a subtype or subset of the candidate. Associations, comorbidities, extra-organ manifestations, shared mechanisms, and shared treatment classes do not count. If no supplied approved indication passes this gate, use "none". The final label, matched indication, and reason must agree. If you revise a decision, output only the revised conclusion; do not put self-correction in the reason.
+
 "approved" — already covered by an approved indication: the same condition, a synonym, or a narrower child/subset. TEST: would a doctor prescribing this drug for the candidate be acting ON-LABEL (the candidate's patients fall within the approved population)? If yes -> approved. This includes a clinically-named SUBTYPE or CAUSE-VARIANT of a broad approval, even if the label does not name it verbatim.
   e.g. approved "primary hyperlipidemia" -> "primary hyperlipidemia": approved.
   e.g. approved broad "chronic kidney disease" -> "diabetic nephropathy" / "diabetic kidney disease": approved (diabetic CKD just names the cause of the same CKD — on-label). But a DISTINCT disease entity that merely CAUSES the approved condition is NOT on-label — keep it (none): e.g. "polycystic kidney disease" or "glomerulonephritis" are their own diseases (own trial populations) that happen to cause CKD, NOT "CKD that is on-label".
@@ -19,14 +21,11 @@ You are a clinical pharmacology expert. Given FDA label text for ONE drug and a 
 "combination_only" — approved for this disease ONLY inside a named combination product, never as monotherapy for this single drug.
   e.g. drug approved as monotherapy elsewhere but only via a fixed-dose combo for homozygous FH -> "homozygous familial hypercholesterolemia": combination_only.
 
-"contaminated" — a real repurposing target (kept and ranked) whose trial counts are untrustworthy because a registry search for the candidate would pull in the drug's APPROVED trials. Two ways this happens:
-  (a) the candidate is a BROADER disease category containing the approval plus other distinct diseases (incl. a bare disease whose approved form is only a MINORITY biomarker subset).
-    e.g. approved "rheumatoid arthritis" -> "arthritis": contaminated (also covers osteoarthritis, gout). Approved "EGFR-mutated NSCLC" (~10-15% of NSCLC) -> "non-small cell lung cancer": contaminated.
-  (b) the candidate is a DISTINCT SIBLING of an approved indication, but a registry/literature search for the candidate would still recall the approved sibling's trials (they co-mingle under a shared disease term). The candidate is genuinely separate (kept), but its counts are polluted. ASK: would a trial search for the candidate return the drug's approved-sibling trials? If yes -> contaminated.
-    e.g. approved "pulmonary arterial hypertension" -> "hypertension" (systemic): contaminated — distinct disease, but a "hypertension" search recalls the approved PAH trials.
+"contaminated" — a real repurposing target (kept and ranked) that is a clinically recognised BROADER disease category containing at least one supplied approved indication plus other distinct diseases. Before returning contaminated, identify the approved indication that the candidate contains and copy it exactly from the supplied approved-indication list. If no supplied indication is a child of the candidate, the answer is none.
+  e.g. approved "rheumatoid arthritis" -> "arthritis": contaminated (arthritis also covers osteoarthritis and gout). Approved "EGFR-mutated NSCLC" (~10-15% of NSCLC) -> "non-small cell lung cancer": contaminated.
 
-"none" — any other real candidate (sibling subtype, related, or unrelated) with no contamination — a search for it would NOT recall the drug's approved trials.
-  e.g. approved "type 2 diabetes" -> "type 1 diabetes": none (distinct sibling; a type-1-diabetes search does not return the type-2 trials). approved "rheumatoid arthritis" -> "juvenile idiopathic arthritis": none. approved "Ph+ CML" -> "acute myeloid leukemia": none.
+"none" — the candidate is not approved and is not a broader parent category containing a supplied approved indication. Distinct sibling diseases, related diseases, shared mechanisms, shared drug classes, common comorbidities, and shared words are none. Do not predict what a registry or literature search might retrieve.
+  e.g. approved "type 2 diabetes" -> "type 1 diabetes": none. approved "rheumatoid arthritis" -> "juvenile idiopathic arthritis": none. approved "Crohn disease" -> "ulcerative colitis": none. approved "Ph+ CML" -> "acute myeloid leukemia": none.
 
 Risk-reduction: for "reduce the risk of X in patients with Y", X is the indication (-> approved); Y only names the population (-> none unless separately labeled).
   e.g. "reduce risk of stroke in patients with atrial fibrillation" -> "stroke": approved; "atrial fibrillation": none.
@@ -34,12 +33,24 @@ Risk-reduction: for "reduce the risk of X in patients with Y", X is the indicati
   e.g. "reduce major adverse cardiovascular events (MACE) in patients with established cardiovascular disease" -> "cardiovascular disease": approved (MACE ARE events of CVD; reducing MACE is treating CVD — its uncovered scope, e.g. primary prevention / non-comorbid, is the SAME disease minus a comorbidity, so approved/dropped, NOT contaminated). Contrast: candidate "NAFLD" against approved "MASH" stays contaminated because NAFLD's uncovered scope (simple steatosis) is a DISTINCT subtype, not the same disease minus a comorbidity.
   e.g. "reduce risk of stroke in patients with atrial fibrillation" -> "atrial fibrillation": none (stroke is cerebrovascular — a DIFFERENT disease axis; AF is only a risk factor for stroke, the drug does not treat AF). The carve-out must NOT flip AF to approved.
 
-Judge synonymy and parent/child/sibling from medical knowledge. Do NOT use knowledge of whether the drug works — only how the candidate relates to the label.
+Judge synonymy and parent/child/sibling from medical knowledge. Do NOT use knowledge of whether the drug works — only how the candidate relates to the label and supplied approved-indication list.
 
-Return ONLY a JSON object mapping each candidate (verbatim) to one label. No other text.
+Return ONLY a JSON object mapping each candidate verbatim to one of these object shapes:
+- For contaminated: write "reason" first, then "matched_approved_indication", and write "label" last. The label must be "contaminated", and the matched indication must exactly equal one item from the supplied approved-indication list.
+- For approved, combination_only, or none: write "reason" first and "label" last. Do not include "matched_approved_indication".
+The reason must be one sentence. Do not put the candidate name in the "label" field. Do not add a "classification", "label_result", or other field.
+
+Required format example:
+{{
+  "candidate parent": {{"reason": "The candidate is the broader parent of the approved child.", "matched_approved_indication": "approved child", "label": "contaminated"}},
+  "separate candidate": {{"reason": "The candidate is not a broader parent of any supplied approved indication.", "label": "none"}}
+}}
 
 FDA label text:
 {label_texts}
+
+Supplied approved-indication list:
+{approved_indications}
 
 Candidate diseases:
 {candidate_diseases}

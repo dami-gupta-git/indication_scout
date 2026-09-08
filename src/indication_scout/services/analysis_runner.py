@@ -142,7 +142,12 @@ async def run_pair_analysis(
 
     async def _run_mechanism() -> object:
         mech_agent = build_mechanism_agent(llm=llm, date_before=date_before)
-        return await run_mechanism_agent(mech_agent, drug, date_before=date_before)
+        return await run_mechanism_agent(
+            mech_agent,
+            drug,
+            approved_indications=list(intake.approved_indications),
+            date_before=date_before,
+        )
 
     try:
         logger.info(
@@ -178,6 +183,7 @@ async def run_pair_analysis(
             fda_mapping = await get_fda_approved_disease_mapping(
                 drug_name=drug,
                 candidate_diseases=[disease_name],
+                approved_indications=list(intake.approved_indications),
                 cache_dir=DEFAULT_CACHE_DIR,
             )
             fda_label = fda_mapping.get(disease_name, "none")

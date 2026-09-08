@@ -454,6 +454,7 @@ def build_supervisor_tools(
                 mapping = await get_fda_approved_disease_mapping(
                     drug_name=drug_name,
                     candidate_diseases=diseases,
+                    approved_indications=list(intake.approved_indications),
                     cache_dir=svc.cache_dir,
                 )
                 fda_approved = {
@@ -999,10 +1000,13 @@ def build_supervisor_tools(
 
     async def _analyze_mechanism_impl(drug_name: str) -> tuple[str, MechanismOutput]:
         drug_name = normalize_drug_name(drug_name)
-        await _get_drug_intake(drug_name)
+        intake = await _get_drug_intake(drug_name)
         _t0 = time.perf_counter()
         output = await run_mechanism_agent(
-            mech_agent, drug_name, date_before=date_before
+            mech_agent,
+            drug_name,
+            approved_indications=list(intake.approved_indications),
+            date_before=date_before,
         )
         logger.warning("[TOOL] analyze_mechanism(drug=%r)", drug_name)
         logger.warning("[TIMING] analyze_mechanism: %.1fs", time.perf_counter() - _t0)

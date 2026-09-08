@@ -520,14 +520,19 @@ CURATED_FDA_REJECTED_CANDIDATES: dict[str, list[str]] = {
 # Curated per-drug list of candidate phrasings to short-circuit as "contaminated"
 # (a real repurposing target whose trial counts are polluted by the approved
 # narrower subset — KEEP and rank, but suppress trial tables). Use for minority-
-# biomarker approvals where the bare disease term is much broader than the approved
-# subset. Exact, case-sensitive match skips the LLM.
+# biomarker approvals and verified query-specific collisions that are not clinical
+# parent-child relationships. Exact, case-sensitive match skips the LLM.
 CURATED_FDA_CONTAMINATED_CANDIDATES: dict[str, list[str]] = {
     # Lumakras has a CRC approval but only for KRAS G12C-mutated mCRC in
     # combination with panitumumab (~3-4% of mCRC patients). The bare candidate
     # "colorectal cancer" is a real, much-broader target whose registry counts
     # inherit the approved-subset trials → contaminated, not dropped.
     "sotorasib": ["colorectal cancer"],
+    # CT.gov's Hypertension MeSH filter also matches trials indexed under its
+    # Pulmonary Hypertension descendant. Sildenafil's approved PAH trials are
+    # therefore included in the bare hypertension query even though systemic
+    # hypertension and PAH are clinically distinct.
+    "sildenafil": ["hypertension"],
 }
 
 

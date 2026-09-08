@@ -9,8 +9,10 @@ import pytest
 from indication_scout.services.approval_check import (
     _coerce_label,
     _load_drug_approvals_table,
+    _parse_approval_decisions,
     extract_approved_from_labels,
     get_approved_indications,
+    get_fda_approved_disease_mapping,
     list_approved_indications_at,
     list_approved_indications_from_labels,
 )
@@ -31,6 +33,67 @@ from indication_scout.services.approval_check import (
 )
 def test_coerce_label(value, expected):
     assert _coerce_label(value) == expected
+
+
+def test_parse_approval_decisions_accepts_structured_labels_and_exact_anchor():
+    parsed = {
+        "inflammatory bowel disease": {
+            "label": "contaminated",
+            "matched_approved_indication": "Crohn disease",
+            "reason": "Inflammatory bowel disease contains Crohn disease.",
+        },
+        "ulcerative colitis": {
+            "label": "none",
+            "reason": "Ulcerative colitis is a sibling of Crohn disease.",
+        },
+    }
+
+    result = _parse_approval_decisions(
+        parsed,
+        ["inflammatory bowel disease", "ulcerative colitis"],
+        ["Crohn disease"],
+    )
+
+    assert result == {
+        "inflammatory bowel disease": "contaminated",
+        "ulcerative colitis": "none",
+    }
+
+
+def test_parse_approval_decisions_rejects_unverified_anchor_and_invalid_shape():
+    parsed = {
+        "inflammatory bowel disease": {
+            "label": "contaminated",
+            "matched_approved_indication": "ulcerative colitis",
+            "reason": "The candidate contains ulcerative colitis.",
+        },
+        "celiac disease": "none",
+    }
+
+    result = _parse_approval_decisions(
+        parsed,
+        ["inflammatory bowel disease", "celiac disease"],
+        ["Crohn disease"],
+    )
+
+    assert result == {}
+
+
+async def test_sildenafil_hypertension_uses_curated_contamination(tmp_path):
+    mock_llm = AsyncMock()
+    with patch(
+        "indication_scout.services.approval_check.query_llm",
+        new=mock_llm,
+    ):
+        result = await get_fda_approved_disease_mapping(
+            drug_name="sildenafil",
+            candidate_diseases=["hypertension"],
+            approved_indications=["pulmonary arterial hypertension"],
+            cache_dir=tmp_path,
+        )
+
+    assert result == {"hypertension": "contaminated"}
+    mock_llm.assert_not_awaited()
 
 
 # --- extract_approved_from_labels ---

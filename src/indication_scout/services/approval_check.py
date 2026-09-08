@@ -11,7 +11,16 @@ import re
 from datetime import date, datetime
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
+
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    TypeAdapter,
+    ValidationError,
+    model_validator,
+)
 
 from indication_scout.config import get_settings
 from indication_scout.constants import (
@@ -53,6 +62,44 @@ APPROVAL_LABELS: frozenset[str] = frozenset(
 )
 
 
+class _ContaminatedDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: Literal["contaminated"]
+    matched_approved_indication: str
+    reason: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict[str, Any]) -> dict[str, Any]:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class _UnanchoredDecision(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    label: Literal["approved", "combination_only", "none"]
+    reason: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict[str, Any]) -> dict[str, Any]:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+_ApprovalDecision = Annotated[
+    _ContaminatedDecision | _UnanchoredDecision,
+    Field(discriminator="label"),
+]
+_APPROVAL_DECISION_ADAPTER = TypeAdapter(_ApprovalDecision)
+
+
 def _coerce_label(value: Any) -> ApprovalLabel | None:
     """Validate a raw value as an ApprovalLabel. Returns None if invalid.
 
@@ -63,6 +110,51 @@ def _coerce_label(value: Any) -> ApprovalLabel | None:
     if isinstance(value, str) and value in APPROVAL_LABELS:
         return value  # type: ignore[return-value]
     return None
+
+
+def _parse_approval_decisions(
+    parsed: dict[str, Any],
+    candidates: list[str],
+    approved_indications: list[str],
+) -> dict[str, ApprovalLabel]:
+    """Validate structured decisions and reject contaminated labels without an exact anchor."""
+    lower_to_verbatim = {candidate.lower(): candidate for candidate in candidates}
+    approved_set = set(approved_indications)
+    labels: dict[str, ApprovalLabel] = {}
+
+    for key, value in parsed.items():
+        if not isinstance(key, str):
+            continue
+        original = lower_to_verbatim.get(key.lower())
+        if original is None:
+            logger.warning(
+                "get_fda_approved_disease_mapping: LLM returned unknown candidate %r, skipping",
+                key,
+            )
+            continue
+        try:
+            decision = _APPROVAL_DECISION_ADAPTER.validate_python(value)
+        except ValidationError as exc:
+            logger.error(
+                "get_fda_approved_disease_mapping: invalid decision for %r: %s",
+                key,
+                exc,
+            )
+            continue
+        if isinstance(decision, _ContaminatedDecision):
+            if decision.matched_approved_indication not in approved_set:
+                logger.warning(
+                    "get_fda_approved_disease_mapping: rejecting contaminated verdict for %r "
+                    "with unverified anchor %r",
+                    key,
+                    decision.matched_approved_indication,
+                )
+                continue
+            labels[original] = "contaminated"
+        else:
+            labels[original] = decision.label
+
+    return labels
 
 
 def _drug_approval_path(drug_name: str, cache_dir: Path) -> Path:
@@ -466,6 +558,7 @@ async def get_all_fda_approved_diseases(
 async def get_fda_approved_disease_mapping(
     drug_name: str,
     candidate_diseases: list[str],
+    approved_indications: list[str],
     cache_dir: Path = DEFAULT_CACHE_DIR,
 ) -> dict[str, ApprovalLabel]:
     """Classify each candidate's relationship to the drug's approved indications.
@@ -476,12 +569,14 @@ async def get_fda_approved_disease_mapping(
       2. LLM fallback — for remaining candidates, the input drug_name is
          expanded to all known aliases (generic, trade, INN, USAN, salt forms)
          via ChEMBL, all matching openFDA labels are fetched, and the
-         candidates are batched into one LLM call that returns one ApprovalLabel
-         per candidate.
+         candidates are batched into one LLM call. Each structured decision
+         includes an ApprovalLabel; contaminated decisions must also name an
+         exact item from approved_indications.
 
     Args:
         drug_name: A single drug name (trade, generic/INN, or USAN).
         candidate_diseases: Disease names to check against the label.
+        approved_indications: Label-derived indications from the run's shared drug intake.
         cache_dir: Cache directory.
 
     Returns:
@@ -588,6 +683,7 @@ async def get_fda_approved_disease_mapping(
     template = (_PROMPTS_DIR / "extract_fda_approval_single.txt").read_text()
     prompt = template.format(
         label_texts="\n---\n".join(label_texts),
+        approved_indications=json.dumps(approved_indications),
         candidate_diseases=json.dumps(still_missing),
     )
 
@@ -601,31 +697,12 @@ async def get_fda_approved_disease_mapping(
         )
         return result
 
-    # Map LLM keys back to verbatim input candidates (case-insensitive), scoped
-    # to the still-missing candidates so a stray key cannot overwrite a curated
-    # or already-cached value.
-    lower_to_verbatim = {c.lower(): c for c in still_missing}
-    llm_labels: dict[str, ApprovalLabel] = {}
-    for key, value in parsed.items():
-        if not isinstance(key, str):
-            continue
-        original = lower_to_verbatim.get(key.lower())
-        if original is None:
-            logger.warning(
-                "get_fda_approved_disease_mapping: LLM returned unknown candidate %r, skipping",
-                key,
-            )
-            continue
-        label = _coerce_label(value)
-        if label is None:
-            logger.error(
-                "get_fda_approved_disease_mapping: value for %r is not a valid label: %r",
-                key,
-                value,
-            )
-            continue
-        result[original] = label
-        llm_labels[original] = label
+    llm_labels = _parse_approval_decisions(
+        parsed,
+        still_missing,
+        approved_indications,
+    )
+    result.update(llm_labels)
 
     # Merge fresh labels into the per-drug cache file. Only candidates the LLM
     # returned a valid label for are cached — parse failures or skipped

@@ -27,7 +27,14 @@ async def test_metformin_mechanism_agent():
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
     agent = build_mechanism_agent(llm)
 
-    output = await run_mechanism_agent(agent, "imatinib")
+    output = await run_mechanism_agent(
+        agent,
+        "imatinib",
+        approved_indications=[
+            "chronic myeloid leukemia",
+            "gastrointestinal stromal tumor",
+        ],
+    )
 
     assert isinstance(output, MechanismOutput)
 

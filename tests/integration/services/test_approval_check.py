@@ -42,7 +42,7 @@ from indication_scout.services.approval_check import (
         # ARE events of CVD, so candidate CVD is on-label (risk-reduction
         # carve-out). It must NOT come back "none" (the regression that floated
         # CVD to a false #1 on the approved SELECT/SUSTAIN-6/PIONEER-6 trials).
-        pytest.param(
+        (
             "semaglutide",
             [
                 "type 1 diabetes mellitus",
@@ -58,19 +58,6 @@ from indication_scout.services.approval_check import (
                 "cardiovascular disease": "approved",
                 "parkinson disease": "none",
             },
-            marks=pytest.mark.xfail(
-                reason=(
-                    "Risk-reduction carve-out (events-of-Y → Y approved) does not yet fire on "
-                    "the dual-comorbidity label shape: the Ozempic label reads 'reduce MACE in "
-                    "patients with type 2 diabetes mellitus AND established cardiovascular "
-                    "disease', so the LLM treats CVD as one of two qualifier populations and "
-                    "returns 'none' instead of 'approved'. The single-population carve-out in "
-                    "extract_fda_approval_single.txt handles 'X in patients with Y' but not "
-                    "'X in patients with Y1 and Y2'. Fix pending: either harden the prompt for "
-                    "co-listed populations or curate CVD for semaglutide."
-                ),
-                strict=True,
-            ),
         ),
         # AF/stroke guard for the risk-reduction carve-out. Apixaban is approved
         # to "reduce the risk of stroke in patients with atrial fibrillation".
@@ -115,9 +102,30 @@ async def test_get_fda_approved_disease_mapping(
     test_cache_dir, drug_name, candidates, expected
 ):
     """Per-candidate approval-relationship labels across curated and LLM paths."""
+    approved_indications = {
+        "semaglutide": [
+            "type 2 diabetes mellitus",
+            "chronic weight management",
+            "cardiovascular risk reduction",
+            "chronic kidney disease",
+            "MASH",
+        ],
+        "apixaban": [
+            "reduction of stroke and systemic embolism risk in nonvalvular atrial fibrillation",
+            "deep vein thrombosis",
+            "pulmonary embolism",
+        ],
+        "sotorasib": ["KRAS G12C-mutated colorectal cancer"],
+        "empagliflozin": [
+            "chronic kidney disease",
+            "heart failure",
+            "cardiovascular risk reduction",
+        ],
+    }[drug_name]
     result = await get_fda_approved_disease_mapping(
         drug_name=drug_name,
         candidate_diseases=candidates,
+        approved_indications=approved_indications,
         cache_dir=test_cache_dir,
     )
     assert result == expected
@@ -140,9 +148,32 @@ async def test_get_fda_approved_disease_mapping_empty_inputs(
     result = await get_fda_approved_disease_mapping(
         drug_name=drug_name,
         candidate_diseases=candidates,
+        approved_indications=[],
         cache_dir=test_cache_dir,
     )
     assert result == expected
+
+
+@pytest.mark.approval_aware
+async def test_approval_mapping_keeps_crohn_sibling_uncontaminated(test_cache_dir):
+    result = await get_fda_approved_disease_mapping(
+        drug_name="certolizumab pegol",
+        candidate_diseases=["inflammatory bowel disease", "ulcerative colitis"],
+        approved_indications=[
+            "Crohn disease",
+            "rheumatoid arthritis",
+            "psoriatic arthritis",
+            "ankylosing spondylitis",
+            "non-radiographic axial spondyloarthritis",
+            "plaque psoriasis",
+        ],
+        cache_dir=test_cache_dir,
+    )
+
+    assert result == {
+        "inflammatory bowel disease": "contaminated",
+        "ulcerative colitis": "none",
+    }
 
 
 @pytest.mark.parametrize(
@@ -329,6 +360,7 @@ async def test_get_fda_approved_disease_mapping_uses_cache(tmp_path, monkeypatch
     first = await get_fda_approved_disease_mapping(
         drug_name=drug_name,
         candidate_diseases=candidates,
+        approved_indications=["type 2 diabetes mellitus"],
         cache_dir=tmp_path,
     )
     assert first == expected
@@ -337,6 +369,7 @@ async def test_get_fda_approved_disease_mapping_uses_cache(tmp_path, monkeypatch
     second = await get_fda_approved_disease_mapping(
         drug_name=drug_name,
         candidate_diseases=candidates,
+        approved_indications=["type 2 diabetes mellitus"],
         cache_dir=tmp_path,
     )
     assert second == expected
