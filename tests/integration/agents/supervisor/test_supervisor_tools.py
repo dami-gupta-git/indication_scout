@@ -142,7 +142,7 @@ _EXPECTED_CANDIDATES_SUBSET = {
 
 async def test_find_candidates_random(llm, db_session_truncating, test_cache_dir):
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
@@ -159,7 +159,7 @@ async def my_test(llm, db_session_truncating, test_cache_dir):
     allowlist, and seeds drug aliases + FDA-approved indications into the briefing store.
     """
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
@@ -178,7 +178,7 @@ async def test_find_candidates_metformin(llm, db_session_truncating, test_cache_
     allowlist, and seeds drug aliases + FDA-approved indications into the briefing store.
     """
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
@@ -244,7 +244,7 @@ async def test_analyze_rejects_unlisted_disease(
     of the right type and a REJECTED: content message naming the tool.
     """
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
@@ -301,7 +301,7 @@ async def test_analyze_mechanism_dedups_against_competitor_allowlist(
     (1) ID match, (2) exact-name match, (3) OT name-resolve fallback.
     """
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
@@ -343,34 +343,39 @@ async def test_analyze_mechanism_dedups_against_competitor_allowlist(
 # ------------------------------------------------------------------
 # Synonym collapse — one disease reaching the allowlist under two names.
 #
-# Metformin's competitor list carries "obesity" while the mechanism route
-# surfaces "obesity disorder": Open Targets gives them different disease IDs,
-# so neither the ID nor the exact-name pass merges them. Both names appeared
-# in the candidate list of all 8 metformin snapshots taken between
-# 2026-09-03 and 2026-09-08. DISEASE_SYNONYM_CANONICAL groups them, so only
-# the canonical name may survive the merge.
+# "obesity" and "obesity disorder" reach the allowlist as separate rows: Open
+# Targets gives them different disease IDs, so neither the ID nor the exact-name
+# pass merges them. Both names appeared in the candidate list of all 8 metformin
+# and all 3 bupropion snapshots taken between 2026-09-03 and 2026-09-08.
+# DISEASE_SYNONYM_CANONICAL groups them, so only the canonical name may survive.
 # ------------------------------------------------------------------
 
 
-_SYNONYM_DRUG = "metformin"
-
-
+# Expected source of the surviving row differs by drug: metformin's competitor list carries "obesity"
+# and the mechanism route adds "obesity disorder", so the survivor is tagged "both". Bupropion's
+# competitor list carries no obesity entry at all, so both names arrive from the mechanism route and
+# the survivor stays "mechanism".
+@pytest.mark.parametrize(
+    "drug_name,expected_source",
+    [
+        ("metformin", "both"),
+        ("bupropion", "mechanism"),
+    ],
+)
 async def test_synonym_named_disease_collapses_to_one_allowlist_row(
-    llm, db_session_truncating, test_cache_dir
+    llm, db_session_truncating, test_cache_dir, drug_name, expected_source
 ):
-    """Two names for one disease must leave exactly one allowlist row, tagged as seen by both routes."""
+    """Two names for one disease must leave exactly one allowlist row, whichever routes surfaced them."""
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
 
     await asyncio.gather(
-        tools["find_candidates"].ainvoke(
-            _tc("find_candidates", drug_name=_SYNONYM_DRUG)
-        ),
+        tools["find_candidates"].ainvoke(_tc("find_candidates", drug_name=drug_name)),
         tools["analyze_mechanism"].ainvoke(
-            _tc("analyze_mechanism", drug_name=_SYNONYM_DRUG)
+            _tc("analyze_mechanism", drug_name=drug_name)
         ),
     )
 
@@ -378,7 +383,7 @@ async def test_synonym_named_disease_collapses_to_one_allowlist_row(
 
     assert "obesity" in allowed_diseases
     assert "obesity disorder" not in allowed_diseases
-    assert allowed_diseases["obesity"] == ("obesity", "both")
+    assert allowed_diseases["obesity"] == ("obesity", expected_source)
 
     # Every EFO ID that pointed at the dropped name must now resolve to the survivor.
     assert "obesity disorder" not in allowed_efo_ids.values()
@@ -417,7 +422,7 @@ async def test_analyze_mechanism_promotes_mechanism_only_candidates(
     analyze_literature / analyze_clinical_trials.
     """
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
@@ -482,7 +487,7 @@ async def test_mechanism_promoted_disease_is_investigatable_downstream(
     the artifact is the real output type, not the empty default.
     """
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
@@ -557,7 +562,7 @@ async def test_finalize_supervisor_echoes_summary(
     find_candidates / analyze_mechanism call, the allowlist is empty so all blurbs drop.
     """
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
@@ -600,7 +605,7 @@ async def test_analyze_clinical_trials_respects_cutoff(
     start_date strictly before the cutoff.
     """
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating, date_before=_CUTOFF
     )
     tools = _tool_map(tools_list)
@@ -682,7 +687,7 @@ async def test_analyze_literature_respects_cutoff(
     from indication_scout.data_sources.pubmed import PubMedClient
 
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating, date_before=_CUTOFF
     )
     tools = _tool_map(tools_list)
@@ -792,7 +797,7 @@ async def test_finalize_blurb_fields_have_no_subphase3_understatement_live(
     real fact critic), the authoritative `stage` must say Phase 3 completed AND no sibling
     field may carry a sub-Phase-3 understatement that contradicts it."""
     svc = RetrievalService(test_cache_dir)
-    tools_list, _, _ = build_supervisor_tools(
+    tools_list, _, _, _ = build_supervisor_tools(
         llm=llm, svc=svc, db=db_session_truncating
     )
     tools = _tool_map(tools_list)
