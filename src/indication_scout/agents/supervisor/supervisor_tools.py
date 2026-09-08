@@ -1122,6 +1122,40 @@ def build_supervisor_tools(
         drug_name = normalize_drug_name(drug_name)
         return _render_briefing(drug_name)
 
+    async def _record_missing_approval_labels(drug_name: str) -> None:
+        """Fill `approval_labels` for allowlist entries that have no label yet.
+
+        find_candidates records labels for competitor diseases only; mechanism-promoted names run their own approval
+        check inside the mechanism agent and it does not report labels back. Without this, a contaminated
+        mechanism-route candidate is invisible to the skip below. Labels are cached per (drug, disease), so this is a
+        cache read after the first run.
+        """
+        missing = [
+            canonical
+            for key, (canonical, _) in allowed_diseases.items()
+            if key not in approval_labels
+        ]
+        if not missing:
+            return
+        entry = _ensure_drug_entry(drug_name)
+        try:
+            mapping = await get_fda_approved_disease_mapping(
+                drug_name=drug_name,
+                candidate_diseases=missing,
+                approved_indications=list(entry["approved_indications"]),
+                cache_dir=svc.cache_dir,
+            )
+        except Exception as e:
+            logger.warning(
+                "_record_missing_approval_labels: approval check failed for %r: %s; investigating every candidate",
+                drug_name,
+                e,
+            )
+            return
+        for disease, label in mapping.items():
+            if label in ("contaminated", "combination_only"):
+                approval_labels[disease.lower().strip()] = label
+
     # Fan-out tool: bulk-investigate the top-N candidates with no LLM discretion. The probe (scripts/probe_supervisor_t2dm.py)
     # showed the supervisor LLM systematically skips "obvious" candidates like T2DM for semaglutide regardless of prompt
     # instructions, so we remove the LLM's ability to skip by auto-investigating the top-N
@@ -1150,10 +1184,33 @@ def build_supervisor_tools(
 
         drug_name = normalize_drug_name(drug_name)
 
+        # Skip candidates the approval check labelled "contaminated" — a broad parent whose approved child covers the
+        # retrievable evidence (diabetes mellitus for metformin, depressive disorder for bupropion). Investigating one
+        # spends a slot to conclude that every paper and trial belongs to the approved sub-indication. They stay in the
+        # candidate list; they just don't consume an investigation slot. Holdout runs have no label data, so nothing is
+        # skipped there.
+        if date_before is None:
+            await _record_missing_approval_labels(drug_name)
+        eligible = [
+            (key, value)
+            for key, value in allowed_diseases.items()
+            if approval_labels.get(key) != "contaminated"
+        ]
+        skipped = [
+            canonical
+            for key, (canonical, _) in allowed_diseases.items()
+            if approval_labels.get(key) == "contaminated"
+        ]
+        if skipped:
+            _log_disease_banner(
+                f"NOT INVESTIGATED (approved-parent contamination) for {drug_name}",
+                skipped,
+            )
+
         # Top-N from the merged allowlist. Insertion order preserves find_candidates's competitor ranking, with
         # mechanism-promoted entries appended in analyze_mechanism's order. supervisor_candidate_cap is NOT used here — it
         # only trims the final ranked list, not how many diseases get investigated.
-        top_n = list(allowed_diseases.items())[:investigation_cap]
+        top_n = eligible[:investigation_cap]
         if not top_n:
             return "No candidates in allowlist; nothing to investigate.", []
 

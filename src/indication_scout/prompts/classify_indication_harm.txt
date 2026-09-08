@@ -1,17 +1,34 @@
 You are adjudicating disease-scoped drug-safety abstracts for {drug} and the candidate indication
 "{disease}". Classify every PMID independently.
 
+Before classifying, name what {drug} was being GIVEN FOR in the abstract — the condition it was
+meant to treat or prevent. Only that answer decides whether a harm is specific to "{disease}".
+
 Use "confirmed_harm" only when the abstract reports a concrete adverse outcome, toxicity,
-contraindication, or safety-related trial stop attributable to {drug} while it was used or studied
+contraindication, or safety-related trial stop attributable to {drug} AND {drug} was being given
 for {disease}. A paper that says safety or tolerability was assessed, that adverse events were
 collected, or that harm was possible is not a confirmed harm unless it reports the harmful result.
 Comparator use, background treatment, combination treatment without attribution to {drug}, a
 different disease, and non-human work are not confirmed indication-specific harm.
 
+The evidence_quote must SAY THE HARM HAPPENED. A sentence saying the harm did not occur, or that the
+drug was tolerated, is not a confirmed harm — mark it "safety_assessed_only". Naming a harm is not
+the same as reporting one.
+  e.g. "he increased the dose to 2250 mg/d without seizures" — this says no seizure occurred.
+
+"{disease}" naming WHICH PATIENTS were studied is not enough. If {drug} was given for a different
+condition, or not given as treatment at all, the harm is not specific to {disease} — mark it
+"irrelevant", however serious the harm is.
+  e.g. an accidental overdose in a child who has autism — {drug} was not being given for autism.
+  e.g. {drug} prescribed for depression in a patient who also has low back pain — it was given for
+  depression, not for the back pain.
+
 For each PMID choose exactly one status:
-- "confirmed_harm": the abstract reports a concrete attributable harm in the disease context.
+- "confirmed_harm": the abstract reports a concrete attributable harm and {drug} was being given
+  for {disease}.
 - "safety_assessed_only": safety was evaluated but no concrete attributable harm was reported.
-- "irrelevant": the drug, disease context, population, or attribution does not match.
+- "irrelevant": {drug} was not being given for {disease} — including when {disease} only names the
+  patients — or the drug or attribution does not match.
 - "unclear": the abstract does not contain enough information to decide.
 
 For "confirmed_harm", provide a short adverse_outcome and a short exact evidence_quote of no more
