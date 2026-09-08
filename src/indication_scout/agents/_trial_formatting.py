@@ -70,16 +70,22 @@ _BRIEF_SUMMARY_CAP = 500
 
 
 def _format_interventions(interventions: list, cap: int = _INTERVENTIONS_CAP) -> str:
-    """Render intervention names as "drug1; drug2", capped at `cap`.
+    """Render intervention types and names, capped at `cap`.
 
     Empty list renders as "(none)" so the LLM sees the absence explicitly.
     """
     if not interventions:
         return "(none)"
-    names = [i.intervention_name for i in interventions[:cap] if i.intervention_name]
-    if not names:
+    rendered = [
+        f"{i.intervention_type}: {i.intervention_name}"
+        if i.intervention_type
+        else i.intervention_name
+        for i in interventions[:cap]
+        if i.intervention_name
+    ]
+    if not rendered:
         return "(none)"
-    return "; ".join(names)
+    return "; ".join(rendered)
 
 
 def _truncate_brief_summary(summary: str | None, cap: int = _BRIEF_SUMMARY_CAP) -> str:
@@ -191,7 +197,7 @@ def _format_trial_row(
         elif col == "mesh":
             parts.append(f"mesh: {_format_mesh_list(trial.mesh_conditions)}")
         elif col == "interventions":
-            parts.append(f"drugs: {_format_interventions(trial.interventions)}")
+            parts.append(f"interventions: {_format_interventions(trial.interventions)}")
         elif col == "brief_summary":
             parts.append(f"summary: {_truncate_brief_summary(trial.brief_summary)}")
         elif col == "refs":

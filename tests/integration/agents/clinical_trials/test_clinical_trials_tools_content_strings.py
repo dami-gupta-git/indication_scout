@@ -81,7 +81,7 @@ async def test_search_trials_content_string_sildenafil_hfpef():
     assert len(artifact.trials) == 4
 
     expected_content = (
-        "Search for sildenafil × diastolic heart failure: 4 trials "
+        "Search for sildenafil × diastolic heart failure: 4 registry query matches "
         "(recruiting=0, active=0, withdrawn=0, unknown=0)\n"
         "Resolved query MeSH: Heart Failure, Diastolic (D054144) — compare each "
         "trial's mesh column against this descriptor to judge relevance vs "
@@ -89,18 +89,46 @@ async def test_search_trials_content_string_sildenafil_hfpef():
         "Phase distribution (shown): Phase 4=1, Phase 3=2, Phase 2/Phase 3=1\n"
         "Trials shown (top 20 by enrollment):\n"
         "  NCT00763867 | Phase 3          | COMPLETED | "
+        "interventions: Drug: Placebo; Drug: Sildenafil | "
         "mesh: Heart Failure; Heart Failure, Diastolic | "
+        "summary: Diastolic heart failure (DHF), which affects older individuals "
+        "and women at a disproportionate rate, is a condition that can lead to "
+        "shortness of breath and fluid build-up in the lungs. This study will "
+        "evaluate the effectiveness of the medication sildenafil at improving "
+        "exercise ability and health outcomes in people with DHF. | "
         "Evaluating the Effectiveness of Sildenafil at Improving Health Outcomes "
         "and Exercise Ability in People With Diastolic Heart Failure (The RELAX Study)\n"
         "  NCT01046838 | Phase 4          | COMPLETED | "
+        "interventions: Drug: Sildenafil; Drug: Placebo | "
         "mesh: Heart Failure, Diastolic | "
+        "summary: In patients with Doppler echocardiographic signs of elevated LV "
+        "filling pressures despite preserved LV systolic function after AMI treatment "
+        "with the phosphodiesterase inhibitor sildenafil 40 mg three times daily for "
+        "9 weeks will compared with placebo\n\n"
+        "1. Improve resting LV filling and cardiac hemodynamics.\n"
+        "2. Improve exercise capacity.\n"
+        "3. Improve filling pattern and cardiac hemodynamics during exercise. | "
         "SIDAMI - Sildenafil and Diastolic Dysfunction After Acute Myocardial "
         "Infarction (AMI)\n"
         "  NCT01726049 | Phase 3          | COMPLETED | "
+        "interventions: Drug: Sildenafil; Drug: Placebo | "
         "mesh: Heart Failure, Diastolic; Hypertension, Pulmonary | "
+        "summary: Aim of the study is to investigate whether Sildenafil treatment "
+        "results in a reduction of pulmonary artery pressure without decrease of "
+        "cardiac output (CO) and in improvement of exercise capacity in patients with "
+        "heart failure with preserved ejection fraction (HFpEF) with pulmonary "
+        "hypertension ( PH). | "
         "Sildenafil in HFpEF (Heart Failure With Preserved Ejection Fraction) and PH\n"
         "  NCT01156636 | Phase 2/Phase 3  | COMPLETED | "
+        "interventions: Drug: Sildenafil; Drug: Placebo | "
         "mesh: Hypertension, Pulmonary; Heart Failure, Diastolic | "
+        "summary: Prevalence of heart failure (HF) with left ventricular (LV) "
+        "diastolic dysfunction and preserved ejection fraction (EF) (HFpEF) is "
+        "increasing. Prognosis worsens with development of pulmonary vasoconstriction "
+        "and hypertension (PH) and right ventricular (RV) failure. The investigators "
+        "aimed at modulating pulmonary vascular tone and RV burden in HFpEF due to "
+        "high blood pressure (HBP), by using the phosphodiesterase-5 (PDE5) inhibitor "
+        "sildenafil. | "
         "Phosphodiesterase-5 (PDE5) Inhibition and Pulmonary Hypertension in "
         "Diastolic Heart Failure"
     )
@@ -114,7 +142,7 @@ async def test_search_trials_content_string_sildenafil_hfpef():
 
 async def test_get_completed_content_string_sildenafil_hfpef():
     """get_completed renders the un-capped relevance-classification view: per-row
-    NCT id, phase, interventions (drugs), title, and truncated brief_summary.
+    NCT id, phase, typed interventions, title, and brief_summary.
     MeSH is dropped from this view (it over-recalls subtypes); the agent judges
     relevance from the drugs/title/summary instead. No status column (all
     COMPLETED), no dates (delegated to the supervisor view).
@@ -150,34 +178,46 @@ async def test_get_completed_content_string_sildenafil_hfpef():
     ]
 
     expected_content = (
-        "Completed for sildenafil × diastolic heart failure: 4 total\n"
+        "Completed for sildenafil × diastolic heart failure: 4 registry query matches\n"
         "Judge relevance from the drugs (is sildenafil the studied drug?), title, and "
         "summary — is the disease THIS indication, not a distinct subtype?\n"
         "Phase distribution (shown): Phase 4=1, Phase 3=2, Phase 2/Phase 3=1\n"
         "Trials shown (all 4 — classify EVERY one):\n"
-        "  NCT00763867 | Phase 3          | drugs: Placebo; Sildenafil | "
+        "  NCT00763867 | Phase 3          | interventions: Drug: Placebo; Drug: Sildenafil | "
         "Evaluating the Effectiveness of Sildenafil at Improving Health Outcomes "
         "and Exercise Ability in People With Diastolic Heart Failure (The RELAX Study) | "
         "summary: Diastolic heart failure (DHF), which affects older individuals and "
         "women at a disproportionate rate, is a condition that can lead to shortness "
-        "of breath and flu…\n"
-        "  NCT01046838 | Phase 4          | drugs: Sildenafil; Placebo | "
+        "of breath and fluid build-up in the lungs. This study will evaluate the "
+        "effectiveness of the medication sildenafil at improving exercise ability "
+        "and health outcomes in people with DHF.\n"
+        "  NCT01046838 | Phase 4          | interventions: Drug: Sildenafil; Drug: Placebo | "
         "SIDAMI - Sildenafil and Diastolic Dysfunction After Acute Myocardial "
         "Infarction (AMI) | "
         "summary: In patients with Doppler echocardiographic signs of elevated LV "
         "filling pressures despite preserved LV systolic function after AMI treatment "
-        "with the phosphodie…\n"
-        "  NCT01726049 | Phase 3          | drugs: Sildenafil; Placebo | "
+        "with the phosphodiesterase inhibitor sildenafil 40 mg three times daily for "
+        "9 weeks will compared with placebo\n\n"
+        "1. Improve resting LV filling and cardiac hemodynamics.\n"
+        "2. Improve exercise capacity.\n"
+        "3. Improve filling pattern and cardiac hemodynamics during exercise.\n"
+        "  NCT01726049 | Phase 3          | interventions: Drug: Sildenafil; Drug: Placebo | "
         "Sildenafil in HFpEF (Heart Failure With Preserved Ejection Fraction) and PH | "
         "summary: Aim of the study is to investigate whether Sildenafil treatment "
         "results in a reduction of pulmonary artery pressure without decrease of "
-        "cardiac output (CO) and…\n"
-        "  NCT01156636 | Phase 2/Phase 3  | drugs: Sildenafil; Placebo | "
+        "cardiac output (CO) and in improvement of exercise capacity in patients with "
+        "heart failure with preserved ejection fraction (HFpEF) with pulmonary "
+        "hypertension ( PH).\n"
+        "  NCT01156636 | Phase 2/Phase 3  | interventions: Drug: Sildenafil; Drug: Placebo | "
         "Phosphodiesterase-5 (PDE5) Inhibition and Pulmonary Hypertension in "
         "Diastolic Heart Failure | "
         "summary: Prevalence of heart failure (HF) with left ventricular (LV) "
         "diastolic dysfunction and preserved ejection fraction (EF) (HFpEF) is "
-        "increasing. Prognosis worsens…"
+        "increasing. Prognosis worsens with development of pulmonary vasoconstriction "
+        "and hypertension (PH) and right ventricular (RV) failure. The investigators "
+        "aimed at modulating pulmonary vascular tone and RV burden in HFpEF due to "
+        "high blood pressure (HBP), by using the phosphodiesterase-5 (PDE5) inhibitor "
+        "sildenafil."
     )
     assert msg.content == expected_content
 
@@ -189,7 +229,7 @@ async def test_get_completed_content_string_sildenafil_hfpef():
 
 async def test_get_terminated_content_string_sildenafil_stroke():
     """get_terminated renders the un-capped relevance-classification view:
-    interventions (drugs), classified stop reason, title, and truncated
+    typed interventions, classified stop reason, title, and
     brief_summary, with an indented why_stopped excerpt under each row (MeSH
     dropped from this view). Sildenafil × stroke has 2 terminated trials
     (NCT00452582 'Failure to recruit...' → other; NCT02628847
@@ -224,19 +264,20 @@ async def test_get_terminated_content_string_sildenafil_stroke():
     assert _classify_stop_reason(nct_628847.why_stopped) == "enrollment"
 
     expected_content = (
-        "Terminated for sildenafil × stroke: 1 total "
+        "Terminated for sildenafil × stroke: 1 registry query matches "
         "(0 safety/efficacy in shown set); dropped 1 post-cutoff "
         "termination(s) (not yet terminated at cutoff)\n"
         "Judge relevance from the drugs (is sildenafil the studied drug?), title, and "
         "summary — is the disease THIS indication, not a distinct subtype?\n"
         "Phase distribution (shown): Phase 1=1\n"
         "Trials shown (all 1 — classify EVERY one):\n"
-        "  NCT02628847 | Phase 1          | drugs: sildenafil citrate; Placebo | "
+        "  NCT02628847 | Phase 1          | interventions: Drug: sildenafil citrate; Drug: Placebo | "
         "stop: enrollment | "
         "Sildenafil and Stroke Recovery | "
         "summary: This is a small, pilot randomized clinical trial of administering "
         "sildenafil citrate to individuals within 10 days of ischemic stroke who have "
-        "motor impairment…\n"
+        "motor impairment and who are undergoing inpatient rehabilitation compared "
+        "to placebo. The primary outcome is motor recovery at one and three months.\n"
         "    why_stopped: Recruitment was problematic"
     )
     assert msg.content == expected_content

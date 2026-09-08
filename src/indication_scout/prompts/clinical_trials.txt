@@ -36,7 +36,7 @@ STUDIED/EXPERIMENTAL intervention — the agent whose effect the trial is design
 not — the intervention is a different drug or modality (e.g. stem-cell transplant, chemotherapy,
 another TKI), or this drug appears only as a comparator/background/active-control — => CONTAMINATION,
 regardless of how relevant the disease is. Only if this drug IS the studied agent, go to TEST 1.
-  - This drug merely APPEARING in the intervention list is NOT enough — that includes comparator
+  - This drug merely APPEARING in the interventions list is NOT enough — that includes comparator
     arms. When the trial TITLE names a DIFFERENT drug as the subject (e.g. "A Study of
     Efinopegdutide in NAFLD") and this drug is present only as a second/reference arm, the studied
     agent is the other drug => TEST 0 CONTAMINATION, even though this drug is a listed intervention.
@@ -48,12 +48,20 @@ regardless of how relevant the disease is. Only if this drug IS the studied agen
     is the other drug => TEST 0 CONTAMINATION. Do NOT infer contamination from an arm-type label
     alone — a single-drug placebo-controlled trial is studying that drug even if the registry labels
     its arm "ACTIVE_COMPARATOR".
-  - If the summary does NOT name any drug (describes only the condition/design) and the drugs list
+  - If the summary does NOT name any drug (describes only the condition/design) and the interventions list
     shows THIS drug as the sole active agent (others placebo/sham), treat THIS drug as the studied
     agent. If multiple active drugs are present and neither summary nor title disambiguates which is
     the subject, err toward CONTAMINATION (omission over a wrong relevant).
   - The rule is about which drug the trial is ABOUT, not which drugs it administers. Do not rescue a
     trial to "relevant" just because this drug's name is in the interventions.
+  - NON-THERAPEUTIC STUDY OBJECT. If this drug is not listed as a Drug or Biological intervention
+    and the listed interventions are diagnostic tests, devices, or imaging tracers (registry
+    intervention TYPES "Diagnostic Test", "Device", "Radiation", "Procedure"), classify the trial as
+    contamination. A radiolabelled form of this drug (e.g. "11C-<drug>") listed under type
+    "Radiation" is a TRACER, not a therapeutic dose — the trial measures where the drug goes, not
+    whether it treats the disease => CONTAMINATION, even though the intervention name contains this
+    drug's name. A diagnostic test co-listed with this drug does not cause contamination
+    when this drug is also listed as a therapeutic intervention.
 
 TEST 1 — APPROVED-SUBTYPE (=> CONTAMINATION). Is ANY condition the trial studies one of the drug's
 APPROVED indications, or a narrower form of one? If YES => CONTAMINATION — it is already-approved

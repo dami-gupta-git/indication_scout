@@ -31,6 +31,10 @@ ignorance, is the failure mode.
 ### Clinical-trials relevance / summary
 - **trial_relevance_harness.py** — signal-ablation for per-trial relevant-vs-contaminated tagging
   (sildenafil × systemic HTN): mesh-only baseline vs title+interventions+summary. Reads `data/sild_htn_trials.json`.
+- **trial_relevance_nontherapeutic_harness.py** — TEST 0 gap: a trial whose STUDIED object is a
+  diagnostic test, device or PET tracer rather than the drug (metformin × NCT02440893 Corus CAD,
+  NCT03122769 11C-metformin PET). Real registry records rendered through the production row
+  formatter; four same-disease controls guard against over-rejection.
 - **trial_relevance_intent_harness.py** — TEST 2 therapeutic-intent clause: a trial that names the
   candidate only as the study POPULATION (not treatment target) is contamination.
 - **trial_relevance_approved_subtype_harness.py** — TEST 1 approved-subtype clause after the multi-condition

@@ -36,7 +36,7 @@ def test_format_trial_row_renders_interventions_and_brief_summary():
         columns=("nct_id", "phase", "interventions", "title", "brief_summary"),
     )
     assert "NCT00000001" in row
-    assert "drugs: Sildenafil; Placebo" in row
+    assert "interventions: Drug: Sildenafil; Drug: Placebo" in row
     assert "A study of sildenafil" in row
     assert "summary: Sildenafil for systemic hypertension in adults." in row
 
@@ -56,7 +56,19 @@ def test_format_interventions_caps_at_five():
         for i in range(8)
     ]
     out = _format_interventions(many)
-    assert out == "Drug0; Drug1; Drug2; Drug3; Drug4"
+    assert out == "Drug: Drug0; Drug: Drug1; Drug: Drug2; Drug: Drug3; Drug: Drug4"
+
+
+def test_format_interventions_preserves_diagnostic_type():
+    """Diagnostic interventions remain distinguishable from studied drugs."""
+    interventions = [
+        Intervention(
+            intervention_type="Diagnostic Test",
+            intervention_name="Corus CAD (ASGES)",
+        )
+    ]
+
+    assert _format_interventions(interventions) == "Diagnostic Test: Corus CAD (ASGES)"
 
 
 def test_truncate_brief_summary_none_and_empty():

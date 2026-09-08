@@ -300,8 +300,8 @@ async def test_get_completed_returns_completed_trials_result_artifact():
     # Classification view is un-capped — no "top 50" note; all shown trials listed.
     assert "top 50 shown" not in msg.content
     assert "classify EVERY one" in msg.content
-    # New rich columns the agent classifies from (drugs + summary), MeSH dropped.
-    assert "drugs: Semaglutide" in msg.content
+    # New rich columns the agent classifies from (typed interventions + summary), MeSH dropped.
+    assert "interventions: Drug: Semaglutide" in msg.content
     assert "summary:" in msg.content
     assert "mesh:" not in msg.content
 
@@ -487,7 +487,7 @@ async def test_get_terminated_classification_view_uncapped_with_rich_columns():
     # Un-capped classification view — no "top 50" note.
     assert "top 50 shown" not in msg.content
     assert "classify EVERY one" in msg.content
-    assert "drugs: Drug_x" in msg.content
+    assert "interventions: Drug: Drug_x" in msg.content
     assert "stop: efficacy" in msg.content
     assert "summary: A study of drug_x for the indication." in msg.content
     assert "mesh:" not in msg.content
