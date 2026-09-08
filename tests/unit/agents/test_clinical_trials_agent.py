@@ -451,6 +451,86 @@ async def test_run_clinical_trials_agent_approval_path():
     assert output.summary == ""
 
 
+async def test_run_clinical_trials_agent_rejected_second_call_does_not_overwrite_earlier_good_one():
+    """A rejected re-call (wrong indication — see _indication_mismatch) returns artifact=None,
+    not an empty placeholder. Output assembly must skip a None artifact rather than let it
+    overwrite an earlier genuine result for the same tool. Fixes the polycythemia-vera-style
+    "No FDA label found for drug" symptom, where a real label found earlier in the run was
+    silently discarded by a later rejected call. See PLAN_approval_check_overwrite_fix.md.
+    """
+    messages = [
+        HumanMessage(content="Analyze semaglutide in type 2 diabetes mellitus"),
+        _tool_msg("search_trials", SEARCH),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("check_fda_approval", APPROVAL),  # first call: good result
+        _tool_msg("check_fda_approval", None),  # second call: rejected, no artifact
+        _tool_msg(
+            "finalize_analysis",
+            "Semaglutide is FDA-approved for type 2 diabetes mellitus.",
+        ),
+    ]
+    agent = _make_agent(messages)
+
+    output = await run_clinical_trials_agent(
+        agent, "semaglutide", "type 2 diabetes mellitus"
+    )
+
+    assert output.approval == APPROVAL
+
+
+@pytest.mark.parametrize(
+    "second_call_approval",
+    [
+        # All resolved drug-name aliases 404'd against openFDA — names WERE checked, label wasn't.
+        ApprovalCheck(
+            is_approved=False,
+            label_found=False,
+            drug_names_checked=["semaglutide", "ozempic"],
+        ),
+        # Label found on the second call, but read as not-approved — flips a true "approved"
+        # verdict to false rather than dropping it to unknown.
+        ApprovalCheck(
+            is_approved=False,
+            label_found=True,
+            drug_names_checked=["semaglutide"],
+        ),
+        # Label found and approved, but for a DIFFERENT indication than the first call matched.
+        ApprovalCheck(
+            is_approved=True,
+            label_found=True,
+            matched_indication="obesity",
+            drug_names_checked=["semaglutide"],
+        ),
+    ],
+    ids=["no_label_found", "flips_to_not_approved", "different_indication"],
+)
+async def test_run_clinical_trials_agent_second_genuine_approval_call_wins(
+    second_call_approval,
+):
+    """When BOTH calls are genuine (non-None) results, the later one still wins — that reflects
+    the agent's most recent real finding, not a rejection. Only a rejected call (artifact=None,
+    see the test above) is excluded from overwriting.
+    """
+    messages = [
+        HumanMessage(content="Analyze semaglutide in type 2 diabetes mellitus"),
+        _tool_msg("search_trials", SEARCH),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("check_fda_approval", APPROVAL),  # first call: good result
+        _tool_msg("check_fda_approval", second_call_approval),  # second call: genuine disagreement
+        _tool_msg(
+            "finalize_analysis",
+            "Semaglutide is FDA-approved for type 2 diabetes mellitus.",
+        ),
+    ]
+    agent = _make_agent(messages)
+
+    output = await run_clinical_trials_agent(
+        agent, "semaglutide", "type 2 diabetes mellitus"
+    )
+
+    assert output.approval == second_call_approval
+
+
 async def test_run_clinical_trials_agent_approval_defaults_to_none_when_absent():
     """When check_fda_approval is never called, output.approval stays None."""
     messages = [

@@ -1671,7 +1671,9 @@ async def test_get_landscape_runs_normally_without_date_before():
 
 async def test_mismatched_indication_is_soft_rejected_without_network():
     """A pair tool called with an indication other than the assigned one returns a REJECTED
-    message and an empty artifact, and never touches the network or the MeSH resolver.
+    message and NO artifact (None, not an empty result) — so the output-assembly step can't
+    mistake this rejection for a genuine empty finding and overwrite an earlier real result with
+    it (see PLAN_approval_check_overwrite_fix.md). Never touches the network or the MeSH resolver.
     """
     tools = build_clinical_trials_tools(
         date_before=None, assigned_indication="nicotine dependence"
@@ -1695,9 +1697,7 @@ async def test_mismatched_indication_is_soft_rejected_without_network():
             )
         )
 
-    assert isinstance(msg.artifact, SearchTrialsResult)
-    assert msg.artifact.total_count == 0
-    assert msg.artifact.trials == []
+    assert msg.artifact is None
     assert "REJECTED" in msg.content
     assert "nicotine dependence" in msg.content
     assert "smoking cessation" in msg.content

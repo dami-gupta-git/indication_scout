@@ -130,7 +130,7 @@ def build_clinical_trials_tools(
     @tool(response_format="content_and_artifact")
     async def search_trials(
         drug: str, indication: str
-    ) -> tuple[str, SearchTrialsResult]:
+    ) -> tuple[str, SearchTrialsResult | None]:
         """All-status trials for a drug × indication pair.
 
         Returns total count for the pair, per-status counts (recruiting,
@@ -143,7 +143,7 @@ def build_clinical_trials_tools(
         """
         mismatch = _indication_mismatch(indication)
         if mismatch is not None:
-            return mismatch, SearchTrialsResult()
+            return mismatch, None
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
             logger.debug(
@@ -240,7 +240,7 @@ def build_clinical_trials_tools(
     @tool(response_format="content_and_artifact")
     async def get_completed(
         drug: str, indication: str
-    ) -> tuple[str, CompletedTrialsResult]:
+    ) -> tuple[str, CompletedTrialsResult | None]:
         """COMPLETED trials for a drug × indication pair.
 
         Returns total completed, Phase 3 count, and the top 50 completed
@@ -250,7 +250,7 @@ def build_clinical_trials_tools(
         """
         mismatch = _indication_mismatch(indication)
         if mismatch is not None:
-            return mismatch, CompletedTrialsResult()
+            return mismatch, None
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
             logger.debug(
@@ -322,7 +322,7 @@ def build_clinical_trials_tools(
     @tool(response_format="content_and_artifact")
     async def get_terminated(
         drug: str, indication: str
-    ) -> tuple[str, TerminatedTrialsResult]:
+    ) -> tuple[str, TerminatedTrialsResult | None]:
         """TERMINATED trials for a drug × indication pair.
 
         Returns total terminated and the top 50 terminated trials by enrollment.
@@ -337,7 +337,7 @@ def build_clinical_trials_tools(
         """
         mismatch = _indication_mismatch(indication)
         if mismatch is not None:
-            return mismatch, TerminatedTrialsResult()
+            return mismatch, None
         resolved = await resolve_mesh_id(indication)
         if resolved is None:
             logger.debug(
@@ -423,7 +423,7 @@ def build_clinical_trials_tools(
         return content, result
 
     @tool(response_format="content_and_artifact")
-    async def get_landscape(indication: str) -> tuple[str, IndicationLandscape]:
+    async def get_landscape(indication: str) -> tuple[str, IndicationLandscape | None]:
         """Get the competitive landscape for an indication.
 
         Returns top 10 competitors grouped by sponsor + drug, ranked by phase then enrollment,
@@ -431,7 +431,7 @@ def build_clinical_trials_tools(
         """
         mismatch = _indication_mismatch(indication)
         if mismatch is not None:
-            return mismatch, IndicationLandscape()
+            return mismatch, None
         # Holdout skip: the landscape aggregates per-trial overall_status and
         # phase across all competitors for the indication. Those aggregates
         # would leak post-cutoff trial outcomes (e.g. a competitor that
@@ -475,7 +475,7 @@ def build_clinical_trials_tools(
     @tool(response_format="content_and_artifact")
     async def check_fda_approval(
         drug: str, indication: str
-    ) -> tuple[str, ApprovalCheck]:
+    ) -> tuple[str, ApprovalCheck | None]:
         """Check whether the drug is FDA-approved for this indication.
 
         Resolves all known trade/generic names for the drug via ChEMBL, then checks current FDA
@@ -489,7 +489,7 @@ def build_clinical_trials_tools(
         """
         mismatch = _indication_mismatch(indication)
         if mismatch is not None:
-            return mismatch, ApprovalCheck()
+            return mismatch, None
         # Holdout path: when date_before is set, the live openFDA labels would
         # leak today's approvals (e.g. semaglutide's 2025 MASH approval into a
         # 2020 holdout). Use the hardcoded approvals table instead. Drugs not

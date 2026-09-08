@@ -211,7 +211,14 @@ async def run_clinical_trials_agent(
     }
 
     for msg in result["messages"]:
-        if isinstance(msg, ToolMessage) and msg.name in field_map:
+        # A rejected call (wrong indication) returns artifact=None, not a real result — skip it
+        # so it can't overwrite an earlier genuine result for the same tool. See
+        # PLAN_approval_check_overwrite_fix.md.
+        if (
+            isinstance(msg, ToolMessage)
+            and msg.name in field_map
+            and msg.artifact is not None
+        ):
             artifacts[field_map[msg.name]] = msg.artifact
 
     tools_called = [k for k, v in artifacts.items() if v is not None]
