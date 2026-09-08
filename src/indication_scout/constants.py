@@ -134,6 +134,10 @@ PUBMED_SUMMARY_URL: str = f"{NCBI_BASE_URL}/esummary.fcgi"
 # for retry/backoff traffic and for the MeSH resolver, which uses the same IP.
 PUBMED_MAX_CONCURRENT_REQUESTS: int = 8
 
+# PubMed ESearch exposes at most the first 10,000 matching PMIDs. A complete
+# direct-query search must fail above this limit instead of returning a partial set.
+PUBMED_ESEARCH_MAX_RESULTS: int = 10_000
+
 # Pre-call sleep on every uncached PubMed search.
 PUBMED_SEARCH_SLEEP_SECONDS: float = 1.0
 

@@ -191,7 +191,7 @@ async def test_extract_organ_term_returns_cached_result(tmp_path):
 
 
 async def test_expand_search_terms_returns_list(tmp_path, metformin_profile):
-    llm_response = '["metformin AND colorectal cancer", "biguanides AND colon"]'
+    llm_response = '["metformin AND <DISEASE>", "biguanides AND colon"]'
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -214,7 +214,10 @@ async def test_expand_search_terms_returns_list(tmp_path, metformin_profile):
             "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
-    assert result == ["metformin AND colorectal cancer", "biguanides AND colon"]
+    assert result == [
+        'metformin AND "colorectal cancer"',
+        "biguanides AND colon",
+    ]
 
 
 async def test_expand_search_terms_prompt_contains_drug_name(
@@ -381,7 +384,9 @@ async def test_expand_search_terms_prompt_contains_organ_term(
 
 async def test_expand_search_terms_deduplicates_output(tmp_path, metformin_profile):
     """Case-duplicate entries in LLM output are deduped; first occurrence casing is preserved."""
-    llm_response = '["Metformin AND colorectal cancer", "metformin AND colorectal cancer", "biguanides AND colon"]'
+    llm_response = (
+        '["metformin AND <DISEASE>", "METFORMIN AND <DISEASE>", "biguanides AND colon"]'
+    )
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -404,7 +409,10 @@ async def test_expand_search_terms_deduplicates_output(tmp_path, metformin_profi
             "CHEMBL1431", "colorectal cancer", metformin_profile
         )
 
-    assert result == ["Metformin AND colorectal cancer", "biguanides AND colon"]
+    assert result == [
+        'metformin AND "colorectal cancer"',
+        "biguanides AND colon",
+    ]
 
 
 async def test_expand_search_terms_returns_cached_result(tmp_path, metformin_profile):
@@ -418,6 +426,7 @@ async def test_expand_search_terms_returns_cached_result(tmp_path, metformin_pro
             "chembl_id": "CHEMBL1431",
             "disease_name": "colorectal cancer",
             "small_llm_model": get_settings().small_llm_model,
+            "logic_version": "deterministic_direct_v1",
         },
         cached_queries,
         tmp_path,
@@ -849,14 +858,15 @@ async def test_fetch_and_cache_returns_deduped_pmids(svc):
 
 
 async def test_fetch_and_cache_calls_search_per_query(svc):
-    """search() is called once for each query string."""
+    """The direct query is complete while supplemental searches stay capped."""
     mock_db = MagicMock()
     mock_db.execute.return_value.fetchall.return_value = []
 
     mock_client = AsyncMock()
     mock_client.__aenter__ = AsyncMock(return_value=mock_client)
     mock_client.__aexit__ = AsyncMock(return_value=None)
-    mock_client.search = AsyncMock(return_value=[])
+    mock_client.search = AsyncMock(side_effect=[["222", "333"], ["444"]])
+    mock_client.search_complete = AsyncMock(return_value=["111", "222"])
     mock_client.fetch_abstracts = AsyncMock(return_value=[])
 
     with (
@@ -865,14 +875,17 @@ async def test_fetch_and_cache_calls_search_per_query(svc):
         ),
         patch("indication_scout.services.retrieval.insert"),
     ):
-        await svc.fetch_and_cache(["q1", "q2", "q3"], mock_db)
+        result = await svc.fetch_and_cache(
+            ["q1", "q2", "q3"], mock_db, direct_query="q1"
+        )
 
-    assert mock_client.search.call_count == 3
+    assert result == ["111", "222", "333", "444"]
+    assert mock_client.search.call_count == 2
     from indication_scout.config import get_settings
 
     _expected_max = get_settings().pubmed_max_results
-    mock_client.search.assert_any_call(
-        "q1", max_results=_expected_max, date_before=None
+    mock_client.search_complete.assert_awaited_once_with(
+        "q1", page_size=_expected_max, date_before=None
     )
     mock_client.search.assert_any_call(
         "q2", max_results=_expected_max, date_before=None
@@ -1074,6 +1087,7 @@ async def test_semantic_search_respects_top_k_from_settings(svc, mock_pubtypes_e
     from indication_scout.config import get_settings
 
     top_k = get_settings().semantic_search_top_k
+    assert top_k == 15
     # Build more rows than top_k so the slice has work to do.
     db_rows = [
         (f"{i}", f"Title {i}", f"Abstract {i}", 0.9 - 0.01 * i)
@@ -1213,6 +1227,12 @@ async def test_synthesize_calls_llm_with_correct_prompt(svc):
             new=AsyncMock(return_value=["metformin", "glucophage"]),
         ),
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_directions",
+            new=AsyncMock(
+                return_value={"11111111": "supporting", "22222222": "supporting"}
+            ),
+        ),
     ):
         await svc.synthesize("CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS)
 
@@ -1241,6 +1261,12 @@ async def test_synthesize_prompt_uses_pref_name(svc):
             new=AsyncMock(return_value=["SENTINEL_PREF", "SENTINEL_SYN"]),
         ),
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_directions",
+            new=AsyncMock(
+                return_value={"11111111": "supporting", "22222222": "supporting"}
+            ),
+        ),
     ):
         await svc.synthesize("CHEMBL999", "colorectal cancer", _SAMPLE_ABSTRACTS)
 

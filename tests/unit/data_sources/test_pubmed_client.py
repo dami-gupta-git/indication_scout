@@ -1,5 +1,8 @@
 """Unit tests for PubMedClient."""
 
+from datetime import date
+from pathlib import Path
+from typing import Any
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -15,6 +18,82 @@ _GOOD_XML = (
     "</MedlineCitation></PubmedArticle></PubmedArticleSet>"
 )
 _MALFORMED_XML = "<?xml version='1.0'?>\n<PubmedArticleSet>\n<broken & token"
+
+# --- complete direct-query search regression ---
+
+
+async def test_search_complete_retrieves_supporting_pmid_beyond_first_page(
+    tmp_path: Path,
+) -> None:
+    """A directly matched trial after the first 200 results remains in the evidence pool."""
+    query = 'metformin AND "Breast Neoplasms"'
+    supporting_pmid = "40579605"
+    all_pmids = [str(10_000_000 + index) for index in range(672)]
+    all_pmids[529] = supporting_pmid
+    requested_offsets: list[int] = []
+
+    async def search_page(url: str, params: dict[str, Any]) -> dict[str, Any]:
+        assert url == client.SEARCH_URL
+        assert params["datetype"] == "pdat"
+        assert params["mindate"] == "1900/01/01"
+        assert params["maxdate"] == "2023/12/31"
+        offset = int(params.get("retstart", 0))
+        page_size = int(params["retmax"])
+        requested_offsets.append(offset)
+        return {
+            "esearchresult": {
+                "count": str(len(all_pmids)),
+                "retmax": str(page_size),
+                "retstart": str(offset),
+                "idlist": all_pmids[offset : offset + page_size],
+            }
+        }
+
+    client = PubMedClient(tmp_path)
+    with (
+        patch.object(client, "_rest_get_json_tolerant", new=search_page),
+        patch("indication_scout.data_sources.pubmed.asyncio.sleep", new=AsyncMock()),
+    ):
+        result = await client.search_complete(
+            query, page_size=200, date_before=date(2024, 1, 1)
+        )
+        cached_result = await client.search_complete(
+            query, page_size=200, date_before=date(2024, 1, 1)
+        )
+
+    assert result == all_pmids
+    assert cached_result == all_pmids
+    assert result[529] == supporting_pmid
+    assert requested_offsets == [0, 200, 400, 600]
+
+
+async def test_search_complete_rejects_more_than_pubmed_limit(tmp_path: Path) -> None:
+    """A complete direct query never returns PubMed's partial first 10,000 records."""
+    client = PubMedClient(tmp_path)
+    response = {
+        "esearchresult": {
+            "count": "10001",
+            "retmax": "200",
+            "retstart": "0",
+            "idlist": [str(10_000_000 + index) for index in range(200)],
+        }
+    }
+    with (
+        patch.object(
+            client, "_rest_get_json_tolerant", new=AsyncMock(return_value=response)
+        ),
+        patch("indication_scout.data_sources.pubmed.asyncio.sleep", new=AsyncMock()),
+    ):
+        with pytest.raises(DataSourceError) as exc_info:
+            await client.search_complete('drug AND "Disease"', page_size=200)
+
+    assert exc_info.value.source == "pubmed"
+    assert (
+        str(exc_info.value)
+        == "[pubmed] Direct query 'drug AND \"Disease\"' matched 10001 records; "
+        "PubMed ESearch exposes at most 10000"
+    )
+
 
 # --- _parse_pubmed_xml ---
 

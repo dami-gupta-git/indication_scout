@@ -254,6 +254,7 @@ async def test_fetch_and_cache_reads_queries_from_store_and_returns_pmids():
 
     svc.fetch_and_cache.assert_awaited_once()
     assert svc.fetch_and_cache.call_args.args[0] == SEARCH_TERMS
+    assert svc.fetch_and_cache.call_args.kwargs["direct_query"] == SEARCH_TERMS[0]
     assert msg.artifact == PMIDS
     assert "Fetched 3 PMIDs" in msg.content
 

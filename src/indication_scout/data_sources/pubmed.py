@@ -2,10 +2,11 @@
 PubMed API client.
 
 Key methods:
-  1. search          — Find PMIDs matching a query (cached)
-  2. fetch_abstracts — Fetch article content for given PMIDs
-  3. get_count       — Quick count of results without fetching
-  4. fetch_pubtypes  — Publication types for given PMIDs (esummary)
+  1. search          — Find a capped set of PMIDs matching a query
+  2. search_complete — Find every available PMID matching a direct query
+  3. fetch_abstracts — Fetch article content for given PMIDs
+  4. get_count       — Quick count of results without fetching
+  5. fetch_pubtypes  — Publication types for given PMIDs (esummary)
 """
 
 from __future__ import annotations
@@ -26,6 +27,7 @@ from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     PUBMED_EFETCH_PARSE_BACKOFF_SCHEDULE,
     PUBMED_EFETCH_PARSE_RETRIES,
+    PUBMED_ESEARCH_MAX_RESULTS,
     PUBMED_FETCH_URL,
     PUBMED_MAX_CONCURRENT_REQUESTS,
     PUBMED_PUBDATE_TTL,
@@ -142,6 +144,87 @@ class PubMedClient(BaseClient):
         # PubMedClient._filter_pmids_by_date directly (used by some tests).
 
         cache_set("pubmed_search", cache_params, pmids, self.cache_dir)
+        return pmids
+
+    async def search_complete(
+        self,
+        query: str,
+        page_size: int | None = None,
+        date_before: date | None = None,
+    ) -> list[str]:
+        """Return every PMID available for a direct drug-disease query."""
+        if page_size is None:
+            page_size = get_settings().pubmed_max_results
+        effective_maxdate = (date_before - timedelta(days=1)) if date_before else None
+        cache_params: dict[str, Any] = {
+            "query": query,
+            "page_size": page_size,
+            "date_before": effective_maxdate,
+        }
+        cached = cache_get("pubmed_search_complete", cache_params, self.cache_dir)
+        if cached is not None:
+            return cached
+
+        base_params: dict[str, Any] = {
+            "db": "pubmed",
+            "term": query,
+            "retmax": page_size,
+            "retmode": "json",
+            "sort": "relevance",
+        }
+        if effective_maxdate:
+            base_params["datetype"] = "pdat"
+            base_params["mindate"] = "1900/01/01"
+            base_params["maxdate"] = effective_maxdate.strftime("%Y/%m/%d")
+
+        pmids: list[str] = []
+        total_count: int | None = None
+        for offset in range(0, PUBMED_ESEARCH_MAX_RESULTS, page_size):
+            params = {**base_params, "retstart": offset}
+            async with self._get_semaphore():
+                await asyncio.sleep(PUBMED_SEARCH_SLEEP_SECONDS)
+                data = await self._rest_get_json_tolerant(
+                    self.SEARCH_URL, self._inject_api_key(params)
+                )
+
+            result = data.get("esearchresult") if isinstance(data, dict) else None
+            if not isinstance(result, dict):
+                raise DataSourceError(
+                    "pubmed", f"ESearch returned no result for direct query {query!r}"
+                )
+            if total_count is None:
+                try:
+                    total_count = int(result["count"])
+                except (KeyError, TypeError, ValueError) as exc:
+                    raise DataSourceError(
+                        "pubmed",
+                        f"ESearch returned an invalid count for direct query {query!r}",
+                    ) from exc
+                if total_count > PUBMED_ESEARCH_MAX_RESULTS:
+                    raise DataSourceError(
+                        "pubmed",
+                        f"Direct query {query!r} matched {total_count} records; PubMed "
+                        f"ESearch exposes at most {PUBMED_ESEARCH_MAX_RESULTS}",
+                    )
+
+            page_pmids = result.get("idlist")
+            if not isinstance(page_pmids, list) or not all(
+                isinstance(pmid, str) for pmid in page_pmids
+            ):
+                raise DataSourceError(
+                    "pubmed", f"ESearch returned an invalid PMID page for {query!r}"
+                )
+            pmids.extend(page_pmids)
+            if len(pmids) >= total_count:
+                break
+
+        if total_count is None or len(pmids) != total_count:
+            raise DataSourceError(
+                "pubmed",
+                f"Direct query {query!r} returned {len(pmids)} of {total_count} PMIDs",
+            )
+
+        cache_set("pubmed_search_complete", cache_params, pmids, self.cache_dir)
         return pmids
 
     async def get_count(self, query: str, date_before: date | None = None) -> int:

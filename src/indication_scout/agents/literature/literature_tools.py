@@ -91,6 +91,7 @@ def build_literature_tools(
             store["drug_profile"] = profile
         queries = await svc.expand_search_terms(chembl_id, disease_name, profile)
         store["queries"] = queries
+        store["direct_query"] = queries[0]
         # logger.warning(
         #     "[TIMING] expand_search_terms %s: %.1fs",
         #     disease_name,
@@ -108,7 +109,12 @@ def build_literature_tools(
         # logger.warning(
         #     "[INVEST] fetch_and_cache %s: %d queries -> PubMed", drug_name, len(queries)
         # )
-        pmids = await svc.fetch_and_cache(queries, db, date_before=date_before)
+        pmids = await svc.fetch_and_cache(
+            queries,
+            db,
+            date_before=date_before,
+            direct_query=store["direct_query"],
+        )
         store["pmids"] = pmids
         # logger.warning(
         #     "[TIMING] fetch_and_cache %s: %.1fs", drug_name, time.perf_counter() - _t0

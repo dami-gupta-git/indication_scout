@@ -586,6 +586,7 @@ class RetrievalService:
         queries: list[str],
         db: Session,
         date_before: date | None = None,
+        direct_query: str | None = None,
     ) -> list[str]:
         """Hit PubMed for all queries concurrently, fetch new abstracts, embed in one batch, cache in pgvector.
 
@@ -603,6 +604,8 @@ class RetrievalService:
             db: Active SQLAlchemy session.
             date_before: Optional temporal holdout cutoff; only articles published
                 before this date are returned by PubMed search.
+            direct_query: Deterministic drug-disease query to retrieve completely.
+                Other queries retain the configured relevance-result cap.
 
         Returns:
             Deduplicated list of all PMIDs returned by PubMed search across all queries.
@@ -616,10 +619,18 @@ class RetrievalService:
             # 1. Search all queries concurrently
             search_results = await asyncio.gather(
                 *[
-                    client.search(
-                        query,
-                        max_results=_settings.pubmed_max_results,
-                        date_before=date_before,
+                    (
+                        client.search_complete(
+                            query,
+                            page_size=_settings.pubmed_max_results,
+                            date_before=date_before,
+                        )
+                        if query == direct_query
+                        else client.search(
+                            query,
+                            max_results=_settings.pubmed_max_results,
+                            date_before=date_before,
+                        )
                     )
                     for query in queries
                 ]
@@ -1688,6 +1699,7 @@ class RetrievalService:
             "chembl_id": chembl_id,
             "disease_name": disease_name,
             "small_llm_model": _settings.small_llm_model,
+            "logic_version": "deterministic_direct_v1",
         }
         cached = cache_get(
             "expand_search_terms",
@@ -1747,15 +1759,18 @@ class RetrievalService:
             )
             raise
 
+        # Build the direct query deterministically. Supplemental queries remain LLM-generated.
+        quoted_disease = f'"{disease_term}"'
+        direct_query = f"{pref_name} AND {quoted_disease}"
+
         # Substitute the <DISEASE> placeholder with the quoted MeSH preferred term.
         # The prompt instructs the LLM to emit `<DISEASE>` instead of writing the
         # disease name directly, so the JSON array never contains embedded quotes.
-        quoted_disease = f'"{disease_term}"'
         substituted = [q.replace("<DISEASE>", quoted_disease) for q in raw]
 
-        # Case-normalised dedup: lowercase+strip as key, preserve original casing
+        # Case-normalised dedup: direct query stays first and model duplicates are removed.
         seen: dict[str, str] = {}
-        for term in substituted:
+        for term in [direct_query, *substituted]:
             key = term.lower().strip()
             if key not in seen:
                 seen[key] = term

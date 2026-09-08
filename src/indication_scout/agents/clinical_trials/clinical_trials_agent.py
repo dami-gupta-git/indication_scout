@@ -1,8 +1,7 @@
 """Clinical Trials agent
 
-Uses a gated ReAct loop (see agents/_react_loop.py) that ends as soon as finalize_analysis
-succeeds, skipping the discarded trailing model turn. After the run, walks the message
-history to pull typed artifacts off the ToolMessages and assembles them into a ClinicalTrialsOutput.
+Gated ReAct loop (agents/_react_loop.py) ending as soon as finalize_analysis succeeds. After
+the run, pulls typed artifacts off the ToolMessages into a ClinicalTrialsOutput.
 """
 
 import logging
@@ -43,8 +42,8 @@ SYSTEM_PROMPT = (_PROMPTS_DIR / "clinical_trials.txt").read_text()
 def _finalize_done(messages: list) -> bool:
     """End the loop once finalize_analysis has SUCCEEDED this turn.
 
-    A rejected finalize (missing/unknown verdicts) returns an empty-string artifact and
-    must loop back to the model to retry, so end only on a truthy artifact.
+    A rejected finalize returns an empty artifact and must loop back to retry, so end only
+    on a truthy one.
     """
     for m in _trailing_tool_messages(messages):
         if m.name == "finalize_analysis" and m.artifact:
@@ -53,11 +52,10 @@ def _finalize_done(messages: list) -> bool:
 
 
 def build_clinical_trials_agent(llm, date_before=None, assigned_indication=None):
-    """Return a compiled ReAct agent. No graph wiring required.
+    """Return a compiled ReAct agent.
 
-    `assigned_indication` pins the tools to one indication: a call for any other
-    indication is soft-rejected so a drifting agent self-corrects instead of crashing
-    at finalize (see build_clinical_trials_tools).
+    `assigned_indication` pins the tools to one indication; a call for any other is
+    soft-rejected so a drifting agent self-corrects instead of crashing at finalize.
     """
     tools = build_clinical_trials_tools(
         date_before=date_before,
@@ -110,15 +108,11 @@ async def run_clinical_trials_agent(
 ) -> ClinicalTrialsOutput:
     """Invoke the agent and assemble a ClinicalTrialsOutput from the run.
 
-    `first_approval` is the year the drug was first approved anywhere (ChEMBL). It is fed
-    to the agent so its closure judgment can tell "old/generic drug, no new NDA expected"
-    (no-approval is not failure) from a genuine negative. When None, the literal "unknown"
-    is passed — never a default year (CLAUDE.md no-fallback).
+    `first_approval` (ChEMBL) lets the closure judgment tell "old generic, no new NDA expected"
+    from a genuine negative. None renders "unknown" — never a default year.
 
-    `approved_indications` is the drug's FDA-approved indications (from the supervisor store).
-    Rendered into the task so the relevance gate's TEST 1 can mark a trial whose condition is an
-    approved sub-indication of a broad candidate as CONTAMINATION. Empty/None renders "(none)",
-    which disables TEST 1 (no behavior change for non-contaminated candidates).
+    `approved_indications` feeds the relevance gate's approved-subtype test. Empty renders
+    "(none)", which disables that test.
     """
     approval_line = (
         f"first_approval (year first approved anywhere): {first_approval}"
@@ -137,20 +131,15 @@ async def run_clinical_trials_agent(
     result = await agent.ainvoke({"messages": [HumanMessage(content=task)]})
     _agent_elapsed = time.perf_counter() - _agent_t0
 
-    # Per-turn LLM accounting (same as literature/mechanism agents). Each AIMessage
-    # is one round-trip; usage_metadata gives context size and output tokens.
-    # Logged at WARNING to isolate clinical_trials loop overhead from its (partly
-    # uncached) API calls. Read-only on result["messages"].
+    # Per-turn LLM accounting. Each AIMessage is one round-trip. Read-only.
     ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
     total_out = 0
     for i, msg in enumerate(ai_turns):
         usage = msg.usage_metadata or {}
         in_tok = usage.get("input_tokens", 0)
         out_tok = usage.get("output_tokens", 0)
-        # cache_read/cache_write surface whether the prompt-caching breakpoints are
-        # hitting; cache_read==0 across turns 2+ means a silent invalidator (e.g. prefix
-        # below the model's min cacheable size) is at work. langchain-anthropic reports
-        # freshly-written tokens under the TTL-specific ephemeral keys, not cache_creation.
+        # cache_read==0 across turns 2+ means a silent cache invalidator. langchain-anthropic
+        # reports fresh writes under the ephemeral keys, not cache_creation.
         details = usage.get("input_token_details", {})
         cache_read = details.get("cache_read", 0)
         cache_write = (
@@ -159,10 +148,8 @@ async def run_clinical_trials_agent(
         ) or details.get("cache_creation", 0)
         total_out += out_tok
 
-        # Include args so repeated search_trials/get_* calls across turns show WHAT each
-        # retry is querying (e.g. a reworded disease term), not just that a tool re-ran.
-        # Args are rendered compactly and truncated — finalize_analysis carries a per-NCT
-        # verdict list (hundreds of entries) that would otherwise flood the log on every turn.
+        # Args show what each retry queries, not just that a tool re-ran. Truncated —
+        # finalize_analysis carries hundreds of per-NCT verdicts.
         def _fmt_args(args: dict) -> str:
             rendered = ", ".join(f"{k}={v!r}" for k, v in args.items())
             return rendered if len(rendered) <= 200 else rendered[:200] + "…"
@@ -171,19 +158,7 @@ async def run_clinical_trials_agent(
             ", ".join(f"{tc['name']}({_fmt_args(tc['args'])})" for tc in msg.tool_calls)
             or "(final)"
         )
-    #     logger.info(
-    #         "[LLMTURN] clinical_trials %s turn %d/%d: in=%d out=%d cache_read=%d "
-    #         "cache_write=%d -> %s",
-    #         disease_name,
-    #         i + 1,
-    #         len(ai_turns),
-    #         in_tok,
-    #         out_tok,
-    #         cache_read,
-    #         cache_write,
-    #         called,
-    #     )
-    # logger.info(
+    # logger.warn(
     #     "[LLMTURN] clinical_trials %s: %d turns, %d total output tokens, "
     #     "agent loop %.1fs",
     #     disease_name,
@@ -211,9 +186,8 @@ async def run_clinical_trials_agent(
     }
 
     for msg in result["messages"]:
-        # A rejected call (wrong indication) returns artifact=None, not a real result — skip it
-        # so it can't overwrite an earlier genuine result for the same tool. See
-        # PLAN_approval_check_overwrite_fix.md.
+        # A rejected call (wrong indication) returns artifact=None — skip it so it can't
+        # overwrite an earlier genuine result for the same tool.
         if (
             isinstance(msg, ToolMessage)
             and msg.name in field_map
@@ -237,8 +211,7 @@ async def run_clinical_trials_agent(
             disease_name,
         )
 
-    # finalize artifact is a FinalizeClinicalTrialsArtifact on a normal end, or "" / None if
-    # finalize was never reached (or only rejected). Unpack defensively.
+    # "" / None when finalize was never reached or only rejected. Unpack defensively.
     finalize = artifacts.get("finalize")
     finalized = isinstance(finalize, FinalizeClinicalTrialsArtifact)
     if not finalized:
@@ -261,10 +234,9 @@ async def run_clinical_trials_agent(
         relevance_reasoning=finalize.relevance_reasoning,
     )
 
-    # Signals are computed from RELEVANT trials only, so supervisor and human report read
-    # identical numbers. Only when the agent actually classified relevance (finalize ran) —
-    # otherwise leave signals None so the supervisor knows no relevance judgment was made,
-    # rather than silently filtering every trial out with an empty relevant set.
+    # Signals come from RELEVANT trials only, so supervisor and report read identical numbers.
+    # Left None when finalize never ran, so the supervisor knows no relevance judgment was made
+    # rather than seeing everything filtered out by an empty relevant set.
     if finalized:
         relevant_ids = set(output.relevant_nct_ids)
         contaminated_ids = set(output.contaminated_nct_ids)
@@ -288,18 +260,13 @@ async def run_clinical_trials_agent(
             relevant_nct_ids=relevant_ids,
             contaminated_nct_ids=contaminated_ids,
         )
-        # dev_stage is an LLM judgment (not the deterministic phase-rank, which mis-encoded
-        # the Phase-4 trap). Only nct/phase/status of the relevant trials is sent. Cached per
-        # trial set. Keeps the deterministic dev_stage already on signals as the fallback when
-        # the relevant set is empty.
+        # dev_stage is an LLM judgment, not the deterministic phase-rank (which mis-encoded the
+        # Phase-4 trap). Only nct/phase/status is sent; cached per trial set. The deterministic
+        # dev_stage stays as the fallback when the relevant set is empty.
         #
-        # Trial set for the judgment: completed + terminated + search, all filtered by
-        # relevant_nct_ids (the agent's relevance split). search-pool trials — where
-        # active/recruiting Phase 3s live — are now classified by the relevance gate too (they
-        # are added to shown_by_indication in search_trials), so the SAME positive
-        # `in relevant_set` filter applies to every scope. This closes the gap where a
-        # contaminated active trial (e.g. a PAH trial under a systemic-hypertension query) drove
-        # the "Phase 3 active" dev-stage signal because search trials bypassed the gate.
+        # completed + terminated + search, all filtered by relevant_nct_ids. Search trials —
+        # where active Phase 3s live — go through the relevance gate too, so the same filter
+        # applies to every scope.
         relevant_set = set(output.relevant_nct_ids)
         seen: set[str] = set()
         relevant_trials = []
@@ -321,9 +288,8 @@ async def run_clinical_trials_agent(
             output.signals.dev_stage = judgment.tier
             output.signals.active_programs = judgment.active_programs
 
-            # LOAD-BEARING ORDER: judge_dev_stage MUST run before judge_ct_summary. The whole
-            # fix is that the trial-section prose is FED the resolved stage so it cannot
-            # contradict it (the T1DM "no completed Phase 3" bug). Do NOT reorder these.
+            # LOAD-BEARING ORDER: judge_dev_stage MUST run before judge_ct_summary — the prose
+            # is fed the resolved stage so it cannot contradict it. Do NOT reorder.
             stage_phrase = dev_stage_phrase(output.signals)
             if stage_phrase:
                 ct_summary = await judge_ct_summary(
