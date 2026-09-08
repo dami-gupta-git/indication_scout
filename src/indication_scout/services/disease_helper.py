@@ -31,7 +31,12 @@ from indication_scout.data_sources.base_client import (
     log_data_source_failure,
 )
 from indication_scout.data_sources.pubmed import PubMedClient
-from indication_scout.services.llm import query_small_llm, strip_markdown_fences
+from indication_scout.services.llm import (
+    parse_last_json_object,
+    query_llm,
+    query_small_llm,
+    strip_markdown_fences,
+)
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
@@ -200,10 +205,9 @@ async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
 async def merge_duplicate_diseases(
     diseases: list[str],
     drug_indications: list[str],
-    max_tokens: int | None = None,
 ) -> MergeResult:
     """
-    Ask the small LLM to collapse synonymous/duplicate disease terms.
+    Ask the main LLM to collapse synonymous/duplicate disease terms.
 
     Returns a MergeResult with a `merge` map (canonical → list of aliases) and a
     `remove` list (terms to drop, e.g. already-approved indications). Cached by the
@@ -220,7 +224,7 @@ async def merge_duplicate_diseases(
     cache_params = {
         "diseases": sorted(diseases),
         "drug_indications": sorted(drug_indications),
-        "small_llm_model": _settings.small_llm_model,
+        "llm_model": _settings.llm_model,
     }
     cached = cache_get("disease_merge", cache_params, DEFAULT_CACHE_DIR)
     if cached is not None:
@@ -233,20 +237,20 @@ async def merge_duplicate_diseases(
         .read_text()
         .format(disease_names=diseases, drug_indications=drug_indications)
     )
-    response = await query_small_llm(prompt, max_tokens=max_tokens)
-    cleaned = strip_markdown_fences(response)
-    try:
-        parsed = json.loads(cleaned)
-    except json.JSONDecodeError as e:
+    response = await query_llm(prompt)
+    # The model routinely prefaces the JSON with its reasoning, so take the last complete JSON object
+    # rather than parsing the whole reply. A reply carrying no JSON object at all is still an error.
+    parsed = parse_last_json_object(response)
+    if parsed is None:
         logger.error(
-            "merge_duplicate_diseases: failed to parse LLM response: %s\nResponse was: %s",
-            e,
+            "merge_duplicate_diseases: no JSON object in LLM response\nResponse was: %s",
             response,
         )
         raise DataSourceError(
             "llm",
-            f"merge_duplicate_diseases: unparseable response for {len(diseases)} diseases: {e}",
-        ) from e
+            f"merge_duplicate_diseases: unparseable response for {len(diseases)} diseases: "
+            "no JSON object found",
+        )
 
     result = _validated_merge_result(parsed, len(diseases), source="LLM response")
 

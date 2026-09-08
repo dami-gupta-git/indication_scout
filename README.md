@@ -153,7 +153,7 @@ Required environment variables:
 | `PUBMED_API_KEY` | No | PubMed API key (separate from NCBI key in config) |
 | `OPENFDA_API_KEY` | No | OpenFDA API key |
 | `LLM_MODEL` | No | Primary LLM model (default: `claude-sonnet-4-6`) |
-| `SMALL_LLM_MODEL` | No | Lightweight LLM model (default: `claude-haiku-4-5-20251001`) |
+| `SMALL_LLM_MODEL` | No | Lightweight LLM model (default: `claude-sonnet-4-6`) |
 | `BIG_LLM_MODEL` | No | Heavyweight LLM model (default: `claude-opus-4-6`) |
 | `EMBEDDING_MODEL` | No | Embedding model (default: `FremyCompany/BioLORD-2023`) |
 | `SEED_REPORTS_ENABLED` | No | Serve a committed seed report instead of running the agents (default: `true`); set `false` to force every request through the live pipeline |

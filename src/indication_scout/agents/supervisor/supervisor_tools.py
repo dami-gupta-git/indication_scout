@@ -17,7 +17,10 @@ from typing import Any, Literal
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session, sessionmaker
 
-from indication_scout.agents.supervisor.candidate_dedup import collapse_synonym_entries
+from indication_scout.agents.supervisor.candidate_dedup import (
+    collapse_synonym_entries,
+    merge_mechanism_entries,
+)
 from indication_scout.config import get_settings
 from indication_scout.constants import SUPERVISOR_MIN_PMIDS_NO_TRIALS
 from indication_scout.data_sources.open_targets import OpenTargetsClient
@@ -561,7 +564,9 @@ def build_supervisor_tools(
           3. OT name-resolve — resolve unresolved mechanism candidate names to EFO IDs; retry step 1 against allowed_efo_ids.
           4. Synonym collapse — merge entries that are the same disease under two names, per the hardcoded
              DISEASE_SYNONYM_CANONICAL table.
-          5. Hierarchical LLM pass — over the full merged list, identify super/subtype overlaps the exact-match passes can't
+          5. LLM merge — the merge the competitor path runs, re-run over the full list; only groups containing a
+             mechanism-route name are applied.
+          6. Hierarchical LLM pass — over the full merged list, identify super/subtype overlaps the exact-match passes can't
              catch (UC ⊂ IBD, T2DM ⊂ DM); pick one survivor each.
 
         Sets find_candidates_done before returning so downstream readers (analyze_literature, analyze_clinical_trials,
@@ -625,7 +630,22 @@ def build_supervisor_tools(
                 [f"{dropped} → {survivor}" for dropped, survivor in collapsed],
             )
 
-        # Step 5: hierarchical LLM pass — temporarily disabled while we revisit the case that motivated it. The dedup was
+        # Step 5: LLM merge over the full list — the competitor path already merged its own names, but mechanism
+        # names arrive afterwards, so the same disease under a second name survives. Only groups containing a
+        # mechanism entry are applied; the hardcoded table above has already decided the pairs it covers.
+        merged_by_llm = await merge_mechanism_entries(
+            drug_name,
+            allowed_diseases,
+            allowed_efo_ids,
+            list(_ensure_drug_entry(drug_name)["approved_indications"]),
+        )
+        if merged_by_llm:
+            _log_disease_banner(
+                f"LLM-MERGED mechanism candidates for {drug_name}",
+                [f"{dropped} → {survivor}" for dropped, survivor in merged_by_llm],
+            )
+
+        # Step 6: hierarchical LLM pass — temporarily disabled while we revisit the case that motivated it. The dedup was
         # collapsing actionable subtype candidates (e.g. PCOS, gestational diabetes) into broad parents (metabolic disease)
         # for broadly-acting drugs like metformin. Keep all candidates from the exact-match dedup until we decide on a
         # hardcoded equivalence-group approach.

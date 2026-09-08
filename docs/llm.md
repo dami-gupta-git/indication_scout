@@ -9,7 +9,7 @@ All LLM calls go through two wrapper functions in `src/indication_scout/services
 | Line | Function | Model |
 |------|----------|-------|
 | 113 | `query_llm()` | `claude-sonnet-4-6` (main) |
-| 128 | `query_small_llm()` | `claude-haiku-4-5-20251001` (small) |
+| 128 | `query_small_llm()` | `claude-sonnet-4-6` (small) |
 
 Both use `AsyncAnthropic`, `temperature=0`. Token limits come from settings:
 `llm_max_tokens` for the main model and `small_llm_max_tokens` for the small
@@ -49,7 +49,7 @@ This module also exposes JSON-parsing helpers used by callers:
 ## Summary
 
 - **9 total LLM call sites** across 3 caller files
-- 6 of 9 use the small model (Haiku); 3 use the main model (Sonnet) — `synthesize()`, `list_approved_indications_from_labels()`, and `get_fda_approved_disease_mapping()`
+- 6 of 9 use the small model; 3 use the main model — `synthesize()`, `list_approved_indications_from_labels()`, and `get_fda_approved_disease_mapping()`. Both models are currently `claude-sonnet-4-6`
 - All calls are async and use the centralized wrappers in `llm.py`
 
 ## Configuration
@@ -58,7 +58,7 @@ Models are configured in `src/indication_scout/config.py` (lines 40–41):
 
 ```python
 llm_model: str = "claude-sonnet-4-6"
-small_llm_model: str = "claude-haiku-4-5-20251001"
+small_llm_model: str = "claude-sonnet-4-6"
 ```
 
 Token limits are required (no defaults) and loaded from `.env.constants`:

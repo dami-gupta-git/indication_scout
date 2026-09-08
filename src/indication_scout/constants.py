@@ -467,6 +467,13 @@ EUROPE_PMC_EXTRACTION_MAX_TOKENS: int = 150
 # "stress urinary incontinence in women") stay well inside this.
 EUROPE_PMC_MAX_CONDITION_WORDS: int = 12
 
+# A confirmed-harm verdict is only trusted when its evidence quote appears verbatim in the source
+# title or abstract, so the quote must be able to hold a whole sentence. Results sections state the
+# harm in one long sentence that also carries comparator arms; a tighter cap forces the model to
+# elide the middle, which breaks the verbatim match and silently downgrades the harm to
+# "undetermined". Observed worst case ran to 73 words.
+SAFETY_QUOTE_MAX_WORDS: int = 100
+
 
 # Curated per-drug list of candidate disease phrasings to short-circuit as
 # FDA-approved (return True without calling the LLM). Acts strictly as an

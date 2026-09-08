@@ -232,6 +232,10 @@ async def test_llm_normalize_disease_strips_llm_response(
         '{"merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]}, "remove": []}',
         '```json\n{"merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]}, "remove": []}\n```',
         '```\n{"merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]}, "remove": []}\n```',
+        # The model routinely explains itself before answering; the JSON block is still the answer.
+        "I will apply the prohibition rules first.\n\n**MERGE:**\n- narcolepsy variants are one"
+        ' condition\n\n```json\n{"merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]},'
+        ' "remove": []}\n```',
     ],
 )
 async def test_merge_duplicate_diseases_parses_response_formats(
@@ -242,12 +246,13 @@ async def test_merge_duplicate_diseases_parses_response_formats(
         "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
     )
     with patch(
-        "indication_scout.services.disease_helper.query_small_llm",
+        "indication_scout.services.disease_helper.query_llm",
         new=AsyncMock(return_value=llm_response),
-    ):
+    ) as mock_llm:
         result = await merge_duplicate_diseases(
             ["narcolepsy", "narcolepsy-cataplexy syndrome"], []
         )
+        mock_llm.assert_awaited_once()
         assert result == {
             "merge": {"narcolepsy": ["narcolepsy-cataplexy syndrome"]},
             "remove": [],
@@ -262,7 +267,7 @@ async def test_merge_duplicate_diseases_raises_on_invalid_json():
     novel candidate.
     """
     with patch(
-        "indication_scout.services.disease_helper.query_small_llm",
+        "indication_scout.services.disease_helper.query_llm",
         new=AsyncMock(return_value="not valid json at all"),
     ):
         with pytest.raises(DataSourceError, match="unparseable response"):
@@ -661,7 +666,7 @@ async def test_merge_duplicate_diseases_raises_on_wrong_shape(
         "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
     )
     with patch(
-        "indication_scout.services.disease_helper.query_small_llm",
+        "indication_scout.services.disease_helper.query_llm",
         new=AsyncMock(return_value=bad_response),
     ):
         with pytest.raises(DataSourceError):

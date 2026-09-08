@@ -40,10 +40,26 @@ from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 logger = logging.getLogger(__name__)
 
 
-def _disease_scoped_query(drug: str, disease: str) -> str:
+def _disease_scoped_query(
+    drug: str, disease: str, disease_aliases: list[str] | None = None
+) -> str:
     """Drug leg AND adverse-event vocabulary leg AND disease leg — the indication-specific query."""
     drug_leg = AE_DISEASE_DRUG_LEG.format(drug=drug)
-    disease_leg = AE_DISEASE_DISEASE_LEG.format(disease=disease.strip().lower())
+    disease_terms = list(
+        dict.fromkeys(
+            term.strip().lower()
+            for term in [disease, *(disease_aliases or [])]
+            if term.strip()
+        )
+    )
+    disease_legs = [
+        AE_DISEASE_DISEASE_LEG.format(disease=term) for term in disease_terms
+    ]
+    disease_leg = (
+        disease_legs[0]
+        if len(disease_legs) == 1
+        else f"({' OR '.join(disease_legs)})"
+    )
     return f"({drug_leg} AND {AE_DISEASE_AE_LEG}) AND {disease_leg}"
 
 
@@ -53,6 +69,7 @@ async def search_adverse_events(
     date_before: date | None = None,
     top_cited: int = AE_TOP_CITED,
     disease: str | None = None,
+    disease_aliases: list[str] | None = None,
 ) -> list[PubmedAbstract]:
     """Return top adverse-event abstracts, ranked by Europe PMC citation count.
 
@@ -63,6 +80,7 @@ async def search_adverse_events(
         top_cited: how many top-cited abstracts to return.
         disease: when set, runs the DISEASE-SCOPED query (indication-specific safety); when None,
             the DRUG-LEVEL [Majr] query (drug-wide safety).
+        disease_aliases: Equivalent disease names to OR into the disease-scoped query.
 
     Returns:
         Up to `top_cited` PubmedAbstract objects, most-cited first. Empty when there is no matching
@@ -73,7 +91,7 @@ async def search_adverse_events(
     async with PubMedClient(cache_dir=cache_dir) as pubmed:
         if disease:
             pmids = await pubmed.search(
-                _disease_scoped_query(drug, disease),
+                _disease_scoped_query(drug, disease, disease_aliases),
                 max_results=AE_SEARCH_MAX_RESULTS,
                 date_before=date_before,
             )

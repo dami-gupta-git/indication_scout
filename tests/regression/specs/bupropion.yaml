@@ -23,12 +23,12 @@ aliases:
   attention deficit-hyperactivity disorder:
     - attention deficit hyperactivity disorder
 
-# The three ranked repurposing signals, in the order the report presents them.
+# The ranked repurposing signals, in the order the report presents them. Mood disorder is NOT
+# pinned here — see forbidden_in_ranked below.
 ranked_order:
   bucket: ranking
   indications:
     - attention deficit-hyperactivity disorder
-    - mood disorder
     - cocaine use disorder
 
 candidate_set_contains:
@@ -47,11 +47,6 @@ required_ncts_surfaced:
     section: relevant
     ncts:
       - NCT00048360   # adult ADHD, Phase 3, completed (stable across runs)
-  - bucket: literature_coverage
-    indication: mood disorder
-    section: relevant
-    ncts:
-      - NCT00012558   # STEP-BD, bipolar disorder, completed
 
 # Cited PMIDs (evidence_summary supporting + contradicting).
 required_pmids_cited:
@@ -61,19 +56,12 @@ required_pmids_cited:
     pmids:
       - "11156812"   # adult ADHD RCT, bupropion SR
       - "15820237"   # bupropion XL, 162 adults
-  - bucket: literature_coverage
-    indication: mood disorder
-    mode: cited
-    pmids:
-      - "2856918"    # open trial, bipolar/schizoaffective maintenance
 
 # Safety — bupropion carries black-box warnings (psychiatric / cardiotoxicity).
 # Production derives black_box from OT warnings; holdout (OT suppressed) would
 # pick serious from pre-cutoff literature, hence the allowed set.
 safety_severity:
   - indication: attention deficit-hyperactivity disorder
-    allowed: [black_box, serious]
-  - indication: mood disorder
     allowed: [black_box, serious]
   - indication: cocaine use disorder
     allowed: [black_box, serious]
@@ -82,8 +70,6 @@ safety_severity:
 # for bupropion in each of these contexts.
 indication_harm:
   - indication: attention deficit-hyperactivity disorder
-    expected: true
-  - indication: mood disorder
     expected: true
   - indication: cocaine use disorder
     expected: true
@@ -98,6 +84,14 @@ forbidden_in_ranked:
   # signals via the combination-product rule.
   - bucket: demotion_logic
     indication: obesity disorder
+  # Bupropion is FDA-approved for major depressive disorder and seasonal
+  # affective disorder, both mood-disorder subtypes, so every paper and trial
+  # retrieved for "mood disorder" is on-label use and the approval gates mark
+  # the whole indication contaminated. It stays a surfaced candidate (see
+  # candidate_set_contains) but must not reach the ranking. The 2026-07-18 gold
+  # standard predates these gates and ranked it #2; it is stale on this point.
+  - bucket: demotion_logic
+    indication: mood disorder
 
 forbidden_phrases:
   # Bupropion monotherapy is not FDA-approved for obesity — the combination

@@ -13,8 +13,10 @@ from indication_scout.agents.supervisor.candidate_dedup import (
     HierarchyDecision,
     HierarchyDedupOutput,
     collapse_synonym_entries,
+    merge_mechanism_entries,
     run_hierarchical_dedup,
 )
+from indication_scout.data_sources.base_client import DataSourceError
 
 CANDIDATES_UC_IBD = [
     ("inflammatory bowel disease", "competitor", "EFO_0003767"),
@@ -304,3 +306,82 @@ def test_collapse_without_canonical_name_keeps_earliest_entry():
         "graft vs host disease": ("Graft vs Host Disease", "both"),
     }
     assert efo_ids == {"EFO_0000530": "graft vs host disease"}
+
+
+async def test_mechanism_merge_folds_alias_into_established_candidate():
+    """A mechanism name the merge calls an alias folds into the existing candidate, which keeps its own name."""
+    allowed = {
+        "narcolepsy": ("narcolepsy", "competitor"),
+        "narcolepsy-cataplexy syndrome": ("narcolepsy-cataplexy syndrome", "mechanism"),
+    }
+    efo_ids = {
+        "MONDO_0004804": "narcolepsy",
+        "MONDO_0016158": "narcolepsy-cataplexy syndrome",
+    }
+    merge_result = {
+        "merge": {"narcolepsy-cataplexy syndrome": ["narcolepsy"]},
+        "remove": [],
+    }
+
+    with patch(
+        "indication_scout.agents.supervisor.candidate_dedup.merge_duplicate_diseases",
+        new=AsyncMock(return_value=merge_result),
+    ):
+        collapsed = await merge_mechanism_entries("modafinil", allowed, efo_ids, [])
+
+    assert collapsed == [("narcolepsy-cataplexy syndrome", "narcolepsy")]
+    assert allowed == {"narcolepsy": ("narcolepsy", "both")}
+    assert efo_ids == {
+        "MONDO_0004804": "narcolepsy",
+        "MONDO_0016158": "narcolepsy",
+    }
+
+
+async def test_mechanism_merge_ignores_competitor_only_groups_and_remove_list():
+    """Groups without a mechanism entry are left alone, and the merge's remove list is not acted on."""
+    allowed = {
+        "stroke": ("stroke", "competitor"),
+        "stroke disorder": ("stroke disorder", "competitor"),
+        "cough": ("cough", "mechanism"),
+    }
+    efo_ids = {"EFO_0000712": "stroke"}
+    merge_result = {
+        "merge": {"stroke": ["stroke disorder"]},
+        "remove": ["cough"],
+    }
+
+    with patch(
+        "indication_scout.agents.supervisor.candidate_dedup.merge_duplicate_diseases",
+        new=AsyncMock(return_value=merge_result),
+    ):
+        collapsed = await merge_mechanism_entries("bupropion", allowed, efo_ids, [])
+
+    assert collapsed == []
+    assert allowed == {
+        "stroke": ("stroke", "competitor"),
+        "stroke disorder": ("stroke disorder", "competitor"),
+        "cough": ("cough", "mechanism"),
+    }
+    assert efo_ids == {"EFO_0000712": "stroke"}
+
+
+async def test_mechanism_merge_keeps_all_candidates_when_merge_fails():
+    """A merge failure leaves the allowlist untouched rather than dropping or renaming candidates."""
+    allowed = {
+        "narcolepsy": ("narcolepsy", "competitor"),
+        "narcolepsy-cataplexy syndrome": ("narcolepsy-cataplexy syndrome", "mechanism"),
+    }
+    efo_ids = {"MONDO_0004804": "narcolepsy"}
+
+    with patch(
+        "indication_scout.agents.supervisor.candidate_dedup.merge_duplicate_diseases",
+        new=AsyncMock(side_effect=DataSourceError("llm", "unparseable response")),
+    ):
+        collapsed = await merge_mechanism_entries("modafinil", allowed, efo_ids, [])
+
+    assert collapsed == []
+    assert allowed == {
+        "narcolepsy": ("narcolepsy", "competitor"),
+        "narcolepsy-cataplexy syndrome": ("narcolepsy-cataplexy syndrome", "mechanism"),
+    }
+    assert efo_ids == {"MONDO_0004804": "narcolepsy"}

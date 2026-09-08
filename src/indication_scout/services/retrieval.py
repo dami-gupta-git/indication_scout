@@ -19,6 +19,7 @@ from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
+    SAFETY_QUOTE_MAX_WORDS,
     SAFETY_TOP_ADVERSE_EVENTS,
 )
 from indication_scout.data_sources.base_client import DataSourceError
@@ -224,6 +225,7 @@ class RetrievalService:
             "chembl_id": chembl_id,
             "date_before": date_before.isoformat() if date_before else None,
             "top_k": _settings.literature_top_k,
+            "logic_version": "cache_disease_aliases_v1",
         }
         cached = cache_get("competitors_merged", cache_params, self.cache_dir)
         if cached is not None:
@@ -257,6 +259,7 @@ class RetrievalService:
                 del top_40[disease.lower()]
 
         removed = {n.lower() for n in merge_result["remove"]}
+        aliases_by_disease: dict[str, list[str]] = {}
         for canonical, aliases in merge_result["merge"].items():
             canonical_lower = canonical.lower()
             aliases_lower = [a.lower() for a in aliases]
@@ -268,6 +271,11 @@ class RetrievalService:
                     continue
                 canonical_lower = surviving[0]
 
+            source_names = [
+                disease
+                for disease in all_names
+                if disease not in removed and disease in top_40
+            ]
             combined: set[str] = set()
             source_present = False
             for disease in all_names:
@@ -280,12 +288,25 @@ class RetrievalService:
                         del top_40[disease]
             if source_present:
                 top_40[canonical_lower] = combined
+                aliases_by_disease[canonical_lower] = [
+                    disease
+                    for disease in source_names
+                    if disease != canonical_lower
+                ]
 
         top_40 = _filter_overly_broad_candidates(top_40)
         sorted_data = dict(
             sorted(top_40.items(), key=lambda item: len(item[1]), reverse=True)
         )
         top_15 = dict(list(sorted_data.items())[: _settings.literature_top_k])
+        for disease in top_15:
+            cache_set(
+                "disease_aliases",
+                {"chembl_id": chembl_id, "disease": disease},
+                aliases_by_disease.get(disease, []),
+                self.cache_dir,
+                ttl=CACHE_TTL,
+            )
         # logger.warning("[COMP] final top_15: %s", list(top_15.keys()))
 
         cache_set(
@@ -1088,8 +1109,18 @@ class RetrievalService:
         )
         disease_scoped: list[PubmedAbstract] = []
         if disease:
+            normalized_disease = disease.lower().strip()
+            disease_aliases = cache_get(
+                "disease_aliases",
+                {"chembl_id": chembl_id, "disease": normalized_disease},
+                self.cache_dir,
+            )
             disease_scoped = await search_adverse_events(
-                pref_name, self.cache_dir, date_before=date_before, disease=disease
+                pref_name,
+                self.cache_dir,
+                date_before=date_before,
+                disease=disease,
+                disease_aliases=disease_aliases,
             )
 
         def _convert(items: list[PubmedAbstract]) -> list[AbstractResult]:
@@ -1385,7 +1416,7 @@ class RetrievalService:
             if (
                 not outcome
                 or not quote
-                or len(quote.split()) > 40
+                or len(quote.split()) > SAFETY_QUOTE_MAX_WORDS
                 or quote.casefold() not in searchable_text
             ):
                 has_unclear = True

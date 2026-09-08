@@ -15,7 +15,8 @@ For each PMID choose exactly one status:
 - "unclear": the abstract does not contain enough information to decide.
 
 For "confirmed_harm", provide a short adverse_outcome and a short exact evidence_quote of no more
-than 30 words copied from the title or abstract. For every other status, return null for both
+than 80 words copied contiguously from the title or abstract — copy the whole sentence rather than
+shortening it, and never join text across a gap. For every other status, return null for both
 fields. Return one verdict for every input PMID and no other PMIDs.
 
 Abstracts:

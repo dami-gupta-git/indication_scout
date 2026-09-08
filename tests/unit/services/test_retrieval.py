@@ -1576,11 +1576,26 @@ async def test_safety_search_fetches_and_dedupes_both_pools(svc):
     deduped drug-level-first, as AbstractResults."""
     calls = []
 
-    async def fake_search(pref, cache_dir, date_before=None, disease=None):
-        calls.append(disease)
+    async def fake_search(
+        pref,
+        cache_dir,
+        date_before=None,
+        disease=None,
+        disease_aliases=None,
+    ):
+        calls.append((disease, disease_aliases))
         if disease is None:
             return [_safety_abs("111", "drug-wide"), _safety_abs("222", "shared")]
         return [_safety_abs("222", "shared"), _safety_abs("333", "disease-only")]
+
+    from indication_scout.utils.cache import cache_set
+
+    cache_set(
+        "disease_aliases",
+        {"chembl_id": "CHEMBL122", "disease": "colorectal cancer"},
+        ["bowel cancer"],
+        svc.cache_dir,
+    )
 
     with (
         patch(
@@ -1595,7 +1610,7 @@ async def test_safety_search_fetches_and_dedupes_both_pools(svc):
         result = await svc.safety_search("CHEMBL122", disease="colorectal cancer")
 
     # One drug-level call (disease=None) + one disease-scoped call.
-    assert calls == [None, "colorectal cancer"]
+    assert calls == [(None, None), ("colorectal cancer", ["bowel cancer"])]
     assert [r.pmid for r in result.drug_level] == ["111", "222"]
     assert [r.pmid for r in result.disease_scoped] == ["222", "333"]
     assert [r.pmid for r in result.combined] == ["111", "222", "333"]
@@ -2111,6 +2126,8 @@ async def test_get_drug_competitors_filters_broad_canonical_after_merge(tmp_path
 
 
 async def test_get_drug_competitors_merge_retains_empty_competitor_set(tmp_path):
+    from indication_scout.utils.cache import cache_get
+
     raw = {
         "diseases": {
             "sleep disorder alpha": set(),
@@ -2142,6 +2159,11 @@ async def test_get_drug_competitors_merge_retains_empty_competitor_set(tmp_path)
         result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert result == {"canonical sleep disorder": set()}
+    assert cache_get(
+        "disease_aliases",
+        {"chembl_id": "CHEMBL1", "disease": "canonical sleep disorder"},
+        tmp_path,
+    ) == ["sleep disorder alpha", "sleep disorder beta"]
 
 
 async def test_get_drug_competitors_returns_cached(tmp_path):
@@ -2161,6 +2183,7 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
             "chembl_id": "CHEMBL1",
             "date_before": None,
             "top_k": get_settings().literature_top_k,
+            "logic_version": "cache_disease_aliases_v1",
         },
         cached,
         tmp_path,
@@ -2187,6 +2210,7 @@ async def test_get_drug_competitors_returns_cached_empty_result(tmp_path):
             "chembl_id": "CHEMBL1",
             "date_before": None,
             "top_k": get_settings().literature_top_k,
+            "logic_version": "cache_disease_aliases_v1",
         },
         {},
         tmp_path,

@@ -15,6 +15,8 @@ import logging
 from pydantic import BaseModel, Field, model_validator
 
 from indication_scout.constants import DISEASE_SYNONYM_CANONICAL
+from indication_scout.data_sources.base_client import DataSourceError
+from indication_scout.services.disease_helper import merge_duplicate_diseases
 from indication_scout.services.llm import parse_last_json_object, query_llm
 
 logger = logging.getLogger(__name__)
@@ -231,6 +233,35 @@ Return only the JSON object. Do not include any other text.
 """
 
 
+def _apply_collapse(
+    allowed_diseases: dict[str, tuple[str, str]],
+    allowed_efo_ids: dict[str, str],
+    survivor_key: str,
+    dropped_keys: list[str],
+) -> list[tuple[str, str]]:
+    """Fold `dropped_keys` into `survivor_key`, mutating both dicts. Returns (dropped_name, survivor_name) pairs.
+
+    Sources merge to "both" when the collapsed entries came from different routes, matching the exact-match passes.
+    An EFO ID pointing at a dropped key is repointed at the survivor so later ID lookups still resolve.
+    """
+    survivor_name, survivor_source = allowed_diseases[survivor_key]
+    sources = {allowed_diseases[k][1] for k in [survivor_key, *dropped_keys]}
+    if len(sources) > 1:
+        survivor_source = "both"
+    allowed_diseases[survivor_key] = (survivor_name, survivor_source)
+
+    collapsed: list[tuple[str, str]] = []
+    for key in dropped_keys:
+        if key == survivor_key:
+            continue
+        dropped_name = allowed_diseases[key][0]
+        for efo_id in [e for e, v in allowed_efo_ids.items() if v == key]:
+            allowed_efo_ids[efo_id] = survivor_key
+        allowed_diseases.pop(key, None)
+        collapsed.append((dropped_name, survivor_name))
+    return collapsed
+
+
 def collapse_synonym_entries(
     allowed_diseases: dict[str, tuple[str, str]],
     allowed_efo_ids: dict[str, str],
@@ -264,20 +295,79 @@ def collapse_synonym_entries(
 
         canonical_key = canonical.lower().strip()
         survivor_key = canonical_key if canonical_key in keys else keys[0]
+        collapsed.extend(
+            _apply_collapse(
+                allowed_diseases,
+                allowed_efo_ids,
+                survivor_key,
+                [k for k in keys if k != survivor_key],
+            )
+        )
 
-        survivor_name, survivor_source = allowed_diseases[survivor_key]
-        sources = {allowed_diseases[k][1] for k in keys}
-        if len(sources) > 1:
-            survivor_source = "both"
-        allowed_diseases[survivor_key] = (survivor_name, survivor_source)
+    return collapsed
 
-        for key in keys:
-            if key == survivor_key:
-                continue
-            dropped_name = allowed_diseases[key][0]
-            for efo_id in [e for e, v in allowed_efo_ids.items() if v == key]:
-                allowed_efo_ids[efo_id] = survivor_key
-            allowed_diseases.pop(key, None)
-            collapsed.append((dropped_name, survivor_name))
+
+async def merge_mechanism_entries(
+    drug_name: str,
+    allowed_diseases: dict[str, tuple[str, str]],
+    allowed_efo_ids: dict[str, str],
+    approved_indications: list[str],
+) -> list[tuple[str, str]]:
+    """Ask the merge LLM to fold mechanism-route names into an existing candidate under another name.
+
+    The competitor path already runs this merge over its own names, but the mechanism route's names reach the
+    allowlist afterwards and are matched only by ontology ID and exact name — so the same disease under a
+    second name survives as its own candidate. This runs the same merge over the full merged list.
+
+    Only groups containing at least one mechanism-sourced entry are applied: competitor names were already
+    decided upstream, and re-merging them here would re-litigate that decision on a different input list. The
+    survivor is the non-mechanism entry when the group has one, so a mechanism name folds into the established
+    candidate rather than renaming it.
+
+    The merge result's `remove` list is ignored. It drops names matching the drug's approved indications, which
+    both routes already filter upstream; acting on it again here would drop candidates on a second opinion.
+
+    A merge failure leaves every candidate in place — the cost is a duplicate name, and `remove` is not used
+    here, so the hazard that makes `merge_duplicate_diseases` raise upstream does not apply.
+    """
+    mechanism_keys = {
+        key for key, (_, source) in allowed_diseases.items() if source == "mechanism"
+    }
+    if not mechanism_keys or len(allowed_diseases) < 2:
+        return []
+
+    names = [name for name, _ in allowed_diseases.values()]
+    try:
+        result = await merge_duplicate_diseases(names, approved_indications)
+    except DataSourceError as e:
+        logger.warning(
+            "merge_mechanism_entries: merge failed for drug=%r (%d candidates): %s — keeping all candidates",
+            drug_name,
+            len(names),
+            e,
+        )
+        return []
+
+    collapsed: list[tuple[str, str]] = []
+    for canonical, aliases in result["merge"].items():
+        keys = [
+            k
+            for k in [canonical.lower().strip(), *[a.lower().strip() for a in aliases]]
+            if k in allowed_diseases
+        ]
+        keys = list(dict.fromkeys(keys))
+        if len(keys) < 2 or not any(k in mechanism_keys for k in keys):
+            continue
+
+        established = [k for k in keys if k not in mechanism_keys]
+        survivor_key = established[0] if established else keys[0]
+        collapsed.extend(
+            _apply_collapse(
+                allowed_diseases,
+                allowed_efo_ids,
+                survivor_key,
+                [k for k in keys if k != survivor_key],
+            )
+        )
 
     return collapsed

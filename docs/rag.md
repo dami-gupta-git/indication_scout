@@ -95,12 +95,12 @@ synthesis.
 ### Stage 0 — Query Expansion (`expand_search_terms`)
 
 Send a `DrugProfile` (flat LLM-facing projection of `RichDrugData` — name, synonyms, target gene
-symbols, mechanisms of action, ATC codes, ATC descriptions, drug type) to Haiku
-(`claude-haiku-4-5-20251001`) to generate diverse PubMed keyword queries across 5 axes: drug name,
+symbols, mechanisms of action, ATC codes, ATC descriptions, drug type) to the small LLM
+(`claude-sonnet-4-6`) to generate diverse PubMed keyword queries across 5 axes: drug name,
 drug class + organ, mechanism + organ, target gene, synonym. Per-axis caps yield 5–10 queries total.
-Organ term is pre-extracted via a separate Haiku call (`extract_organ_term`). Both functions cache
+Organ term is pre-extracted via a separate small-LLM call (`extract_organ_term`). Both functions cache
 results. The small-LLM model is `settings.small_llm_model` (currently
-`claude-haiku-4-5-20251001`), not hardcoded.
+`claude-sonnet-4-6`), not hardcoded.
 
 Signature: `expand_search_terms(chembl_id: str, disease_name: str, drug_profile: DrugProfile) -> list[str]`.
 
@@ -182,11 +182,11 @@ search terms (e.g. `"narcolepsy"`) before they are passed to `get_pubmed_query`.
 
 **Two-step LLM strategy:**
 
-1. **Normalize** — Haiku prompt strips subtypes, staging, etiology, and genetic qualifiers while
+1. **Normalize** — a small-LLM prompt strips subtypes, staging, etiology, and genetic qualifiers while
    preserving organ specificity. If the disease has a well-known synonym, both are returned joined
    with `OR` (e.g. `"eczema OR dermatitis"`).
 2. **Verify** — If a `drug_name` is provided, the normalized term is verified with a PubMed count
-   (`drug AND disease`). If the count is below `MIN_RESULTS` (3), a second Haiku call generalises to
+   (`drug AND disease`). If the count is below `MIN_RESULTS` (3), a second small-LLM call generalises to
    a broader category. The broader term is used only if it also has `>= MIN_RESULTS` hits and does
    not collapse to an over-generic term in `BROADENING_BLOCKLIST` (defined in `constants.py`; e.g.
    `"cancer"`, `"carcinoma"`, `"disease"`, `"syndrome"`).
@@ -315,7 +315,7 @@ volumes:
 7. **Grounded generation with PMIDs** — Claude synthesises from retrieved documents, not training
    weights; every claim in `EvidenceSummary` is traceable to a real paper.
 8. **Cache-first retrieval** — avoid redundant PubMed API calls and re-embedding.
-9. **LLM disease name normalization** — cheap Haiku calls instead of building a synonym dictionary
+9. **LLM disease name normalization** — LLM calls instead of building a synonym dictionary
    or ontology traversal.
 10. **`DrugProfile` for query expansion** — flat LLM-facing projection of `RichDrugData` (name,
     synonyms, target gene symbols, mechanisms, ATC codes/descriptions, drug type) inform better

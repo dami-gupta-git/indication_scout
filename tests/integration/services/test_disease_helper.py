@@ -140,6 +140,12 @@ async def test_multiple_drug_disease_normalizer(disease, drug, required_keyword)
             {frozenset({"obesity", "overweight body mass index status"})},
             set(),
         ),
+        (
+            {"mood disorder", "bipolar disorder"},
+            set(),
+            set(),
+            {"mood disorder", "bipolar disorder"},
+        ),
         # Distinct substance-dependence disorders must NOT be collapsed into each
         # other or the "drug dependence" / "substance abuse" umbrella. Only the two
         # umbrella synonyms may merge together.
