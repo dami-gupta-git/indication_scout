@@ -235,7 +235,7 @@ async def run_pair_analysis(
                 relationship=approval_relationship,
                 approved_indication=approved_ind,
                 trial_evidence=trial_evidence,
-                closure=_closure_text(clinical_trials),
+                closure=_closure_text(clinical_trials, es),
                 terminations=_terminations_text(sig),
                 cache_dir=DEFAULT_CACHE_DIR,
                 drug=drug,

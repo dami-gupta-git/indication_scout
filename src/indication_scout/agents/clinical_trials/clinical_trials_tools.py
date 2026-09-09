@@ -167,7 +167,7 @@ def build_clinical_trials_tools(
         """All-status trials for a drug × indication pair.
 
         Returns total count for the pair, per-status counts (recruiting,
-        active, withdrawn), and the top 50 trials by enrollment. The TERMINATED
+        active, withdrawn), the top 50 trials by enrollment, and every ongoing trial. The TERMINATED
         and COMPLETED counts live on get_terminated and get_completed
         respectively — call those for those scopes.
 
@@ -186,7 +186,7 @@ def build_clinical_trials_tools(
             )
             return (
                 f"Search for {drug} × {indication}: MeSH unresolved, skipped.",
-                SearchTrialsResult(),
+                SearchTrialsResult(resolution_status="unresolved"),
             )
         mesh_id, mesh_term = resolved
 
@@ -216,7 +216,11 @@ def build_clinical_trials_tools(
             result.trials = new_trials
 
         shown = len(result.trials)
-        cap_note = "; top 50 shown" if shown < result.total_count else ""
+        cap_note = (
+            "; enrollment top 50 plus every ongoing trial shown"
+            if shown < result.total_count
+            else ""
+        )
         scrub_note = (
             f"; scrubbed post-cutoff outcomes from {scrubbed_n} trial(s) "
             f"(status set to UNKNOWN)"

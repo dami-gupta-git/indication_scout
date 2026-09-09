@@ -32,17 +32,18 @@ CASES: list[tuple[str, str, bool]] = [
     ("natalizumab", "multiple sclerosis", True),   # PML reported in MS therapy
     ("bevacizumab", "colorectal cancer", True),    # GI perforation reported in colorectal use
     ("warfarin", "atrial fibrillation", True),     # bleeding reported in AF anticoagulation
+    # Cocaine abuse sensitization is reported to precipitate bupropion psychosis at a lower dose.
+    # The disease is a risk modifier even though bupropion was prescribed for another condition.
+    ("bupropion", "cocaine use disorder", True),
     # Labeled False as "ED literature is efficacy-dominated" until the retrieved corpus was read:
     # it contains a randomised crossover trial of sildenafil FOR ED that stopped recruitment after
     # three of six men with multiple system atrophy dropped their blood pressure severely an hour
     # post-dose (PMID 11511713). Attributed, and it halted the study — a flag is correct.
     ("sildenafil", "erectile dysfunction", True),
+    # The current bundle includes directly attributed gastrointestinal adverse events during
+    # metformin treatment for type 2 diabetes (PMIDs 27987248 and 31034184).
+    ("metformin", "type 2 diabetes", True),
     # No disease-context safety finding expected (efficacy-only or thin AE literature for the pair).
-    # Labeled True on metformin's lactic-acidosis reputation until the retrieved corpus was read:
-    # the two lactic-acidosis papers it returns are the Cochrane review concluding there is NO
-    # evidence of increased risk versus other anti-hyperglycemics (PMID 20091535). No flag is the
-    # correct answer for this evidence.
-    ("metformin", "type 2 diabetes", False),
     ("rofecoxib", "migraine", False),              # migraine trials are efficacy; CV signal is not migraine-context
     # The 2026-09-08 sildenafil run flagged ischemic stroke off PMID 19717023: a 12-patient
     # uncontrolled study whose primary outcome was a counted safety event (one sudden death) and

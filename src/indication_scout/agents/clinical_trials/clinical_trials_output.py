@@ -71,7 +71,8 @@ class ClinicalTrialsOutput(BaseModel):
         default=None,
         description=(
             "All-status trial query for the pair: total + per-status counts "
-            "(recruiting / active / withdrawn) + top 50 trials by enrollment."
+            "(recruiting / active / withdrawn) + the top 50 trials by enrollment "
+            "and every ongoing trial."
         ),
     )
 

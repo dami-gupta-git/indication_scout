@@ -79,6 +79,11 @@ def _derive_relevance_coverage(
     """Derive query coverage and reviewed relevance counts for one result scope."""
     if result is None:
         return None
+    if (
+        isinstance(result, SearchTrialsResult)
+        and result.resolution_status == "unresolved"
+    ):
+        return None
     trials_by_id = {trial.nct_id: trial for trial in result.trials if trial.nct_id}
     retrieved_ids = set(trials_by_id)
     relevant_ids = retrieved_ids & relevant_nct_ids
@@ -243,7 +248,10 @@ async def run_clinical_trials_agent(
     # Signals come from RELEVANT trials only, so supervisor and report read identical numbers.
     # Left None when finalize never ran, so the supervisor knows no relevance judgment was made
     # rather than seeing everything filtered out by an empty relevant set.
-    if finalized:
+    query_unresolved = (
+        output.search is not None and output.search.resolution_status == "unresolved"
+    )
+    if finalized and not query_unresolved:
         relevant_ids = set(output.relevant_nct_ids)
         contaminated_ids = set(output.contaminated_nct_ids)
         output.search_coverage = _derive_relevance_coverage(

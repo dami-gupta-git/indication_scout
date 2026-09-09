@@ -54,10 +54,11 @@ AUTHORITATIVE FACTS (ground truth):
 - Closure verdict (whether the signal is still live): {closure}
 - Late-stage terminations: {terminations}
 
-The closure verdict comes from the trial review. When it says CLOSED, say so in the assessment and
-prose; never call a closed signal open, uncertain, or still to be resolved. When it says NOT DECIDED,
-no closure judgement was reached — never call the signal closed on that basis. Absence of trials is
-not closure; a signal closes on a negative result, not on never having been tested.
+The closure verdict comes from the combined trial and literature review. When it says CLOSED, say so
+in the assessment and prose; never call a closed signal open, uncertain, or still to be resolved.
+When it says NOT DECIDED, no closure judgement was reached — never call the signal closed on that
+basis. Absence of trials is not closure; a signal closes on a negative result, not on never having
+been tested.
 
 A late-stage termination for safety or benefit:risk is a closure signal even when a completed
 Phase 3 also exists — the development stage names the furthest trial reached, not the fate of the

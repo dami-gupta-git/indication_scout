@@ -186,6 +186,25 @@ def test_fmt_clinical_trials_search_whitespace():
     assert "Whitespace: no trials found for this drug × indication pair." in rendered
 
 
+def test_fmt_clinical_trials_unresolved_search_is_not_reported_as_zero():
+    out = ClinicalTrialsOutput(
+        search=SearchTrialsResult(resolution_status="unresolved"),
+        completed=CompletedTrialsResult(),
+        terminated=TerminatedTrialsResult(),
+    )
+
+    rendered = _fmt_clinical_trials(out)
+
+    assert "**Trial activity:** Not searched" in rendered
+    assert "disease name could not be resolved to a MeSH descriptor" in rendered
+    assert "Trial status is unknown" in rendered
+    assert "0 relevant" not in rendered
+    assert "Registry query matches" not in rendered
+    assert "Whitespace" not in rendered
+    assert "Completed trials" not in rendered
+    assert "Terminated trials" not in rendered
+
+
 def test_fmt_clinical_trials_completed_renders_count_and_top_trials():
     trial = Trial(
         nct_id="NCT04567890",

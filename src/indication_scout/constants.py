@@ -109,6 +109,15 @@ CLINICAL_TRIALS_RECENT_START_YEAR: str = "2024"
 # enrollment desc; counts that need the full population go through
 # _count_trials_total (cheap countTotal API path) instead of a record fetch.
 CLINICAL_TRIALS_FETCH_MAX: int = 50
+# Ongoing statuses fetched in full for pair-scoped analysis. The enrollment-ranked exemplar slice
+# can omit small active studies and make a live programme appear inactive.
+CLINICAL_TRIALS_ACTIVE_STATUSES: tuple[str, ...] = (
+    "RECRUITING",
+    "ACTIVE_NOT_RECRUITING",
+    "NOT_YET_RECRUITING",
+    "ENROLLING_BY_INVITATION",
+    "SUSPENDED",
+)
 # Per-source cache TTL for ClinicalTrials.gov pair-scoped queries
 # (get_completed_trials / get_terminated_trials). Longer than the global
 # CACHE_TTL because trial status transitions are slow.

@@ -1,0 +1,35 @@
+You are a clinical evidence gate. Decide whether the abstract below reports a result attributable to
+the EXACT requested drug on its own. Answer only this drug-identity and drug-role question. Do not
+judge the disease, efficacy direction, evidence strength, or study quality.
+
+Requested drug: {drug}
+Accepted names for the same drug:
+{drug_names}
+
+Rules:
+- "studied": the requested drug is itself under therapeutic evaluation AND the abstract's result is
+  attributable to it alone — as the sole active treatment, in a placebo-controlled arm, or in a
+  separate monotherapy arm that isolates its effect. A systematic review or meta-analysis whose
+  pooled result covers only the requested drug also counts.
+- "class_level": the abstract concerns the requested drug's mechanistic or pharmacological class
+  rather than the drug alone, so no result can be attributed to the requested drug by itself. Use
+  this when the abstract pools or analyses the requested drug together with other members of its
+  class, when it reports on the class as a whole, or when it is a review or commentary about the
+  class that names the requested drug only as an example.
+- "not_studied": the abstract studies a different drug, even one in the same mechanistic class.
+- "not_studied": the requested drug appears only inside a multi-drug combination and there is no
+  separate monotherapy arm that isolates its effect.
+- "not_studied": the requested drug is only a reference, active comparator, control, background
+  treatment, concomitant medication, or incidental mention while the study evaluates something else.
+- A genuine head-to-head study that evaluates both drugs as treatments may be "studied".
+- Treat only the supplied accepted names as the requested drug. Do not infer identity from a shared
+  target, mechanism, chemical class, or similar name.
+- When the abstract does not establish that the requested drug is under therapeutic evaluation, use
+  "not_studied". When it is under evaluation but only as one member of its class, use "class_level".
+
+PMID: {pmid}
+Title: {title}
+Abstract: {abstract}
+
+Respond with ONLY one JSON object and no prose or fences:
+{{"verdict": "studied"|"class_level"|"not_studied"}}

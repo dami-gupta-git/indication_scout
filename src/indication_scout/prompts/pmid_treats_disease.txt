@@ -1,0 +1,57 @@
+You are a clinical evidence gate. Decide whether the candidate disease is an efficacy target in the
+abstract below, either through treatment of existing disease or prevention of disease onset. Answer
+only this target question. Do not judge which drug was studied, the efficacy direction, the evidence
+strength, or the study quality.
+
+Drug: {drug}
+Candidate disease: {disease}
+
+Apply these checks IN ORDER:
+
+1. PREVENTION: Was the drug deliberately administered, and does the abstract separately report a
+   comparative result for the candidate disease's incidence or onset as a clinical outcome? If yes,
+   answer "treats" even when the abstract does not label the outcome primary or secondary, the
+   patients did not have the disease at baseline, were selected for a different disease or risk
+   state, and the drug failed to prevent the disease or increased its rate. A biomarker or surrogate
+   that merely tracks disease risk does not. A safety or causation study asking whether drug exposure
+   CAUSES the candidate disease does not.
+2. TREATMENT: Otherwise, NAME the condition the drug was given to treat, then ask whether that named
+   target IS the candidate disease. Do not infer the target from the patient population.
+
+- "treats": the condition the drug was administered to treat IS the candidate disease, and the
+  abstract reports an outcome for it.
+- "not_treats": the drug was given for a different target — another disease, a comorbidity, a
+  complication, a side effect of another drug, or a lab or metabolic measure — even when the
+  candidate disease was present in the patients, and even when the target is caused by or attributed
+  to the candidate disease. A symptom the disease explains is still not the disease.
+- "not_treats": the treated condition is a related but clinically distinct disease. Shared anatomy,
+  ischemia, pathology, or downstream injury does not make two diseases interchangeable. For example,
+  neonatal hypoxic-ischemic brain injury is not ischemic stroke, and cerebral small-vessel disease is
+  not ischemic stroke.
+- "not_treats": the candidate disease appears only as an incidental observed event or association,
+  rather than a prespecified treatment or prevention outcome.
+- "not_treats": the candidate is a physiological function, dysfunction, biomarker, or mechanistic
+  endpoint measured to explain how treatment affects a different clinical condition. This remains
+  "not_treats" when the endpoint is named in the title or objectives. For example, flow-mediated
+  dilation or penile endothelial-function measurements in a trial treating heart failure or erectile
+  dysfunction are not treatment of endothelial dysfunction as a standalone disease.
+- "not_treats": the abstract reports no outcome for any condition — a protocol, a narrative
+  commentary, or a mechanistic discussion with no result of its own.
+
+ELIMINATION TEST for a symptom or score endpoint: if the measured endpoint were fully normalized,
+would the patient STILL HAVE the candidate disease?
+  NO — normalizing it means the disease is gone, so the target IS the disease => "treats".
+    e.g. symptom-rating scores in an ADHD trial; pain scores in a neuropathic-pain trial; blood
+    pressure in hypertension.
+  YES — the disease remains and only a symptom was relieved => "not_treats".
+    e.g. pain after a stroke; depression after a stroke; fatigue in multiple sclerosis.
+
+When genuinely unsure whether the target is the disease itself or something the disease merely
+explains, answer "not_treats".
+
+PMID: {pmid}
+Title: {title}
+Abstract: {abstract}
+
+Respond with ONLY one JSON object and no prose or fences:
+{{"verdict": "treats"|"not_treats"}}

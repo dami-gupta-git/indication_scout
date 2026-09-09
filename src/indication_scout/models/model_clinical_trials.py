@@ -90,7 +90,7 @@ class Trial(BaseModel):
 
 
 # ------------------------------------------------------------------
-# Per-pair trial query results (count + top-50 exemplars)
+# Per-pair trial query results (count + reviewed records)
 # ------------------------------------------------------------------
 
 
@@ -101,13 +101,16 @@ class SearchTrialsResult(BaseModel):
     downstream relevance review. `by_status` carries query-match counts for RECRUITING,
     ACTIVE_NOT_RECRUITING, WITHDRAWN, and UNKNOWN. TERMINATED and COMPLETED
     counts live on TerminatedTrialsResult and CompletedTrialsResult to avoid
-    double-counting. `trials` is the top 50 by enrollment for the agent
-    to inspect.
+    double-counting. `trials` is the deduplicated union of the top 50 by enrollment and
+    every ongoing trial for the agent to inspect. `resolution_status` distinguishes a
+    resolved query with zero matches from a query that could not be run because disease
+    normalization failed. None means the provenance is unavailable, as with an older cache.
     """
 
     total_count: int = 0
     by_status: dict[str, int] = {}
     trials: list[Trial] = []
+    resolution_status: Literal["resolved", "unresolved"] | None = None
 
     @model_validator(mode="before")
     @classmethod

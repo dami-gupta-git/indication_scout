@@ -4,6 +4,7 @@ import asyncio
 import calendar
 import json
 import logging
+import re
 import time
 from datetime import date
 from pathlib import Path
@@ -31,7 +32,10 @@ from indication_scout.data_sources.open_targets import (
 )
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.models.model_drug_profile import DrugProfile
-from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.models.model_evidence_summary import (
+    EvidenceDirectionJudgment,
+    EvidenceSummary,
+)
 from indication_scout.models.model_fda import FDALabelSafetyRecord
 from indication_scout.models.model_open_targets import AdverseEvent, DrugWarning
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
@@ -95,11 +99,231 @@ PUBTYPE_BOOST_DEFAULT: float = 1.0
 
 
 _PMID_DIRECTION_PROMPT = (_PROMPTS_DIR / "pmid_direction.txt").read_text()
+_EVIDENCE_DIRECTION_PROMPT = (_PROMPTS_DIR / "judge_evidence_direction.txt").read_text()
+_PMID_DRUG_IDENTITY_PROMPT = (_PROMPTS_DIR / "pmid_drug_identity.txt").read_text()
+# "class_level" = the abstract's result belongs to the drug's mechanistic class, not to the drug
+# alone (a pooled sildenafil+tadalafil meta-analysis, a review of PDE5 inhibitors). It is judged
+# PER PAPER because evidence_basis is one verdict for the whole candidate: without a per-paper
+# value a single drug-specific animal study made the candidate "drug_specific" and the class-level
+# papers then counted at full weight in the supporting list, which is what the strength cap exists
+# to prevent (sildenafil x ischemic stroke read "moderate, supports" on rodent data plus two
+# class-level papers).
+_PMID_DRUG_IDENTITY_VERDICTS = {"studied", "class_level", "not_studied"}
+_PMID_TREATS_DISEASE_PROMPT = (_PROMPTS_DIR / "pmid_treats_disease.txt").read_text()
+_PMID_TREATS_DISEASE_VERDICTS = {"treats", "not_treats"}
 # "neutral" = a relevant abstract with NO efficacy result (PK / safety-only / mechanism). It stays
 # RELEVANT (counts in study_count) but is kept OUT of supporting AND contradicting, so a PK paper
 # can't flip a clean "supports" to "mixed" (thalidomide × prostate: a PK study force-bucketed as
 # contradicting; baricitinib safety analysis force-bucketed as supporting).
 _PMID_DIRECTIONS = {"supporting", "contradicting", "mixed", "neutral"}
+_CONTROLLED_DESIGN_PATTERN = re.compile(
+    r"\brandomi[sz](?:ed|ation)\b|"
+    r"\bplacebo[- ]controlled\b|"
+    r"\b(?:double|single)[- ]blind\b|"
+    r"\bcross[- ]?over\b|"
+    r"\bcontrolled (?:clinical )?(?:trial|study)\b|"
+    r"\bcompared (?:with|to) placebo\b|"
+    r"\brct\b",
+    re.IGNORECASE,
+)
+_CONTROLLED_PUBTYPES = {"Randomized Controlled Trial", "Controlled Clinical Trial"}
+
+
+def _has_explicit_controlled_design(abstracts: list["AbstractResult"]) -> bool:
+    """Return whether relevant evidence explicitly identifies a controlled study design."""
+    return any(
+        bool(_CONTROLLED_PUBTYPES.intersection(result.pubtype))
+        or bool(
+            _CONTROLLED_DESIGN_PATTERN.search(f"{result.title} {result.abstract}")
+        )
+        for result in abstracts
+    )
+
+
+def _mentions_exact_drug(drug_names: list[str], result: "AbstractResult") -> bool:
+    """Return whether the title or abstract contains a supplied name for the exact drug."""
+
+    def normalize(value: str) -> str:
+        return " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
+
+    text = f" {normalize(f'{result.title} {result.abstract}')} "
+    return any(
+        normalized_name and f" {normalized_name} " in text
+        for name in drug_names
+        if (normalized_name := normalize(name))
+    )
+
+
+async def _judge_pmid_drug_identity(
+    chembl_id: str,
+    drug_names: list[str],
+    abstracts: list["AbstractResult"],
+    cache_dir: Path,
+) -> dict[str, str]:
+    """Return each PMID's drug-role verdict: "studied", "class_level" or "not_studied".
+
+    Absence of every accepted drug name is a deterministic rejection. Remaining abstracts are judged
+    in isolated calls and cached by ChEMBL ID and PMID, so changing the surrounding batch cannot
+    affect a decision. The question does not depend on the candidate disease, so one entry serves
+    every candidate in a run. Missing or invalid responses fail closed as "not_studied" and are not
+    cached.
+    """
+    if not abstracts:
+        return {}
+
+    names = list(dict.fromkeys(name.strip() for name in drug_names if name.strip()))
+    formatted_names = "\n".join(f"- {name}" for name in names)
+    semaphore = asyncio.Semaphore(_settings.rag_llm_concurrency)
+
+    async def judge_one(result: "AbstractResult") -> tuple[str, str]:
+        if not _mentions_exact_drug(names, result):
+            # Logged because this branch excludes a paper WITHOUT an LLM call: a name the corpus
+            # uses but ChEMBL does not carry would otherwise drop real evidence with no trace.
+            logger.info(
+                "pmid_drug_identity: no accepted name for %s in PMID %s; excluding paper",
+                chembl_id,
+                result.pmid,
+            )
+            return result.pmid, "not_studied"
+
+        cache_params = {
+            "chembl_id": chembl_id,
+            "pmid": result.pmid,
+            "drug_names": sorted(names),
+            "small_llm_model": _settings.small_llm_model,
+            "logic_version": "drug_identity_v2",
+        }
+        cached = cache_get("pmid_drug_identity", cache_params, cache_dir)
+        if isinstance(cached, str) and cached in _PMID_DRUG_IDENTITY_VERDICTS:
+            return result.pmid, cached
+
+        prompt = _PMID_DRUG_IDENTITY_PROMPT.format(
+            drug=names[0],
+            drug_names=formatted_names,
+            pmid=result.pmid,
+            title=result.title,
+            abstract=result.abstract,
+        )
+        async with semaphore:
+            try:
+                response = await query_small_llm(prompt)
+            except DataSourceError as exc:
+                logger.warning(
+                    "pmid_drug_identity: LLM call failed for %s / PMID %s; excluding paper: %s",
+                    chembl_id,
+                    result.pmid,
+                    exc,
+                )
+                return result.pmid, "not_studied"
+        data = parse_last_json_object(response)
+        verdict = (
+            str(data.get("verdict", "")).strip().lower()
+            if isinstance(data, dict)
+            else ""
+        )
+        if verdict not in _PMID_DRUG_IDENTITY_VERDICTS:
+            logger.warning(
+                "pmid_drug_identity: unusable verdict for %s / PMID %s; excluding paper. "
+                "Response was: %s",
+                chembl_id,
+                result.pmid,
+                response,
+            )
+            return result.pmid, "not_studied"
+
+        cache_set(
+            "pmid_drug_identity",
+            cache_params,
+            verdict,
+            cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return result.pmid, verdict
+
+    decisions = await asyncio.gather(*(judge_one(result) for result in abstracts))
+    return dict(decisions)
+
+
+async def _judge_pmid_treats_disease(
+    chembl_id: str,
+    drug: str,
+    disease: str,
+    abstracts: list["AbstractResult"],
+    cache_dir: Path,
+) -> dict[str, bool]:
+    """Return whether each PMID gave the drug IN ORDER TO treat this disease.
+
+    Isolated one-question-per-abstract calls, cached by ChEMBL ID, PMID and disease, so changing the
+    surrounding batch cannot affect a decision. This is the therapeutic-target gate the combined
+    synthesize prompt still owned; kept there, a related but distinct condition could grade as the
+    candidate disease (sildenafil for neonatal hypoxic-ischemic brain injury read as evidence for
+    ischemic stroke). Missing or invalid responses fail closed as ``False`` and are not cached.
+    """
+    if not abstracts:
+        return {}
+
+    semaphore = asyncio.Semaphore(_settings.rag_llm_concurrency)
+
+    async def judge_one(result: "AbstractResult") -> tuple[str, bool]:
+        cache_params = {
+            "chembl_id": chembl_id,
+            "pmid": result.pmid,
+            "disease": disease,
+            "small_llm_model": _settings.small_llm_model,
+            "logic_version": "treats_disease_v5",
+        }
+        cached = cache_get("pmid_treats_disease", cache_params, cache_dir)
+        if isinstance(cached, str) and cached in _PMID_TREATS_DISEASE_VERDICTS:
+            return result.pmid, cached == "treats"
+
+        prompt = _PMID_TREATS_DISEASE_PROMPT.format(
+            drug=drug,
+            disease=disease,
+            pmid=result.pmid,
+            title=result.title,
+            abstract=result.abstract,
+        )
+        async with semaphore:
+            try:
+                response = await query_small_llm(prompt)
+            except DataSourceError as exc:
+                logger.warning(
+                    "pmid_treats_disease: LLM call failed for %s / %s / PMID %s; excluding "
+                    "paper: %s",
+                    chembl_id,
+                    disease,
+                    result.pmid,
+                    exc,
+                )
+                return result.pmid, False
+        data = parse_last_json_object(response)
+        verdict = (
+            str(data.get("verdict", "")).strip().lower()
+            if isinstance(data, dict)
+            else ""
+        )
+        if verdict not in _PMID_TREATS_DISEASE_VERDICTS:
+            logger.warning(
+                "pmid_treats_disease: unusable verdict for %s / %s / PMID %s; excluding paper. "
+                "Response was: %s",
+                chembl_id,
+                disease,
+                result.pmid,
+                response,
+            )
+            return result.pmid, False
+
+        cache_set(
+            "pmid_treats_disease",
+            cache_params,
+            verdict,
+            cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return result.pmid, verdict == "treats"
+
+    decisions = await asyncio.gather(*(judge_one(result) for result in abstracts))
+    return dict(decisions)
 
 
 async def _judge_pmid_directions(
@@ -139,6 +363,60 @@ async def _judge_pmid_directions(
         if str(pmid) in valid_pmids and v in _PMID_DIRECTIONS:
             out[str(pmid)] = v
     return out
+
+
+async def _judge_overall_evidence_direction(
+    drug: str,
+    disease: str,
+    abstracts: list["AbstractResult"],
+    verdict_of: dict[str, str],
+) -> EvidenceDirectionJudgment | None:
+    """Weigh already-relevant papers when their efficacy verdicts conflict."""
+    if not abstracts:
+        return None
+
+    formatted = "\n\n".join(
+        f"PMID: {result.pmid}\n"
+        f"Paper-level verdict: {verdict_of[result.pmid]}\n"
+        f"Title: {result.title}\n"
+        f"Abstract: {result.abstract}"
+        for result in abstracts
+    )
+    prompt = _EVIDENCE_DIRECTION_PROMPT.format(
+        drug=drug,
+        disease=disease,
+        abstracts=formatted,
+    )
+    response = await query_llm(prompt)
+    data = parse_last_json_object(response)
+    if not isinstance(data, dict):
+        logger.warning(
+            "evidence_direction: unparseable response for %s / %s: %s",
+            drug,
+            disease,
+            response,
+        )
+        return None
+
+    try:
+        judgment = EvidenceDirectionJudgment(**data)
+    except ValidationError as exc:
+        logger.warning(
+            "evidence_direction: invalid response for %s / %s: %s",
+            drug,
+            disease,
+            exc,
+        )
+        return None
+    if not judgment.summary.strip():
+        logger.warning(
+            "evidence_direction: incomplete response for %s / %s: %s",
+            drug,
+            disease,
+            response,
+        )
+        return None
+    return judgment
 
 
 class AbstractResult(BaseModel):
@@ -289,9 +567,7 @@ class RetrievalService:
             if source_present:
                 top_40[canonical_lower] = combined
                 aliases_by_disease[canonical_lower] = [
-                    disease
-                    for disease in source_names
-                    if disease != canonical_lower
+                    disease for disease in source_names if disease != canonical_lower
                 ]
 
         top_40 = _filter_overly_broad_candidates(top_40)
@@ -923,7 +1199,7 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or DERIVED fields (direction rollup, strength cap)
             # change, so stale judgments cannot preserve behavior that the new rules reject.
-            "logic_version": "prevention_evidence_v1",
+            "logic_version": "per_pmid_class_and_target_gates_v3",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -933,10 +1209,67 @@ class RetrievalService:
             # )
             return EvidenceSummary(**cached)
 
-        pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
+        drug_names = await get_all_drug_names(chembl_id, self.cache_dir)
+        pref_name = drug_names[0]
+        # Two isolated per-paper gates run BEFORE the combined prompt, so the prompt only ever sees
+        # abstracts already established as this drug alone, given to treat this disease. Both are
+        # cached per paper, so a paper's fate no longer moves when the surrounding batch changes.
+        drug_identity = await _judge_pmid_drug_identity(
+            chembl_id, drug_names, top_abstracts, self.cache_dir
+        )
+        on_topic = await _judge_pmid_treats_disease(
+            chembl_id,
+            pref_name,
+            disease,
+            [
+                result
+                for result in top_abstracts
+                if drug_identity.get(result.pmid) in ("studied", "class_level")
+            ],
+            self.cache_dir,
+        )
+        synthesis_abstracts = [
+            result
+            for result in top_abstracts
+            if drug_identity.get(result.pmid) == "studied"
+            and on_topic.get(result.pmid, False)
+        ]
+        # Class-level papers never enter the supporting/contradicting lists. Their only role is to
+        # distinguish "no evidence at all" from "evidence exists, but only for the class".
+        class_level_pmids = [
+            result.pmid
+            for result in top_abstracts
+            if drug_identity.get(result.pmid) == "class_level"
+            and on_topic.get(result.pmid, False)
+        ]
+        if not synthesis_abstracts:
+            summary = EvidenceSummary(
+                summary="",
+                study_count=0,
+                strength="none",
+                direction="none",
+                evidence_basis="class_level" if class_level_pmids else "none",
+                is_observational=None,
+                is_animal_only=None,
+                key_findings=[],
+                supporting_pmids=[],
+                contradicting_pmids=[],
+                relevant_pmids=[],
+                contaminated_pmids=[result.pmid for result in top_abstracts],
+                neutral_pmids=[],
+            )
+            cache_set(
+                "synthesize",
+                cache_params,
+                summary.model_dump(mode="json"),
+                self.cache_dir,
+                ttl=CACHE_TTL,
+            )
+            return summary
+
         formatted = "\n\n".join(
             f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
-            for r in top_abstracts
+            for r in synthesis_abstracts
         )
 
         template = (_PROMPTS_DIR / "synthesize.txt").read_text()
@@ -984,6 +1317,7 @@ class RetrievalService:
         # second-pass bucketing that mis-placed a positive trial as contradicting (BRAVE-I).
         verdicts = data.get("verdicts")
         input_pmids = [r.pmid for r in top_abstracts]
+        synthesis_pmids = {r.pmid for r in synthesis_abstracts}
         # Relevant = anything not contaminated. "neutral" (PK/safety/mechanism, set by the direction
         # sub-call) is relevant — it counts toward study_count — but is excluded from supporting AND
         # contradicting below. synthesize itself never emits "neutral", so including it here only
@@ -991,7 +1325,12 @@ class RetrievalService:
         _RELEVANT_VERDICTS = {"supporting", "contradicting", "mixed", "neutral"}
         if isinstance(verdicts, dict):
             verdict_of = {
-                p: str(verdicts.get(p, "")).strip().lower() for p in input_pmids
+                p: (
+                    str(verdicts.get(p, "")).strip().lower()
+                    if p in synthesis_pmids
+                    else "contaminated"
+                )
+                for p in input_pmids
             }
         else:
             logger.warning(
@@ -1011,7 +1350,7 @@ class RetrievalService:
         # as supporting for metformin). The sub-call's verdict OVERRIDES the synthesize direction
         # for any relevant PMID it returns; PMIDs it omits keep the synthesize direction.
         relevant_for_direction = [
-            r for r in top_abstracts if verdict_of[r.pmid] in _RELEVANT_VERDICTS
+            r for r in synthesis_abstracts if verdict_of[r.pmid] in _RELEVANT_VERDICTS
         ]
         pmid_directions = await _judge_pmid_directions(
             pref_name, disease, relevant_for_direction
@@ -1052,18 +1391,42 @@ class RetrievalService:
         data["study_count"] = len(relevant_pmids)
         summary = EvidenceSummary(**data)
 
-        # DETERMINISTIC overall direction from the per-PMID spread (guardrail): cannot read
-        # "supports" when any contradicting/mixed abstract exists (-> "mixed"); "none" when there
-        # is no relevant evidence. The strength cap below still forces direction "none" for a
-        # non-drug_specific basis.
+        # The synthesis model sometimes emits is_observational=False even while describing every
+        # relevant human study as uncontrolled. The card renders False as "RCT-backed / controlled",
+        # so require an explicit controlled-design signal before allowing that claim. This guard is
+        # one-way: it prevents an unsupported controlled claim without upgrading any study to one.
+        if (
+            summary.evidence_basis == "drug_specific"
+            and summary.is_observational is False
+            and not _has_explicit_controlled_design(relevant_for_direction)
+        ):
+            summary.is_observational = None
+
+        # Preserve the synthesis model's evidence-weighted overall direction when individual papers
+        # disagree. A presence-only rollup made any positive case report cancel controlled negative
+        # evidence. The one-sided and no-efficacy cases remain deterministic guardrails.
         has_support = bool(supporting_pmids)
         has_against = any(
             verdict_of[p] in ("contradicting", "mixed") for p in input_pmids
         )
         if not relevant_pmids:
             summary.direction = "none"
-        elif has_support and has_against:
-            summary.direction = "mixed"
+        elif has_support and has_against and summary.evidence_basis == "drug_specific":
+            directional_abstracts = [
+                result
+                for result in relevant_for_direction
+                if verdict_of[result.pmid] != "neutral"
+            ]
+            judgment = await _judge_overall_evidence_direction(
+                pref_name,
+                disease,
+                directional_abstracts,
+                verdict_of,
+            )
+            if judgment is not None:
+                summary.direction = judgment.direction
+                summary.summary = judgment.summary
+                summary.key_findings = judgment.key_findings
         elif has_support:
             summary.direction = "supports"
         elif has_against:
@@ -1357,7 +1720,7 @@ class RetrievalService:
         cache_params = {
             "chembl_id": chembl_id,
             "disease": disease,
-            "logic_version": "per_pmid_indication_harm_v2",
+            "logic_version": "disease_risk_modifier_v3",
             "pmids": sorted(r.pmid for r in safety_abstracts),
             "llm_model": _settings.llm_model,
         }

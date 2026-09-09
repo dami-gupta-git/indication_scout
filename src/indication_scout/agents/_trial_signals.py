@@ -26,7 +26,10 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
     TrialSignals,
 )
-from indication_scout.constants import NON_THERAPEUTIC_INTERVENTION_TYPES
+from indication_scout.constants import (
+    CLINICAL_TRIALS_ACTIVE_STATUSES,
+    NON_THERAPEUTIC_INTERVENTION_TYPES,
+)
 from indication_scout.models.model_clinical_trials import Trial
 
 # Stop categories that constitute a genuine cause-termination: an explicit safety or
@@ -62,13 +65,7 @@ def is_non_therapeutic_study(trial: Trial) -> bool:
 # "RECRUITING". "Not yet recruiting" IS included as a real (planned) program; "Enrolling by
 # invitation" is an open program too. "Suspended" is a PAUSE, not a dead end, so it counts as
 # ongoing development rather than a dead/unknown trial.
-_ACTIVE_STATUSES = {
-    "RECRUITING",
-    "ACTIVE_NOT_RECRUITING",
-    "NOT_YET_RECRUITING",
-    "ENROLLING_BY_INVITATION",
-    "SUSPENDED",
-}
+_ACTIVE_STATUSES = frozenset(CLINICAL_TRIALS_ACTIVE_STATUSES)
 
 
 def _normalize_status(status: str) -> str:

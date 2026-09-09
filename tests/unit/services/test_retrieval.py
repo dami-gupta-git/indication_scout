@@ -94,7 +94,23 @@ def metformin_profile() -> DrugProfile:
 
 @pytest.fixture
 def svc(tmp_path):
-    return RetrievalService(tmp_path)
+    async def all_studied(chembl_id, drug_names, abstracts, cache_dir):
+        return {abstract.pmid: "studied" for abstract in abstracts}
+
+    async def all_on_topic(chembl_id, drug, disease, abstracts, cache_dir):
+        return {abstract.pmid: True for abstract in abstracts}
+
+    with (
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=all_studied,
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_treats_disease",
+            new=all_on_topic,
+        ),
+    ):
+        yield RetrievalService(tmp_path)
 
 
 # --- DrugProfile.from_rich_drug_data ---
@@ -1197,7 +1213,8 @@ _SAMPLE_ABSTRACTS = [
 ]
 
 # Directional per-PMID verdicts (the new schema): supporting/contradicting/mixed/contaminated.
-# supporting/contradicting/relevant lists + study_count + direction are DERIVED in code from this.
+# Supporting/contradicting/relevant lists and study_count are derived in code from this.
+# Overall direction is preserved from the synthesis model when paper-level verdicts disagree.
 _SAMPLE_LLM_RESPONSE = json.dumps(
     {
         "verdicts": {"11111111": "supporting", "22222222": "supporting"},
@@ -1340,6 +1357,76 @@ async def test_synthesize_parses_llm_response(svc):
     assert result.contaminated_pmids == []
 
 
+async def test_synthesize_downgrades_unsupported_controlled_design_claim(svc):
+    """An uncontrolled Parkinson study cannot render as RCT-backed in the candidate card."""
+    abstract = AbstractResult(
+        pmid="6431314",
+        title="Bupropion in Parkinson's disease",
+        abstract=(
+            "We evaluated bupropion in 20 patients with idiopathic Parkinson's disease. "
+            "Parkinsonism lessened in half the patients, although side effects were frequent."
+        ),
+        similarity=0.9,
+        pubtype=["Journal Article"],
+    )
+    response = json.dumps(
+        {
+            "verdicts": {"6431314": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "A single uncontrolled study reported mild efficacy (PMID: 6431314).",
+            "strength": "moderate",
+            "direction": "supports",
+            "is_observational": False,
+            "is_animal_only": False,
+            "key_findings": [
+                "Parkinsonism lessened in half the patients (PMID: 6431314)."
+            ],
+        }
+    )
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["bupropion"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=response),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_directions",
+            new=AsyncMock(return_value={"6431314": "supporting"}),
+        ),
+    ):
+        result = await svc.synthesize("CHEMBL894", "Parkinson disease", [abstract])
+
+    assert result.model_dump() == {
+        "summary": "A single uncontrolled study reported mild efficacy (PMID: 6431314).",
+        "study_count": 1,
+        "strength": "moderate",
+        "direction": "supports",
+        "evidence_basis": "drug_specific",
+        "is_observational": None,
+        "is_animal_only": False,
+        "key_findings": ["Parkinsonism lessened in half the patients (PMID: 6431314)."],
+        "supporting_pmids": ["6431314"],
+        "contradicting_pmids": [],
+        "relevant_pmids": ["6431314"],
+        "contaminated_pmids": [],
+        "neutral_pmids": [],
+        "safety_summary": "",
+        "regulatory_safety_summary": "",
+        "regulatory_safety_full_labels": "",
+        "pharmacovigilance_summary": "",
+        "literature_safety_summary": "",
+        "label_safety_available": None,
+        "safety_pmids": [],
+        "safety_severity": None,
+        "indication_harm": None,
+        "indication_harm_summary": "",
+        "indication_harm_pmids": [],
+    }
+
+
 async def test_synthesize_degrades_to_safe_floor_on_invalid_json(svc):
     """Unparseable LLM JSON degrades to a safe untested floor (no raise): basis none, strength
     none, all abstracts contaminated. The tolerant parse + floor keeps the pipeline alive.
@@ -1406,6 +1493,396 @@ async def test_synthesize_strength_cap_forces_none_for_class_level(svc):
     assert result.contaminated_pmids == ["11111111", "22222222"]
 
 
+# --- _judge_pmid_drug_identity sub-call (the per-PMID identity authority) ---
+
+
+async def test_pmid_drug_identity_isolated_and_cached_per_pmid(tmp_path):
+    """A same-class drug is rejected without the model, while adding a batch neighbour reuses the
+    existing exact-drug decision. A fresh cache cannot change the deterministic rejection.
+    """
+    from indication_scout.services.retrieval import _judge_pmid_drug_identity
+
+    sildenafil = AbstractResult(
+        pmid="1",
+        title="Sildenafil trial",
+        abstract="Sildenafil was evaluated against placebo.",
+        similarity=0.9,
+    )
+    pf_compound = AbstractResult(
+        pmid="27113485",
+        title="PF-00489791 trial",
+        abstract="The PDE5 inhibitor PF-00489791 was evaluated against placebo.",
+        similarity=0.9,
+    )
+    neighbour = AbstractResult(
+        pmid="3",
+        title="Another sildenafil trial",
+        abstract="Sildenafil was evaluated against placebo.",
+        similarity=0.9,
+    )
+    calls: list[str] = []
+
+    async def identity_llm(prompt: str) -> str:
+        calls.append(prompt)
+        if "PMID: 27113485" in prompt:
+            return json.dumps({"verdict": "not_studied"})
+        return json.dumps({"verdict": "studied"})
+
+    with patch("indication_scout.services.retrieval.query_small_llm", new=identity_llm):
+        first = await _judge_pmid_drug_identity(
+            "CHEMBL192",
+            ["sildenafil", "viagra"],
+            [sildenafil, pf_compound],
+            tmp_path,
+        )
+        second = await _judge_pmid_drug_identity(
+            "CHEMBL192",
+            ["sildenafil", "viagra"],
+            [pf_compound, neighbour, sildenafil],
+            tmp_path,
+        )
+        fresh_cache = await _judge_pmid_drug_identity(
+            "CHEMBL192",
+            ["sildenafil", "viagra"],
+            [pf_compound],
+            tmp_path / "fresh_cache",
+        )
+
+    assert first == {"1": "studied", "27113485": "not_studied"}
+    assert second == {"27113485": "not_studied", "3": "studied", "1": "studied"}
+    assert fresh_cache == {"27113485": "not_studied"}
+    assert len(calls) == 2
+    assert all("PMID: 27113485" not in prompt for prompt in calls)
+
+
+async def test_synthesize_class_level_paper_never_counts_as_drug_specific_evidence(svc):
+    """A pooled class paper is kept out of the synthesis prompt and every evidence list, so one
+    drug-specific study cannot carry class-level papers into the supporting list at full weight.
+    """
+    abstracts = [
+        AbstractResult(
+            pmid="11111111",
+            title="Sildenafil in stroke",
+            abstract="Sildenafil improved recovery against placebo.",
+            similarity=0.95,
+        ),
+        AbstractResult(
+            pmid="42051769",
+            title="PDE5 inhibitors meta-analysis",
+            abstract="Sildenafil or tadalafil increased cerebral blood flow.",
+            similarity=0.94,
+        ),
+    ]
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Sildenafil improved recovery (PMID: 11111111).",
+            "strength": "weak",
+            "direction": "supports",
+            "is_observational": False,
+            "is_animal_only": True,
+            "key_findings": ["Sildenafil improved recovery (PMID: 11111111)."],
+        }
+    )
+    captured: dict[str, str] = {}
+
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return main
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["sildenafil"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(
+                return_value={"11111111": "studied", "42051769": "class_level"}
+            ),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_directions",
+            new=AsyncMock(return_value={"11111111": "supporting"}),
+        ),
+    ):
+        result = await svc.synthesize("CHEMBL192", "ischemic stroke", abstracts)
+
+    assert "PMID: 11111111" in captured["prompt"]
+    assert "42051769" not in captured["prompt"]
+    assert result.strength == "weak"
+    assert result.direction == "supports"
+    assert result.evidence_basis == "drug_specific"
+    assert result.study_count == 1
+    assert result.supporting_pmids == ["11111111"]
+    assert result.contradicting_pmids == []
+    assert result.relevant_pmids == ["11111111"]
+    assert result.contaminated_pmids == ["42051769"]
+    assert result.neutral_pmids == []
+
+
+async def test_synthesize_reports_class_level_basis_when_no_drug_specific_paper(svc):
+    """Only class-level papers survive the gates, so the pair is graded ungraded-but-class-backed
+    without ever reaching the synthesis model."""
+    abstracts = [
+        AbstractResult(
+            pmid="42051769",
+            title="PDE5 inhibitors meta-analysis",
+            abstract="Sildenafil or tadalafil increased cerebral blood flow.",
+            similarity=0.94,
+        )
+    ]
+    query_llm = AsyncMock()
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["sildenafil"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(return_value={"42051769": "class_level"}),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=query_llm),
+    ):
+        result = await svc.synthesize("CHEMBL192", "ischemic stroke", abstracts)
+
+    assert query_llm.await_count == 0
+    assert result.summary == ""
+    assert result.study_count == 0
+    assert result.strength == "none"
+    assert result.direction == "none"
+    assert result.evidence_basis == "class_level"
+    assert result.is_observational is None
+    assert result.is_animal_only is None
+    assert result.key_findings == []
+    assert result.supporting_pmids == []
+    assert result.contradicting_pmids == []
+    assert result.relevant_pmids == []
+    assert result.contaminated_pmids == ["42051769"]
+    assert result.neutral_pmids == []
+
+
+async def test_synthesize_target_gate_excludes_disease_observed_but_not_treated(
+    tmp_path,
+):
+    """The drug was given for a different target and the candidate disease was only counted as an
+    outcome, so the paper never reaches the synthesis prompt or the evidence lists."""
+    svc = RetrievalService(tmp_path)
+    abstracts = [
+        AbstractResult(
+            pmid="11111111",
+            title="Sildenafil in stroke",
+            abstract="Sildenafil improved recovery against placebo.",
+            similarity=0.95,
+        ),
+        AbstractResult(
+            pmid="29092891",
+            title="Sildenafil and device thrombosis on Heart Mate II support",
+            abstract="Sildenafil was associated with reduced device thrombosis and ischemic stroke.",
+            similarity=0.94,
+        ),
+    ]
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Sildenafil improved recovery (PMID: 11111111).",
+            "strength": "weak",
+            "direction": "supports",
+            "is_observational": False,
+            "is_animal_only": True,
+            "key_findings": ["Sildenafil improved recovery (PMID: 11111111)."],
+        }
+    )
+    captured: dict[str, str] = {}
+
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return main
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["sildenafil"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(return_value={"11111111": "studied", "29092891": "studied"}),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_treats_disease",
+            new=AsyncMock(return_value={"11111111": True, "29092891": False}),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_directions",
+            new=AsyncMock(return_value={"11111111": "supporting"}),
+        ),
+    ):
+        result = await svc.synthesize("CHEMBL192", "ischemic stroke", abstracts)
+
+    assert "PMID: 11111111" in captured["prompt"]
+    assert "29092891" not in captured["prompt"]
+    assert result.study_count == 1
+    assert result.strength == "weak"
+    assert result.direction == "supports"
+    assert result.evidence_basis == "drug_specific"
+    assert result.supporting_pmids == ["11111111"]
+    assert result.contradicting_pmids == []
+    assert result.relevant_pmids == ["11111111"]
+    assert result.contaminated_pmids == ["29092891"]
+    assert result.neutral_pmids == []
+
+
+async def test_pmid_treats_disease_isolated_and_cached_per_pmid(tmp_path):
+    """Each target decision sees one abstract and survives changes to the surrounding batch."""
+    from indication_scout.services.retrieval import _judge_pmid_treats_disease
+
+    adult_stroke = AbstractResult(
+        pmid="12411660",
+        title="Sildenafil promotes functional recovery after stroke in rats",
+        abstract="Rats received sildenafil after embolic middle cerebral artery occlusion.",
+        similarity=0.9,
+    )
+    neonatal_hi = AbstractResult(
+        pmid="28343223",
+        title="Sildenafil in the developing ischemic mouse brain",
+        abstract="Nine-day-old mice received sildenafil after neonatal hypoxic-ischemic injury.",
+        similarity=0.9,
+    )
+    neighbour = AbstractResult(
+        pmid="19717023",
+        title="Sildenafil treatment of subacute ischemic stroke",
+        abstract="Patients received sildenafil during recovery from ischemic stroke.",
+        similarity=0.9,
+    )
+    calls: list[str] = []
+
+    async def target_llm(prompt: str) -> str:
+        calls.append(prompt)
+        verdict = "not_treats" if "PMID: 28343223" in prompt else "treats"
+        return json.dumps({"verdict": verdict})
+
+    with patch("indication_scout.services.retrieval.query_small_llm", new=target_llm):
+        first = await _judge_pmid_treats_disease(
+            "CHEMBL192",
+            "sildenafil",
+            "ischemic stroke",
+            [adult_stroke, neonatal_hi],
+            tmp_path,
+        )
+        second = await _judge_pmid_treats_disease(
+            "CHEMBL192",
+            "sildenafil",
+            "ischemic stroke",
+            [neighbour, neonatal_hi, adult_stroke],
+            tmp_path,
+        )
+        fresh = await _judge_pmid_treats_disease(
+            "CHEMBL192",
+            "sildenafil",
+            "ischemic stroke",
+            [neonatal_hi],
+            tmp_path / "fresh",
+        )
+
+    assert first == {"12411660": True, "28343223": False}
+    assert second == {"19717023": True, "28343223": False, "12411660": True}
+    assert fresh == {"28343223": False}
+    assert len(calls) == 4
+    assert all(not ("12411660" in prompt and "28343223" in prompt) for prompt in calls)
+
+
+async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(svc):
+    """The batch model cannot count a PF-00489791 paper as sildenafil evidence because the
+    authoritative identity gate removes it from the synthesis prompt and final evidence lists.
+    """
+    abstracts = [
+        AbstractResult(
+            pmid="11111111",
+            title="Sildenafil trial",
+            abstract="Sildenafil improved the primary endpoint against placebo.",
+            similarity=0.95,
+        ),
+        AbstractResult(
+            pmid="27113485",
+            title="PF-00489791 trial",
+            abstract="PF-00489791 reduced albuminuria against placebo.",
+            similarity=0.94,
+        ),
+    ]
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Sildenafil improved the primary endpoint (PMID: 11111111).",
+            "strength": "moderate",
+            "direction": "supports",
+            "is_observational": False,
+            "is_animal_only": False,
+            "key_findings": [
+                "Sildenafil improved the primary endpoint (PMID: 11111111)."
+            ],
+        }
+    )
+    captured: dict[str, str] = {}
+
+    async def capture_llm(prompt: str) -> str:
+        captured["prompt"] = prompt
+        return main
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["sildenafil", "viagra"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(
+                return_value={"11111111": "studied", "27113485": "not_studied"}
+            ),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_directions",
+            new=AsyncMock(return_value={"11111111": "supporting"}),
+        ),
+    ):
+        result = await svc.synthesize("CHEMBL192", "diabetic nephropathy", abstracts)
+
+    assert "PMID: 11111111" in captured["prompt"]
+    assert "27113485" not in captured["prompt"]
+    assert "PF-00489791" not in captured["prompt"]
+    assert result.model_dump() == {
+        "summary": "Sildenafil improved the primary endpoint (PMID: 11111111).",
+        "study_count": 1,
+        "strength": "moderate",
+        "direction": "supports",
+        "evidence_basis": "drug_specific",
+        "is_observational": False,
+        "is_animal_only": False,
+        "key_findings": ["Sildenafil improved the primary endpoint (PMID: 11111111)."],
+        "supporting_pmids": ["11111111"],
+        "contradicting_pmids": [],
+        "relevant_pmids": ["11111111"],
+        "contaminated_pmids": ["27113485"],
+        "neutral_pmids": [],
+        "safety_summary": "",
+        "regulatory_safety_summary": "",
+        "regulatory_safety_full_labels": "",
+        "pharmacovigilance_summary": "",
+        "literature_safety_summary": "",
+        "label_safety_available": None,
+        "safety_pmids": [],
+        "safety_severity": None,
+        "indication_harm": None,
+        "indication_harm_summary": "",
+        "indication_harm_pmids": [],
+    }
+
+
 # --- _judge_pmid_directions sub-call (the per-PMID direction authority) ---
 
 
@@ -1469,6 +1946,67 @@ async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
     assert result.neutral_pmids == ["22222222"]  # surfaced as context, not dropped
     assert result.study_count == 2
     assert result.direction == "supports"  # the PK paper did not make it "mixed"
+
+
+async def test_synthesize_focuses_final_judgment_when_papers_disagree(svc):
+    """A focused judgment replaces the batch model's mixed direction and matching prose."""
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting", "22222222": "contradicting"},
+            "evidence_basis": "drug_specific",
+            "summary": "The evidence is mixed.",
+            "strength": "moderate",
+            "direction": "mixed",
+            "is_observational": False,
+            "is_animal_only": False,
+            "key_findings": ["The papers disagree."],
+        }
+    )
+    focused = json.dumps(
+        {
+            "direction": "contradicts",
+            "summary": "The controlled evidence contradicts efficacy (PMID: 22222222).",
+            "key_findings": ["The controlled trial found no benefit (PMID: 22222222)."],
+        }
+    )
+    sub = json.dumps({"11111111": "supporting", "22222222": "contradicting"})
+    query_llm = AsyncMock(side_effect=[main, focused])
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["bupropion"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(return_value={"11111111": "studied", "22222222": "studied"}),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=query_llm),
+        patch(
+            "indication_scout.services.retrieval.query_small_llm",
+            new=AsyncMock(return_value=sub),
+        ),
+    ):
+        result = await svc.synthesize("CHEMBL894", "ptsd", _SAMPLE_ABSTRACTS)
+
+    assert (
+        result.summary
+        == "The controlled evidence contradicts efficacy (PMID: 22222222)."
+    )
+    assert result.study_count == 2
+    assert result.strength == "moderate"
+    assert result.direction == "contradicts"
+    assert result.evidence_basis == "drug_specific"
+    assert result.is_observational is False
+    assert result.is_animal_only is False
+    assert result.key_findings == [
+        "The controlled trial found no benefit (PMID: 22222222)."
+    ]
+    assert result.supporting_pmids == ["11111111"]
+    assert result.contradicting_pmids == ["22222222"]
+    assert result.relevant_pmids == ["11111111", "22222222"]
+    assert result.contaminated_pmids == []
+    assert result.neutral_pmids == []
+    assert query_llm.await_count == 2
 
 
 async def test_all_neutral_abstracts_force_direction_none(svc):

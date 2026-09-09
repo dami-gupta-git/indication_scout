@@ -5,6 +5,22 @@ from typing import Any, Literal
 from pydantic import BaseModel, field_validator, model_validator
 
 
+class EvidenceDirectionJudgment(BaseModel):
+    """Focused LLM judgment over already-relevant, directionally conflicting papers."""
+
+    direction: Literal["supports", "contradicts", "mixed"]
+    summary: str
+    key_findings: list[str]
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values):
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
 class EvidenceSummary(BaseModel):
     summary: str = ""
     study_count: int = 0
@@ -13,7 +29,7 @@ class EvidenceSummary(BaseModel):
     strength: Literal["strong", "moderate", "weak", "none"] = "none"
     direction: Literal["supports", "contradicts", "mixed", "none"] = "none"
     # Whether the strength/direction above grade evidence FOR THIS DRUG or only for other drugs
-    # in the same class. Set by the combined synthesize call (the single author over the abstracts).
+    # in the same class. Exact-drug identity is gated before the combined synthesis call.
     # "class_level" means the disease-relevant RCTs are for sibling drugs, not this one — the
     # strength is then forced to NOT "strong" by the deterministic cap in services/retrieval.py.
     # "approved" means the only
@@ -21,8 +37,8 @@ class EvidenceSummary(BaseModel):
     # approved, not repurposing) — strength is also forced to none. Renderers surface the basis so
     # a card never claims "strong, RCT-backed" for class-level-only or already-approved evidence.
     evidence_basis: Literal["drug_specific", "approved", "class_level", "none"] = "none"
-    # True when the relevant evidence includes at least one RCT/controlled trial, False when
-    # it is purely observational, None when undetermined (no-data). Lets the supervisor avoid
+    # True when the relevant evidence is purely observational, False when it includes at least
+    # one RCT/controlled trial, and None when undetermined (no-data). Lets the supervisor avoid
     # calling RCT-backed evidence "observational". None stays None (no default coercion).
     is_observational: bool | None = None
     # True when EVERY relevant drug-specific study is a non-human model (animal/in-vitro), False when
@@ -32,9 +48,10 @@ class EvidenceSummary(BaseModel):
     is_animal_only: bool | None = None
     key_findings: list[str] = []
     # supporting/contradicting/relevant/contaminated_pmids are BUILT IN CODE (services/retrieval.py)
-    # from the per-PMID `verdicts` map the synthesize call emits (each PMID labeled contaminated /
-    # supporting / contradicting / mixed). They are NOT emitted directly by the LLM — this removed
-    # the loose second-pass bucketing that mis-placed a positive trial as contradicting (BRAVE-I).
+    # from the exact-drug identity gate and the per-PMID `verdicts` map the synthesize call emits
+    # (each surviving PMID labeled contaminated / supporting / contradicting / mixed). They are NOT
+    # emitted directly by the LLM — this removed the loose second-pass bucketing that mis-placed a
+    # positive trial as contradicting (BRAVE-I).
     # supporting = supporting+mixed; contradicting = contradicting+mixed; relevant = non-contaminated.
     supporting_pmids: list[str] = []
     contradicting_pmids: list[str] = []

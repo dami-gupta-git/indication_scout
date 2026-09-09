@@ -247,6 +247,7 @@ def test_search_trials_result_all_fields():
         total_count=42,
         by_status={"RECRUITING": 10, "ACTIVE_NOT_RECRUITING": 4, "WITHDRAWN": 1},
         trials=[trial],
+        resolution_status="resolved",
     )
     assert result.total_count == 42
     assert result.by_status == {
@@ -256,6 +257,7 @@ def test_search_trials_result_all_fields():
     }
     assert len(result.trials) == 1
     assert result.trials[0].nct_id == "NCT00000001"
+    assert result.resolution_status == "resolved"
 
 
 def test_search_trials_result_defaults():
@@ -264,6 +266,7 @@ def test_search_trials_result_defaults():
     assert result.total_count == 0
     assert result.by_status == {}
     assert result.trials == []
+    assert result.resolution_status is None
 
 
 def test_search_trials_result_coerce_nones():
@@ -272,6 +275,7 @@ def test_search_trials_result_coerce_nones():
     assert result.total_count == 0
     assert result.by_status == {}
     assert result.trials == []
+    assert result.resolution_status is None
 
 
 # --- CompletedTrialsResult ---

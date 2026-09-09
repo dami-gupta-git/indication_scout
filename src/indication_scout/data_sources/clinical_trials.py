@@ -19,6 +19,7 @@ from typing import Any
 
 from indication_scout.config import get_settings
 from indication_scout.constants import (
+    CLINICAL_TRIALS_ACTIVE_STATUSES,
     CLINICAL_TRIALS_BASE_URL,
     CLINICAL_TRIALS_CACHE_TTL,
     CLINICAL_TRIALS_FETCH_MAX,
@@ -96,7 +97,7 @@ class ClinicalTrialsClient(BaseClient):
         return self._parse_trial(data)
 
     # ------------------------------------------------------------------
-    # Public: search_trials (all-status pair query: counts + top-50)
+    # Public: search_trials (all-status pair query: counts + reviewed union)
     # ------------------------------------------------------------------
 
     async def search_trials(
@@ -113,11 +114,9 @@ class ClinicalTrialsClient(BaseClient):
         Drug side stays free-text via `query.intr` so trials whose
         intervention isn't MeSH-tagged are still caught.
 
-        Issues four cheap count calls (total + RECRUITING +
-        ACTIVE_NOT_RECRUITING + WITHDRAWN) plus one fetch of up to
-        CLINICAL_TRIALS_FETCH_MAX records sorted by enrollment desc. The
-        same query.cond filter is used for counts and fetch, so
-        `len(trials) <= total_count` always.
+        Issues status count calls, fetches up to CLINICAL_TRIALS_FETCH_MAX records sorted by
+        enrollment, and separately fetches every ongoing record. The returned trial list is the
+        deduplicated union, so small active studies cannot fall outside the relevance review.
 
         TERMINATED and COMPLETED counts are NOT reported here — those live
         on get_terminated_trials and get_completed_trials respectively to
@@ -128,6 +127,7 @@ class ClinicalTrialsClient(BaseClient):
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
             "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
+            "coverage_version": "active_union_v1",
         }
         cached = cache_get("ct_search", cache_params, self.cache_dir)
         if cached is not None:
@@ -172,17 +172,36 @@ class ClinicalTrialsClient(BaseClient):
             max_results=CLINICAL_TRIALS_FETCH_MAX,
             sort="EnrollmentCount:desc",
         )
-
-        total, recruiting, active, withdrawn, unknown, (trials, _) = (
-            await asyncio.gather(
-                total_task,
-                recruiting_task,
-                active_task,
-                withdrawn_task,
-                unknown_task,
-                fetch_task,
-            )
+        active_fetch_task = self._paginated_search(
+            drug=drug,
+            indication=cond,
+            date_before=date_before,
+            status_filter="|".join(CLINICAL_TRIALS_ACTIVE_STATUSES),
+            max_results=None,
+            sort="StartDate:desc",
         )
+
+        (
+            total,
+            recruiting,
+            active,
+            withdrawn,
+            unknown,
+            (exemplars, _),
+            (ongoing, _),
+        ) = await asyncio.gather(
+            total_task,
+            recruiting_task,
+            active_task,
+            withdrawn_task,
+            unknown_task,
+            fetch_task,
+            active_fetch_task,
+        )
+
+        trials_by_id = {
+            trial.nct_id: trial for trial in exemplars + ongoing if trial.nct_id
+        }
 
         result = SearchTrialsResult(
             total_count=total,
@@ -192,7 +211,8 @@ class ClinicalTrialsClient(BaseClient):
                 "WITHDRAWN": withdrawn,
                 "UNKNOWN": unknown,
             },
-            trials=trials,
+            trials=list(trials_by_id.values()),
+            resolution_status="resolved",
         )
         cache_set(
             "ct_search",

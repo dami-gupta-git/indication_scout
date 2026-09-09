@@ -1,0 +1,25 @@
+You are making the final evidence judgment for repurposing {drug} to treat {disease}.
+
+Every abstract below has already passed the exact-drug and therapeutic-target relevance checks.
+The paper-level efficacy verdict beside each PMID is authoritative. Do not reconsider relevance or
+paper-level direction. Your only job is to weigh the relevant evidence and write one internally
+consistent conclusion.
+
+Evidence hierarchy:
+- Prioritize direct clinical outcomes over biomarkers, mechanisms, or preclinical outcomes.
+- Prioritize systematic reviews, meta-analyses, and controlled trials over uncontrolled studies,
+  case series, and case reports.
+- A small uncontrolled positive report does not offset consistent negative controlled evidence.
+- Likewise, a weak negative report does not offset consistent positive controlled evidence.
+- Use "mixed" only when comparably credible evidence points in both directions with no clear net.
+
+Relevant abstracts and authoritative paper-level verdicts:
+{abstracts}
+
+Return JSON only with:
+- "direction": "supports", "contradicts", or "mixed".
+- "summary": 2-3 sentences stating the overall direction and why. Cite every factual claim with
+  its PMID. Use only the supplied abstracts.
+- "key_findings": specific findings from the supplied abstracts, each ending with its PMID.
+
+The direction stated in the summary must exactly match the direction field.

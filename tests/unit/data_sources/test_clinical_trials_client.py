@@ -100,12 +100,12 @@ async def test_count_trials_total_passes_status_and_phase_filters(tmp_path):
 
 
 # ------------------------------------------------------------------
-# search_trials — 5 counts + 1 fetch, MeSH server-side
+# search_trials — 5 counts + exemplar and ongoing fetches, MeSH server-side
 # ------------------------------------------------------------------
 
 
 async def test_search_trials_assembles_counts_and_fetch(tmp_path):
-    """search_trials fans out five count calls plus one fetch and returns a SearchTrialsResult."""
+    """search_trials unions enrollment exemplars with every ongoing record."""
     client = ClinicalTrialsClient(cache_dir=tmp_path)
     fake_trial = Trial(
         nct_id="NCT11111111",
@@ -113,6 +113,14 @@ async def test_search_trials_assembles_counts_and_fetch(tmp_path):
         phase="Phase 2",
         overall_status="RECRUITING",
         sponsor="S",
+    )
+    small_active_trial = Trial(
+        nct_id="NCT22222222",
+        title="Small active trial",
+        phase="Phase 3",
+        overall_status="ACTIVE_NOT_RECRUITING",
+        sponsor="Active sponsor",
+        enrollment=8,
     )
 
     with (
@@ -124,30 +132,87 @@ async def test_search_trials_assembles_counts_and_fetch(tmp_path):
         patch.object(
             client,
             "_paginated_search",
-            new=AsyncMock(return_value=([fake_trial], False)),
+            new=AsyncMock(
+                side_effect=[
+                    ([fake_trial], True),
+                    ([fake_trial, small_active_trial], False),
+                ]
+            ),
         ) as mock_fetch,
     ):
         result = await client.search_trials("bupropion", "Depressive Disorder")
 
-    assert result.total_count == 131
-    assert result.by_status == {
-        "RECRUITING": 12,
-        "ACTIVE_NOT_RECRUITING": 4,
-        "WITHDRAWN": 1,
-        "UNKNOWN": 7,
+    assert result.model_dump() == {
+        "total_count": 131,
+        "by_status": {
+            "RECRUITING": 12,
+            "ACTIVE_NOT_RECRUITING": 4,
+            "WITHDRAWN": 1,
+            "UNKNOWN": 7,
+        },
+        "trials": [
+            {
+                "nct_id": "NCT11111111",
+                "title": "T",
+                "brief_summary": None,
+                "phase": "Phase 2",
+                "overall_status": "RECRUITING",
+                "why_stopped": None,
+                "indications": [],
+                "mesh_conditions": [],
+                "mesh_ancestors": [],
+                "interventions": [],
+                "sponsor": "S",
+                "enrollment": None,
+                "start_date": None,
+                "completion_date": None,
+                "primary_outcomes": [],
+                "references": [],
+            },
+            {
+                "nct_id": "NCT22222222",
+                "title": "Small active trial",
+                "brief_summary": None,
+                "phase": "Phase 3",
+                "overall_status": "ACTIVE_NOT_RECRUITING",
+                "why_stopped": None,
+                "indications": [],
+                "mesh_conditions": [],
+                "mesh_ancestors": [],
+                "interventions": [],
+                "sponsor": "Active sponsor",
+                "enrollment": 8,
+                "start_date": None,
+                "completion_date": None,
+                "primary_outcomes": [],
+                "references": [],
+            },
+        ],
+        "resolution_status": "resolved",
     }
-    assert len(result.trials) == 1
-    assert result.trials[0].nct_id == "NCT11111111"
 
     # 5 counts: total + recruiting + active + withdrawn + unknown
     assert mock_count.await_count == 5
-    # 1 fetch with EnrollmentCount:desc sort and the FETCH_MAX cap
-    assert mock_fetch.await_count == 1
-    fetch_kwargs = mock_fetch.await_args.kwargs
-    assert fetch_kwargs["drug"] == "bupropion"
-    assert fetch_kwargs["indication"] == 'AREA[ConditionMeshTerm]"Depressive Disorder"'
-    assert fetch_kwargs["sort"] == "EnrollmentCount:desc"
-    assert fetch_kwargs["max_results"] == 50
+    # Enrollment exemplars stay capped, but the active-status fetch is exhaustive.
+    assert mock_fetch.await_count == 2
+    exemplar_kwargs = mock_fetch.await_args_list[0].kwargs
+    assert exemplar_kwargs["drug"] == "bupropion"
+    assert (
+        exemplar_kwargs["indication"] == 'AREA[ConditionMeshTerm]"Depressive Disorder"'
+    )
+    assert exemplar_kwargs["sort"] == "EnrollmentCount:desc"
+    assert exemplar_kwargs["max_results"] == 50
+    ongoing_kwargs = mock_fetch.await_args_list[1].kwargs
+    assert ongoing_kwargs["drug"] == "bupropion"
+    assert (
+        ongoing_kwargs["indication"] == 'AREA[ConditionMeshTerm]"Depressive Disorder"'
+    )
+    assert ongoing_kwargs["status_filter"] == (
+        "RECRUITING|ACTIVE_NOT_RECRUITING|NOT_YET_RECRUITING|"
+        "ENROLLING_BY_INVITATION|SUSPENDED"
+    )
+    assert ongoing_kwargs["sort"] == "StartDate:desc"
+    assert ongoing_kwargs["max_results"] is None
 
 
 async def test_search_trials_uses_same_mesh_cond_for_count_and_fetch(tmp_path):
@@ -171,7 +236,8 @@ async def test_search_trials_uses_same_mesh_cond_for_count_and_fetch(tmp_path):
 
     for call in mock_count.await_args_list:
         assert call.kwargs["indication"] == expected_cond
-    assert mock_fetch.await_args.kwargs["indication"] == expected_cond
+    for call in mock_fetch.await_args_list:
+        assert call.kwargs["indication"] == expected_cond
 
 
 # ------------------------------------------------------------------

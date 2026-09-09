@@ -20,6 +20,7 @@ from indication_scout.agents.mechanism.mechanism_output import (
     MechanismCandidate,
 )
 from indication_scout.agents.supervisor.supervisor_tools import (
+    _closure_text,
     _get_shared_drug_intake,
     build_supervisor_tools,
 )
@@ -587,6 +588,34 @@ async def test_analyze_mechanism_merges_by_efo_id(
 # --- finalize_supervisor closure helpers (shared by the blurb-repair tests below) --
 
 
+def test_controlled_contradicting_literature_closes_card_signal():
+    clinical_trials = ClinicalTrialsOutput(
+        closure="live",
+        closure_reason="No registry termination",
+    )
+    controlled_negative = EvidenceSummary(
+        strength="moderate",
+        direction="contradicts",
+        evidence_basis="drug_specific",
+        is_observational=False,
+    )
+    observational_negative = EvidenceSummary(
+        strength="moderate",
+        direction="contradicts",
+        evidence_basis="drug_specific",
+        is_observational=True,
+    )
+
+    assert (
+        _closure_text(clinical_trials, controlled_negative)
+        == "CLOSED — controlled literature contradicts efficacy for this indication"
+    )
+    assert (
+        _closure_text(clinical_trials, observational_negative)
+        == "LIVE — not closed (No registry termination)"
+    )
+
+
 def _make_lit(
     strength: str,
     n_pmids: int,
@@ -690,6 +719,98 @@ def _finalize_tools_and_closure(cutoff: date | None = None):
     findings_local = fin_closure["findings_local"].cell_contents
     allowed_diseases = fin_closure["allowed_diseases"].cell_contents
     return by_name, findings_local, allowed_diseases
+
+
+async def test_finalize_does_not_treat_unresolved_trial_query_as_zero_evidence():
+    """Missing trial coverage is unknown and cannot satisfy the zero-trial evidence gate."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+    allowed_diseases["unresolved disease"] = (
+        "unresolved disease",
+        "competitor",
+    )
+    findings_local["unresolved disease"] = {
+        "literature": _make_lit("none", 0, 0, direction="none"),
+        "clinical_trials": ClinicalTrialsOutput(
+            search=SearchTrialsResult(resolution_status="unresolved")
+        ),
+    }
+    allowed_diseases["unresolved footer"] = (
+        "unresolved footer",
+        "competitor",
+    )
+    findings_local["unresolved footer"] = {
+        "literature": _make_lit("none", 0, 0, direction="none"),
+        "clinical_trials": ClinicalTrialsOutput(
+            search=SearchTrialsResult(resolution_status="unresolved")
+        ),
+    }
+    blurb = {
+        "disease": "unresolved disease",
+        "stage": "No relevant trials found in reviewed registry records",
+        "literature": "None",
+        "blocker": "No registered trials exist",
+        "active_programs": "None active",
+        "key_risk": "No programme exists",
+        "verdict": "Untested",
+        "watch": "",
+        "prose": "No trials or active programmes exist.",
+    }
+    critic_out = json.dumps({"ordering": "consistent", "blurbs": [blurb]})
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=AsyncMock(return_value=critic_out),
+    ) as mock_query:
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": [blurb]},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+        msg = await by_name["finalize_supervisor"].ainvoke(
+            {
+                "name": "finalize_supervisor",
+                "args": {
+                    "summary": (
+                        "Ranked repurposing signals:\n"
+                        "1. unresolved disease\n"
+                        "- unresolved footer — no relevant trials; none active"
+                    ),
+                    "blurbs": [blurb],
+                },
+                "id": "test_finalize",
+                "type": "tool_call",
+            }
+        )
+
+    assert msg.artifact["blurbs"] == [
+        {
+            "disease": "unresolved disease",
+            "stage": (
+                "Trial search unavailable — disease name could not be resolved to a "
+                "MeSH descriptor"
+            ),
+            "literature": "none, undetermined design",
+            "blocker": "",
+            "active_programs": "Unknown — registry search was not run",
+            "key_risk": "",
+            "verdict": "",
+            "watch": "",
+            "prose": "",
+        }
+    ]
+    assert "Evidence gate exclusions" not in msg.artifact["summary"]
+    assert (
+        "authoritative trial query state = unresolved"
+        in mock_query.await_args_list[0].args[0]
+    )
+    assert (
+        "- unresolved footer — Trial search unavailable — disease name could not be "
+        "resolved to a MeSH descriptor; active programs Unknown — registry search was "
+        "not run"
+    ) in msg.artifact["summary"]
 
 
 async def test_fact_critic_flags_withdrawn_only_pair():

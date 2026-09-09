@@ -29,6 +29,7 @@ from indication_scout.helpers.drug_helpers import (
     normalize_drug_name,
     seed_drug_intake,
 )
+from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.approval_check import (
     get_approved_indications,
     get_fda_approved_disease_mapping,
@@ -76,6 +77,10 @@ async def _get_shared_drug_intake(
 # 1961 but re-approved / in active myeloma trials) was mis-attributed by the ranking LLM as
 # foreclosing the specific disease. `indication_harm` is per-candidate, so it cannot mis-attribute.
 _INDICATION_HARM_FLAG = "⚠️ safety signal reported for this indication"
+_UNRESOLVED_TRIAL_STAGE = (
+    "Trial search unavailable — disease name could not be resolved to a MeSH descriptor"
+)
+_UNRESOLVED_ACTIVE_PROGRAMS = "Unknown — registry search was not run"
 
 
 def _safety_flag(es) -> str:
@@ -171,7 +176,9 @@ SECOND, repair any blurb field that CONTRADICTS the candidate's FACT (the FACT i
 it states whether a relevant COMPLETED or ACTIVE Phase 3 is on record, or none). Do not let a \
 field claim there are no Phase 3 trials when the FACT says one exists. Leave true statements about \
 the absence of a commercial/NDA/regulatory PROGRAM alone (a generic drug files no new NDA — that \
-is not the same as "no trial"). Change nothing else.
+is not the same as "no trial"). An unresolved registry query is UNKNOWN, not zero: never claim \
+that no trials or active programs exist when the FACT says the query was unresolved. Change nothing \
+else.
 
 Output a JSON object ONLY — no reasoning, no preamble, no prose before or after it, no fences:
 {"blurbs": [ <every input blurb, in your final rank order, each a full dict with the same keys; \
@@ -230,12 +237,31 @@ from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 from indication_scout.services.retrieval import RetrievalService
 
 
-def _closure_text(ct: "ClinicalTrialsOutput | None") -> str:
-    """Render the clinical-trials agent's typed live/closed verdict as a sentence for the interpretive writer.
+def _trial_query_unresolved(ct: "ClinicalTrialsOutput | None") -> bool:
+    """Whether the pair query could not run because disease resolution failed."""
+    return bool(
+        ct is not None
+        and ct.search is not None
+        and ct.search.resolution_status == "unresolved"
+    )
 
-    The verdict is decided upstream; the writer was previously not given it and judged closure itself, producing a
-    summary that called a closed signal open.
+
+def _closure_text(
+    ct: "ClinicalTrialsOutput | None", literature: EvidenceSummary | None = None
+) -> str:
+    """Render the overall live/closed verdict as a sentence for the interpretive writer.
+
+    A controlled, moderate-or-strong contradictory literature body closes the overall signal even
+    when the registry-only verdict is live or unknown.
     """
+    if (
+        literature is not None
+        and literature.evidence_basis == "drug_specific"
+        and literature.strength in {"moderate", "strong"}
+        and literature.direction == "contradicts"
+        and literature.is_observational is False
+    ):
+        return "CLOSED — controlled literature contradicts efficacy for this indication"
     if ct is None or ct.closure == "unknown":
         # Must not read as "the hypothesis is not established" — that phrasing was turned into a "Closed signal"
         # assessment for a candidate with no trials at all, which is the opposite of what an undecided verdict means.
@@ -1360,6 +1386,7 @@ def build_supervisor_tools(
                 else None
             )
             ct_signals = ct_artifact.signals if ct_artifact else None
+            trial_query_unresolved = _trial_query_unresolved(ct_artifact)
             relevant_highest_phase = (
                 ct_signals.highest_completed_phase if ct_signals else None
             )
@@ -1377,7 +1404,12 @@ def build_supervisor_tools(
                 "trials_completed": n_completed,
                 "trials_terminated": n_terminated,
                 "trials_withdrawn": n_withdrawn,
-                "trial_evidence": _trial_evidence_text(search_coverage),
+                "trial_evidence": (
+                    _UNRESOLVED_TRIAL_STAGE
+                    if trial_query_unresolved
+                    else _trial_evidence_text(search_coverage)
+                ),
+                "trial_query_unresolved": trial_query_unresolved,
                 "relevant_highest_phase": relevant_highest_phase,
                 "relevant_phase3_terminated_for_cause": relevant_phase3_terminated,
                 # Authoritative development-stage tier — seed the LLM's ranking with the same fact the downstream
@@ -1436,11 +1468,17 @@ def build_supervisor_tools(
             dir_note = f"/{direction}" if direction not in ("none", "no data") else ""
             # Authoritative dev_stage seeds the ranking; render it so the LLM ranks on the same fact the report will show,
             # not on highest_completed_phase alone.
-            stage_note = (
-                f"; dev_stage {a['dev_stage']} ({a['dev_stage_phrase']})"
-                if a.get("dev_stage_phrase")
-                else ""
-            )
+            if a.get("trial_query_unresolved"):
+                stage_note = (
+                    f"; authoritative stage {_UNRESOLVED_TRIAL_STAGE}; "
+                    f"active programs {_UNRESOLVED_ACTIVE_PROGRAMS}"
+                )
+            else:
+                stage_note = (
+                    f"; dev_stage {a['dev_stage']} ({a['dev_stage_phrase']})"
+                    if a.get("dev_stage_phrase")
+                    else ""
+                )
             # Withdrawn-before-enrolling note. Flagged only when the pair's ONLY on-record trials are withdrawn (total
             # equals withdrawn) — that pair has no live/completed trial and must not read as a registered candidate.
             n_withdrawn = a.get("trials_withdrawn")
@@ -1488,7 +1526,13 @@ def build_supervisor_tools(
             ct = slot.get("clinical_trials")
             sig = ct.signals if ct else None
             stage_phrase = _dev_stage_phrase(sig)
-            if stage_phrase is not None:
+            if _trial_query_unresolved(ct):
+                fact = (
+                    f"authoritative trial query state = unresolved; stage = "
+                    f"{_UNRESOLVED_TRIAL_STAGE}; active programs = "
+                    f"{_UNRESOLVED_ACTIVE_PROGRAMS}"
+                )
+            elif stage_phrase is not None:
                 fact = (
                     f"authoritative dev_stage = {sig.dev_stage} ({stage_phrase}) — "
                     "do not contradict this stage"
@@ -1702,7 +1746,7 @@ def build_supervisor_tools(
             ct = slot.get("clinical_trials")
             n_pmids = len(lit.pmids) if lit else 0
             coverage = ct.search_coverage if ct is not None else None
-            n_trials = coverage.relevant_records if coverage is not None else 0
+            n_trials = coverage.relevant_records if coverage is not None else None
             lit_strength = (
                 lit.evidence_summary.strength if lit and lit.evidence_summary else None
             )
@@ -1751,10 +1795,28 @@ def build_supervisor_tools(
             # overwriting whatever the LLM wrote for `stage`. This replaces the earlier per-signal regex repairs (false-"no
             # Phase 3" / false-"no development program") with one source of truth, so there is no path left for the blurb
             # stage to contradict the trial section. Only when a dev_stage phrase is available (sub-agent classified
-            # relevance) — otherwise the LLM's stage is left as-is rather than asserting a stage the signal doesn't show.
+            # relevance). An unresolved query has its own authoritative availability phrase; only
+            # other missing-signal cases retain the LLM's stage.
             sig = ct.signals if ct else None
             stage_phrase = _dev_stage_phrase(sig)
-            if stage_phrase is not None and stage_phrase != fields["stage"]:
+            trial_query_unresolved = _trial_query_unresolved(ct)
+            if trial_query_unresolved:
+                stage_phrase = _UNRESOLVED_TRIAL_STAGE
+                if fields["stage"] != stage_phrase:
+                    logger.warning(
+                        "[TOOL] finalize_supervisor replaced stage for unresolved trial "
+                        "query disease=%r; was: %r",
+                        disease,
+                        fields["stage"],
+                    )
+                fields["stage"] = stage_phrase
+                fields["active_programs"] = _UNRESOLVED_ACTIVE_PROGRAMS
+                fields["blocker"] = ""
+                fields["key_risk"] = ""
+                fields["verdict"] = ""
+                fields["watch"] = ""
+                prose = ""
+            elif stage_phrase is not None and stage_phrase != fields["stage"]:
                 logger.warning(
                     "[TOOL] finalize_supervisor set stage from dev_stage=%s for disease=%r; "
                     "was: %r",
@@ -1766,7 +1828,7 @@ def build_supervisor_tools(
             # active_programs ("what is still moving") is also an authoritative fact from the isolated stage judgment
             # (services/dev_stage), not a free-text interpretation — the blurb LLM kept mis-filling it (e.g. listing a
             # COMPLETED trial as an active program). Render it verbatim from the signal, overwriting whatever the LLM wrote.
-            if sig is not None and sig.active_programs:
+            if not trial_query_unresolved and sig is not None and sig.active_programs:
                 if sig.active_programs != fields["active_programs"]:
                     logger.warning(
                         "[TOOL] finalize_supervisor set active_programs from signal for "
@@ -1783,8 +1845,9 @@ def build_supervisor_tools(
                 fields["literature"] = _literature_oneliner(es)
             # Stash the RESOLVED facts for the interpretive enrich pass after the loop. The interpretive fields
             # (blocker/key_risk/verdict/prose) are authored ONLY by the isolated judge_interpretive call fed these facts —
-            # never re-derived in the blurb pass (which contradicted the stage). `_interp_facts` is None when no stage phrase
-            # is available (sub-agent didn't classify) — then the LLM blurb text stays.
+            # never re-derived in the blurb pass (which contradicted the stage). Unresolved queries
+            # receive explicit unavailable-search facts. Other entries without a stage phrase keep
+            # the LLM blurb text.
             approved_ind = (
                 ct.approval.matched_indication
                 if (ct is not None and ct.approval is not None)
@@ -1804,7 +1867,7 @@ def build_supervisor_tools(
                     # Closure and late-stage terminations are decided upstream but were not reaching the writer, so it
                     # judged closure itself ("uncertain but not closed" on a pair already graded closed) and read the
                     # stage alone (a completed Phase 3 outranks the terminated-for-cause tier, hiding the stops).
-                    "closure": _closure_text(ct),
+                    "closure": _closure_text(ct, es),
                     "terminations": _terminations_text(sig),
                 }
                 if stage_phrase is not None
@@ -1858,8 +1921,11 @@ def build_supervisor_tools(
         # (NOT just the ranked/validated ones — demoted candidates appear only in the footer and must be corrected there
         # too). Used to overwrite a false stage clause the LLM wrote in a demotion footer line.
         dev_stage_by_disease: dict[str, str] = {}
+        unresolved_trial_queries: set[str] = set()
         for _dkey, _slot in findings_local.items():
             _ct = (_slot or {}).get("clinical_trials")
+            if _trial_query_unresolved(_ct):
+                unresolved_trial_queries.add(_dkey)
             _phrase = _dev_stage_phrase(_ct.signals if _ct else None)
             if _phrase is not None:
                 dev_stage_by_disease[_dkey] = _phrase
@@ -1909,7 +1975,22 @@ def build_supervisor_tools(
             fm = footer_line.match(line)
             if fm is None:
                 return line
-            return _repair_stage_clause(fm.group("disease"), line, "demotion footer")
+            disease_text = fm.group("disease")
+            disease_lower = disease_text.lower()
+            unresolved_key = next(
+                (
+                    key
+                    for key in sorted(unresolved_trial_queries, key=len, reverse=True)
+                    if key and key in disease_lower
+                ),
+                None,
+            )
+            if unresolved_key is not None:
+                return (
+                    f"- {disease_text} — {_UNRESOLVED_TRIAL_STAGE}; "
+                    f"active programs {_UNRESOLVED_ACTIVE_PROGRAMS}"
+                )
+            return _repair_stage_clause(disease_text, line, "demotion footer")
 
         # A ranked summary line: "N. <disease> — <tail>" or the tail-less "N. <disease>". The tail is optional because the
         # report formatter discards it (it splices the blurb in), and a tail-less line must still be recognized as a ranked

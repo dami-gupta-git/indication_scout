@@ -170,7 +170,7 @@ async def test_search_trials_passes_date_before():
 
 
 async def test_search_trials_returns_empty_when_resolver_returns_none():
-    """search_trials returns a default SearchTrialsResult and skips the client when resolver is None."""
+    """search_trials marks an unresolved query and skips the client."""
     client_factory = MagicMock()
     tools = build_clinical_trials_tools(date_before=None)
 
@@ -197,12 +197,13 @@ async def test_search_trials_returns_empty_when_resolver_returns_none():
     assert msg.artifact.total_count == 0
     assert msg.artifact.by_status == {}
     assert msg.artifact.trials == []
+    assert msg.artifact.resolution_status == "unresolved"
     assert "MeSH unresolved" in msg.content
     client_factory.assert_not_called()
 
 
 async def test_search_trials_content_notes_top_50_when_total_exceeds_shown():
-    """When total_count exceeds len(trials), the content string flags the 50-cap."""
+    """When total exceeds shown records, content describes both retrieval scopes."""
     trial = Trial(
         nct_id="NCT00000001",
         title="T",
@@ -242,7 +243,7 @@ async def test_search_trials_content_notes_top_50_when_total_exceeds_shown():
         )
 
     assert "131 registry query matches" in msg.content
-    assert "top 50 shown" in msg.content
+    assert "enrollment top 50 plus every ongoing trial shown" in msg.content
 
 
 async def test_search_trials_renders_every_trial_it_records_for_classification():

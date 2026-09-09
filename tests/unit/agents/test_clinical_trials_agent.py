@@ -87,6 +87,18 @@ def test_derive_relevance_coverage_is_exact_when_all_matches_classified():
     assert coverage.relevant_by_status == {"RECRUITING": 1}
 
 
+def test_derive_relevance_coverage_is_unavailable_when_query_unresolved():
+    result = SearchTrialsResult(resolution_status="unresolved")
+
+    coverage = _derive_relevance_coverage(
+        result,
+        relevant_nct_ids=set(),
+        contaminated_nct_ids=set(),
+    )
+
+    assert coverage is None
+
+
 # ------------------------------------------------------------------
 # Shared test data
 # ------------------------------------------------------------------
@@ -96,6 +108,8 @@ SEARCH = SearchTrialsResult(
     by_status={"RECRUITING": 0, "ACTIVE_NOT_RECRUITING": 0, "WITHDRAWN": 0},
     trials=[],
 )
+
+UNRESOLVED_SEARCH = SearchTrialsResult(resolution_status="unresolved")
 
 ACTIVE_SEARCH = SearchTrialsResult(
     total_count=5,
@@ -295,6 +309,45 @@ async def test_run_clinical_trials_agent_whitespace_path():
 
     # summary: no relevant verdicts → judge_ct_summary not reached → prose stays empty
     assert output.summary == ""
+
+
+async def test_run_clinical_trials_agent_keeps_unresolved_query_unknown():
+    """A failed disease resolution does not produce zero coverage or untested signals."""
+    messages = [
+        HumanMessage(content="Analyze bupropion in an unresolved disease"),
+        _tool_msg("search_trials", UNRESOLVED_SEARCH),
+        _tool_msg("get_completed", CompletedTrialsResult()),
+        _tool_msg("get_terminated", TerminatedTrialsResult()),
+        _tool_msg("finalize_analysis", "The disease name could not be resolved."),
+    ]
+
+    output = await run_clinical_trials_agent(
+        _make_agent(messages),
+        "bupropion",
+        "an unresolved disease",
+    )
+
+    assert output.search is not None
+    assert output.search.model_dump() == {
+        "total_count": 0,
+        "by_status": {},
+        "trials": [],
+        "resolution_status": "unresolved",
+    }
+    assert output.completed == CompletedTrialsResult()
+    assert output.terminated == TerminatedTrialsResult()
+    assert output.search_coverage is None
+    assert output.completed_coverage is None
+    assert output.terminated_coverage is None
+    assert output.landscape is None
+    assert output.approval is None
+    assert output.signals is None
+    assert output.summary == ""
+    assert output.closure == "unknown"
+    assert output.closure_reason == ""
+    assert output.relevant_nct_ids == []
+    assert output.contaminated_nct_ids == []
+    assert output.relevance_reasoning == "The disease name could not be resolved."
 
 
 # ------------------------------------------------------------------

@@ -246,3 +246,6 @@ drug = Drug(**{"name": None, "synonyms": None, "year_approved": None})
   paper can report a supportive result on one endpoint and a contradicting one on another (e.g. a
   trial that improves depression scores but shows a switch-to-mania rate). This is intended — do not
   report it as a bug or "fix" it by forcing each PMID to one side.
+
+### Caches
+Caches can be deleted when needed. Complicated logic to circumvent this is not needed.

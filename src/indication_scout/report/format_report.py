@@ -143,6 +143,9 @@ def _fmt_clinical_trials(
     approval_relationship: str = "none",
 ) -> str:
     lines: list[str] = []
+    query_unresolved = (
+        ct.search is not None and ct.search.resolution_status == "unresolved"
+    )
 
     # Authoritative development-stage line — the SINGLE source of the phase-tier judgment
     # (from judge_dev_stage). The CT sub-agent prose describes trials but must NOT judge the
@@ -205,28 +208,34 @@ def _fmt_clinical_trials(
 
     if ct.search:
         s = ct.search
-        lines.append(
-            f"\n**Trial activity:** {_trial_coverage_text(ct.search_coverage)}"
-        )
-        if ct.search_coverage is None:
-            lines.append(f"- **Registry query matches:** {s.total_count}")
-        elif ct.search_coverage.coverage_complete:
+        if query_unresolved:
             lines.append(
-                f"- **Registry query matches:** {ct.search_coverage.registry_query_matches}"
+                "\n**Trial activity:** Not searched — the disease name could not be "
+                "resolved to a MeSH descriptor. Trial status is unknown."
             )
-        if (
-            ct.search_coverage
-            and ct.search_coverage.coverage_complete
-            and s.total_count == 0
-        ):
+        else:
             lines.append(
-                "- _Whitespace: no trials found for this drug × indication pair._"
+                f"\n**Trial activity:** {_trial_coverage_text(ct.search_coverage)}"
             )
+            if ct.search_coverage is None:
+                lines.append(f"- **Registry query matches:** {s.total_count}")
+            elif ct.search_coverage.coverage_complete:
+                lines.append(
+                    f"- **Registry query matches:** {ct.search_coverage.registry_query_matches}"
+                )
+            if (
+                ct.search_coverage
+                and ct.search_coverage.coverage_complete
+                and s.total_count == 0
+            ):
+                lines.append(
+                    "- _Whitespace: no trials found for this drug × indication pair._"
+                )
 
     # Rendered examples include only trials the relevance gate accepted for this candidate.
     relevant = set(ct.relevant_nct_ids)
 
-    if ct.completed:
+    if ct.completed and not query_unresolved:
         c = ct.completed
         shown = [t for t in c.trials if t.nct_id in relevant]
         lines.append(
@@ -253,7 +262,7 @@ def _fmt_clinical_trials(
     # card-vs-section mismatches. Active trials are already surfaced authoritatively via the
     # card's active_programs and the CT prose; the redundant second list is gone.
 
-    if ct.terminated:
+    if ct.terminated and not query_unresolved:
         term = ct.terminated
         if term.total_count:
             shown = [t for t in term.trials if t.nct_id in relevant]
