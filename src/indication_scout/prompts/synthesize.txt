@@ -28,9 +28,18 @@ classify the abstract as "contaminated", even when treatment succeeds.
     e.g. "bupropion for multiple-sclerosis-related fatigue" — name the target: fatigue. Fatigue is
     not multiple sclerosis => CONTAMINATED, even though the fatigue is caused by the MS.
   - NOT contaminated: an abstract whose outcome IS the candidate disease's own defining endpoint,
-    even when that endpoint is a symptom scale. e.g. ADHD symptom-rating scores in an ADHD trial,
-    binge frequency in binge-eating disorder, pain scores in a neuropathic-pain trial — in each the
-    named target IS the candidate disease.
+    even when that endpoint is a symptom scale. Decide this with the ELIMINATION TEST, not by
+    asking whether the symptom is typical of the disease: if the measured endpoint were fully
+    normalized, would the patient STILL HAVE the candidate disease?
+      NO — normalizing the endpoint means the disease itself is gone => the target IS the disease
+      => relevant. e.g. ADHD symptom-rating scores in an ADHD trial (scores normal => no ADHD);
+      binge frequency in binge-eating disorder (no binges => no BED); pain scores in a
+      neuropathic-pain trial (no pain => no pain disorder); blood pressure in hypertension (normal
+      BP => no hypertension).
+      YES — the disease is still there and only a symptom was relieved => CONTAMINATED. e.g. pain
+      after a stroke (pain gone, the stroke still happened); depression after a stroke; pain in
+      Parkinson disease (pain gone, the patient still has Parkinson); fatigue in multiple
+      sclerosis. A symptom being common in, or caused by, the disease does NOT rescue it.
   - When genuinely unsure whether the target is the disease itself or something the disease merely
     explains, prefer "contaminated".
 
@@ -43,6 +52,7 @@ The relevant-vs-contaminated rules (strength and direction grade evidence for TH
 - This drug, treating this disease in the candidate's NON-approved scope -> relevant.
 - A DIFFERENT drug — even one in the same mechanistic class (e.g. another GLP-1 receptor agonist) -> contaminated. It is class-level context, NOT direct evidence for this drug. (But note it: if the ONLY disease-relevant abstracts are other-drug, evidence_basis is "class_level".)
 - This drug but a DIFFERENT disease -> contaminated.
+- NAME-STATED EXCLUSION: when the candidate's OWN NAME carves out a subtype, abstracts about the carved-out subtype -> contaminated, no matter how close the two names read. e.g. candidate "astrocytoma, excluding glioblastoma" -> glioblastoma and gliosarcoma abstracts are contaminated; candidate "non-small-cell lung cancer" -> small-cell abstracts are contaminated. This fires ONLY on an exclusion written into the candidate name. It does NOT make ordinary siblings contaminated, and it NEVER overrides the rule below that an abstract about a disease BROADER than the candidate stays relevant.
 - THERAPEUTIC-INTENT MISMATCH: this drug studied IN patients who HAVE this disease but FOR a different target (a comorbidity, a symptom the disease explains, smoking cessation, weight loss, etc.) -> contaminated, per the THERAPEUTIC-TARGET GATE above. It is not evidence that the drug TREATS this disease.
 - APPROVED-INDICATION EXCLUSION (direction matters):
   - "Approved" means ONLY a disease in the given "FDA-approved indications" list — never your own
