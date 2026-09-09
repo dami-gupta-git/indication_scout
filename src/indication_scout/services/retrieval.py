@@ -921,10 +921,9 @@ class RetrievalService:
             "pmids": sorted(r.pmid for r in top_abstracts),
             "approved_indications": approved,
             "llm_model": _settings.llm_model,
-            # Bump when the DERIVED fields (direction rollup, strength cap) change — those are
-            # computed in code after the LLM call, so a stale entry would keep the old verdict and
-            # the fix would never reach a cached pair.
-            "logic_version": "direction_all_neutral_v1",
+            # Bump when the relevance prompt or DERIVED fields (direction rollup, strength cap)
+            # change, so stale judgments cannot preserve behavior that the new rules reject.
+            "logic_version": "combination_only_v1",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:

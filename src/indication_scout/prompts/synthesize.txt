@@ -51,6 +51,18 @@ Judge each abstract by ITS OWN result, NOT the program's overall direction: in a
 The relevant-vs-contaminated rules (strength and direction grade evidence for THIS EXACT DRUG treating THIS EXACT DISEASE only):
 - This drug, treating this disease in the candidate's NON-approved scope -> relevant.
 - A DIFFERENT drug — even one in the same mechanistic class (e.g. another GLP-1 receptor agonist) -> contaminated. It is class-level context, NOT direct evidence for this drug. (But note it: if the ONLY disease-relevant abstracts are other-drug, evidence_basis is "class_level".)
+- COMBINATION-ONLY EVIDENCE: when this drug is tested only as one component of a multi-drug
+  combination, the abstract is contaminated. A result for the combination cannot be attributed to
+  this drug alone. The abstract is relevant only when the study includes a separate monotherapy arm
+  that tests this drug alone and therefore isolates its effect. Apply this rule to positive,
+  negative, and mixed combination results alike.
+- COMPARATOR / BACKGROUND ARM: when this drug is given as the reference, active-control, or
+  background treatment and the study is designed to evaluate a DIFFERENT agent, the abstract is
+  contaminated. Ask what the study set out to evaluate, not which drugs it administered. This holds
+  whether this drug's arm did well or badly — its result is the benchmark the agent under test was
+  measured against, not a test of this drug. NOT contaminated: a genuine head-to-head in which BOTH
+  agents are under evaluation, and a study in which this drug is the sole active agent (others
+  placebo or sham).
 - This drug but a DIFFERENT disease -> contaminated.
 - NAME-STATED EXCLUSION: when the candidate's OWN NAME carves out a subtype, abstracts about the carved-out subtype -> contaminated, no matter how close the two names read. e.g. candidate "astrocytoma, excluding glioblastoma" -> glioblastoma and gliosarcoma abstracts are contaminated; candidate "non-small-cell lung cancer" -> small-cell abstracts are contaminated. This fires ONLY on an exclusion written into the candidate name. It does NOT make ordinary siblings contaminated, and it NEVER overrides the rule below that an abstract about a disease BROADER than the candidate stays relevant.
 - THERAPEUTIC-INTENT MISMATCH: this drug studied IN patients who HAVE this disease but FOR a different target (a comorbidity, a symptom the disease explains, smoking cessation, weight loss, etc.) -> contaminated, per the THERAPEUTIC-TARGET GATE above. It is not evidence that the drug TREATS this disease.
