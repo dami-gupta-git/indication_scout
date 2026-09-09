@@ -36,6 +36,11 @@ CASES: list[tuple[str, str, bool]] = [
     # No disease-context safety finding expected (efficacy-only or thin AE literature for the pair).
     ("rofecoxib", "migraine", False),              # migraine trials are efficacy; CV signal is not migraine-context
     ("sildenafil", "erectile dysfunction", False), # ED literature is efficacy-dominated
+    # The 2026-09-08 sildenafil run flagged ischemic stroke off PMID 19717023: a 12-patient
+    # uncontrolled study whose primary outcome was a counted safety event (one sudden death) and
+    # whose own conclusion was that the drug appeared safe. An event the authors record without
+    # attributing it to the drug is not a confirmed harm.
+    ("sildenafil", "ischemic stroke", False),
 ]
 
 

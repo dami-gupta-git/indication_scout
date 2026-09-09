@@ -24,6 +24,19 @@ drug was tolerated, is not a confirmed harm — mark it "safety_assessed_only". 
 the same as reporting one.
   e.g. "he increased the dose to 2250 mg/d without seizures" — this says no seizure occurred.
 
+The abstract must also ATTRIBUTE the event to {drug}. Attribution is author language tying the event
+to the drug — drug-related, treatment-related, caused by, led to discontinuation, dose reduction or
+trial stop, or an event rate reported for {drug} against a comparator. RECORDING that an event
+occurred in patients who received {drug} is not attribution, and neither is counting it as a
+pre-specified safety endpoint. When the abstract's own conclusion is that {drug} was safe, tolerated
+or well tolerated, an event it reports is a counted event -> "safety_assessed_only", unless the
+authors separately attribute that event to {drug}.
+  e.g. "The primary outcome measure occurred in one patient (sudden death)" in a study concluding
+  the drug appeared safe — the event is counted, not attributed => "safety_assessed_only".
+This raises the bar for a harm flag, so apply it only to attribution. A harm the authors DO attribute
+to {drug} stays "confirmed_harm" even when the abstract also reports the drug was generally well
+tolerated — a tolerability statement does not cancel an attributed event.
+
 "{disease}" naming WHICH PATIENTS were studied is not enough. If {drug} was given for a different
 condition, or not given as treatment at all, the harm is not specific to {disease} — mark it
 "irrelevant", however serious the harm is.
