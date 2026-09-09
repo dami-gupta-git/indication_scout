@@ -1,12 +1,17 @@
 # Bupropion regression spec.
 #
-# Authored against gold_standard/bupropion_2026-09-08_19-47-22.json. Each assertion encodes a
+# Authored against gold_standard/bupropion_2026-09-08_22-45-20.json. Each assertion encodes a
 # domain-meaningful invariant — a fact about bupropion's evidence base that a regression must NOT
 # silently flip.
 #
-# Anchors are pinned only where they held across BOTH the 2026-09-08 19:34 and 19:47 runs. Those two
-# runs produced an identical 12-deep ranking, but they are 13 minutes apart and share a warm cache,
-# so only the top five are order-pinned; the rest are pinned present-in-top.
+# Anchors were pinned where they held across the 2026-09-08 19:34 and 19:47 runs, then re-checked
+# against the 22:45 run that is now the gold. Only the top five are order-pinned; the rest are
+# pinned present-in-top, because the tail of the ranking reorders run to run.
+#
+# Dropped anchor: PMID 12842303 was pinned under bipolar disorder from the 19:47 gold. The 22:45 run
+# classifies it contaminated and is correct — it is an ADHD trial in patients who also have bipolar
+# disorder, so normalizing its endpoint leaves the bipolar diagnosis intact. The elimination test
+# added to the synthesis prompt on 2026-09-08 is what now catches it.
 #
 # Candidate-set shift from the prior (2026-07-18) gold: that snapshot ranked "mood disorder" #2 and
 # pinned STEP-BD (NCT00012558) and PMID 2856918 under it. Bupropion is FDA-approved for major
@@ -129,7 +134,7 @@ required_pmids_cited:
     mode: cited
     pmids:
       - "10701483"
-      - "12842303"
+      - "7929019"
 
 # Safety — bupropion carries black-box warnings (psychiatric / cardiotoxicity). Production derives
 # black_box from OT warnings; holdout (OT suppressed) would pick serious from pre-cutoff literature,

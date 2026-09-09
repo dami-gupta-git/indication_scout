@@ -32,6 +32,11 @@ CASES: list[tuple[str, str, bool]] = [
     ("natalizumab", "multiple sclerosis", True),   # PML reported in MS therapy
     ("bevacizumab", "colorectal cancer", True),    # GI perforation reported in colorectal use
     ("warfarin", "atrial fibrillation", True),     # bleeding reported in AF anticoagulation
+    # Labeled False as "ED literature is efficacy-dominated" until the retrieved corpus was read:
+    # it contains a randomised crossover trial of sildenafil FOR ED that stopped recruitment after
+    # three of six men with multiple system atrophy dropped their blood pressure severely an hour
+    # post-dose (PMID 11511713). Attributed, and it halted the study — a flag is correct.
+    ("sildenafil", "erectile dysfunction", True),
     # No disease-context safety finding expected (efficacy-only or thin AE literature for the pair).
     # Labeled True on metformin's lactic-acidosis reputation until the retrieved corpus was read:
     # the two lactic-acidosis papers it returns are the Cochrane review concluding there is NO
@@ -39,7 +44,6 @@ CASES: list[tuple[str, str, bool]] = [
     # correct answer for this evidence.
     ("metformin", "type 2 diabetes", False),
     ("rofecoxib", "migraine", False),              # migraine trials are efficacy; CV signal is not migraine-context
-    ("sildenafil", "erectile dysfunction", False), # ED literature is efficacy-dominated
     # The 2026-09-08 sildenafil run flagged ischemic stroke off PMID 19717023: a 12-patient
     # uncontrolled study whose primary outcome was a counted safety event (one sudden death) and
     # whose own conclusion was that the drug appeared safe. An event the authors record without

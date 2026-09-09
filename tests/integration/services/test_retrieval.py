@@ -5,10 +5,15 @@ import logging
 import pytest
 from sqlalchemy import text
 
+from indication_scout.config import get_settings
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
-from indication_scout.services.retrieval import RetrievalService
+from indication_scout.services.retrieval import (
+    PUBTYPE_BOOST_DEFAULT,
+    PUBTYPE_BOOSTS,
+    RetrievalService,
+)
 
 logger = logging.getLogger(__name__)
 # db_session fixture is defined in tests/integration/conftest.py and
@@ -116,7 +121,9 @@ async def test_synthesize_evidence_summary_is_self_consistent(svc, db_session_tr
     The combined synthesize+judge call authors verdicts/strength/basis; the service then applies
     a handful of deterministic fixes. Asserted here (metformin × hepatic steatosis is the case
     that exposed them — real abstracts pulled through the full fetch → semantic_search path):
-      - No PMID appears in BOTH supporting_pmids and contradicting_pmids (dedup → contradicting).
+      - supporting/contradicting/neutral cover the relevant set and nothing else. A PMID may sit in
+        BOTH directional lists — a "mixed" abstract carries evidence each way — but a neutral PMID
+        is in neither.
       - relevant_pmids and contaminated_pmids partition the INPUT PMID set exactly (disjoint, and
         their union equals the input set — every input PMID is classified).
       - The strength cap holds: when evidence_basis != "drug_specific", strength and direction
@@ -141,11 +148,19 @@ async def test_synthesize_evidence_summary_is_self_consistent(svc, db_session_tr
     assert isinstance(summary, EvidenceSummary)
     sup = set(summary.supporting_pmids)
     con = set(summary.contradicting_pmids)
-    # 1. No PMID in both lists (dedup keeps it as contradicting only).
-    assert not (sup & con), f"PMID(s) in both supporting and contradicting: {sup & con}"
-    # 2. relevant/contaminated partition the input set exactly.
+    neu = set(summary.neutral_pmids)
     rel = set(summary.relevant_pmids)
     cont = set(summary.contaminated_pmids)
+    # 1. Directional lists cover exactly the relevant set; overlap between them is allowed (mixed),
+    #    but a neutral PMID appears in neither.
+    assert sup | con | neu == rel, (
+        f"supporting ∪ contradicting ∪ neutral != relevant; "
+        f"missing={rel - (sup | con | neu)}, extra={(sup | con | neu) - rel}"
+    )
+    assert not (neu & (sup | con)), (
+        f"neutral PMID(s) also in a directional list: {neu & (sup | con)}"
+    )
+    # 2. relevant/contaminated partition the input set exactly.
     assert not (rel & cont), f"PMID(s) in both relevant and contaminated: {rel & cont}"
     assert rel | cont == input_pmids, (
         f"relevant ∪ contaminated != input set; "
@@ -639,7 +654,7 @@ async def test_semantic_search_returns_relevant_results(svc, db_session_truncati
         "myocardial infarction", "CHEMBL2107830", pmids, db_session_truncating
     )
 
-    assert len(results) == 5
+    assert len(results) == get_settings().semantic_search_top_k
     # All results should have reasonable similarity
     assert all(r.similarity > 0.5 for r in results)
     # At least one title should mention empagliflozin or SGLT2
@@ -660,7 +675,7 @@ async def test_semantic_search_returns_relevant_results(svc, db_session_truncati
         "myocardial infarction", "CHEMBL2107830", pmids, db_session_truncating
     )
 
-    assert len(results) == 5
+    assert len(results) == get_settings().semantic_search_top_k
     # All results should have reasonable similarity
     assert all(r.similarity > 0.5 for r in results)
     # At least one title should mention empagliflozin or SGLT2
@@ -679,12 +694,19 @@ async def test_semantic_search_sema_nash(svc, db_session_truncating):
         "NASH", "CHEMBL2108724", pmids, db_session_truncating
     )
 
-    assert len(results) == 5
+    assert len(results) == get_settings().semantic_search_top_k
     assert all(hasattr(r, "pmid") for r in results)
     assert all(hasattr(r, "similarity") for r in results)
-    # Sorted descending by similarity
-    similarities = [r.similarity for r in results]
-    assert similarities == sorted(similarities, reverse=True)
+    # Ranked by similarity x publication-type boost, not raw similarity.
+    scores = [
+        r.similarity
+        * max(
+            (PUBTYPE_BOOSTS.get(pt, PUBTYPE_BOOST_DEFAULT) for pt in r.pubtype),
+            default=PUBTYPE_BOOST_DEFAULT,
+        )
+        for r in results
+    ]
+    assert scores == sorted(scores, reverse=True)
 
 
 async def test_synthesize_strong_candidate(svc, db_session_truncating):
