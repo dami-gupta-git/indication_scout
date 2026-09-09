@@ -69,6 +69,13 @@ call it untested or abandoned. Registry query matches are search coverage, not s
 "None active" means no trial is currently recruiting — state that as the status; do not infer a \
 cause (sponsor disengagement, commercial failure, abandonment) you were not given.
 
+When the reviewed evidence reports ZERO relevant trials, that means no registered trial matched \
+this pair — it does NOT mean the drug was never studied in humans for this disease. If the \
+literature says "RCT-backed / controlled" or "observational", human studies exist: describe the \
+registry record as empty and never write "untested in humans", "no clinical development has been \
+initiated", "no clinical testing", or "entirely unvalidated". Reserve an untested verdict for \
+candidates whose literature is "animal/in-vitro only".
+
 The drug is NOT approved for THIS candidate indication unless the approved indication above \
 exactly names it. If the approved indication is "none", do not claim any approval for this use.
 
@@ -80,8 +87,10 @@ completed or active, do NOT write "no Phase 3" or "no dedicated development prog
 - key_risk: the single biggest risk to the hypothesis. One short line. Phase-free.
 - assessment: a short interpretive verdict tag. Choose one that fits the facts — e.g. "Live but \
 bottlenecked", "Maturing, awaiting readout", "Tested, status unconfirmed", "Stalled, regulatory \
-gap", "Untested at scale", "Closed signal". When trials exist but their status is unknown, prefer \
-a neutral tag (e.g. "Tested, status unconfirmed") over a decline tag. Do NOT name a phase tier.
+gap", "Untested at scale", "Studied outside the registry", "Closed signal". When trials exist but \
+their status is unknown, prefer a neutral tag (e.g. "Tested, status unconfirmed") over a decline \
+tag. When no registered trial matched but the literature reports human studies, prefer "Studied \
+outside the registry" over "Untested at scale". Do NOT name a phase tier.
 - prose: EXACTLY 2 sentences interpreting the state of the hypothesis, consistent with the stage \
 and active programs above. If the literature direction is "contradicts", surface that the drug \
 failed / was disproven. Do NOT name a phase tier that disagrees with the stage.

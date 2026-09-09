@@ -166,11 +166,10 @@ pulled directly from the tool artifacts you received this run.
 FORMAT: a heading line followed by a ranked list of investigated candidates. The heading
 must be exactly:
 
-  Ranked repurposing signals for <drug>:
+  Candidates assessed for <drug>:
 
-Use "signals" — NOT "candidates", "opportunities", or "indications". This list surfaces
-pairs with notable evidence (positive, mixed, stalled, or adverse), not a recommendation
-list. After the heading, one line per pair with these fields:
+Use exactly this wording. This list surfaces pairs with notable evidence (positive, mixed,
+stalled, or adverse), not a recommendation list. After the heading, one line per pair with these fields:
 
   <rank>. <disease> — <literature maturity phrase>; <development status phrase>
 

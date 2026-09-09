@@ -1920,11 +1920,13 @@ def build_supervisor_tools(
         gate_exclusions_line = re.compile(
             r"^\s*Evidence\s+gate\s+exclusions\s*:", re.IGNORECASE
         )
-        # Normalize the heading line so the report uses "signals" instead of "candidates" / "opportunities" / "indications"
-        # regardless of what the LLM wrote.
+        # Normalize the heading line to "Candidates assessed for <drug>:" regardless of what the LLM wrote. The legacy
+        # "Ranked repurposing <noun>" wording is still matched so a model that reverts to it is rewritten rather than
+        # passed through as an unrecognized line.
         heading_line = re.compile(
-            r"^\s*Ranked\s+repurposing\s+"
+            r"^\s*(?:Ranked\s+repurposing\s+"
             r"(?:candidates|opportunities|indications|signals)"
+            r"|Candidates\s+assessed)"
             r"(?P<rest>\s+for\s+.+?:?\s*)$",
             re.IGNORECASE,
         )
@@ -1957,7 +1959,7 @@ def build_supervisor_tools(
                 rest = heading_match.group("rest").rstrip()
                 if not rest.endswith(":"):
                     rest = rest + ":"
-                passthrough.append(f"Ranked repurposing signals{rest}")
+                passthrough.append(f"Candidates assessed{rest}")
                 continue
             m = rank_line.match(line)
             if m is None:

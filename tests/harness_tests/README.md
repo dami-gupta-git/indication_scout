@@ -24,7 +24,10 @@ ignorance, is the failure mode.
   inflating to "strong" on class-level (other-drug) RCTs. `evidence_basis="class_level"` vs `drug_specific`.
   Real abstracts by PMID.
 - **literature_relevance_intent_harness.py** — runs the production `synthesize.txt` prompt against
-  therapeutic-intent mismatches and a direct-treatment control using real abstracts from pgvector.
+  therapeutic-intent mismatches and direct-treatment controls using real abstracts from pgvector.
+  Covers both the empty-approved-list case (bupropion) and the case where the treated symptom is
+  itself an approved indication of the drug (duloxetine × stroke / Parkinson, where the target is
+  pain or depression).
 - **approval_aware_literature_harness.py** — extension to `judge_literature_strength`: papers on an
   APPROVED sub-indication of a broad candidate must not count toward its strength (`evidence_basis="approved"`).
 

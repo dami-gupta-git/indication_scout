@@ -921,6 +921,10 @@ class RetrievalService:
             "pmids": sorted(r.pmid for r in top_abstracts),
             "approved_indications": approved,
             "llm_model": _settings.llm_model,
+            # Bump when the DERIVED fields (direction rollup, strength cap) change — those are
+            # computed in code after the LLM call, so a stale entry would keep the old verdict and
+            # the fix would never reach a cached pair.
+            "logic_version": "direction_all_neutral_v1",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -1065,6 +1069,13 @@ class RetrievalService:
             summary.direction = "supports"
         elif has_against:
             summary.direction = "contradicts"
+        else:
+            # Every relevant abstract is "neutral" (PK / safety-only / mechanism) — there is no
+            # efficacy result in either direction to grade. Without this branch the LLM's own
+            # direction survived unchecked: sildenafil x astrocytoma read "weak, supports" on four
+            # neutral abstracts and an empty supporting list, and the non-zero study_count then
+            # carried it past the supervisor's zero-evidence gate.
+            summary.direction = "none"
 
         # DETERMINISTIC strength cap — the one clinical-accuracy invariant NOT trusted to the
         # prompt. strength/direction grade DRUG-SPECIFIC evidence only; whenever evidence_basis is

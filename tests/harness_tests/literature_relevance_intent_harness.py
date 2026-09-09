@@ -1,8 +1,10 @@
 """Evaluate therapeutic-intent classification in the production literature synthesis prompt.
 
 The harness sends real PubMed abstracts from the local pgvector database through the current
-``synthesize.txt`` prompt. It checks two cases where the candidate disease is only the patient
-population and one control where bupropion directly treats the candidate disease.
+``synthesize.txt`` prompt. It checks cases where the candidate disease is only the patient
+population — including one where the treated symptom is CAUSED BY the candidate disease, and two
+where the treated symptom is itself an FDA-APPROVED indication of the drug — plus controls where
+the drug directly treats the candidate disease.
 
 Run: .venv/bin/python tests/harness_tests/literature_relevance_intent_harness.py [runs]
 """
@@ -75,6 +77,20 @@ class IntentCase:
     disease: str
     pmids: tuple[str, ...]
     expected: IntentOutcome
+    approved: tuple[str, ...] = ()
+
+
+# Duloxetine's real FDA-label indication list, as extracted by the production label reader. Pain
+# and depression are on it, which is what makes the stroke and Parkinson cases below double
+# violations: the treated target is not the candidate disease AND it is already approved.
+_DULOXETINE_APPROVED: tuple[str, ...] = (
+    "Major depressive disorder",
+    "Generalized anxiety disorder",
+    "Diabetic peripheral neuropathic pain",
+    "Fibromyalgia",
+    "Chronic musculoskeletal pain",
+    "Diabetic Peripheral Neuropathy",
+)
 
 
 CASES: tuple[IntentCase, ...] = (
@@ -115,6 +131,27 @@ CASES: tuple[IntentCase, ...] = (
         ),
     ),
     IntentCase(
+        # The disease-attributed variant: the treated target (fatigue) is caused by the candidate
+        # disease, so the disease is not merely "background". Graded as real MS evidence before the
+        # therapeutic-target gate was rewritten to name the target explicitly.
+        name="MS population, disease-attributed fatigue treatment",
+        drug="bupropion",
+        disease="Multiple Sclerosis",
+        pmids=("21118738", "22723570"),
+        expected=IntentOutcome(
+            verdicts={
+                "21118738": "contaminated",
+                "22723570": "contaminated",
+            },
+            evidence_basis="none",
+            study_count=0,
+            strength="none",
+            direction="none",
+            is_observational=None,
+            is_animal_only=None,
+        ),
+    ),
+    IntentCase(
         name="ADHD direct-treatment control",
         drug="bupropion",
         disease="Attention Deficit-Hyperactivity Disorder",
@@ -128,6 +165,72 @@ CASES: tuple[IntentCase, ...] = (
             evidence_basis="drug_specific",
             study_count=3,
             strength="strong",
+            direction="supports",
+            is_observational=False,
+            is_animal_only=False,
+        ),
+    ),
+    IntentCase(
+        # Graded "moderate, mixed, RCT-backed" evidence for duloxetine in STROKE in the
+        # 2026-09-08 run, though every abstract treats central post-stroke pain or post-stroke
+        # depression — both approved indications. Stroke is only the population.
+        name="Stroke population, post-stroke pain and depression treatment",
+        drug="duloxetine",
+        disease="Stroke",
+        pmids=("36409018", "21078545", "23549225"),
+        approved=_DULOXETINE_APPROVED,
+        expected=IntentOutcome(
+            verdicts={
+                "36409018": "contaminated",
+                "21078545": "contaminated",
+                "23549225": "contaminated",
+            },
+            evidence_basis="none",
+            study_count=0,
+            strength="none",
+            direction="none",
+            is_observational=None,
+            is_animal_only=None,
+        ),
+    ),
+    IntentCase(
+        # Same failure in the same run for PARKINSON DISEASE: both abstracts measure pain in PD
+        # patients. The trials agent excluded the matching registry record (NCT01504178) for
+        # exactly this reason while the literature side counted it.
+        name="Parkinson population, PD-attributed pain treatment",
+        drug="duloxetine",
+        disease="Parkinson Disease",
+        pmids=("32299024", "34767324"),
+        approved=_DULOXETINE_APPROVED,
+        expected=IntentOutcome(
+            verdicts={
+                "32299024": "contaminated",
+                "34767324": "contaminated",
+            },
+            evidence_basis="none",
+            study_count=0,
+            strength="none",
+            direction="none",
+            is_observational=None,
+            is_animal_only=None,
+        ),
+    ),
+    IntentCase(
+        # Over-rejection control for the two cases above: a non-empty approved list must not
+        # suppress a candidate the drug genuinely treats off-label.
+        name="Duloxetine ADHD direct-treatment control",
+        drug="duloxetine",
+        disease="Attention Deficit-Hyperactivity Disorder",
+        pmids=("22582349", "21455975"),
+        approved=_DULOXETINE_APPROVED,
+        expected=IntentOutcome(
+            verdicts={
+                "22582349": "supporting",
+                "21455975": "supporting",
+            },
+            evidence_basis="drug_specific",
+            study_count=2,
+            strength="moderate",
             direction="supports",
             is_observational=False,
             is_animal_only=False,
@@ -182,7 +285,7 @@ async def _evaluate_once(
     prompt = _PROMPT.format(
         drug_name=case.drug,
         disease_name=case.disease,
-        approved_indications="(none)",
+        approved_indications=", ".join(case.approved) if case.approved else "(none)",
         abstracts=_format_abstracts(case, abstracts),
     )
     try:

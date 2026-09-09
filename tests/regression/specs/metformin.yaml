@@ -1,96 +1,157 @@
 # Metformin regression spec.
 #
-# Authored against gold_standard/metformin_2026-08-03_20-22-47.json. Each
-# assertion encodes a domain-meaningful invariant a regression must NOT flip.
-# Anchors are chosen to be STABLE across runs — pinned only where they held
-# across both the 2026-07-18 runs (20:19, 20:48) and the 2026-08-03 run
-# (20:22), which fixed the MASLD trial-count-0 display bug from 07-18.
+# Authored against gold_standard/metformin_2026-09-08_19-13-23.json. Each assertion encodes a
+# domain-meaningful invariant a regression must NOT flip.
+#
+# Anchors are pinned only where they held across BOTH the 2026-09-08 18:52 and 19:13 runs. The two
+# runs surface the SAME sixteen ranked indications but in substantially different order — only
+# preeclampsia and atherosclerosis hold their positions — so membership is pinned broadly and order
+# is pinned only for those two.
+#
+# Candidate-set shift from the prior (2026-08-03) gold: that snapshot pinned NCT00343395 under
+# cardiovascular disease. It is a rosiglitazone-AND-metformin trial, and the relevance gate now
+# excludes trials where metformin is not the sole studied agent, so it is classified contaminated.
+# The indication still surfaces nine relevant trials.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
 drug: metformin
 
-# Indication naming drifts run to run; resolve the variants to one canonical
-# name so a rename upstream isn't read as a coverage regression. Observed across
-# runs: hepatic steatosis <-> MASLD, cardiovascular disease <-> coronary artery
-# disorder.
+# Indication naming drifts run to run; resolve the variants to one canonical name so a rename
+# upstream isn't read as a coverage regression.
 aliases:
   hepatic steatosis:
     - metabolic dysfunction-associated steatotic liver disease
     - non-alcoholic fatty liver disease
   cardiovascular disease:
-    - coronary artery disorder
     - cardiovascular disorder
+    - coronary artery disorder
 
-# PCOS is stably #1. Cardiovascular disease and hepatic steatosis are similarly
-# weighted (both weak/mixed, neither animal-only) and swap #2/#3 run to run, so
-# they are pinned present-in-top but NOT order-pinned.
+# Preeclampsia and atherosclerosis are the only two indications holding a stable rank across runs.
 ranked_order:
   bucket: ranking
   indications:
-    - polycystic ovary syndrome
+    - preeclampsia
+    - atherosclerosis
 
+# Present in the ranked set; exact rank permutes run to run.
 required_in_ranked:
   - bucket: ranking
-    indication: cardiovascular disease
+    indication: polycystic ovary syndrome
   - bucket: ranking
     indication: hepatic steatosis
+  - bucket: ranking
+    indication: metabolic syndrome
+  - bucket: ranking
+    indication: obesity
+  - bucket: ranking
+    indication: insulin resistance
+  - bucket: ranking
+    indication: heart failure
+  - bucket: ranking
+    indication: breast cancer
+  - bucket: ranking
+    indication: miscarriage
+
+forbidden_in_ranked:
+  # Metformin's approved indication. The broad parent stays a surfaced candidate but must never
+  # reach the ranking — every paper and trial retrieved for it is on-label use.
+  - bucket: demotion_logic
+    indication: diabetes mellitus
 
 candidate_set_contains:
   bucket: structural_integrity
   indications:
+    - preeclampsia
+    - atherosclerosis
     - polycystic ovary syndrome
-    - cardiovascular disease
     - hepatic steatosis
-    - gestational diabetes
     - obesity
+    - breast cancer
+    - gestational diabetes
     - prediabetes syndrome
+    - diabetes mellitus
 
+# Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
+# each stable across both 2026-09-08 runs.
 required_ncts_surfaced:
   - bucket: literature_coverage
+    indication: preeclampsia
+    section: relevant
+    ncts:
+      - NCT03717701
+      - NCT04855513
+  - bucket: literature_coverage
+    indication: atherosclerosis
+    section: relevant
+    ncts:
+      - NCT01799057
+      - NCT02744976
+  - bucket: literature_coverage
     indication: polycystic ovary syndrome
     section: relevant
     ncts:
-      - NCT00068861   # stable across both 07-18 runs
-  - bucket: literature_coverage
-    indication: cardiovascular disease
-    section: relevant
-    ncts:
-      - NCT00343395   # stable across both 07-18 runs
-      - NCT01217307
+      - NCT00005104
+      - NCT00005654
   - bucket: literature_coverage
     indication: hepatic steatosis
     section: relevant
     ncts:
-      - NCT00063635   # stable across both 07-18 runs
-      - NCT00303537
+      - NCT00063232
+      - NCT00063635
+  - bucket: literature_coverage
+    indication: cardiovascular disease
+    section: relevant
+    ncts:
+      - NCT00510705
+      - NCT00723307
 
+# Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each stable
+# across both 2026-09-08 runs.
 required_pmids_cited:
   - bucket: literature_coverage
+    indication: preeclampsia
+    mode: cited
+    pmids:
+      - "17330831"
+      - "20926533"
+  - bucket: literature_coverage
+    indication: atherosclerosis
+    mode: cited
+    pmids:
+      - "21411114"
+      - "22892913"
+  - bucket: literature_coverage
     indication: polycystic ovary syndrome
     mode: cited
     pmids:
-      - "10634377"   # stable across both 07-18 runs
-  - bucket: literature_coverage
-    indication: cardiovascular disease
-    mode: cited
-    pmids:
-      - "23230096"   # stable across both 07-18 runs
-      - "30993313"
+      - "10206447"
+      - "10634377"
   - bucket: literature_coverage
     indication: hepatic steatosis
     mode: cited
     pmids:
-      - "19811343"   # stable across both 07-18 runs
+      - "15277403"
+      - "18721166"
+  - bucket: literature_coverage
+    indication: cardiovascular disease
+    mode: cited
+    pmids:
+      - "23230096"
+      - "26179504"
 
-# Safety — metformin carries black-box warnings (lactic acidosis). Production
-# derives black_box from OT; holdout would fall back to serious.
+# Safety — metformin carries black-box warnings (lactic acidosis). Production derives black_box from
+# OT; holdout would fall back to serious.
 safety_severity:
+  - indication: preeclampsia
+    allowed: [black_box, serious]
+  - indication: atherosclerosis
+    allowed: [black_box, serious]
   - indication: polycystic ovary syndrome
     allowed: [black_box, serious]
-  - indication: cardiovascular disease
-    allowed: [black_box, serious]
   - indication: hepatic steatosis
+    allowed: [black_box, serious]
+  - indication: cardiovascular disease
     allowed: [black_box, serious]
 
 # Drug-level collapsed safety signal must surface (empty = collapse regression).

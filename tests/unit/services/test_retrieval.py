@@ -1471,6 +1471,48 @@ async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
     assert result.direction == "supports"  # the PK paper did not make it "mixed"
 
 
+async def test_all_neutral_abstracts_force_direction_none(svc):
+    """Every relevant abstract non-efficacy (PK / safety / mechanism): there is no result in either
+    direction, so the deterministic rollup must overwrite the LLM's claimed direction with "none".
+    Without this the LLM's word survived unchecked and the non-zero study_count carried the pair past
+    the supervisor's zero-evidence gate (sildenafil x astrocytoma read "weak, supports" on four
+    mechanism abstracts and an empty supporting list)."""
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting", "22222222": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Mechanism only (PMID: 11111111; PMID: 22222222).",
+            "strength": "weak",
+            "direction": "supports",
+            "is_observational": False,
+            "key_findings": [],
+        }
+    )
+    sub = json.dumps({"11111111": "neutral", "22222222": "neutral"})
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=main),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_small_llm",
+            new=AsyncMock(return_value=sub),
+        ),
+    ):
+        result = await svc.synthesize(
+            "CHEMBL1431", "prostate cancer", _SAMPLE_ABSTRACTS
+        )
+    assert result.supporting_pmids == []
+    assert result.contradicting_pmids == []
+    assert result.neutral_pmids == ["11111111", "22222222"]
+    assert result.study_count == 2  # still relevant, still cited as context
+    assert result.direction == "none"  # overwrites the LLM's "supports"
+
+
 async def test_judge_pmid_directions_empty_on_unparseable():
     from indication_scout.services.retrieval import _judge_pmid_directions
 

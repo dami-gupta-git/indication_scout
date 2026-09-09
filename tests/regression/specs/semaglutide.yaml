@@ -1,68 +1,155 @@
 # Semaglutide regression spec.
 #
-# Authored against gold_standard/semaglutide_2026-08-03_20-30-07.json. Each
-# assertion encodes a domain-meaningful invariant a regression must NOT flip.
+# Authored against gold_standard/semaglutide_2026-09-08_20-58-45.json. Each assertion encodes a
+# domain-meaningful invariant a regression must NOT flip.
 #
-# Candidate-set shift from the prior (2026-07-18) gold: NCT05669755 (REDEFINE
-# 3) was reclassified from relevant to contaminated — it studies CagriSema
-# (cagrilintide + semaglutide combination), not semaglutide monotherapy. That
-# trial had been propping up "diabetes mellitus" as a top-3 candidate; with it
-# correctly excluded, diabetes mellitus no longer surfaces in the top ranks.
-# NCT04741074 (kidney transplant candidacy) was also reclassified as
-# contaminated — all enrollees have T2DM per inclusion criteria, placing it
-# within the approved indication.
+# Anchors are pinned only where they held across BOTH the 2026-09-08 19:09 and 20:58 runs. Ranks 6-8
+# (myocardial infarction, nicotine dependence, polycystic ovary syndrome) permute between those two
+# runs, so they are pinned present-in-top but NOT order-pinned.
+#
+# Candidate-set shift from the prior (2026-08-03) gold: cardiovascular disorder and kidney disorder
+# were ranked #1 and #2 there. Both are now FDA-approved uses on the semaglutide label — MACE risk
+# reduction, and eGFR decline / end-stage kidney disease in T2DM with CKD — so the approval check
+# marks them contaminated and they no longer consume an investigation slot. They remain surfaced
+# candidates and are pinned as required demotions below.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
 drug: semaglutide
 
+# Indication naming drifts run to run; resolve the variants to one canonical name so a rename
+# upstream isn't read as a coverage regression.
+aliases:
+  metabolic dysfunction-associated steatohepatitis:
+    - non-alcoholic steatohepatitis
+    - nash
+    - mash
+  alcohol abuse:
+    - alcohol use disorder
+    - alcohol dependence
+
+# The stable top of the ranking. MASH, heart failure, type 1 diabetes, alcohol abuse and stroke hold
+# these five positions across both runs.
 ranked_order:
   bucket: ranking
   indications:
-    - cardiovascular disorder
-    - kidney disorder
+    - metabolic dysfunction-associated steatohepatitis
+    - heart failure
+    - type 1 diabetes mellitus
+    - alcohol abuse
+    - stroke
+
+# Present in the ranked set, but their relative order permutes run to run.
+required_in_ranked:
+  - bucket: ranking
+    indication: myocardial infarction
+  - bucket: ranking
+    indication: nicotine dependence
+  - bucket: ranking
+    indication: polycystic ovary syndrome
+  - bucket: ranking
+    indication: alzheimer disease
+
+forbidden_in_ranked:
+  # Both are FDA-approved uses on the semaglutide label (MACE risk reduction; eGFR decline and
+  # end-stage kidney disease in T2DM with CKD). On-label use is not a repurposing signal — they must
+  # stay surfaced candidates but never reach the ranking.
+  - bucket: demotion_logic
+    indication: cardiovascular disorder
+  - bucket: demotion_logic
+    indication: kidney disorder
 
 candidate_set_contains:
   bucket: structural_integrity
   indications:
+    - metabolic dysfunction-associated steatohepatitis
+    - heart failure
+    - type 1 diabetes mellitus
+    - alcohol abuse
+    - stroke
     - cardiovascular disorder
     - kidney disorder
-    - parkinson disease
-    - metabolic dysfunction-associated steatotic liver disease
-    - polycystic ovary syndrome
 
+# Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
+# each stable across both 2026-09-08 runs.
 required_ncts_surfaced:
   - bucket: literature_coverage
-    indication: cardiovascular disorder
+    indication: metabolic dysfunction-associated steatohepatitis
     section: relevant
     ncts:
-      - NCT07483801   # stable across both 07-18 runs
+      - NCT02970942   # semaglutide in NASH, completed
+      - NCT03357380
   - bucket: literature_coverage
-    indication: kidney disorder
+    indication: heart failure
     section: relevant
     ncts:
-      - NCT05822609   # stable across both 07-18 runs
+      - NCT06541509
+      - NCT07090343   # active Phase 3
+  - bucket: literature_coverage
+    indication: type 1 diabetes mellitus
+    section: relevant
+    ncts:
+      - NCT05205928
+      - NCT05819138   # active Phase 3
+  - bucket: literature_coverage
+    indication: alcohol abuse
+    section: relevant
+    ncts:
+      - NCT05520775
+      - NCT05891587
+  - bucket: literature_coverage
+    indication: stroke
+    section: relevant
+    ncts:
+      - NCT05630586
+      - NCT06788626
 
+# Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each stable
+# across both 2026-09-08 runs.
 required_pmids_cited:
   - bucket: literature_coverage
-    indication: cardiovascular disorder
+    indication: metabolic dysfunction-associated steatohepatitis
     mode: cited
     pmids:
-      - "27633186"
-      - "38796653"
+      - "33185364"
+      - "34570916"
   - bucket: literature_coverage
-    indication: kidney disorder
+    indication: heart failure
     mode: cited
     pmids:
-      - "34903039"
-      - "38796653"
+      - "37622681"
+      - "38587233"
+  - bucket: literature_coverage
+    indication: type 1 diabetes mellitus
+    mode: cited
+    pmids:
+      - "39794615"
+      - "40550013"
+  - bucket: literature_coverage
+    indication: alcohol abuse
+    mode: cited
+    pmids:
+      - "38806481"
+      - "39937469"
+  - bucket: literature_coverage
+    indication: stroke
+    mode: cited
+    pmids:
+      - "31465784"
+      - "35582947"
 
-# Safety — semaglutide carries a black-box warning (thyroid C-cell / MTC risk).
-# Production derives black_box from OT; holdout would fall back to serious.
+# Safety — semaglutide carries a boxed warning (thyroid C-cell tumors). Production derives black_box
+# from the label; holdout (no label data) would fall back to serious.
 safety_severity:
-  - indication: cardiovascular disorder
+  - indication: metabolic dysfunction-associated steatohepatitis
     allowed: [black_box, serious]
-  - indication: kidney disorder
+  - indication: heart failure
+    allowed: [black_box, serious]
+  - indication: type 1 diabetes mellitus
+    allowed: [black_box, serious]
+  - indication: alcohol abuse
+    allowed: [black_box, serious]
+  - indication: stroke
     allowed: [black_box, serious]
 
 # Drug-level collapsed safety signal must surface (empty = collapse regression).

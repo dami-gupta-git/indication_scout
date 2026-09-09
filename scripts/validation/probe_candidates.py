@@ -7,11 +7,15 @@ prefetch, and the dedup/merge — without invoking any LLM agent. It reports
 whether a target disease survived to the merged candidate list, and (from the
 raw OT ranking) where it fell if it did not.
 
+The target disease argument is a plain substring match, not a disease matcher. Pass a short
+fragment ("neuroendocrine"), not a full clinical phrase ("progressive pancreatic neuroendocrine
+tumors") — no Open Targets disease name contains the latter, so it matches nothing.
+
 Usage:
-    probe_candidates.py <drug> <YYYY-MM-DD> [target disease substring]
+    python scripts/validation/probe_candidates.py <drug> <YYYY-MM-DD> [target disease substring]
 
 Example:
-    probe_candidates.py imatinib 2006-05-05 eosinophil
+    python scripts/validation/probe_candidates.py imatinib 2006-05-05 eosinophil
 """
 
 import asyncio

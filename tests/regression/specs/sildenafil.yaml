@@ -1,42 +1,86 @@
 # Sildenafil regression spec.
 #
-# Authored against gold_standard/sildenafil_2026-07-18_20-40-31.json. Each
-# assertion encodes a domain-meaningful invariant a regression must NOT flip.
-# Anchors are chosen to be STABLE across runs (confirmed identical across the
-# 20:20 and 20:40 runs on 2026-07-18).
+# Authored against gold_standard/sildenafil_2026-09-08_21-37-44.json. Each assertion encodes a
+# domain-meaningful invariant a regression must NOT flip.
 #
-# Candidate-set shift from the prior (2026-07-13) gold: hypertension dropped out
-# of the top-3 (replaced by malignant glioma) and is now only a candidate, not
-# an investigated indication; duchenne muscular dystrophy is no longer surfaced.
-# Anchors reconciled accordingly.
+# UNLIKE the bupropion / metformin / semaglutide specs, these anchors are drawn from a SINGLE run —
+# there is no second 2026-09-08 run to cross-check them against. Order is therefore pinned only for
+# the top three; everything else is pinned as membership. If a ranked_order assertion here proves
+# flaky across runs, move that indication to required_in_ranked rather than widening the order pin.
+#
+# Candidate-set shift from the prior (2026-07-18) gold: that snapshot was a three-candidate report
+# ranking malignant glioma #3. The pipeline now surfaces 57 candidates and investigates 16, and
+# malignant glioma falls at position 41 — outside the investigation cap, so it is never investigated.
+# Its close sibling "astrocytoma (excluding glioblastoma)" ranks 5th among candidates, is
+# investigated, and carries the brain-tumour signal in the ranked set instead. Three overlapping
+# brain-tumour candidates now coexist (malignant glioma, glioblastoma, astrocytoma excluding
+# glioblastoma); the dedup correctly keeps parent and subtypes separate, so they compete for slots.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
 drug: sildenafil
 
+# Indication naming drifts run to run; resolve the variants to one canonical name so a rename
+# upstream isn't read as a coverage regression.
+aliases:
+  chronic obstructive pulmonary disease:
+    - copd
+  astrocytoma (excluding glioblastoma):
+    - astrocytoma
+    - malignant glioma
+
 ranked_order:
   bucket: ranking
   indications:
+    - eisenmenger syndrome
+    - heart failure
     - raynaud disease
-    - covid-19
-    - malignant glioma
+
+# Present in the ranked set; exact rank not pinned.
+required_in_ranked:
+  - bucket: ranking
+    indication: infertility
+  - bucket: ranking
+    indication: chronic obstructive pulmonary disease
+  - bucket: ranking
+    indication: covid-19
+  - bucket: ranking
+    indication: duchenne muscular dystrophy
+  - bucket: ranking
+    indication: astrocytoma (excluding glioblastoma)
 
 candidate_set_contains:
   bucket: structural_integrity
   indications:
-    - raynaud disease
-    - covid-19
-    - malignant glioma
-    - hypertension            # still surfaced as a candidate, no longer top-3
     - eisenmenger syndrome
+    - heart failure
+    - raynaud disease
+    - infertility
+    - chronic obstructive pulmonary disease
+    - covid-19
+    - duchenne muscular dystrophy
     - benign prostatic hyperplasia
 
+# Curated trials the report surfaces (clinical_trials.relevant_nct_ids).
 required_ncts_surfaced:
+  - bucket: literature_coverage
+    indication: eisenmenger syndrome
+    section: relevant
+    ncts:
+      - NCT00586794
+      - NCT00303004
+  - bucket: literature_coverage
+    indication: heart failure
+    section: relevant
+    ncts:
+      - NCT00763867
+      - NCT01616381
   - bucket: literature_coverage
     indication: raynaud disease
     section: relevant
     ncts:
-      - NCT02050360   # stable across the 20:20/20:40 runs
+      - NCT02050360
+      - NCT03027674
   - bucket: literature_coverage
     indication: covid-19
     section: relevant
@@ -44,27 +88,56 @@ required_ncts_surfaced:
       - NCT04489446
       - NCT04304313
 
+# Cited PMIDs (evidence_summary supporting + contradicting).
 required_pmids_cited:
+  - bucket: literature_coverage
+    indication: eisenmenger syndrome
+    mode: cited
+    pmids:
+      - "20202971"
+      - "34627582"
+  - bucket: literature_coverage
+    indication: heart failure
+    mode: cited
+    pmids:
+      - "16275194"
+      - "18036451"
   - bucket: literature_coverage
     indication: raynaud disease
     mode: cited
     pmids:
-      - "21360507"   # supporting
-      - "30383134"   # contradicting
+      - "30383134"
+      - "21360507"
   - bucket: literature_coverage
-    indication: covid-19
+    indication: duchenne muscular dystrophy
     mode: cited
     pmids:
-      - "37243243"
-      - "34980198"
+      - "22653783"
+      - "20956307"
 
-# Safety — sildenafil carries a serious-severity signal (priapism, NAION,
-# hypotension with nitrates). Production/holdout both land on `serious` here.
+# Safety — sildenafil carries no boxed warning, so the label-derived severity is "serious", not
+# "black_box". A run reporting black_box here would mean the severity is coming from somewhere other
+# than the label.
 safety_severity:
+  - indication: eisenmenger syndrome
+    allowed: [serious]
+  - indication: heart failure
+    allowed: [serious]
   - indication: raynaud disease
-    allowed: [serious, black_box, moderate]
+    allowed: [serious]
   - indication: covid-19
-    allowed: [serious, black_box, moderate]
+    allowed: [serious]
+
+# Disease-specific harm flag — the indication-scoped literature reports a harm for sildenafil in each
+# of these contexts (sudden death in Eisenmenger, reduced left-ventricular contractility in heart
+# failure, worsened gas exchange in COPD).
+indication_harm:
+  - indication: eisenmenger syndrome
+    expected: true
+  - indication: heart failure
+    expected: true
+  - indication: chronic obstructive pulmonary disease
+    expected: true
 
 # Drug-level collapsed safety signal must surface (empty = collapse regression).
 drug_safety:

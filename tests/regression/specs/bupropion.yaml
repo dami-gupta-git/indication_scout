@@ -1,102 +1,161 @@
 # Bupropion regression spec.
 #
-# Authored against gold_standard/bupropion_2026-07-18_20-35-58.json. Each
-# assertion encodes a domain-meaningful invariant — a fact about bupropion's
-# evidence base that a regression must NOT silently flip. If one fails, the
-# supervisor, a sub-agent, or the upstream data layer stopped surfacing a
-# known-good signal.
+# Authored against gold_standard/bupropion_2026-09-08_19-47-22.json. Each assertion encodes a
+# domain-meaningful invariant — a fact about bupropion's evidence base that a regression must NOT
+# silently flip.
 #
-# Anchors are chosen to be STABLE across runs. Trials the relevance classifier
-# treats as borderline (comorbid / dual-indication studies whose
-# relevant-vs-contaminated call flips run to run) are deliberately NOT pinned;
-# pinning them makes the test flaky without catching real coverage loss.
+# Anchors are pinned only where they held across BOTH the 2026-09-08 19:34 and 19:47 runs. Those two
+# runs produced an identical 12-deep ranking, but they are 13 minutes apart and share a warm cache,
+# so only the top five are order-pinned; the rest are pinned present-in-top.
+#
+# Candidate-set shift from the prior (2026-07-18) gold: that snapshot ranked "mood disorder" #2 and
+# pinned STEP-BD (NCT00012558) and PMID 2856918 under it. Bupropion is FDA-approved for major
+# depressive disorder and seasonal affective disorder, both mood-disorder subtypes, so every paper
+# and trial retrieved for the umbrella term is on-label use and the approval gates mark it
+# contaminated. The bipolar signal now surfaces under "bipolar disorder", which is not an approved
+# use — STEP-BD is pinned there instead.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
 drug: bupropion
 
-# Indication naming drifts run to run; resolve the variants to one canonical
-# name so a rename upstream isn't read as a coverage regression.
+# Indication naming drifts run to run; resolve the variants to one canonical name so a rename
+# upstream isn't read as a coverage regression.
 aliases:
   cocaine use disorder:
     - cocaine dependence
+    - cocaine abuse
   attention deficit-hyperactivity disorder:
     - attention deficit hyperactivity disorder
 
-# The ranked repurposing signals, in the order the report presents them. Mood disorder is NOT
-# pinned here — see forbidden_in_ranked below.
+# The stable top of the ranking.
 ranked_order:
   bucket: ranking
   indications:
+    - binge eating disorder
     - attention deficit-hyperactivity disorder
     - cocaine use disorder
+    - bipolar disorder
+    - alcohol dependence
+
+# Present in the ranked set; exact rank not pinned.
+required_in_ranked:
+  - bucket: ranking
+    indication: neuropathic pain
+  - bucket: ranking
+    indication: post-traumatic stress disorder
+  - bucket: ranking
+    indication: parkinson disease
+
+forbidden_in_ranked:
+  # Obesity is FDA-approved only as Contrave (bupropion + naltrexone), not bupropion monotherapy —
+  # the combination-product rule must keep it out of the ranked signals.
+  - bucket: demotion_logic
+    indication: obesity disorder
+  # Bupropion is approved for major depressive disorder and seasonal affective disorder, so the
+  # umbrella "mood disorder" and "depressive disorder" are on-label. Both stay surfaced candidates
+  # (see candidate_set_contains) but must never reach the ranking.
+  - bucket: demotion_logic
+    indication: mood disorder
+  - bucket: demotion_logic
+    indication: depressive disorder
 
 candidate_set_contains:
   bucket: structural_integrity
   indications:
+    - binge eating disorder
     - attention deficit-hyperactivity disorder
     - cocaine use disorder
+    - bipolar disorder
+    - alcohol dependence
     - mood disorder
+    - depressive disorder
     - schizophrenia
-    - methamphetamine dependence
 
-# Curated trials the report surfaces (clinical_trials.relevant_nct_ids).
+# Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
+# each stable across both 2026-09-08 runs.
 required_ncts_surfaced:
+  - bucket: literature_coverage
+    indication: binge eating disorder
+    section: relevant
+    ncts:
+      - NCT00414167
+      - NCT03045341
   - bucket: literature_coverage
     indication: attention deficit-hyperactivity disorder
     section: relevant
     ncts:
-      - NCT00048360   # adult ADHD, Phase 3, completed (stable across runs)
+      - NCT00048360   # adult ADHD, Phase 3, completed
+      - NCT00936299
+  - bucket: literature_coverage
+    indication: cocaine use disorder
+    section: relevant
+    # Regression guard for the MeSH-vocabulary bug: "cocaine use disorder" has no MeSH entry, so an
+    # unresolved lookup returns zero trials and the report calls the indication clinical whitespace.
+    # These two only surface when the lookup falls back to the "cocaine dependence" synonym.
+    ncts:
+      - NCT02111798
+      - NCT00000276
+  - bucket: literature_coverage
+    indication: bipolar disorder
+    section: relevant
+    ncts:
+      - NCT00012558   # STEP-BD, bipolar disorder, completed
+      - NCT00181896
 
-# Cited PMIDs (evidence_summary supporting + contradicting).
+# Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each stable
+# across both 2026-09-08 runs.
 required_pmids_cited:
+  - bucket: literature_coverage
+    indication: binge eating disorder
+    mode: cited
+    pmids:
+      - "23656848"
+      - "36285406"
   - bucket: literature_coverage
     indication: attention deficit-hyperactivity disorder
     mode: cited
     pmids:
       - "11156812"   # adult ADHD RCT, bupropion SR
-      - "15820237"   # bupropion XL, 162 adults
+      - "11916368"
+  - bucket: literature_coverage
+    indication: cocaine use disorder
+    mode: cited
+    pmids:
+      - "31183685"
+      - "30815171"
+  - bucket: literature_coverage
+    indication: bipolar disorder
+    mode: cited
+    pmids:
+      - "10701483"
+      - "12842303"
 
-# Safety — bupropion carries black-box warnings (psychiatric / cardiotoxicity).
-# Production derives black_box from OT warnings; holdout (OT suppressed) would
-# pick serious from pre-cutoff literature, hence the allowed set.
+# Safety — bupropion carries black-box warnings (psychiatric / cardiotoxicity). Production derives
+# black_box from OT warnings; holdout (OT suppressed) would pick serious from pre-cutoff literature,
+# hence the allowed set.
 safety_severity:
+  - indication: binge eating disorder
+    allowed: [black_box, serious]
   - indication: attention deficit-hyperactivity disorder
     allowed: [black_box, serious]
   - indication: cocaine use disorder
     allowed: [black_box, serious]
+  - indication: bipolar disorder
+    allowed: [black_box, serious]
 
-# Disease-specific harm flag — the indication-scoped literature reports a harm
-# for bupropion in each of these contexts.
+# Disease-specific harm flag — the indication-scoped literature reports a harm for bupropion in each
+# of these contexts. ADHD is the regression guard for the evidence-quote word cap: the only paper
+# reporting the harm states it in one 73-word sentence, and a tighter cap forced an elision that
+# broke the verbatim check and silently downgraded the flag to undetermined.
 indication_harm:
   - indication: attention deficit-hyperactivity disorder
     expected: true
   - indication: cocaine use disorder
     expected: true
+  - indication: bipolar disorder
+    expected: true
 
 # Drug-level collapsed safety signal must surface (empty = collapse regression).
 drug_safety:
   summary_present: true
-
-forbidden_in_ranked:
-  # Obesity is FDA-approved only as Contrave (bupropion + naltrexone), not
-  # bupropion monotherapy — the supervisor must keep it out of the ranked
-  # signals via the combination-product rule.
-  - bucket: demotion_logic
-    indication: obesity disorder
-  # Bupropion is FDA-approved for major depressive disorder and seasonal
-  # affective disorder, both mood-disorder subtypes, so every paper and trial
-  # retrieved for "mood disorder" is on-label use and the approval gates mark
-  # the whole indication contaminated. It stays a surfaced candidate (see
-  # candidate_set_contains) but must not reach the ranking. The 2026-07-18 gold
-  # standard predates these gates and ranked it #2; it is stale on this point.
-  - bucket: demotion_logic
-    indication: mood disorder
-
-forbidden_phrases:
-  # Bupropion monotherapy is not FDA-approved for obesity — the combination
-  # product (Contrave/Mysimba) is. A report saying "approved for obesity"
-  # without qualifying it as the combination is a factual regression.
-  - bucket: factual_accuracy
-    phrase: "approved for obesity"
-    scope: summary

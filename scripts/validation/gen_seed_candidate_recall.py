@@ -1,45 +1,24 @@
 """Generate a holdout candidate-recall markdown table (seed phase only).
 
-This is a validation probe, not part of the live pipeline. It answers one question per
-runbook row: under a holdout cutoff, does the drug's known target indication actually
-surface in the seed-phase candidate list, and at what rank? It exercises only the cheap
-seed phase (mechanism + competitor surfacing + merge), so it runs in seconds per row
-rather than the minutes a full lit/trials/synthesis report takes.
+Validation probe, not part of the live pipeline. Per runbook row: under a holdout cutoff,
+does the drug's known target indication surface in the seed-phase candidate list, and at
+what rank? Runs only the cheap seed phase (mechanism + competitor surfacing + merge).
 
-How a row is produced:
+Per row: run `analyze_mechanism` and `find_candidates` concurrently as the ReAct loop does,
+snapshot `get_merged_allowlist()` (merged competitor + mechanism list, insertion order — the
+same order `investigate_top_candidates[:N]` slices), then LLM-match the target indication
+into it. Every run passes `date_before=cutoff`, so the mechanism score excludes
+clinical_precedence and no post-cutoff approval signal can inflate a rank.
 
-  1. Run the real supervisor seed-phase tools — `analyze_mechanism` and `find_candidates`
-     — exactly as the ReAct loop fires them: both concurrently, with find_candidates
-     awaiting the mechanism gate and then running the centralized merge_and_dedup. The
-     result is snapshotted from `get_merged_allowlist()`: the ground-truth merged
-     competitor + mechanism list in insertion order — the same order
-     `investigate_top_candidates[:N]` slices. There is no OT-score re-ranking here; the
-     mechanism set is the real signal-filtered/capped one, NOT the full association pool
-     that probe_ot_score_rank.py inspects.
-  2. Because every run passes `date_before=cutoff`, ranking is always holdout/leak-free:
-     the mechanism score is the recomputed OT score with clinical_precedence excluded, so
-     a post-cutoff approval signal can never inflate a candidate's rank.
-  3. LLM-match the row's target indication into that merged list (synonyms/abbreviations
-     count; broader parents and siblings do not) and record its rank + source.
+One seed-phase run per distinct (drug, cutoff); rows sharing it reuse the cached result.
+Rows are written as they complete.
 
-One seed-phase run is performed per distinct (drug, cutoff); rows that share it reuse the
-cached result. Rows are written as they complete so a mid-run crash never loses progress.
-
-Output mirrors results/holdout_validation/validation_results_bak_9.md exactly:
-
-  | Drug | Indication | Cutoff | Score | List position | Notes | Source | Matched |
-
-Score is binary candidate-presence (holdout does not rank, so cap/rank are irrelevant):
-  1     = target indication is present in the merged candidate list
-  0     = absent from the merged list
-  ERROR = the seed-phase run failed for that row
-
-The Notes column is emitted empty; any prose in a committed table was added by hand.
+Score: 1 = target indication present in the merged list, 0 = absent, ERROR = run failed.
+The Notes column is emitted empty; prose in a committed table was added by hand.
 
 Args: <runbook.txt> [output.md] [--lines 3-7,12]. Runbook columns: drug,indication,date.
-`--lines` selects 1-based data rows (header excluded; ranges and lists allowed); default
-runs every row. With no output.md given, writes to the next free
-results/holdout_validation/validation_results_N.md (never overwrites).
+`--lines` selects 1-based data rows; default runs every row. With no output.md, writes to
+the next free results/holdout_validation/validation_results_N.md (never overwrites).
 
 Run (per-target read widened to 30 to test deeper recall):
     MECHANISM_ASSOCIATIONS_PER_TARGET=30 CONSTANTS_FILE=.env.constants \\
@@ -165,7 +144,7 @@ def _parse_lines(spec: str) -> set[int]:
 def _ensure_header(cap: int) -> None:
     OUT_MD.parent.mkdir(parents=True, exist_ok=True)
     s = get_settings()
-    # Reflect the effective per-target value (a CLI env override beats the constants file).
+    # A CLI env override beats the constants file.
     per_target = int(
         os.environ.get(
             "MECHANISM_ASSOCIATIONS_PER_TARGET", s.mechanism_associations_per_target
@@ -196,8 +175,6 @@ def _ensure_header(cap: int) -> None:
 
 
 def _append_row(r: dict) -> None:
-    # Binary presence: 1 = target in the merged candidate list, 0 = absent. Holdout does not
-    # rank, so cap/rank no longer affect the score. ERROR rows are recorded verbatim.
     if r["present"] == "ERROR":
         score = "ERROR"
     else:
@@ -214,7 +191,7 @@ async def main() -> None:
     global OUT_MD
     argv = sys.argv[1:]
 
-    # --lines 3-7,12 (or --lines=3-7,12) selects 1-based data rows; default = all.
+    # --lines 3-7,12 or --lines=3-7,12; default = all.
     line_spec: str | None = None
     skip = set()
     for i, a in enumerate(argv):
