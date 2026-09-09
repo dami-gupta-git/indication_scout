@@ -32,8 +32,12 @@ CASES: list[tuple[str, str, bool]] = [
     ("natalizumab", "multiple sclerosis", True),   # PML reported in MS therapy
     ("bevacizumab", "colorectal cancer", True),    # GI perforation reported in colorectal use
     ("warfarin", "atrial fibrillation", True),     # bleeding reported in AF anticoagulation
-    ("metformin", "type 2 diabetes", True),        # lactic acidosis reported in T2D use
     # No disease-context safety finding expected (efficacy-only or thin AE literature for the pair).
+    # Labeled True on metformin's lactic-acidosis reputation until the retrieved corpus was read:
+    # the two lactic-acidosis papers it returns are the Cochrane review concluding there is NO
+    # evidence of increased risk versus other anti-hyperglycemics (PMID 20091535). No flag is the
+    # correct answer for this evidence.
+    ("metformin", "type 2 diabetes", False),
     ("rofecoxib", "migraine", False),              # migraine trials are efficacy; CV signal is not migraine-context
     ("sildenafil", "erectile dysfunction", False), # ED literature is efficacy-dominated
     # The 2026-09-08 sildenafil run flagged ischemic stroke off PMID 19717023: a 12-patient
