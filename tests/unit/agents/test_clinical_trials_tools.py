@@ -1136,10 +1136,52 @@ async def _populate_shown(tools: list, *, completed=(), terminated=()) -> None:
             )
 
 
-async def _finalize(tools: list, **args):
-    return await _get_tool(tools, "finalize_analysis").ainvoke(
-        LCToolCall(name="finalize_analysis", args=args, id="tc_fin", type="tool_call")
+async def _finalize(tools: list, treats: dict[str, bool] | None = None, **args):
+    """Invoke finalize_analysis with the therapeutic-target gate stubbed.
+
+    `treats` maps NCT to the gate's verdict; anything unlisted passes, so tests that are not about
+    the gate keep their pre-gate expectations.
+    """
+
+    async def gate(drug, disease, trials, cache_dir):
+        return {t.nct_id: (treats or {}).get(t.nct_id, True) for t in trials}
+
+    with patch(
+        "indication_scout.agents.clinical_trials.clinical_trials_tools."
+        "judge_trials_treat_disease",
+        new=gate,
+    ):
+        return await _get_tool(tools, "finalize_analysis").ainvoke(
+            LCToolCall(
+                name="finalize_analysis", args=args, id="tc_fin", type="tool_call"
+            )
+        )
+
+
+async def test_finalize_analysis_target_gate_demotes_trial_aimed_at_a_complication():
+    """A trial that studies the drug in patients who have the candidate disease but targets a
+    complication of it is moved from relevant to contaminated, and the agent's own verdict cannot
+    keep it."""
+    tools = build_clinical_trials_tools(
+        date_before=None, target_drug="sildenafil", assigned_indication="hypertension"
     )
+    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
+
+    msg = await _finalize(
+        tools,
+        treats={"NCT00000002": False},
+        verdicts=[
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
+            {"nct": "NCT00000002", "drug_role": "studied", "verdict": "relevant"},
+        ],
+        relevance_reasoning="both study sildenafil in this indication.",
+    )
+
+    art = msg.artifact
+    assert art.relevant_ncts == ["NCT00000001"]
+    assert art.contaminated_ncts == ["NCT00000002"]
+    assert art.relevance_reasoning == "both study sildenafil in this indication."
+    assert "Analysis complete" in msg.content
 
 
 async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():

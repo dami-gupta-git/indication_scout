@@ -1803,7 +1803,10 @@ async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(sv
         AbstractResult(
             pmid="11111111",
             title="Sildenafil trial",
-            abstract="Sildenafil improved the primary endpoint against placebo.",
+            abstract=(
+                "In a randomized placebo-controlled trial, sildenafil improved the primary "
+                "endpoint against placebo."
+            ),
             similarity=0.95,
         ),
         AbstractResult(

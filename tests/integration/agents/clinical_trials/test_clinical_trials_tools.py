@@ -169,10 +169,11 @@ _SEMAGLUTIDE_EXPECTED_NAMES = {
     "indication,is_approved,matched_indication,expected_content",
     [
         (
-            "NASH",
+            "type 2 diabetes mellitus",
             True,
-            "NASH",
-            "FDA approval check for semaglutide × NASH: APPROVED (checked 9 drug names)",
+            "type 2 diabetes mellitus",
+            "FDA approval check for semaglutide × type 2 diabetes mellitus: "
+            "APPROVED (checked 9 drug names)",
         ),
         (
             "alzheimer disease",
@@ -189,10 +190,15 @@ async def test_check_fda_approval_semaglutide(
     """End-to-end: ChEMBL resolution, openFDA label fetch, and LLM approval
     extraction for semaglutide.
 
-    - NASH: semaglutide IS FDA-approved → is_approved=True.
+    - type 2 diabetes mellitus: printed on the Ozempic label → is_approved=True.
     - alzheimer disease: label exists, indication not on it → is_approved=False.
     matched_indication is the caller's input verbatim when is_approved is True,
     otherwise None.
+
+    The positive case must name an indication the SERVED label states. NASH was used here and
+    fails: semaglutide is approved for MASH in the real world, but openFDA carries a single Wegovy
+    label effective 2024-04-23 that predates that approval, so the extraction correctly finds no
+    such indication. An expectation drawn from outside the label tests the label lag, not the code.
 
     Numbers verified live on 2026-04-25: ChEMBL resolves to 9 drug names for
     semaglutide.

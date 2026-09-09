@@ -13,6 +13,8 @@ clinical_precedence and no post-cutoff approval signal can inflate a rank.
 One seed-phase run per distinct (drug, cutoff); rows sharing it reuse the cached result.
 Rows are written as they complete.
 
+The leading `#` column is the 1-based runbook data-row index — the same number `--lines` takes.
+
 Score: 1 = target indication present in the merged list, 0 = absent, ERROR = run failed.
 The Notes column is emitted empty; prose in a committed table was added by hand.
 
@@ -168,8 +170,8 @@ def _ensure_header(cap: int) -> None:
         "`List position`/`Source` = the target's 1-based spot in the merged list and its origin "
         "(competitor/mechanism/both), for context only.",
         "",
-        "| Drug | Indication | Cutoff | Score | List position | Notes | Source | Matched |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| # | Drug | Indication | Cutoff | Score | List position | Notes | Source | Matched |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     OUT_MD.write_text("\n".join(lines) + "\n")
 
@@ -181,7 +183,7 @@ def _append_row(r: dict) -> None:
         score = "1" if r["present"] == "in" else "0"
     with OUT_MD.open("a") as f:
         f.write(
-            f"| {r['drug']} | {r['indication']} | {r['cutoff']} | {score} "
+            f"| {r['n']} | {r['drug']} | {r['indication']} | {r['cutoff']} | {score} "
             f"| {r['rank']} | {r.get('note', '')} | {r['source']} "
             f"| {r.get('matched', '')} |\n"
         )
@@ -210,9 +212,12 @@ async def main() -> None:
     if len(paths) > 1:
         OUT_MD = Path(paths[1])
 
+    # The number is the 1-based runbook data-row index, so it survives --lines and stays the
+    # selector you would pass back to re-run that row.
+    numbered = list(enumerate(rows, start=1))
     if line_spec:
         wanted = _parse_lines(line_spec)
-        rows = [r for i, r in enumerate(rows, start=1) if i in wanted]
+        numbered = [(i, r) for i, r in numbered if i in wanted]
 
     settings = get_settings()
     cap = settings.supervisor_investigation_cap
@@ -229,7 +234,7 @@ async def main() -> None:
 
     # One seed-phase run per distinct (drug, cutoff).
     cache: dict[tuple[str, str], list[tuple[str, str]]] = {}
-    for r in rows:
+    for n, r in numbered:
         drug, indication, cutoff = r["drug"].strip(), r["indication"].strip(), r["date"].strip()
         key = (drug, cutoff)
         try:
@@ -239,18 +244,18 @@ async def main() -> None:
                 )
         except Exception as e:  # noqa: BLE001 - record ERROR, keep going
             logger.error("%s / %s -> ERROR: %s", drug, indication, e)
-            _append_row({"drug": drug, "indication": indication, "cutoff": cutoff,
+            _append_row({"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
                          "present": "ERROR", "rank": "", "source": ""})
             continue
         merged = cache[key]
         names = [n for n, _ in merged]
         idx = await _match(indication, names)
         if idx is None:
-            row = {"drug": drug, "indication": indication, "cutoff": cutoff,
+            row = {"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
                    "present": "out", "rank": "", "source": ""}
         else:
             name, source = merged[idx]
-            row = {"drug": drug, "indication": indication, "cutoff": cutoff,
+            row = {"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
                    "present": "in", "rank": str(idx + 1), "source": source,
                    "matched": name}
         _append_row(row)  # write as we go

@@ -19,7 +19,6 @@ frontend/.vite/
 # Local caches & data (mounted as volumes at runtime, not baked in)
 cache/
 cache_test/
-.deepeval/
 
 # Local env / secrets (passed via compose env_file at runtime)
 .env

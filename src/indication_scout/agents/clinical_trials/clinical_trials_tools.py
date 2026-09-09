@@ -33,6 +33,7 @@ from indication_scout.services.approval_check import (
     get_approved_indications,
 )
 from indication_scout.services.disease_helper import resolve_mesh_id
+from indication_scout.services.trial_target import judge_trials_treat_disease
 
 _settings = get_settings()
 
@@ -110,6 +111,11 @@ def build_clinical_trials_tools(
     # indication keeps a re-call rewriting the same set, tolerates drug-name variants, and still
     # separates distinct indications (the cross-pair-reuse guard).
     shown_by_indication: dict[str, set[str]] = {}
+
+    # The Trial records behind the ids above, so the therapeutic-target gate at finalize can read
+    # each trial's objective. Keyed on NCT alone: a trial's own text does not vary by which tool
+    # fetched it, and a later fetch simply rewrites the same entry.
+    records_by_nct: dict[str, Trial] = {}
 
     # The drug this agent instance was launched to analyze. Pinned by the caller so the
     # finalize drug-role question is anchored to one agent: were it taken from the tools' own
@@ -277,6 +283,7 @@ def build_clinical_trials_tools(
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
+        records_by_nct.update({t.nct_id: t for t in result.trials if t.nct_id})
         return content, result
 
     @tool(response_format="content_and_artifact")
@@ -337,6 +344,7 @@ def build_clinical_trials_tools(
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
+        records_by_nct.update({t.nct_id: t for t in result.trials if t.nct_id})
 
         scrub_note = (
             f"; dropped {scrub_dropped} post-cutoff completion(s) "
@@ -440,6 +448,7 @@ def build_clinical_trials_tools(
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
+        records_by_nct.update({t.nct_id: t for t in result.trials if t.nct_id})
 
         header = (
             f"Terminated for {drug} × {indication}: {result.total_count} registry query matches "
@@ -743,6 +752,38 @@ def build_clinical_trials_tools(
 
         relevant_ncts = [v.nct for v in parsed if v.verdict == "relevant"]
         contaminated_ncts = [v.nct for v in parsed if v.verdict == "contaminated"]
+
+        # THERAPEUTIC-TARGET GATE — the drug's ROLE is checked above; this checks the trial's
+        # OBJECTIVE. Asked once per trial in isolation and cached, so the answer cannot move with
+        # the batch, and applied deterministically here rather than trusted to the agent's own
+        # relevance call, which counted a cardiomyopathy trial in muscular-dystrophy patients as
+        # muscular-dystrophy development and a pharmacokinetics study as an acute-kidney-injury
+        # programme. A trial the gate rejects moves to contaminated; it is never re-admitted.
+        gated = [records_by_nct[n] for n in relevant_ncts if n in records_by_nct]
+        if relevant_ncts:
+            treats = (
+                await judge_trials_treat_disease(
+                    _target_drug or "this drug",
+                    _assigned or next(iter(shown_by_indication), ""),
+                    gated,
+                    DEFAULT_CACHE_DIR,
+                )
+                if gated
+                else {}
+            )
+            # A relevant NCT with no stored record cannot be gated, so it is demoted rather than
+            # admitted ungated — the same fail-closed rule the gate itself uses.
+            demoted = [n for n in relevant_ncts if not treats.get(n, False)]
+            if demoted:
+                logger.info(
+                    "clinical_trials: therapeutic-target gate demoted %d trial(s) for %s x %s: %s",
+                    len(demoted),
+                    _target_drug or "this drug",
+                    _assigned,
+                    ", ".join(demoted),
+                )
+                relevant_ncts = [n for n in relevant_ncts if n not in demoted]
+                contaminated_ncts = contaminated_ncts + demoted
         artifact = FinalizeClinicalTrialsArtifact(
             relevant_ncts=relevant_ncts,
             contaminated_ncts=contaminated_ncts,
