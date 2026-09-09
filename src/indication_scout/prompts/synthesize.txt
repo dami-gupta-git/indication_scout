@@ -27,6 +27,19 @@ classify the abstract as "contaminated", even when treatment succeeds.
     the disease explains is still not the disease.
     e.g. "bupropion for multiple-sclerosis-related fatigue" — name the target: fatigue. Fatigue is
     not multiple sclerosis => CONTAMINATED, even though the fatigue is caused by the MS.
+  - PREVENTION EVIDENCE: patients do not need to have the candidate disease at baseline. When this
+    drug is deliberately administered and the study reports a comparative result for the candidate
+    disease's incidence or onset as a prespecified clinical outcome, the candidate disease IS a
+    treatment target => relevant. This includes separately reported primary or secondary outcomes
+    in people selected for a different disease or risk state. Judge the result as supporting,
+    contradicting, or mixed even when the drug failed to prevent the disease or increased its rate.
+    This exception does NOT include a protocol with no outcome result or a biomarker or surrogate
+    that merely tracks disease risk (e.g. arterial stiffness is not atherosclerosis). A combined
+    outcome is insufficient unless the abstract reports the candidate disease's result separately:
+    for example, a combined count of preterm delivery, severe preeclampsia, and postpartum events is
+    not a preeclampsia result. It also does NOT include a safety/causation study asking whether
+    exposure to the drug causes the candidate disease when no preventive efficacy hypothesis is
+    being tested; that is safety evidence, not repurposing efficacy.
   - NOT contaminated: an abstract whose outcome IS the candidate disease's own defining endpoint,
     even when that endpoint is a symptom scale. Decide this with the ELIMINATION TEST, not by
     asking whether the symptom is typical of the disease: if the measured endpoint were fully

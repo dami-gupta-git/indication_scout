@@ -923,7 +923,7 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or DERIVED fields (direction rollup, strength cap)
             # change, so stale judgments cannot preserve behavior that the new rules reject.
-            "logic_version": "combination_only_v1",
+            "logic_version": "prevention_evidence_v1",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
