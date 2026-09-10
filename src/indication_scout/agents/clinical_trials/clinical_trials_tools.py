@@ -1,5 +1,6 @@
 import logging
 from datetime import date
+from pathlib import Path
 
 from langchain_core.tools import tool
 from pydantic import ValidationError
@@ -98,6 +99,7 @@ def build_clinical_trials_tools(
     date_before: date | None = None,
     assigned_indication: str | None = None,
     target_drug: str | None = None,
+    cache_dir: Path = DEFAULT_CACHE_DIR,
 ) -> list:
 
     # Closure-scoped snapshot of the NCTs rendered to the agent for the relevance
@@ -201,7 +203,7 @@ def build_clinical_trials_tools(
             )
         mesh_id, mesh_term = resolved
 
-        async with ClinicalTrialsClient() as client:
+        async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.search_trials(
                 drug,
                 mesh_term,
@@ -317,7 +319,7 @@ def build_clinical_trials_tools(
             )
         _mesh_id, mesh_term = resolved
 
-        async with ClinicalTrialsClient() as client:
+        async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.get_completed_trials(
                 drug,
                 mesh_term,
@@ -415,7 +417,7 @@ def build_clinical_trials_tools(
             )
         _mesh_id, mesh_term = resolved
 
-        async with ClinicalTrialsClient() as client:
+        async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.get_terminated_trials(
                 drug,
                 mesh_term,
@@ -530,7 +532,7 @@ def build_clinical_trials_tools(
             )
         _mesh_id, mesh_term = resolved
 
-        async with ClinicalTrialsClient() as client:
+        async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             landscape = await client.get_landscape(
                 mesh_term,
                 date_before=date_before,

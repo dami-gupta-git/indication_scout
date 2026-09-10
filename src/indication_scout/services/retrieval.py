@@ -20,11 +20,14 @@ from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
+    LITERATURE_TRIAL_REFERENCE_RESERVE,
+    PUBMED_NCT_QUERY_BATCH_SIZE,
     SAFETY_QUOTE_MAX_WORDS,
     SAFETY_TOP_ADVERSE_EVENTS,
 )
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import ChEMBLClient, get_all_drug_names
+from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
 from indication_scout.data_sources.fda import FDAClient
 from indication_scout.data_sources.open_targets import (
     CompetitorRawData,
@@ -52,6 +55,7 @@ from indication_scout.services.citation_guard import (
 from indication_scout.services.disease_helper import (
     llm_normalize_disease_batch,
     merge_duplicate_diseases,
+    resolve_mesh_id,
 )
 from indication_scout.services.embeddings import embed_async
 from indication_scout.services.llm import (
@@ -709,6 +713,69 @@ class RetrievalService:
         logger.debug("Fetching %d new abstracts from PubMed", len(new_pmids))
         return await client.fetch_abstracts(new_pmids)
 
+    async def cache_trial_reference_abstracts(
+        self,
+        pmids: list[str],
+        db: Session,
+        date_before: date | None,
+    ) -> list[str]:
+        """Fetch and embed trial-linked PubMed records independently of query retrieval."""
+        linked_pmids = list(dict.fromkeys(str(pmid) for pmid in pmids if str(pmid)))
+        if not linked_pmids:
+            return []
+        async with PubMedClient(cache_dir=self.cache_dir) as client:
+            if date_before is not None:
+                linked_pmids = await self._filter_pmids_by_date(
+                    linked_pmids, date_before, db, client
+                )
+            stored = self.get_stored_pmids(linked_pmids, db)
+            db.rollback()
+            new_abstracts = await self.fetch_new_abstracts(
+                linked_pmids, stored, client
+            )
+        abstracts_with_text = [abstract for abstract in new_abstracts if abstract.abstract]
+        pairs = await self.embed_abstracts(abstracts_with_text)
+        self.insert_abstracts(pairs, db)
+        return linked_pmids
+
+    async def find_trial_linked_pmids(
+        self,
+        drug: str,
+        disease: str,
+        date_before: date | None,
+    ) -> list[str]:
+        """Find publications tagged in PubMed with NCT IDs from the pair registry lookup."""
+        resolved = await resolve_mesh_id(disease)
+        if resolved is None:
+            return []
+        _, mesh_term = resolved
+        async with ClinicalTrialsClient(cache_dir=self.cache_dir) as trials_client:
+            trial_result = await trials_client.search_trials(
+                drug, mesh_term, date_before=date_before
+            )
+        nct_ids = list(
+            dict.fromkeys(trial.nct_id for trial in trial_result.trials if trial.nct_id)
+        )
+        if not nct_ids:
+            return []
+
+        max_results = _settings.pubmed_max_results
+        pmids: list[str] = []
+        async with PubMedClient(cache_dir=self.cache_dir) as pubmed_client:
+            for start in range(0, len(nct_ids), PUBMED_NCT_QUERY_BATCH_SIZE):
+                remaining = max_results - len(pmids)
+                if remaining <= 0:
+                    break
+                batch = nct_ids[start : start + PUBMED_NCT_QUERY_BATCH_SIZE]
+                query = " OR ".join(f"{nct_id}[si]" for nct_id in batch)
+                found = await pubmed_client.search(
+                    query,
+                    max_results=remaining,
+                    date_before=date_before,
+                )
+                pmids.extend(pmid for pmid in found if pmid not in pmids)
+        return pmids
+
     async def embed_abstracts(
         self,
         abstracts: list[PubmedAbstract],
@@ -1069,10 +1136,15 @@ class RetrievalService:
         if date_before is not None:
             async with PubMedClient(cache_dir=self.cache_dir) as client:
                 pmids = await self._filter_pmids_by_date(pmids, date_before, db, client)
-            if not pmids:
-                return []
 
-        pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
+        drug_names = await get_all_drug_names(chembl_id, self.cache_dir)
+        pref_name = drug_names[0]
+        linked_pmids = await self.find_trial_linked_pmids(
+            pref_name, disease, date_before
+        )
+        linked_pmids = await self.cache_trial_reference_abstracts(
+            linked_pmids, db, date_before
+        )
         query_string = (
             f"Evidence for {pref_name} as a treatment for {disease}, "
             "including clinical trials, efficacy data, mechanism of action, "
@@ -1130,6 +1202,26 @@ class RetrievalService:
                 "rerank_cap": rerank_cap,
             },
         ).fetchall()
+        linked_rows = []
+        if linked_pmids:
+            linked_rows = db.execute(
+                text("""
+                    SELECT pmid, title, abstract,
+                           1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
+                    FROM pubmed_abstracts
+                    WHERE pmid = ANY(:pmids)
+                    ORDER BY similarity DESC
+                """),
+                {
+                    "query_vec": "[" + ",".join(str(x) for x in query_vector) + "]",
+                    "pmids": linked_pmids,
+                },
+            ).fetchall()
+        baseline_pmids = {str(row[0]) for row in rows}
+        rows_by_pmid = {str(row[0]): row for row in rows}
+        for row in linked_rows:
+            rows_by_pmid.setdefault(str(row[0]), row)
+        all_rows = list(rows_by_pmid.values())
         # Rows are fully materialized, so the read transaction is no longer
         # needed while PubMed and the literature agent perform awaited work.
         db.rollback()
@@ -1140,10 +1232,10 @@ class RetrievalService:
         #     len(pmids),
         # )
 
-        if not rows:
+        if not all_rows:
             return []
 
-        candidate_pmids = [row[0] for row in rows]
+        candidate_pmids = [row[0] for row in all_rows]
         _t_pt = time.perf_counter()
         async with PubMedClient(cache_dir=self.cache_dir) as client:
             pubtypes_map = await client.fetch_pubtypes(candidate_pmids)
@@ -1164,7 +1256,7 @@ class RetrievalService:
             )
 
         scored: list[tuple[AbstractResult, float, float]] = []
-        for row in rows:
+        for row in all_rows:
             pmid, title, abstract, similarity = row[0], row[1], row[2], float(row[3])
             pubtypes = pubtypes_map.get(pmid, [])
             boost = max(
@@ -1182,6 +1274,42 @@ class RetrievalService:
             scored.append((result, boost, final_score))
 
         scored.sort(key=lambda x: x[2], reverse=True)
+        baseline_scored = [item for item in scored if item[0].pmid in baseline_pmids]
+
+        if linked_pmids:
+            trial_reference_set = set(linked_pmids)
+            linked = [
+                result
+                for result, _, _ in scored
+                if result.pmid in trial_reference_set
+            ]
+            drug_identity = await _judge_pmid_drug_identity(
+                chembl_id, drug_names, linked, self.cache_dir
+            )
+            exact_drug = [
+                result
+                for result in linked
+                if drug_identity.get(result.pmid) == "studied"
+            ]
+            on_topic = await _judge_pmid_treats_disease(
+                chembl_id, pref_name, disease, exact_drug, self.cache_dir
+            )
+            eligible_pmids = {
+                result.pmid
+                for result in exact_drug
+                if on_topic.get(result.pmid, False)
+            }
+            reserved = [
+                item
+                for item in scored
+                if item[0].pmid in eligible_pmids
+            ][:LITERATURE_TRIAL_REFERENCE_RESERVE]
+            reserved_pmids = {item[0].pmid for item in reserved}
+            if reserved_pmids and not reserved_pmids.intersection(
+                item[0].pmid for item in baseline_scored[:top_k]
+            ):
+                baseline_scored = baseline_scored[: top_k - len(reserved)] + reserved
+                baseline_scored.sort(key=lambda item: item[2], reverse=True)
 
         # logger.info(
         #     "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
@@ -1202,7 +1330,7 @@ class RetrievalService:
         #         final_score,
         #     )
 
-        return [item[0] for item in scored[:top_k]]
+        return [item[0] for item in baseline_scored[:top_k]]
 
     async def synthesize(
         self,

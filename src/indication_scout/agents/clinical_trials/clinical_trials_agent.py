@@ -52,7 +52,11 @@ def _finalize_done(messages: list) -> bool:
 
 
 def build_clinical_trials_agent(
-    llm, date_before=None, assigned_indication=None, target_drug=None
+    llm,
+    date_before=None,
+    assigned_indication=None,
+    target_drug=None,
+    cache_dir: Path = DEFAULT_CACHE_DIR,
 ):
     """Return a compiled ReAct agent.
 
@@ -66,6 +70,7 @@ def build_clinical_trials_agent(
         date_before=date_before,
         assigned_indication=assigned_indication,
         target_drug=target_drug,
+        cache_dir=cache_dir,
     )
     return build_gated_react_loop(llm, tools, SYSTEM_PROMPT, _finalize_done)
 

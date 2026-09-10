@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from indication_scout.models.model_chembl import ATCDescription
+from indication_scout.models.model_clinical_trials import SearchTrialsResult, Trial
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary, PmidJudgment
 from indication_scout.models.model_open_targets import (
@@ -20,6 +21,8 @@ from indication_scout.services.retrieval import (
     AbstractResult,
     RetrievalService,
 )
+
+_FIND_TRIAL_LINKED_PMIDS = RetrievalService.find_trial_linked_pmids
 
 # --- Fixtures ---
 
@@ -964,6 +967,111 @@ async def test_fetch_and_cache_releases_db_before_fetching_abstracts(svc):
     mock_client.fetch_abstracts.assert_awaited_once_with(["111"])
 
 
+async def test_find_trial_linked_pmids_batches_nct_secondary_source_query(tmp_path):
+    from indication_scout.config import get_settings
+
+    cutoff = date(2025, 1, 1)
+    trial_result = SearchTrialsResult(
+        total_count=3,
+        trials=[
+            Trial(nct_id="NCT04167306"),
+            Trial(nct_id="NCT03169244"),
+            Trial(nct_id="NCT04167306"),
+        ],
+    )
+    trials_client = AsyncMock()
+    trials_client.__aenter__ = AsyncMock(return_value=trials_client)
+    trials_client.__aexit__ = AsyncMock(return_value=None)
+    trials_client.search_trials = AsyncMock(return_value=trial_result)
+    pubmed_client = AsyncMock()
+    pubmed_client.__aenter__ = AsyncMock(return_value=pubmed_client)
+    pubmed_client.__aexit__ = AsyncMock(return_value=None)
+    pubmed_client.search = AsyncMock(return_value=["40487775", "40487775"])
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.resolve_mesh_id",
+            new=AsyncMock(return_value=("D000437", "Alcoholism")),
+        ),
+        patch(
+            "indication_scout.services.retrieval.ClinicalTrialsClient",
+            return_value=trials_client,
+        ),
+        patch(
+            "indication_scout.services.retrieval.PubMedClient",
+            return_value=pubmed_client,
+        ),
+    ):
+        result = await _FIND_TRIAL_LINKED_PMIDS(
+            RetrievalService(tmp_path), "bupropion", "alcohol dependence", cutoff
+        )
+
+    assert result == ["40487775"]
+    trials_client.search_trials.assert_awaited_once_with(
+        "bupropion", "Alcoholism", date_before=cutoff
+    )
+    pubmed_client.search.assert_awaited_once_with(
+        "NCT04167306[si] OR NCT03169244[si]",
+        max_results=get_settings().pubmed_max_results,
+        date_before=cutoff,
+    )
+
+
+async def test_cache_trial_reference_abstracts_fetches_missing_paper(svc):
+    abstract = PubmedAbstract(
+        pmid="40487775",
+        title="Bupropion and naltrexone for alcohol use disorder",
+        abstract="Randomized clinical trial results.",
+    )
+    mock_db = MagicMock()
+    client = AsyncMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+    client.fetch_abstracts = AsyncMock(return_value=[abstract])
+
+    with (
+        patch.object(svc, "get_stored_pmids", return_value=set()),
+        patch.object(svc, "embed_abstracts", new=AsyncMock(return_value=[(abstract, [0.1])])),
+        patch.object(svc, "insert_abstracts") as insert_abstracts,
+        patch(
+            "indication_scout.services.retrieval.PubMedClient", return_value=client
+        ),
+    ):
+        result = await svc.cache_trial_reference_abstracts(
+            ["40487775"], mock_db, None
+        )
+
+    assert result == ["40487775"]
+    client.fetch_abstracts.assert_awaited_once_with(["40487775"])
+    insert_abstracts.assert_called_once_with([(abstract, [0.1])], mock_db)
+
+
+async def test_cache_trial_reference_abstracts_applies_holdout_post_guard(svc):
+    cutoff = date(2025, 1, 1)
+    mock_db = MagicMock()
+    client = AsyncMock()
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+
+    with (
+        patch.object(
+            svc,
+            "_filter_pmids_by_date",
+            new=AsyncMock(return_value=[]),
+        ) as filter_pmids,
+        patch(
+            "indication_scout.services.retrieval.PubMedClient", return_value=client
+        ),
+    ):
+        result = await svc.cache_trial_reference_abstracts(
+            ["40487775"], mock_db, cutoff
+        )
+
+    assert result == []
+    filter_pmids.assert_awaited_once_with(["40487775"], cutoff, mock_db, client)
+    client.fetch_abstracts.assert_not_awaited()
+
+
 # --- semantic_search ---
 
 
@@ -992,6 +1100,17 @@ def mock_pubtypes_empty():
         return_value=mock_client,
     ):
         yield mock_client
+
+
+@pytest.fixture(autouse=True)
+def mock_trial_lane_discovery():
+    """Keep ordinary retrieval unit tests independent of registry and PubMed calls."""
+    with patch.object(
+        RetrievalService,
+        "find_trial_linked_pmids",
+        new=AsyncMock(return_value=[]),
+    ):
+        yield
 
 
 async def test_semantic_search_returns_ranked_dicts(svc, mock_pubtypes_empty):
@@ -1135,6 +1254,74 @@ async def test_semantic_search_respects_top_k_from_settings(svc, mock_pubtypes_e
         result = await svc.semantic_search("diabetes", "CHEMBL1431", ["111"], mock_db)
 
     assert len(result) == top_k
+
+
+@pytest.mark.parametrize(
+    "passes_disease_gate, expected_first, expected_last",
+    [(True, "1", "16"), (False, "1", "15")],
+)
+async def test_semantic_search_trial_lane_requires_both_relevance_gates(
+    svc, mock_pubtypes_empty, passes_disease_gate, expected_first, expected_last
+):
+    from indication_scout.config import get_settings
+
+    top_k = get_settings().semantic_search_top_k
+    db_rows = [
+        (str(index), f"Title {index}", f"Abstract {index}", 1.0 - index / 100)
+        for index in range(1, top_k + 3)
+    ]
+    mock_db = _make_db_with_rows(db_rows)
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["bupropion"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[[0.1] * 768],
+        ),
+        patch.object(
+            svc,
+            "find_trial_linked_pmids",
+            new=AsyncMock(return_value=[str(top_k + 1), str(top_k + 2)]),
+        ),
+        patch.object(
+            svc,
+            "cache_trial_reference_abstracts",
+            new=AsyncMock(return_value=[str(top_k + 1), str(top_k + 2)]),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(
+                return_value={
+                    str(top_k + 1): "studied",
+                    str(top_k + 2): "studied",
+                }
+            ),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_treats_disease",
+            new=AsyncMock(
+                return_value={
+                    str(top_k + 1): passes_disease_gate,
+                    str(top_k + 2): passes_disease_gate,
+                }
+            ),
+        ),
+    ):
+        result = await svc.semantic_search(
+            "alcohol dependence",
+            "CHEMBL894",
+            [str(index) for index in range(1, top_k + 3)],
+            mock_db,
+        )
+
+    assert len(result) == top_k
+    assert result[0].pmid == expected_first
+    assert result[-1].pmid == expected_last
+    assert len({paper.pmid for paper in result}) == top_k
+    assert str(top_k + 2) not in {paper.pmid for paper in result}
 
 
 async def test_semantic_search_similarity_is_float(svc, mock_pubtypes_empty):

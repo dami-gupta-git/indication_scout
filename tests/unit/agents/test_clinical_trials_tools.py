@@ -54,7 +54,7 @@ def _get_tool(tools: list, name: str):
 # ------------------------------------------------------------------
 
 
-async def test_search_trials_returns_search_trials_result_artifact():
+async def test_search_trials_returns_search_trials_result_artifact(tmp_path):
     """search_trials returns a SearchTrialsResult artifact with all fields intact."""
     trial = Trial(
         nct_id="NCT00127933",
@@ -82,7 +82,7 @@ async def test_search_trials_returns_search_trials_result_artifact():
     )
 
     mock_client = _mock_client(search_trials=mock_result)
-    tools = build_clinical_trials_tools(date_before=None)
+    tools = build_clinical_trials_tools(date_before=None, cache_dir=tmp_path)
 
     with (
         patch(
@@ -92,7 +92,7 @@ async def test_search_trials_returns_search_trials_result_artifact():
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
             return_value=mock_client,
-        ),
+        ) as client_constructor,
     ):
         msg = await _get_tool(tools, "search_trials").ainvoke(
             LCToolCall(
@@ -108,6 +108,7 @@ async def test_search_trials_returns_search_trials_result_artifact():
         "Breast Neoplasms",
         date_before=None,
     )
+    client_constructor.assert_called_once_with(cache_dir=tmp_path)
     assert isinstance(msg.artifact, SearchTrialsResult)
     assert msg.artifact.total_count == 1
     assert msg.artifact.by_status == {

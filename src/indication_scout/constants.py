@@ -109,6 +109,12 @@ CLINICAL_TRIALS_RECENT_START_YEAR: str = "2024"
 # enrollment desc; counts that need the full population go through
 # _count_trials_total (cheap countTotal API path) instead of a record fetch.
 CLINICAL_TRIALS_FETCH_MAX: int = 50
+# Number of literature shortlist positions reserved for publications linked from a relevant
+# ClinicalTrials.gov record after the publication passes the exact-drug and disease-treatment gates.
+LITERATURE_TRIAL_REFERENCE_RESERVE: int = 1
+# Operational chunk size for batched PubMed Secondary Source ID queries. This limits URL length;
+# results from every chunk still form one evidence lane.
+PUBMED_NCT_QUERY_BATCH_SIZE: int = 50
 # Ongoing statuses fetched in full for pair-scoped analysis. The enrollment-ranked exemplar slice
 # can omit small active studies and make a live programme appear inactive.
 CLINICAL_TRIALS_ACTIVE_STATUSES: tuple[str, ...] = (

@@ -913,13 +913,19 @@ def build_supervisor_tools(
         # genuine negative. None when not resolved — passed through as-is.
         seed_entry = drug_facts.get(_drug_key(drug_name))
         first_approval = seed_entry.get("first_approval") if seed_entry else None
+        registry_drug = (
+            seed_entry["drug_aliases"][0]
+            if seed_entry and seed_entry["drug_aliases"]
+            else drug_name
+        )
         # Fresh agent per call — isolates the tools' closure-scoped shown_by_pair so concurrent candidate investigations
         # don't accumulate each other's trials into this pair's contaminated set (see the build-site note above).
         ct_agent = build_clinical_trials_agent(
             llm=llm,
             date_before=date_before,
             assigned_indication=disease_name,
-            target_drug=drug_name,
+            target_drug=registry_drug,
+            cache_dir=svc.cache_dir,
         )
         # Approved indications fully seeded by find_candidates before fan-out (label-grounded; see
         # PLAN_approval_aware_relevance.md §A). Threaded into the task so the relevance gate's TEST 1 treats an approved
@@ -927,7 +933,7 @@ def build_supervisor_tools(
         ct_approved = list(_ensure_drug_entry(drug_name)["approved_indications"])
         output = await run_clinical_trials_agent(
             ct_agent,
-            drug_name,
+            registry_drug,
             disease_name,
             first_approval=first_approval,
             approved_indications=ct_approved,

@@ -131,15 +131,17 @@ async def run_pair_analysis(
             return await run_literature_agent(lit_agent, drug, disease_name)
 
     async def _run_clinical_trials() -> object:
+        registry_drug = intake.aliases[0] if intake.aliases else drug
         ct_agent = build_clinical_trials_agent(
             llm=llm,
             date_before=date_before,
             assigned_indication=disease_name,
-            target_drug=drug,
+            target_drug=registry_drug,
+            cache_dir=svc.cache_dir,
         )
         return await run_clinical_trials_agent(
             ct_agent,
-            drug,
+            registry_drug,
             disease_name,
             first_approval=intake.first_approval,
             approved_indications=list(intake.approved_indications),

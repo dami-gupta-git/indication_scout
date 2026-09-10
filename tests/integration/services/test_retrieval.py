@@ -1,6 +1,7 @@
 """Integration tests for services/retrieval."""
 
 import logging
+from datetime import date
 
 import pytest
 from sqlalchemy import text
@@ -24,6 +25,70 @@ logger = logging.getLogger(__name__)
 def svc(test_cache_dir):
     """RetrievalService bound to the test cache directory."""
     return RetrievalService(test_cache_dir)
+
+
+async def test_pubmed_secondary_source_id_returns_alcohol_trial_publication(
+    pubmed_client,
+):
+    """PubMed links NCT04167306 to its published alcohol-use-disorder result."""
+    pmids = await pubmed_client.search("NCT04167306[si]", max_results=10)
+
+    assert pmids == ["38206930", "40487775"]
+
+
+async def test_find_trial_linked_pmids_surfaces_missing_bupropion_alcohol_paper(svc):
+    """The live registry-to-PubMed lane surfaces the known human trial publication."""
+    pmids = await svc.find_trial_linked_pmids(
+        "bupropion", "alcohol dependence", date_before=None
+    )
+
+    assert "40487775" in pmids
+    assert len(pmids) == len(set(pmids))
+
+
+async def test_find_trial_linked_pmids_respects_publication_cutoff(svc):
+    """The 2025 publication is absent from a lane held out before 2025."""
+    pmids = await svc.find_trial_linked_pmids(
+        "bupropion", "alcohol dependence", date_before=date(2025, 1, 1)
+    )
+
+    assert "40487775" not in pmids
+
+
+async def test_semantic_search_promotes_trial_paper_absent_from_the_query_pool(
+    svc, db_session
+):
+    """End to end: a trial publication the ordinary queries never retrieved reaches the shortlist.
+
+    The pool passed in deliberately omits PMID 40487775, reproducing the production miss — the COMB
+    readout is unreachable from a query anchored on the MeSH heading "Alcoholism" because it is not yet
+    MeSH-indexed and its text says "alcohol use disorder". The lane must fetch, embed and reserve it
+    despite that, and despite it carrying only the "Journal Article" publication type, which earns no
+    rerank boost.
+    """
+    async with PubMedClient() as client:
+        pool = await client.search(
+            'bupropion AND "Alcoholism"', max_results=get_settings().pubmed_max_results
+        )
+    assert "40487775" not in pool, "baseline query must not already retrieve the paper"
+
+    await svc.fetch_and_cache(pool, db_session, direct_query='bupropion AND "Alcoholism"')
+
+    results = await svc.semantic_search(
+        "alcohol dependence", "CHEMBL894", pool, db_session, date_before=None
+    )
+
+    shortlist = [result.pmid for result in results]
+    assert "40487775" in shortlist
+    assert len(shortlist) == get_settings().semantic_search_top_k
+    assert len(shortlist) == len(set(shortlist))
+
+    promoted = next(result for result in results if result.pmid == "40487775")
+    assert promoted.pubtype == ["Journal Article"]
+    assert promoted.title == (
+        "Efficacy and safety of varenicline and bupropion, in combination and alone, for alcohol "
+        "use disorder: a randomized, double-blind, placebo-controlled multicentre trial."
+    )
 
 
 # @pytest.mark.parametrize(
