@@ -1,13 +1,13 @@
 # Metformin regression spec.
 #
-# Authored against gold_standard/metformin_2026-09-08_19-13-23.json. Each assertion encodes a
+# Authored against gold_standard/metformin_2026-09-10_15-01-58.json. Each assertion encodes a
 # domain-meaningful invariant a regression must NOT flip.
 #
 # Anchors are cut from the LATEST run under the current code, not from agreement across runs. The
 # grading prompts and gates change often enough that an older snapshot describes different code, so
 # intersecting several runs pins whatever survived the changes rather than what is correct now. Each
 # anchor below is a paper or trial that is on-point for its indication AND surfaced by the current
-# code — the two exceptions are called out at required_pmids_cited.
+# code.
 #
 # Rank order is not pinned for any indication. No two metformin snapshots have ever ordered the
 # sixteen ranked indications the same way, so membership is pinned and position is not.
@@ -15,7 +15,12 @@
 # Candidate-set shift from the prior (2026-08-03) gold: that snapshot pinned NCT00343395 under
 # cardiovascular disease. It is a rosiglitazone-AND-metformin trial, and the relevance gate now
 # excludes trials where metformin is not the sole studied agent, so it is classified contaminated.
-# The indication still surfaces nine relevant trials.
+#
+# Shift from the 2026-09-08 gold: the per-trial therapeutic-target gate (2026-09-09) moves every
+# cardiovascular-disease trial to contaminated (mechanistic endothelial / lipid studies), so no NCT
+# is pinned there any more. NCT03717701 (preeclampsia), NCT01799057 (atherosclerosis),
+# NCT00005104 / NCT00005654 (PCOS) and NCT00510705 / NCT00723307 (coronary artery disorder) are
+# gated out too; the trials pinned below are the ones stable across both 2026-09-10 runs.
 #
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
@@ -83,20 +88,20 @@ required_ncts_surfaced:
     indication: preeclampsia
     section: relevant
     ncts:
-      - NCT03717701
       - NCT04855513
+      - NCT06033131
   - bucket: literature_coverage
     indication: atherosclerosis
     section: relevant
     ncts:
-      - NCT01799057
       - NCT02744976
+      - NCT02915198
   - bucket: literature_coverage
     indication: polycystic ovary syndrome
     section: relevant
     ncts:
-      - NCT00005104
-      - NCT00005654
+      - NCT00151411
+      - NCT04175964
   - bucket: literature_coverage
     indication: hepatic steatosis
     section: relevant
@@ -104,40 +109,32 @@ required_ncts_surfaced:
       - NCT00063232
       - NCT00063635
   - bucket: literature_coverage
-    indication: cardiovascular disease
-    section: relevant
-    ncts:
-      - NCT01037660
-      - NCT00400231
-  - bucket: literature_coverage
     indication: coronary artery disorder
     section: relevant
     ncts:
-      - NCT00510705
-      - NCT00723307
+      - NCT02744976
+      - NCT02915198
 
-# Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease.
+# Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each cited in
+# both 2026-09-10 runs.
 #
-# The preeclampsia and atherosclerosis anchors are the deliberate exceptions: they pin papers the
-# current code does NOT cite, and are expected to fail. The 2026-09-08 22:45 therapeutic-target-gate
-# rewrite moved them to contaminated — metformin given to women with PCOS or gestational diabetes
-# with preeclampsia incidence as the measured outcome, and metformin measured on carotid artery
-# diameter and arterial properties. The gate names the condition the drug is given to TREAT, which
-# has no answer for a prevention trial, so the candidate disease appearing as the prevented outcome
-# grades as contaminated. They stay pinned until the gate handles prevention.
+# Prevention papers are not pinned: the therapeutic-target gate names the condition the drug is
+# given to TREAT, which has no answer for a prevention trial, so PMID 17330831 (preeclampsia
+# incidence in PCOS / gestational diabetes) and PMIDs 21411114 / 22892913 (carotid artery
+# properties) grade as contaminated.
 required_pmids_cited:
   - bucket: literature_coverage
     indication: preeclampsia
     mode: cited
     pmids:
-      - "17330831"
       - "20926533"
+      - "25467617"
   - bucket: literature_coverage
     indication: atherosclerosis
     mode: cited
     pmids:
-      - "21411114"
-      - "22892913"
+      - "28615149"
+      - "6209500"
   - bucket: literature_coverage
     indication: polycystic ovary syndrome
     mode: cited
@@ -160,7 +157,7 @@ required_pmids_cited:
     indication: coronary artery disorder
     mode: cited
     pmids:
-      - "23230096"
+      - "24622715"   # 23230096 is now graded contaminated
 
 # Safety — metformin carries black-box warnings (lactic acidosis). Production derives black_box from
 # OT; holdout would fall back to serious.

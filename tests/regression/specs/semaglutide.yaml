@@ -1,11 +1,16 @@
 # Semaglutide regression spec.
 #
-# Authored against gold_standard/semaglutide_2026-09-08_20-58-45.json. Each assertion encodes a
+# Authored against gold_standard/semaglutide_2026-09-10_15-03-38.json. Each assertion encodes a
 # domain-meaningful invariant a regression must NOT flip.
 #
-# Anchors are pinned only where they held across BOTH the 2026-09-08 19:09 and 20:58 runs. Ranks 6-8
-# (myocardial infarction, nicotine dependence, polycystic ovary syndrome) permute between those two
-# runs, so they are pinned present-in-top but NOT order-pinned.
+# Anchors are pinned only where they held across ALL THREE 2026-09-10 runs (14:38, 14:46, 15:03).
+# MASH and type 1 diabetes hold ranks 1-2 but swap between runs, so they are pinned present-in-top;
+# alcohol abuse, stroke and nicotine dependence hold ranks 3-5 in the same order in every run.
+#
+# Shift from the 2026-09-08 gold: the per-trial therapeutic-target gate (2026-09-09) moves every
+# heart-failure trial to contaminated (NCT07090343 targets aortic stenosis / TAVR; NCT06541509 is a
+# biomarker mechanism study), and heart failure falls from #2 to #10 on literature alone. No heart
+# failure NCT is pinned any more. NCT05819138 (type 1 diabetes) is gated out too.
 #
 # Candidate-set shift from the prior (2026-08-03) gold: cardiovascular disorder and kidney disorder
 # were ranked #1 and #2 there. Both are now FDA-approved uses on the semaglutide label — MACE risk
@@ -28,23 +33,24 @@ aliases:
     - alcohol use disorder
     - alcohol dependence
 
-# The stable top of the ranking. MASH, heart failure, type 1 diabetes, alcohol abuse and stroke hold
-# these five positions across both runs.
+# The stable middle of the ranking: ranks 3-5 in every run.
 ranked_order:
   bucket: ranking
   indications:
-    - metabolic dysfunction-associated steatohepatitis
-    - heart failure
-    - type 1 diabetes mellitus
     - alcohol abuse
     - stroke
+    - nicotine dependence
 
 # Present in the ranked set, but their relative order permutes run to run.
 required_in_ranked:
   - bucket: ranking
-    indication: myocardial infarction
+    indication: metabolic dysfunction-associated steatohepatitis
   - bucket: ranking
-    indication: nicotine dependence
+    indication: type 1 diabetes mellitus
+  - bucket: ranking
+    indication: heart failure
+  - bucket: ranking
+    indication: myocardial infarction
   - bucket: ranking
     indication: polycystic ovary syndrome
   - bucket: ranking
@@ -71,7 +77,7 @@ candidate_set_contains:
     - kidney disorder
 
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
-# each stable across both 2026-09-08 runs.
+# each stable across all three 2026-09-10 runs.
 required_ncts_surfaced:
   - bucket: literature_coverage
     indication: metabolic dysfunction-associated steatohepatitis
@@ -80,17 +86,11 @@ required_ncts_surfaced:
       - NCT02970942   # semaglutide in NASH, completed
       - NCT03357380
   - bucket: literature_coverage
-    indication: heart failure
-    section: relevant
-    ncts:
-      - NCT06541509
-      - NCT07090343   # active Phase 3
-  - bucket: literature_coverage
     indication: type 1 diabetes mellitus
     section: relevant
     ncts:
       - NCT05205928
-      - NCT05819138   # active Phase 3
+      - NCT06057077
   - bucket: literature_coverage
     indication: alcohol abuse
     section: relevant
@@ -105,7 +105,7 @@ required_ncts_surfaced:
       - NCT06788626
 
 # Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each stable
-# across both 2026-09-08 runs.
+# across all three 2026-09-10 runs.
 required_pmids_cited:
   - bucket: literature_coverage
     indication: metabolic dysfunction-associated steatohepatitis

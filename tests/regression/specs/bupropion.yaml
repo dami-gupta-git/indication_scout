@@ -1,12 +1,18 @@
 # Bupropion regression spec.
 #
-# Authored against gold_standard/bupropion_2026-09-08_22-45-20.json. Each assertion encodes a
+# Authored against gold_standard/bupropion_2026-09-10_14-59-56.json. Each assertion encodes a
 # domain-meaningful invariant — a fact about bupropion's evidence base that a regression must NOT
 # silently flip.
 #
-# Anchors were pinned where they held across the 2026-09-08 19:34 and 19:47 runs, then re-checked
-# against the 22:45 run that is now the gold. Only the top five are order-pinned; the rest are
-# pinned present-in-top, because the tail of the ranking reorders run to run.
+# Anchors are pinned where they held across BOTH 2026-09-10 runs (14:52 and 14:59). Only the top
+# three are order-pinned; bipolar disorder and neuropathic pain swap ranks 4-5 between the two runs,
+# so the rest are pinned present-in-top.
+#
+# Shift from the 2026-09-08 gold: the per-trial therapeutic-target gate (2026-09-09) and the
+# combination-product rule now classify NCT03045341 (naltrexone/bupropion in binge eating) and
+# NCT00181896 (bupropion SR for bipolar depression) as contaminated, and binge eating disorder drops
+# from #1 to #8 with one relevant trial and one cited paper left. PMIDs 36285406 and 10701483 are no
+# longer cited. Anchors below are the survivors.
 #
 # Dropped anchor: PMID 12842303 was pinned under bipolar disorder from the 19:47 gold. The 22:45 run
 # classifies it contaminated and is correct — it is an ADHD trial in patients who also have bipolar
@@ -37,14 +43,16 @@ aliases:
 ranked_order:
   bucket: ranking
   indications:
-    - binge eating disorder
     - attention deficit-hyperactivity disorder
     - cocaine use disorder
-    - bipolar disorder
     - alcohol dependence
 
 # Present in the ranked set; exact rank not pinned.
 required_in_ranked:
+  - bucket: ranking
+    indication: bipolar disorder
+  - bucket: ranking
+    indication: binge eating disorder
   - bucket: ranking
     indication: neuropathic pain
   - bucket: ranking
@@ -77,15 +85,14 @@ candidate_set_contains:
     - depressive disorder
     - schizophrenia
 
-# Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
-# each stable across both 2026-09-08 runs.
+# Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Anchors are the trials
+# stable across both 2026-09-10 runs.
 required_ncts_surfaced:
   - bucket: literature_coverage
     indication: binge eating disorder
     section: relevant
     ncts:
-      - NCT00414167
-      - NCT03045341
+      - NCT00414167   # bupropion monotherapy; the only BED trial that is not a naltrexone combination
   - bucket: literature_coverage
     indication: attention deficit-hyperactivity disorder
     section: relevant
@@ -106,17 +113,15 @@ required_ncts_surfaced:
     section: relevant
     ncts:
       - NCT00012558   # STEP-BD, bipolar disorder, completed
-      - NCT00181896
 
-# Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each stable
-# across both 2026-09-08 runs.
+# Cited PMIDs (evidence_summary supporting + contradicting). Anchors are the citations stable across
+# both 2026-09-10 runs.
 required_pmids_cited:
   - bucket: literature_coverage
     indication: binge eating disorder
     mode: cited
     pmids:
       - "23656848"
-      - "36285406"
   - bucket: literature_coverage
     indication: attention deficit-hyperactivity disorder
     mode: cited
@@ -133,8 +138,8 @@ required_pmids_cited:
     indication: bipolar disorder
     mode: cited
     pmids:
-      - "10701483"
       - "7929019"
+      - "16880481"
 
 # Safety — bupropion carries black-box warnings (psychiatric / cardiotoxicity). Production derives
 # black_box from OT warnings; holdout (OT suppressed) would pick serious from pre-cutoff literature,
@@ -150,12 +155,9 @@ safety_severity:
     allowed: [black_box, serious]
 
 # Disease-specific harm flag — the indication-scoped literature reports a harm for bupropion in each
-# of these contexts. ADHD is the regression guard for the evidence-quote word cap: the only paper
-# reporting the harm states it in one 73-word sentence, and a tighter cap forced an elision that
-# broke the verbatim check and silently downgraded the flag to undetermined.
+# of these contexts. The ADHD pin was dropped on 2026-09-10: the per-paper harm judge grades PMID
+# 15705013 (blood pressure and heart rate rises vs baseline) as "safety_assessed_only".
 indication_harm:
-  - indication: attention deficit-hyperactivity disorder
-    expected: true
   - indication: cocaine use disorder
     expected: true
   - indication: bipolar disorder

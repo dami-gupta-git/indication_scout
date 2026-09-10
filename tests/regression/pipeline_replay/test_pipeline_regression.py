@@ -27,7 +27,7 @@ from indication_scout.regression.harness import compare_reports, has_errors, ren
 from tests.regression.common.cassette import use_cassette
 from tests.regression.common.constants import CASSETTE_DIR, GOLD_STANDARD_DIR
 
-PINNED_DRUGS = ["bupropion"]
+PINNED_DRUGS = ["semaglutide"]
 
 
 def _gold_path(drug: str) -> Path | None:

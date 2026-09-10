@@ -1,12 +1,19 @@
 # Sildenafil regression spec.
 #
-# Authored against gold_standard/sildenafil_2026-09-08_21-37-44.json. Each assertion encodes a
+# Authored against gold_standard/sildenafil_2026-09-10_14-56-21.json. Each assertion encodes a
 # domain-meaningful invariant a regression must NOT flip.
 #
-# UNLIKE the bupropion / metformin / semaglutide specs, these anchors are drawn from a SINGLE run —
-# there is no second 2026-09-08 run to cross-check them against. Order is therefore pinned only for
-# the top three; everything else is pinned as membership. If a ranked_order assertion here proves
-# flaky across runs, move that indication to required_in_ranked rather than widening the order pin.
+# Anchors are pinned only where they held across ALL FOUR 2026-09-10 runs (14:41, 14:46, 14:49,
+# 14:56). Heart failure, Raynaud disease and Eisenmenger syndrome fill the top three, but only
+# "heart failure before Eisenmenger" holds in every run; Raynaud moves between #1 and #8. Duchenne
+# muscular dystrophy is ranked in two of the four runs and astrocytoma in none, so neither is
+# required in the ranking.
+#
+# Shift from the 2026-09-08 gold: the per-trial therapeutic-target gate (2026-09-09) moves both
+# Eisenmenger trials (NCT00586794 registered for pulmonary arterial hypertension; NCT00303004 a
+# bosentan combination), all four Duchenne trials, NCT03027674 (Raynaud) and NCT04489446 (COVID-19)
+# to contaminated. PMIDs 20202971 / 34627582 (Eisenmenger) and 20956307 (Duchenne) are no longer
+# cited. Anchors below are the survivors.
 #
 # Candidate-set shift from the prior (2026-07-18) gold: that snapshot was a three-candidate report
 # ranking malignant glioma #3. The pipeline now surfaces 57 candidates and investigates 16, and
@@ -32,22 +39,19 @@ aliases:
 ranked_order:
   bucket: ranking
   indications:
-    - eisenmenger syndrome
     - heart failure
-    - raynaud disease
+    - eisenmenger syndrome
 
 # Present in the ranked set; exact rank not pinned.
 required_in_ranked:
+  - bucket: ranking
+    indication: raynaud disease
   - bucket: ranking
     indication: infertility
   - bucket: ranking
     indication: chronic obstructive pulmonary disease
   - bucket: ranking
     indication: covid-19
-  - bucket: ranking
-    indication: duchenne muscular dystrophy
-  - bucket: ranking
-    indication: astrocytoma (excluding glioblastoma)
 
 candidate_set_contains:
   bucket: structural_integrity
@@ -64,12 +68,6 @@ candidate_set_contains:
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids).
 required_ncts_surfaced:
   - bucket: literature_coverage
-    indication: eisenmenger syndrome
-    section: relevant
-    ncts:
-      - NCT00586794
-      - NCT00303004
-  - bucket: literature_coverage
     indication: heart failure
     section: relevant
     ncts:
@@ -80,12 +78,10 @@ required_ncts_surfaced:
     section: relevant
     ncts:
       - NCT02050360
-      - NCT03027674
   - bucket: literature_coverage
     indication: covid-19
     section: relevant
     ncts:
-      - NCT04489446
       - NCT04304313
 
 # Cited PMIDs (evidence_summary supporting + contradicting).
@@ -94,8 +90,8 @@ required_pmids_cited:
     indication: eisenmenger syndrome
     mode: cited
     pmids:
-      - "20202971"
-      - "34627582"
+      - "16569546"
+      - "20304507"
   - bucket: literature_coverage
     indication: heart failure
     mode: cited
@@ -113,7 +109,6 @@ required_pmids_cited:
     mode: cited
     pmids:
       - "22653783"
-      - "20956307"
 
 # Safety — sildenafil carries no boxed warning, so the label-derived severity is "serious", not
 # "black_box". A run reporting black_box here would mean the severity is coming from somewhere other
@@ -129,13 +124,11 @@ safety_severity:
     allowed: [serious]
 
 # Disease-specific harm flag — the indication-scoped literature reports a harm for sildenafil in each
-# of these contexts (sudden death in Eisenmenger, reduced left-ventricular contractility in heart
-# failure, worsened gas exchange in COPD).
+# of these contexts (worsened gas exchange in COPD). The Eisenmenger pin (sudden death, PMID 17822253) was dropped: the case report does not
+# attribute the death to sildenafil, and the author-attribution rule (2026-09-08) rejects it. The
+# heart-failure pin was dropped on 2026-09-10: the per-paper harm judge v2 grades PMID 25782985
+# (contractility reduced vs placebo) as "safety_assessed_only".
 indication_harm:
-  - indication: eisenmenger syndrome
-    expected: true
-  - indication: heart failure
-    expected: true
   - indication: chronic obstructive pulmonary disease
     expected: true
 
