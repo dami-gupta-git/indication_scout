@@ -13,6 +13,7 @@ acceptable direction, an unverifiable citation is not.
 
 import logging
 import re
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +96,9 @@ def strip_findings_with_unknown_pmids(
     return kept
 
 
-def _strip_sentences(text: str, find_unknown, *, context: str) -> str:
+def _strip_sentences(
+    text: str, find_unknown: Callable[[str], list[str]], *, context: str
+) -> str:
     if not text:
         return text
     kept: list[str] = []

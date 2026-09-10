@@ -10,10 +10,16 @@ import logging
 import time
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from langchain_anthropic import ChatAnthropic
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
+from indication_scout.agents.clinical_trials.clinical_trials_output import (
+    ClinicalTrialsOutput,
+)
+from indication_scout.agents.literature.literature_output import LiteratureOutput
+from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 from indication_scout.agents.supervisor.supervisor_agent import (
     build_supervisor_agent,
     run_supervisor_agent,
@@ -31,14 +37,13 @@ logger = logging.getLogger(__name__)
 
 def build_agent(
     db: Session,
-    session_factory=None,
+    session_factory: sessionmaker[Session] | None = None,
     date_before: date | None = None,
     cache_dir: Path = DEFAULT_CACHE_DIR,
-):
+) -> tuple[Any, Any, Any, Any]:
     settings = get_settings()
     llm = ChatAnthropic(
         model=settings.llm_model,
-        temperature=0,
         max_tokens=settings.llm_max_tokens,
         anthropic_api_key=settings.anthropic_api_key,
     )
@@ -100,7 +105,6 @@ async def run_pair_analysis(
     settings = get_settings()
     llm = ChatAnthropic(
         model=settings.llm_model,
-        temperature=0,
         max_tokens=settings.llm_max_tokens,
         anthropic_api_key=settings.anthropic_api_key,
     )
@@ -118,7 +122,7 @@ async def run_pair_analysis(
 
     _warmup_task = asyncio.create_task(_warm_embeddings())
 
-    async def _run_literature() -> object:
+    async def _run_literature() -> LiteratureOutput:
         # Own session for this coroutine — never shared with the concurrent trials/mechanism work.
         with session_factory() as call_db:
             lit_agent = build_literature_agent(
@@ -130,7 +134,7 @@ async def run_pair_analysis(
             )
             return await run_literature_agent(lit_agent, drug, disease_name)
 
-    async def _run_clinical_trials() -> object:
+    async def _run_clinical_trials() -> ClinicalTrialsOutput:
         registry_drug = intake.aliases[0] if intake.aliases else drug
         ct_agent = build_clinical_trials_agent(
             llm=llm,
@@ -147,7 +151,7 @@ async def run_pair_analysis(
             approved_indications=list(intake.approved_indications),
         )
 
-    async def _run_mechanism() -> object:
+    async def _run_mechanism() -> MechanismOutput:
         mech_agent = build_mechanism_agent(llm=llm, date_before=date_before)
         return await run_mechanism_agent(
             mech_agent,

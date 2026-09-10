@@ -15,7 +15,7 @@ import asyncio
 import logging
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from indication_scout.config import get_settings
 from indication_scout.constants import (
@@ -190,14 +190,25 @@ class ClinicalTrialsClient(BaseClient):
             unknown,
             (exemplars, _),
             (ongoing, _),
-        ) = await asyncio.gather(
-            total_task,
-            recruiting_task,
-            active_task,
-            withdrawn_task,
-            unknown_task,
-            fetch_task,
-            active_fetch_task,
+        ) = cast(
+            tuple[
+                int,
+                int,
+                int,
+                int,
+                int,
+                tuple[list[Trial], bool],
+                tuple[list[Trial], bool],
+            ],
+            await asyncio.gather(
+                total_task,
+                recruiting_task,
+                active_task,
+                withdrawn_task,
+                unknown_task,
+                fetch_task,
+                active_fetch_task,
+            ),
         )
 
         trials_by_id = {
@@ -389,7 +400,7 @@ class ClinicalTrialsClient(BaseClient):
                 )
                 continue
             if pmids:
-                trial.references = list(pmids)
+                trial.references = list(cast(list[str], pmids))
 
     # ------------------------------------------------------------------
     # Public: get_completed_trials (COMPLETED pair query: count + top-50)

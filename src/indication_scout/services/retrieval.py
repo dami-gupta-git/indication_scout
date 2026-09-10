@@ -6,11 +6,13 @@ import json
 import logging
 import re
 import time
+from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
+from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import text
+from sqlalchemy import Row, text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -445,6 +447,8 @@ async def _judge_overall_evidence_direction(
             attempt,
         )
 
+    # Both attempts produced a validated judgment (the None paths return above), so it is set here.
+    judgment = cast(EvidenceDirectionJudgment, judgment)
     judgment.summary = strip_sentences_with_unknown_pmids(
         judgment.summary, allowed_pmids, context=context
     )
@@ -651,7 +655,7 @@ class RetrievalService:
             rich = await open_targets_client.get_rich_drug_data(chembl_id)
 
         atc_descriptions = []
-        if rich.drug.atc_classifications:
+        if rich.drug is not None and rich.drug.atc_classifications:
             async with ChEMBLClient() as chembl_client:
                 for code in rich.drug.atc_classifications:
                     atc_descriptions.append(
@@ -1199,7 +1203,7 @@ class RetrievalService:
                 "rerank_cap": rerank_cap,
             },
         ).fetchall()
-        linked_rows = []
+        linked_rows: Sequence[Row[Any]] = []
         if linked_pmids:
             linked_rows = db.execute(
                 text("""
@@ -1472,6 +1476,8 @@ class RetrievalService:
                 attempt,
             )
         else:
+            # The loop breaks on a None parse, so reaching here means both attempts parsed a dict.
+            data = cast(dict[str, Any], data)
             data["summary"] = strip_sentences_with_unknown_pmids(
                 str(data.get("summary") or ""), allowed_pmids, context=prose_context
             )
@@ -1775,7 +1781,8 @@ class RetrievalService:
                     for event in drug_profile.adverse_events
                     if event.log_likelihood_ratio is not None
                 ],
-                key=lambda event: event.log_likelihood_ratio,
+                # The comprehension above already excludes None ratios.
+                key=lambda event: cast(float, event.log_likelihood_ratio),
                 reverse=True,
             )[:SAFETY_TOP_ADVERSE_EVENTS]
             try:

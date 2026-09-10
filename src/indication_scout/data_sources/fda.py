@@ -3,6 +3,7 @@
 import asyncio
 import logging
 from pathlib import Path
+from typing import cast
 
 from indication_scout.config import get_settings
 from indication_scout.constants import (
@@ -135,7 +136,7 @@ class FDAClient(BaseClient):
                 # Individual 404s are already turned into [] in
                 # get_label_indications and never reach here as exceptions.
                 raise result
-            all_indications.extend(result)
+            all_indications.extend(cast(list[str], result))
 
         return list(dict.fromkeys(all_indications))
 
@@ -235,7 +236,7 @@ class FDAClient(BaseClient):
                     result,
                 )
                 raise result
-            records.extend(result)
+            records.extend(cast(list[FDALabelSafetyRecord], result))
 
         deduplicated: dict[
             tuple[str | None, str | None, tuple[str, ...], tuple[str, ...]],

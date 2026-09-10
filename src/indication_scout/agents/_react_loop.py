@@ -15,7 +15,14 @@ the prebuilt's return_direct=True instead.
 from collections.abc import Callable
 from typing import Any
 
-from langchain_core.messages import AIMessage, BaseMessage, SystemMessage, ToolMessage
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import (
+    AIMessage,
+    AnyMessage,
+    SystemMessage,
+    ToolMessage,
+)
+from langchain_core.tools import BaseTool
 from langgraph.graph import END, MessagesState, StateGraph
 from langgraph.prebuilt import ToolNode
 
@@ -34,7 +41,7 @@ def cached_system_message(prompt: str) -> SystemMessage:
     )
 
 
-def _with_history_breakpoint(messages: list[BaseMessage]) -> list[BaseMessage]:
+def _with_history_breakpoint(messages: list[AnyMessage]) -> list[AnyMessage]:
     """Return `messages` with a cache_control breakpoint on the last message's content.
 
     The system block carries a breakpoint for the static prefix; this adds a second one
@@ -79,8 +86,8 @@ def history_cache_pre_model_hook(state: MessagesState) -> dict:
 
 
 def build_gated_react_loop(
-    llm,
-    tools: list,
+    llm: BaseChatModel,
+    tools: list[BaseTool],
     prompt: str,
     finalize_done: Callable[[list], bool],
 ) -> Any:
@@ -102,7 +109,7 @@ def build_gated_react_loop(
 
     async def call_model(state: MessagesState) -> dict:
         messages = _with_history_breakpoint(state["messages"])
-        response = await model.ainvoke([system_message] + messages)
+        response = await model.ainvoke([system_message, *messages])
         return {"messages": [response]}
 
     def after_model(state: MessagesState) -> str:

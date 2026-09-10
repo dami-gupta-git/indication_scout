@@ -12,6 +12,8 @@ Python-side and is invisible to the model. So whatever the LLM is going to
 reason over has to be in the content string. These helpers build that string.
 """
 
+from collections.abc import Callable
+
 from indication_scout.constants import NEGATION_PREFIXES, STOP_KEYWORDS
 from indication_scout.models.model_clinical_trials import ArmGroup, MeshTerm, Trial
 
@@ -293,7 +295,7 @@ def _format_trial_table(
     columns: tuple[str, ...],
     cap: int,
     include_why_stopped: bool = False,
-    stop_classifier=None,
+    stop_classifier: Callable[[str | None], str] | None = None,
 ) -> str:
     """Render a list of trials as a multi-line table.
 

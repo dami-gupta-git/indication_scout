@@ -10,10 +10,12 @@ import json
 import logging
 import re
 import time
+from collections.abc import Callable
 from datetime import date
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict, TypeVar
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -32,6 +34,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_agent import (
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
     TrialRelevanceCoverage,
+    TrialSignals,
 )
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     _classify_stop_reason,
@@ -77,6 +80,16 @@ from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
 
+_EmptyOutputT = TypeVar("_EmptyOutputT")
+
+
+class _CritiqueState(TypedDict, total=False):
+    """Closure-scoped critique_ranking state: whether it ran, and the blurbs it returned."""
+
+    ran: bool
+    last_blurbs: list[dict]
+
+
 # Authoritative development-stage phrase + renderer live in services/dev_stage (the single
 # home shared with the report formatter). Aliased to the local names used throughout.
 _DEV_STAGE_PHRASE = DEV_STAGE_PHRASE
@@ -118,7 +131,7 @@ _NOT_RANKED_REASON_COMBINATION = "demoted: approved only as a fixed-dose combina
 _NOT_RANKED_REASON_ABSENT = "investigated but absent from the supervisor's ranking"
 
 
-def _safety_flag(es) -> str:
+def _safety_flag(es: EvidenceSummary | None) -> str:
     """Terse safety flag: fires only when a disease-specific harm was reported for this candidate
     indication (EvidenceSummary.indication_harm). "" otherwise (no signal ≠ confirmed safe).
     """
@@ -127,7 +140,7 @@ def _safety_flag(es) -> str:
     return _INDICATION_HARM_FLAG
 
 
-def _literature_oneliner(es) -> str:
+def _literature_oneliner(es: EvidenceSummary | None) -> str:
     """Deterministic one-line literature summary from the typed EvidenceSummary fields (strength, direction,
     study design) — NOT free LLM prose. Fed to judge_interpretive and used to overwrite the blurb's `literature`
     field, so the design word always matches the authoritative is_observational token. Returns "None" when no
@@ -159,7 +172,7 @@ def _literature_oneliner(es) -> str:
             )
         )
     direction = es.direction if es.direction and es.direction != "none" else ""
-    parts = [es.strength or "none"]
+    parts: list[str] = [es.strength or "none"]
     if direction:
         parts.append(direction)
     parts.append(design)
@@ -314,7 +327,7 @@ def _closure_text(
     return f"{state}{f' ({reason})' if reason else ''}"
 
 
-def _terminations_text(sig) -> str:
+def _terminations_text(sig: TrialSignals | None) -> str:
     """State whether a late-stage trial was terminated for safety or efficacy.
 
     The development stage names the furthest trial reached, and its terminated-for-cause tier only applies when no
@@ -346,12 +359,17 @@ def _trial_evidence_text(coverage: TrialRelevanceCoverage | None) -> str:
 
 
 def build_supervisor_tools(
-    llm,
+    llm: BaseChatModel,
     svc: RetrievalService,
     db: Session,
     session_factory: "sessionmaker | None" = None,
     date_before: date | None = None,
-) -> tuple[list, "callable", "callable", "callable"]:
+) -> tuple[
+    list,
+    Callable[[], dict[str, tuple[str, Literal["competitor", "mechanism", "both"]]]],
+    Callable[[], dict[str, dict]],
+    Callable[[], dict[str, str]],
+]:
     """Build supervisor tools that close over the sub-agents.
 
     The literature and clinical trials agents are compiled once here and reused across calls.
@@ -433,7 +451,7 @@ def build_supervisor_tools(
     # Ordering gate: finalize_supervisor is rejected until critique_ranking has run this run, so the ranking is always
     # audited before it is committed. The LLM ignores the prompt-level "MANDATORY" instruction on its own, so this enforces
     # it in code.
-    critique_state: dict[str, bool] = {"ran": False}
+    critique_state: _CritiqueState = {"ran": False}
 
     def _drug_key(drug_name: str) -> str:
         return drug_name.lower().strip()
@@ -808,7 +826,9 @@ def build_supervisor_tools(
         #         survivors,
         #     )
 
-    def _reject(disease_name: str, tool_label: str, empty_output):
+    def _reject(
+        disease_name: str, tool_label: str, empty_output: _EmptyOutputT
+    ) -> tuple[str, _EmptyOutputT]:
         valid = sorted(allowed_diseases.keys())
         msg = (
             f"REJECTED: '{disease_name}' is not in the allowed candidate list. "
@@ -1580,7 +1600,7 @@ def build_supervisor_tools(
                     f"{_UNRESOLVED_TRIAL_STAGE}; active programs = "
                     f"{_UNRESOLVED_ACTIVE_PROGRAMS}"
                 )
-            elif stage_phrase is not None:
+            elif sig is not None and stage_phrase is not None:
                 fact = (
                     f"authoritative dev_stage = {sig.dev_stage} ({stage_phrase}) — "
                     "do not contradict this stage"
@@ -1853,7 +1873,11 @@ def build_supervisor_tools(
                 fields["verdict"] = ""
                 fields["watch"] = ""
                 prose = ""
-            elif stage_phrase is not None and stage_phrase != fields["stage"]:
+            elif (
+                sig is not None
+                and stage_phrase is not None
+                and stage_phrase != fields["stage"]
+            ):
                 logger.warning(
                     "[TOOL] finalize_supervisor set stage from dev_stage=%s for disease=%r; "
                     "was: %r",
@@ -2128,11 +2152,11 @@ def build_supervisor_tools(
             ranked_block_index = insert_at
 
         filtered_lines: list[str] = []
-        for item in passthrough:
-            if item is None:
+        for passthrough_line in passthrough:
+            if passthrough_line is None:
                 filtered_lines.extend(ranked_lines)
             else:
-                filtered_lines.append(item)
+                filtered_lines.append(passthrough_line)
 
         # Derived footers, each omitted entirely when empty — an absent line says nothing, whereas the LLM's version
         # could assert an exclusion or closure that never happened. Order: closed signals, not ranked, gate exclusions.

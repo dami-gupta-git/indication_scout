@@ -11,6 +11,8 @@ caller keeps all candidates (error by omission, not inaccuracy).
 from __future__ import annotations
 
 import logging
+from collections.abc import Callable
+from typing import Any, Literal, cast
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -20,6 +22,8 @@ from indication_scout.services.disease_helper import merge_duplicate_diseases
 from indication_scout.services.llm import parse_last_json_object, query_llm
 
 logger = logging.getLogger(__name__)
+
+DiseaseSource = Literal["competitor", "mechanism", "both"]
 
 
 class HierarchyDecision(BaseModel):
@@ -35,7 +39,9 @@ class HierarchyDecision(BaseModel):
         for field_name, field_info in cls.model_fields.items():
             if values.get(field_name) is None:
                 if field_info.default_factory is not None:
-                    values[field_name] = field_info.default_factory()
+                    values[field_name] = cast(
+                        Callable[[], Any], field_info.default_factory
+                    )()
                 elif field_info.default is not None:
                     values[field_name] = field_info.default
         return values
@@ -52,7 +58,9 @@ class HierarchyDedupOutput(BaseModel):
         for field_name, field_info in cls.model_fields.items():
             if values.get(field_name) is None:
                 if field_info.default_factory is not None:
-                    values[field_name] = field_info.default_factory()
+                    values[field_name] = cast(
+                        Callable[[], Any], field_info.default_factory
+                    )()
                 elif field_info.default is not None:
                     values[field_name] = field_info.default
         return values
@@ -234,7 +242,7 @@ Return only the JSON object. Do not include any other text.
 
 
 def _apply_collapse(
-    allowed_diseases: dict[str, tuple[str, str]],
+    allowed_diseases: dict[str, tuple[str, DiseaseSource]],
     allowed_efo_ids: dict[str, str],
     survivor_key: str,
     dropped_keys: list[str],
@@ -263,7 +271,7 @@ def _apply_collapse(
 
 
 def collapse_synonym_entries(
-    allowed_diseases: dict[str, tuple[str, str]],
+    allowed_diseases: dict[str, tuple[str, DiseaseSource]],
     allowed_efo_ids: dict[str, str],
 ) -> list[tuple[str, str]]:
     """Collapse allowlist entries that are the same disease under two names.
@@ -309,7 +317,7 @@ def collapse_synonym_entries(
 
 async def merge_mechanism_entries(
     drug_name: str,
-    allowed_diseases: dict[str, tuple[str, str]],
+    allowed_diseases: dict[str, tuple[str, DiseaseSource]],
     allowed_efo_ids: dict[str, str],
     approved_indications: list[str],
 ) -> list[tuple[str, str]]:

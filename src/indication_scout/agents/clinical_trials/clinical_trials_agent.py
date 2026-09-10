@@ -6,9 +6,12 @@ the run, pulls typed artifacts off the ToolMessages into a ClinicalTrialsOutput.
 
 import logging
 import time
+from datetime import date
 from pathlib import Path
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, ToolMessage
+from langgraph.graph.state import CompiledStateGraph
 
 from indication_scout.agents._react_loop import (
     _trailing_tool_messages,
@@ -52,12 +55,12 @@ def _finalize_done(messages: list) -> bool:
 
 
 def build_clinical_trials_agent(
-    llm,
-    date_before=None,
-    assigned_indication=None,
-    target_drug=None,
+    llm: BaseChatModel,
+    date_before: date | None = None,
+    assigned_indication: str | None = None,
+    target_drug: str | None = None,
     cache_dir: Path = DEFAULT_CACHE_DIR,
-):
+) -> CompiledStateGraph:
     """Return a compiled ReAct agent.
 
     `assigned_indication` pins the tools to one indication; a call for any other is
@@ -115,7 +118,7 @@ def _derive_relevance_coverage(
 
 
 async def run_clinical_trials_agent(
-    agent,
+    agent: CompiledStateGraph,
     drug_name: str,
     disease_name: str,
     first_approval: int | None = None,
@@ -230,7 +233,7 @@ async def run_clinical_trials_agent(
     # "" / None when finalize was never reached or only rejected. Unpack defensively.
     finalize = artifacts.get("finalize")
     finalized = isinstance(finalize, FinalizeClinicalTrialsArtifact)
-    if not finalized:
+    if not isinstance(finalize, FinalizeClinicalTrialsArtifact):
         logger.warning(
             "clinical_trials_agent: %s × %s — finalize_analysis produced no artifact; "
             "relevance, signals, and summary will be empty",

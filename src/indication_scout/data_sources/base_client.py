@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import aiohttp
+from typing_extensions import Self
 
 from indication_scout.config import get_settings
 from indication_scout.constants import DEFAULT_CACHE_DIR, RETRY_BACKOFF_SCHEDULE
@@ -155,7 +156,7 @@ class BaseClient(ABC):
     # the list reuse the last (largest) value.
     retry_backoff_schedule: list[int] = RETRY_BACKOFF_SCHEDULE
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.timeout = _settings.default_timeout
         self.max_retries = _settings.default_max_retries
         self._session: aiohttp.ClientSession | None = None
@@ -178,10 +179,10 @@ class BaseClient(ABC):
         if self._session and not self._session.closed:
             await self._session.close()
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> Self:
         return self
 
-    async def __aexit__(self, *exc):
+    async def __aexit__(self, *exc: object) -> None:
         await self.close()
 
     # -- HTTP requests with retry --------------------------------------------

@@ -7,11 +7,14 @@ for each, and decides when enough evidence has been gathered to stop.
 
 import logging
 import time
+from collections.abc import Callable, Mapping
 from datetime import date
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal, cast
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from sqlalchemy.orm import Session, sessionmaker
 
 from indication_scout.agents._react_loop import (
     _trailing_tool_messages,
@@ -26,6 +29,7 @@ from indication_scout.agents.supervisor.supervisor_output import (
 from indication_scout.agents.supervisor.supervisor_tools import build_supervisor_tools
 from indication_scout.config import get_settings
 from indication_scout.services.progress import PHASE_SUMMARY, emit_progress
+from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
 
@@ -84,8 +88,17 @@ def _finalize_done(messages: list) -> bool:
 
 
 def build_supervisor_agent(
-    llm, svc, db, session_factory=None, date_before: date | None = None
-):
+    llm: BaseChatModel,
+    svc: RetrievalService,
+    db: Session,
+    session_factory: sessionmaker | None = None,
+    date_before: date | None = None,
+) -> tuple[
+    Any,
+    Callable[[], dict[str, tuple[str, Literal["competitor", "mechanism", "both"]]]],
+    Callable[[], dict[str, dict]],
+    Callable[[], dict[str, str]],
+]:
     """Return (agent, get_merged_allowlist, get_auto_findings, get_approval_labels).
 
     - get_merged_allowlist: snapshots the competitor + mechanism disease allowlist after the run.
@@ -119,11 +132,13 @@ def build_supervisor_agent(
 
 
 async def run_supervisor_agent(
-    agent,
-    get_merged_allowlist,
+    agent: Any,
+    get_merged_allowlist: Callable[
+        [], dict[str, tuple[str, Literal["competitor", "mechanism", "both"]]]
+    ],
     drug_name: str,
-    get_auto_findings=None,
-    get_approval_labels=None,
+    get_auto_findings: Callable[[], dict[str, dict]] | None = None,
+    get_approval_labels: Callable[[], dict[str, str]] | None = None,
     date_before: date | None = None,
 ) -> SupervisorOutput:
     """Invoke the supervisor and assemble a SupervisorOutput from the run.
@@ -152,7 +167,7 @@ async def run_supervisor_agent(
     _ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
     _total_out = 0
     for _i, _msg in enumerate(_ai_turns):
-        _usage = _msg.usage_metadata or {}
+        _usage: Mapping[str, Any] = _msg.usage_metadata or {}
         _in_tok = _usage.get("input_tokens", 0)
         _out_tok = _usage.get("output_tokens", 0)
         # cache_read/cache_write show whether prompt-caching is hitting; cache_read==0 across turns 2+ means a
@@ -194,7 +209,7 @@ async def run_supervisor_agent(
     for msg in result["messages"]:
         if isinstance(msg, AIMessage):
             for tc in msg.tool_calls:
-                tool_call_args[tc["id"]] = tc["args"]
+                tool_call_args[cast(str, tc["id"])] = tc["args"]
 
     # First pass: capture mechanism artifact and the supervisor's final summary.
     # finalize_supervisor's artifact: {"summary": str, "blurbs": list[dict]}.
@@ -283,13 +298,16 @@ async def run_supervisor_agent(
     # Set each finding's approval relationship from the upstream FDA check (NOT LLM prose). Canonicalised names
     # may differ, so match on both the canonical key and the finding's own disease string. Absent → stays "none".
     approval_labels = get_approval_labels() if get_approval_labels is not None else {}
+    finding: CandidateFindings | None
     if approval_labels:
         for canonical, finding in findings_by_disease.items():
             label = approval_labels.get(
                 canonical.lower().strip()
             ) or approval_labels.get(finding.disease.lower().strip())
             if label in ("contaminated", "combination_only"):
-                finding.approval_relationship = label
+                finding.approval_relationship = cast(
+                    Literal["contaminated", "combination_only"], label
+                )
 
     # Attach supervisor-written blurbs to the matching CandidateFindings — only diseases
     # investigated this run. Names are canonicalised so casing / synonym variants land right.

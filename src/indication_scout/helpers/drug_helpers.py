@@ -1,6 +1,7 @@
 import logging
 from datetime import date
 from pathlib import Path
+from typing import Any
 
 from pydantic import BaseModel, model_validator
 
@@ -53,7 +54,7 @@ class DrugIntake(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def coerce_nones(cls, values):
+    def coerce_nones(cls, values: dict[str, Any]) -> dict[str, Any]:
         for field_name, field_info in cls.model_fields.items():
             if values.get(field_name) is None and field_info.default is not None:
                 values[field_name] = field_info.default

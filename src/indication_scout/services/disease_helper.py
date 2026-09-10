@@ -165,6 +165,7 @@ async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
     response = await query_small_llm(prompt)
     cleaned = strip_markdown_fences(response)
 
+    normalized: str | None
     try:
         batch_results: dict[str, str] = json.loads(cleaned)
     except json.JSONDecodeError as e:

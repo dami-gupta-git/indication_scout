@@ -1,5 +1,8 @@
 """Structured output from the mechanism agent."""
 
+from collections.abc import Callable
+from typing import Any, cast
+
 from pydantic import BaseModel, Field, model_validator
 
 from indication_scout.models.model_open_targets import MechanismOfAction
@@ -53,7 +56,9 @@ class MechanismOutput(BaseModel):
         for field_name, field_info in cls.model_fields.items():
             if values.get(field_name) is None:
                 if field_info.default_factory is not None:
-                    values[field_name] = field_info.default_factory()
+                    values[field_name] = cast(
+                        Callable[[], Any], field_info.default_factory
+                    )()
                 elif field_info.default is not None:
                     values[field_name] = field_info.default
         return values

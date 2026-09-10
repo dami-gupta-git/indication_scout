@@ -459,7 +459,8 @@ class OpenTargetsClient(BaseClient):
         return [
             a
             for a in target.associations
-            if a.overall_score >= _settings.open_targets_association_min_score
+            if a.overall_score is not None
+            and a.overall_score >= _settings.open_targets_association_min_score
         ]
 
     async def get_target_data_pathways(self, target_id: str) -> list[Pathway]:
@@ -702,7 +703,7 @@ class OpenTargetsClient(BaseClient):
 
     async def _paginate_associations(self, target_id: str) -> list[Association]:
         """Fetch all associations when count exceeds single page."""
-        all_associations = []
+        all_associations: list[Association] = []
         page_index = 0
 
         while True:

@@ -14,9 +14,11 @@ from __future__ import annotations
 import argparse
 import asyncio
 import logging
+from datetime import date
 from pathlib import Path
 
 from sqlalchemy import text
+from sqlalchemy.orm import Session
 
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
@@ -39,8 +41,8 @@ logger = logging.getLogger(__name__)
 async def _top_abstracts(
     query: str,
     pmids: list[str],
-    cutoff_date,
-    db,
+    cutoff_date: date,
+    db: Session,
     top_k: int,
 ) -> list[tuple[str, str, str, float]]:
     """Return [(pmid, title, abstract, similarity), ...] sorted desc."""

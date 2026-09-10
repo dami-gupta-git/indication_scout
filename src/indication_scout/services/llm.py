@@ -3,8 +3,10 @@
 import json
 import logging
 import re
+from typing import cast
 
-from anthropic import NOT_GIVEN, AsyncAnthropic
+from anthropic import AsyncAnthropic, omit
+from anthropic.types import TextBlock
 from dotenv import load_dotenv
 
 from indication_scout.config import get_settings
@@ -115,14 +117,15 @@ async def query_llm(prompt: str, system: str = "") -> str:
         model=_model,
         max_tokens=_settings.llm_max_tokens,
         temperature=0,
-        system=system or NOT_GIVEN,
+        system=system or omit,
         messages=[{"role": "user", "content": prompt}],
     )
     if not response.content:
         raise DataSourceError(
             "llm", f"Empty content in LLM response (stop_reason={response.stop_reason})"
         )
-    return response.content[0].text
+    # The first block is read as text today; a non-text first block raises AttributeError either way.
+    return cast(TextBlock, response.content[0]).text
 
 
 async def query_small_llm(
@@ -132,11 +135,12 @@ async def query_small_llm(
         model=_small_model,
         max_tokens=max_tokens or _settings.small_llm_max_tokens,
         temperature=0,
-        system=system or NOT_GIVEN,
+        system=system or omit,
         messages=[{"role": "user", "content": prompt}],
     )
     if not response.content:
         raise DataSourceError(
             "llm", f"Empty content in LLM response (stop_reason={response.stop_reason})"
         )
-    return response.content[0].text
+    # The first block is read as text today; a non-text first block raises AttributeError either way.
+    return cast(TextBlock, response.content[0]).text

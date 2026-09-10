@@ -5,10 +5,14 @@ history to pull typed artifacts off the ToolMessages and assembles them into a L
 """
 
 import logging
+from datetime import date
 from pathlib import Path
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, ToolMessage
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
+from sqlalchemy.orm import Session
 
 from indication_scout.agents._react_loop import (
     cached_system_message,
@@ -17,6 +21,7 @@ from indication_scout.agents._react_loop import (
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.literature.literature_tools import build_literature_tools
 from indication_scout.models.model_drug_profile import DrugProfile
+from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
 
@@ -26,13 +31,13 @@ SYSTEM_PROMPT = (_PROMPTS_DIR / "literature.txt").read_text()
 
 
 def build_literature_agent(
-    llm,
-    svc,
-    db,
-    date_before=None,
-    approved_indications=None,
+    llm: BaseChatModel,
+    svc: RetrievalService,
+    db: Session,
+    date_before: date | None = None,
+    approved_indications: list[str] | None = None,
     drug_profile: DrugProfile | None = None,
-):
+) -> CompiledStateGraph:
     """Return a compiled ReAct agent. No graph wiring required.
 
     `approved_indications` is the drug's FDA-approved indication list, forwarded to the synthesize
@@ -55,7 +60,7 @@ def build_literature_agent(
 
 
 async def run_literature_agent(
-    agent, drug_name: str, disease_name: str
+    agent: CompiledStateGraph, drug_name: str, disease_name: str
 ) -> LiteratureOutput:
     """Invoke the agent and assemble a LiteratureOutput from the run."""
     logger.debug(

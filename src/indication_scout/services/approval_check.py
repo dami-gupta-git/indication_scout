@@ -97,7 +97,9 @@ _ApprovalDecision = Annotated[
     _ContaminatedDecision | _UnanchoredDecision,
     Field(discriminator="label"),
 ]
-_APPROVAL_DECISION_ADAPTER = TypeAdapter(_ApprovalDecision)
+_APPROVAL_DECISION_ADAPTER: TypeAdapter[_ContaminatedDecision | _UnanchoredDecision] = (
+    TypeAdapter(_ApprovalDecision)
+)
 
 
 def _coerce_label(value: Any) -> ApprovalLabel | None:

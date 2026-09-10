@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import time
+from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -35,7 +36,7 @@ router = APIRouter(prefix="/api/examples", tags=["examples"])
 _locks: dict[str, asyncio.Lock] = {drug: asyncio.Lock() for drug in EXAMPLE_DRUGS}
 
 
-def _cache_path(drug: str):
+def _cache_path(drug: str) -> Path:
     return EXAMPLE_CACHE_DIR / f"{drug}.json"
 
 

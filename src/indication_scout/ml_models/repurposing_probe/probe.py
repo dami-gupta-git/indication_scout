@@ -396,7 +396,7 @@ def probe_lr(df: pd.DataFrame, feats: list[str], group_col: str = "drug") -> dic
     }
 
 
-def main():
+def main() -> None:
     labels = load_labels()
     disease_to_mesh = load_disease_to_mesh()
     drug_to_chembl = load_drug_to_chembl()

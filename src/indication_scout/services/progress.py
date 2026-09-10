@@ -12,7 +12,7 @@ Emission is best-effort and side-channel only: when no callback is bound (CLI ru
 
 import logging
 from collections.abc import Callable
-from contextvars import ContextVar
+from contextvars import ContextVar, Token
 
 logger = logging.getLogger(__name__)
 
@@ -38,12 +38,14 @@ _emitter: ContextVar[Callable[[str, str], None] | None] = ContextVar(
 )
 
 
-def set_emitter(emit: Callable[[str, str], None] | None):
+def set_emitter(
+    emit: Callable[[str, str], None] | None,
+) -> Token[Callable[[str, str], None] | None]:
     """Bind the active run's progress callback. Returns the contextvar token for reset()."""
     return _emitter.set(emit)
 
 
-def reset_emitter(token) -> None:
+def reset_emitter(token: Token[Callable[[str, str], None] | None]) -> None:
     """Restore the previous emitter binding (call in a finally after the run)."""
     _emitter.reset(token)
 

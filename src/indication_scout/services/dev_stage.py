@@ -12,8 +12,10 @@ cached (per the relevant trial set) so a given pair is judged once within the TT
 """
 
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from indication_scout.agents._trial_formatting import _classify_stop_reason
 from indication_scout.agents._trial_signals import _is_active, _normalize_status
@@ -21,6 +23,11 @@ from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
 from indication_scout.services.llm import parse_last_json_object, query_llm
 from indication_scout.utils.cache import cache_get, cache_set
+
+if TYPE_CHECKING:
+    from indication_scout.agents.clinical_trials.clinical_trials_output import (
+        TrialSignals,
+    )
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +52,7 @@ DEV_STAGE_PHRASE = {
 DEV_STAGE_TIERS = tuple(DEV_STAGE_PHRASE)
 
 
-def dev_stage_phrase(sig) -> str | None:
+def dev_stage_phrase(sig: "TrialSignals | None") -> str | None:
     """Render the authoritative stage phrase for a TrialSignals, or None when unavailable.
 
     Appends the active Phase 3 NCT ids for the active_phase3 tier so the line names the
@@ -300,7 +307,7 @@ def _render_active_programs(trials: list[Trial]) -> str:
     if not active:
         return _none_active_line(trials)
 
-    def _ids(predicate) -> list[str]:
+    def _ids(predicate: Callable[[Trial], bool]) -> list[str]:
         return [t.nct_id for t in active if t.nct_id and predicate(t)]
 
     def _phase(t: Trial) -> str:

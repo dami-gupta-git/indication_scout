@@ -1,12 +1,12 @@
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import Engine, create_engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from indication_scout.config import get_settings
 
 
-def _make_engine():
+def _make_engine() -> Engine:
     settings = get_settings()
     return create_engine(
         settings.database_url,
@@ -15,7 +15,7 @@ def _make_engine():
     )
 
 
-def _make_session_factory():
+def _make_session_factory() -> sessionmaker[Session]:
     return sessionmaker(autocommit=False, autoflush=False, bind=_make_engine())
 
 

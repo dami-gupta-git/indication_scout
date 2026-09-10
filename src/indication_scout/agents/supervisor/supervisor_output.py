@@ -1,7 +1,7 @@
 """Structured output from the supervisor agent."""
 
 from datetime import date
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, model_validator
 
@@ -83,7 +83,7 @@ class CandidateBlurb(BaseModel):
 
     @model_validator(mode="before")
     @classmethod
-    def coerce_nones(cls, values):
+    def coerce_nones(cls, values: dict[str, Any]) -> dict[str, Any]:
         for field_name, field_info in cls.model_fields.items():
             if values.get(field_name) is None and field_info.default is not None:
                 values[field_name] = field_info.default

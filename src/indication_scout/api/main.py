@@ -1,9 +1,10 @@
 """FastAPI application."""
 
 import logging
+from collections.abc import Awaitable, Callable
 
 import httpx
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -84,7 +85,9 @@ def _is_bot_user_agent(user_agent: str) -> bool:
 
 
 @app.middleware("http")
-async def _log_client_ip(request: Request, call_next):
+async def _log_client_ip(
+    request: Request, call_next: Callable[[Request], Awaitable[Response]]
+) -> Response:
     # Skip the high-frequency analysis polling endpoint to avoid log spam.
     if not request.url.path.startswith("/api/analyses/"):
         # Behind Railway's proxy the real client IP is the first entry of X-Forwarded-For;

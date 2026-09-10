@@ -8,8 +8,11 @@ import asyncio
 import logging
 import time
 from datetime import date
+from typing import cast
 
+from langchain_core.language_models import BaseChatModel
 from langchain_core.messages import HumanMessage, ToolMessage
+from langgraph.graph.state import CompiledStateGraph
 from langgraph.prebuilt import create_react_agent
 
 from indication_scout.agents._react_loop import (
@@ -52,7 +55,9 @@ Steps:
 Do not call get_target_associations on more than 3 targets."""
 
 
-def build_mechanism_agent(llm, date_before: date | None = None) -> object:
+def build_mechanism_agent(
+    llm: BaseChatModel, date_before: date | None = None
+) -> CompiledStateGraph:
     """Return a compiled ReAct agent.
 
     `date_before` is forwarded to the tools so get_target_associations ranks leak-free in holdout
@@ -68,7 +73,7 @@ def build_mechanism_agent(llm, date_before: date | None = None) -> object:
 
 
 async def run_mechanism_agent(
-    agent,
+    agent: CompiledStateGraph,
     drug_name: str,
     *,
     approved_indications: list[str],
@@ -244,7 +249,7 @@ async def _assemble_candidates(
                 "_assemble_candidates: row build failed for %s: %s", symbol, result
             )
             continue
-        rows.extend(result)
+        rows.extend(cast(list[dict], result))
 
     if not rows:
         return []

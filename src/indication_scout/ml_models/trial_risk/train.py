@@ -18,6 +18,7 @@ import json
 import logging
 import pickle
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 from sklearn.calibration import CalibratedClassifierCV
@@ -54,7 +55,7 @@ METRICS_PATH = MODELS_DIR / "trial_risk_v1.metrics.json"
 CONCURRENCY = 4  # number of trials processed in parallel
 
 
-def _build_estimator(model_name: str):
+def _build_estimator(model_name: str) -> Pipeline:
     """Construct one of the experimental classifiers."""
     if model_name == "lr":
         # Aggressive shrinkage for high-dim fingerprint case (n=303, p~792).
@@ -159,7 +160,7 @@ async def _build_feature_rows(
 
 def _grouped_cv_scores(
     X: np.ndarray, y: np.ndarray, groups: np.ndarray, model_name: str
-) -> dict[str, float | list[dict]]:
+) -> dict[str, Any]:
     """Leave-one-drug-out CV. Returns aggregate metrics + per-fold breakdown."""
     logo = LeaveOneGroupOut()
     all_y, all_p = [], []
@@ -218,7 +219,9 @@ def _grouped_cv_scores(
     return metrics
 
 
-def _fit_final_model(X: np.ndarray, y: np.ndarray, model_name: str):
+def _fit_final_model(
+    X: np.ndarray, y: np.ndarray, model_name: str
+) -> Pipeline | CalibratedClassifierCV:
     base = _build_estimator(model_name)
     train_class_counts = np.bincount(y, minlength=2)
     if model_name != "knn" and train_class_counts.min() >= 2:

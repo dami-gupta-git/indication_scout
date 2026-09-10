@@ -113,7 +113,6 @@ async def _run_pipeline(drug: str, cassette_path: Path):
     drug = normalize_drug_name(drug)
     llm = ChatAnthropic(
         model="claude-sonnet-4-6",
-        temperature=0,
         max_tokens=4096,
         api_key=os.environ.get("ANTHROPIC_API_KEY", "test-key-unused-in-replay"),
     )

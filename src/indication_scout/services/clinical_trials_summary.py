@@ -18,7 +18,7 @@ closure" rule. Cached per the fact-tuple so a pair is summarized once within the
 import logging
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, cast
 
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     TrialRelevanceCoverage,
@@ -228,6 +228,8 @@ async def judge_ct_summary(
             attempt,
         )
     else:
+        # Both attempts parsed (the None path returns above), so summary is set here.
+        summary = cast(CTSummary, summary)
         summary = CTSummary(
             prose=strip_sentences_with_unknown_nct_ids(
                 summary.prose, allowed_ncts, context=context

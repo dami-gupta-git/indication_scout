@@ -5,14 +5,14 @@ from indication_scout.services.disease_helper import normalize_for_pubmed
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
 
-async def get_pubmed_query(drug_name, disease_name):
+async def get_pubmed_query(drug_name: str, disease_name: str) -> list[str]:
     """Build a PubMed search query for a drug-disease pair.
 
     Normalizes the disease name to a broader, PubMed-friendly term (e.g.
     "atopic eczema" → "eczema OR dermatitis") before combining with the drug name.
     """
     pubmed_diseases = await normalize_for_pubmed(disease_name, drug_name)
-    queries = []
+    queries: list[str] = []
     for d in pubmed_diseases.split("OR"):
         queries.append(f"{d.strip()} AND {drug_name}")
 
