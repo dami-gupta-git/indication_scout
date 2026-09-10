@@ -70,12 +70,14 @@ call it untested or abandoned. Registry query matches are search coverage, not s
 "None active" means no trial is currently recruiting — state that as the status; do not infer a \
 cause (sponsor disengagement, commercial failure, abandonment) you were not given.
 
-When the reviewed evidence reports ZERO relevant trials, that means no registered trial matched \
-this pair — it does NOT mean the drug was never studied in humans for this disease. If the \
-literature says "RCT-backed / controlled" or "observational", human studies exist: describe the \
-registry record as empty and never write "untested in humans", "no clinical development has been \
-initiated", "no clinical testing", or "entirely unvalidated". Reserve an untested verdict for \
-candidates whose literature is "animal/in-vitro only".
+ZERO relevant trials means no reviewed trial studies this drug for this disease. If registry \
+matches were found, say the review found none studying this pair. Never say no trial exists or \
+that the registry is empty. Say no registered trial matched only when zero matches were found. \
+Zero relevant trials does NOT mean the drug was never studied in humans. If the literature says \
+"RCT-backed / controlled" or "observational", human studies exist: never write "untested in \
+humans", "no clinical development has been initiated", "no clinical testing", or "entirely \
+unvalidated". Reserve an untested verdict for candidates whose literature is "animal/in-vitro \
+only".
 
 The drug is NOT approved for THIS candidate indication unless the approved indication above \
 exactly names it. If the approved indication is "none", do not claim any approval for this use.
@@ -88,10 +90,12 @@ completed or active, do NOT write "no Phase 3" or "no dedicated development prog
 - key_risk: the single biggest risk to the hypothesis. One short line. Phase-free.
 - assessment: a short interpretive verdict tag. Choose one that fits the facts — e.g. "Live but \
 bottlenecked", "Maturing, awaiting readout", "Tested, status unconfirmed", "Stalled, regulatory \
-gap", "Untested at scale", "Studied outside the registry", "Closed signal". When trials exist but \
-their status is unknown, prefer a neutral tag (e.g. "Tested, status unconfirmed") over a decline \
-tag. When no registered trial matched but the literature reports human studies, prefer "Studied \
-outside the registry" over "Untested at scale". Do NOT name a phase tier.
+gap", "Untested at scale", "No trial programme for this use", "Studied outside the registry", \
+"Closed signal". When trials exist but their status is unknown, prefer a neutral tag (e.g. \
+"Tested, status unconfirmed") over a decline tag. No matches at all, plus human literature: \
+prefer "Studied outside the registry". Matches but none relevant: prefer "No trial programme for \
+this use". When the trial search did not run, say only that the trial status is unknown — never a \
+tag asserting what the registry holds. Do NOT name a phase tier.
 - prose: EXACTLY 2 sentences interpreting the state of the hypothesis, consistent with the stage \
 and active programs above. If the literature direction is "contradicts", surface that the drug \
 failed / was disproven. Do NOT name a phase tier that disagrees with the stage.
@@ -99,6 +103,12 @@ failed / was disproven. Do NOT name a phase tier that disagrees with the stage.
 Respond with the JSON object and NOTHING else — no reasoning, no preamble, no prose outside \
 the object: \
 {{"constraint":"...","key_risk":"...","assessment":"...","prose":"..."}}"""
+
+
+# Bumped whenever _INTERP_PROMPT changes, so the fact-keyed cache does not replay prose written
+# by an older prompt. v2: zero relevant trials no longer described as an empty registry. v3: an
+# unresolved trial search no longer takes a tag that asserts what the registry holds.
+_INTERP_PROMPT_VERSION = "v3_unresolved_search_tag"
 
 
 @dataclass(frozen=True)
@@ -189,6 +199,9 @@ async def judge_interpretive(
         "trial_evidence": trial_evidence,
         "closure": closure,
         "terminations": terminations,
+        # The key is otherwise the fact tuple alone, so a prompt edit silently no-ops on every
+        # already-cached candidate. Bump this whenever _INTERP_PROMPT changes.
+        "prompt_version": _INTERP_PROMPT_VERSION,
     }
     cached = cache_get("interpretive", cache_params, cache_dir)
     if isinstance(cached, dict):
