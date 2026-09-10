@@ -22,7 +22,6 @@ import logging
 from datetime import date
 
 import pytest
-
 from langchain_anthropic import ChatAnthropic
 
 from indication_scout.agents.clinical_trials.clinical_trials_agent import (
@@ -69,13 +68,16 @@ async def test_sildenafil_pah_excluded_only_when_approved_list_supplied():
         agent,
         "sildenafil",
         "hypertension",
-        approved_indications=["pulmonary arterial hypertension", "erectile dysfunction"],
+        approved_indications=[
+            "pulmonary arterial hypertension",
+            "erectile dysfunction",
+        ],
     )
 
     shown = _shown(output)
-    assert _SILD_PAH_NCT in shown, (
-        f"{_SILD_PAH_NCT} not in shown set — CT.gov drift; cannot assert TEST 1"
-    )
+    assert (
+        _SILD_PAH_NCT in shown
+    ), f"{_SILD_PAH_NCT} not in shown set — CT.gov drift; cannot assert TEST 1"
     contaminated = set(output.contaminated_nct_ids)
     relevant = set(output.relevant_nct_ids)
     # completeness: shown set fully classified, no overlap
@@ -97,7 +99,10 @@ async def test_sildenafil_ed_in_hypertensives_contaminated_therapeutic_intent():
         agent,
         "sildenafil",
         "hypertension",
-        approved_indications=["pulmonary arterial hypertension", "erectile dysfunction"],
+        approved_indications=[
+            "pulmonary arterial hypertension",
+            "erectile dysfunction",
+        ],
     )
 
     shown = _shown(output)
@@ -106,7 +111,9 @@ async def test_sildenafil_ed_in_hypertensives_contaminated_therapeutic_intent():
     assert relevant | contaminated >= shown
     assert not (relevant & contaminated)
     if _SILD_ED_IN_HTN_NCT not in shown:
-        pytest.skip(f"{_SILD_ED_IN_HTN_NCT} not recalled this run — cannot assert TEST 2")
+        pytest.skip(
+            f"{_SILD_ED_IN_HTN_NCT} not recalled this run — cannot assert TEST 2"
+        )
     assert _SILD_ED_IN_HTN_NCT in contaminated
     assert _SILD_ED_IN_HTN_NCT not in relevant
 
@@ -128,9 +135,9 @@ async def test_bupropion_approved_sad_trial_contaminated_via_rule():
     )
 
     shown = _shown(output)
-    assert _BUP_SAD_NCT in shown, (
-        f"{_BUP_SAD_NCT} not in shown set — CT.gov drift; cannot assert TEST 1"
-    )
+    assert (
+        _BUP_SAD_NCT in shown
+    ), f"{_BUP_SAD_NCT} not in shown set — CT.gov drift; cannot assert TEST 1"
     contaminated = set(output.contaminated_nct_ids)
     relevant = set(output.relevant_nct_ids)
     assert relevant | contaminated >= shown
@@ -141,7 +148,8 @@ async def test_bupropion_approved_sad_trial_contaminated_via_rule():
 
 async def test_semaglutide_multi_condition_nash_trial_contaminated():
     """Multi-condition TEST 1: a "type 2 diabetes with NASH" trial contaminates because NASH is
-    the approved subtype — the co-listed T2DM must not rescue it (the NCT04639414 flip bug)."""
+    the approved subtype — the co-listed T2DM must not rescue it (the NCT04639414 flip bug).
+    """
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
     agent = build_clinical_trials_agent(llm, date_before=_SEMA_CUTOFF)
 
@@ -164,23 +172,33 @@ async def test_semaglutide_multi_condition_nash_trial_contaminated():
     assert not (relevant & contaminated)
     # The multi-condition anchor: assert only when CT.gov actually recalled it (the set drifts).
     if _SEMA_T2DM_NASH_NCT not in shown:
-        pytest.skip(f"{_SEMA_T2DM_NASH_NCT} not recalled this run — cannot assert TEST 1")
+        pytest.skip(
+            f"{_SEMA_T2DM_NASH_NCT} not recalled this run — cannot assert TEST 1"
+        )
     assert _SEMA_T2DM_NASH_NCT in contaminated
     assert _SEMA_T2DM_NASH_NCT not in relevant
 
 
 # imatinib × leukemia: imatinib is approved for Ph+ CML and Ph+ ALL. The broad "leukemia" candidate
-# over-recalls approved Ph+ CML/ALL trials (contaminated) alongside a distinct non-approved leukemia
-# (CLL) trial that is genuine repurposing (relevant). The CLL trial is the stable anchor.
-_IMA_CLL_RELEVANT_NCT = "NCT00558961"  # imatinib + chlorambucil in CLL — distinct, non-approved
-_IMA_CML_CONTAMINATED_NCT = "NCT00102440"  # imatinib in Ph+ CML — an approved indication
+# over-recalls approved Ph+ CML/ALL trials (contaminated). The one recalled trial in a distinct,
+# non-approved leukemia (CLL) is a single-arm imatinib + chlorambucil combination with no
+# imatinib-alone arm, so under the combination-only rule (2026-09-09) it is ALSO contaminated: a
+# combination result cannot be attributed to imatinib. Every other recalled non-approved-subtype
+# trial is a basket study without arm data or a vaccine trial where imatinib is not the studied
+# agent, so this pair has no relevant trial to anchor on.
+_IMA_CLL_COMBINATION_NCT = (
+    "NCT00558961"  # imatinib + chlorambucil in CLL — combination-only
+)
+_IMA_CML_CONTAMINATED_NCT = (
+    "NCT00102440"  # imatinib in Ph+ CML — an approved indication
+)
 _IMA_CUTOFF = date(2025, 1, 1)
 
 
-async def test_imatinib_leukemia_approved_cml_contaminated_distinct_cll_relevant():
-    """imatinib × leukemia: a Ph+ CML trial (approved indication) is contaminated, while a CLL
-    trial (a distinct leukemia not covered by any imatinib approval) is relevant. Guards the
-    approved-subtype contamination that over-recall pulls into the broad 'leukemia' candidate."""
+async def test_imatinib_leukemia_approved_cml_and_combination_only_cll_contaminated():
+    """imatinib × leukemia: a Ph+ CML trial (approved indication) is contaminated by TEST 1, and
+    the CLL imatinib + chlorambucil trial is contaminated by the combination-only rule (no
+    monotherapy arm). Guards both exclusions on the broad 'leukemia' candidate."""
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
     agent = build_clinical_trials_agent(llm, date_before=_IMA_CUTOFF)
 
@@ -200,11 +218,50 @@ async def test_imatinib_leukemia_approved_cml_contaminated_distinct_cll_relevant
     # completeness: every shown trial classified, no overlap
     assert relevant | contaminated >= shown
     assert not (relevant & contaminated)
-    # CLL is a distinct non-approved leukemia => relevant (the stable anchor).
-    if _IMA_CLL_RELEVANT_NCT in shown:
-        assert _IMA_CLL_RELEVANT_NCT in relevant
-        assert _IMA_CLL_RELEVANT_NCT not in contaminated
+    # CLL is a distinct non-approved leukemia, but the trial is combination-only => contaminated.
+    if _IMA_CLL_COMBINATION_NCT in shown:
+        assert _IMA_CLL_COMBINATION_NCT in contaminated
+        assert _IMA_CLL_COMBINATION_NCT not in relevant
     # An approved Ph+ CML trial => contaminated.
     if _IMA_CML_CONTAMINATED_NCT in shown:
         assert _IMA_CML_CONTAMINATED_NCT in contaminated
         assert _IMA_CML_CONTAMINATED_NCT not in relevant
+
+
+# Combination-only rule, positive control: a multi-drug trial WITH a monotherapy arm isolating THIS
+# drug stays relevant. bupropion × alcohol dependence, NCT04167306 (varenicline and bupropion for
+# AUD) is a 2x2 factorial with a "bupropion + placebo for varenicline" arm, so bupropion's own effect
+# is isolated. Its counterpart, the combination-only exclusion, is asserted on imatinib × leukemia
+# above (NCT00558961, single arm, no imatinib-alone arm).
+_BUP_AUD_FACTORIAL_NCT = "NCT04167306"
+
+
+async def test_bupropion_alcohol_dependence_factorial_with_monotherapy_arm_relevant():
+    """Combination-only rule must not over-fire: a factorial trial with a bupropion-only arm is
+    relevant. Bupropion has no alcohol-related approval, so TEST 1 cannot exclude it either.
+    """
+    llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
+    agent = build_clinical_trials_agent(llm, date_before=_BUP_CUTOFF)
+
+    output = await run_clinical_trials_agent(
+        agent,
+        "bupropion",
+        "alcohol dependence",
+        approved_indications=[
+            "seasonal affective disorder",
+            "major depressive disorder",
+            "smoking cessation",
+        ],
+    )
+
+    shown = _shown(output)
+    contaminated = set(output.contaminated_nct_ids)
+    relevant = set(output.relevant_nct_ids)
+    assert relevant | contaminated >= shown
+    assert not (relevant & contaminated)
+    if _BUP_AUD_FACTORIAL_NCT not in shown:
+        pytest.skip(
+            f"{_BUP_AUD_FACTORIAL_NCT} not recalled this run — cannot assert the rule"
+        )
+    assert _BUP_AUD_FACTORIAL_NCT in relevant
+    assert _BUP_AUD_FACTORIAL_NCT not in contaminated
