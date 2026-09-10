@@ -249,21 +249,11 @@ Produce the order you judge correct, then call critique_ranking — a fresh revi
 order (and may reorder if a tested-and-failed or closed candidate is ranked above a live one) and
 fact-checks the blurb fields. Finalize with the blurbs it returns, in the order it returns them.
 
-After the ranked list, add these optional footer lines in order. (The "Demoted — approval
-relationship:" footer is NOT one of them — it is rendered downstream from the upstream FDA
-label; do not write it.)
-
-  Closed signals: <name(s)> — only candidates the clinical_trials sub-agent judged closed
-  (a relevant safety/efficacy termination, or negative literature). No explanation — just names.
-
-  Evidence gate exclusions: <name(s)> — candidates excluded for zero trials AND
-  literature direction=none (no relevant evidence), or zero trials AND fewer than 5 PMIDs.
-  A direction=contradicts pair is NOT excluded here — it ranks at the bottom as a negative.
-
-A candidate appears in EXACTLY ONE footer block. Precedence when multiple apply:
-approval-relationship demotions > closed signals > evidence gate exclusions.
-
-Omit any footer line that has no entries.
+Do NOT write any footer lines after the ranked list. The "Closed signals:", "Not ranked:",
+"Evidence gate exclusions:" and "Demoted — approval relationship:" lines are all rebuilt
+downstream from the sub-agents' own verdicts and the upstream FDA label; anything you write there
+is discarded. A direction=contradicts pair is NOT excluded from the ranking — it ranks at the
+bottom as a negative.
 
 # WRITING THE BLURBS
 Alongside the `summary` string, pass a `blurbs` list to finalize_supervisor with one entry per

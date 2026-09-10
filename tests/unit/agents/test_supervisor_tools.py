@@ -1753,3 +1753,166 @@ def test_literature_oneliner_no_indication_harm_omits_flag():
         indication_harm=False,
     )
     assert _literature_oneliner(es) == "strong, supports, RCT-backed / controlled"
+
+
+# --- Summary footer accounting: dedup, closed-signals rebuild, not-ranked disclosure ---------------
+
+
+async def _critique_then_finalize(by_name, critic_blurbs: list[dict], summary: str):
+    """Run critique_ranking (LLM stubbed to return `critic_blurbs`) then finalize_supervisor."""
+    critic_out = json.dumps({"ordering": "consistent", "blurbs": critic_blurbs})
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=AsyncMock(return_value=critic_out),
+    ):
+        await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": critic_blurbs},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+        return await by_name["finalize_supervisor"].ainvoke(
+            {
+                "name": "finalize_supervisor",
+                "args": {"summary": summary, "blurbs": critic_blurbs},
+                "id": "test_finalize",
+                "type": "tool_call",
+            }
+        )
+
+
+async def test_finalize_dedups_duplicate_blurbs_and_emits_no_empty_footers():
+    """The critic returned the same disease twice (metformin x cardiovascular disorder) and the
+    ranked block rendered it twice. Keep the first entry only; with nothing closed, unranked or
+    gate-dropped, no footer line is emitted at all."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+    allowed_diseases["cardiovascular disorder"] = (
+        "cardiovascular disorder",
+        "competitor",
+    )
+    findings_local["cardiovascular disorder"] = {
+        "literature": _make_lit("strong", 3, 3, direction="supports"),
+        "clinical_trials": _make_ct(
+            2, 1, 0, signals=TrialSignals(dev_stage="untested")
+        ),
+    }
+    blurbs = [
+        {"disease": "cardiovascular disorder", "prose": "first copy."},
+        {"disease": "cardiovascular disorder", "prose": "second copy."},
+    ]
+    msg = await _critique_then_finalize(
+        by_name,
+        blurbs,
+        "Candidates assessed for testdrug:\n"
+        "1. cardiovascular disorder — strong\n"
+        "2. cardiovascular disorder — strong",
+    )
+
+    assert [b["disease"] for b in msg.artifact["blurbs"]] == ["cardiovascular disorder"]
+    assert msg.artifact["blurbs"][0]["prose"] == "first copy."
+    assert msg.artifact["summary"] == (
+        "Candidates assessed for testdrug:\n1. cardiovascular disorder — strong"
+    )
+
+
+async def test_finalize_rebuilds_closed_signals_footer_from_closure_verdicts():
+    """The 'Closed signals:' footer is derived from the same closure fact the card's assessment
+    uses; the LLM's own line (naming a live candidate) is discarded."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+    closed_ct = _make_ct(
+        1, 1, 0, signals=TrialSignals(dev_stage="phase3_completed")
+    ).model_copy(update={"closure": "closed", "closure_reason": "Phase 3 failed."})
+    live_ct = _make_ct(
+        1, 1, 0, signals=TrialSignals(dev_stage="phase3_completed")
+    ).model_copy(update={"closure": "live", "closure_reason": "No failure on record."})
+    for name, ct in (("copd", closed_ct), ("aki", closed_ct), ("raynaud", live_ct)):
+        allowed_diseases[name] = (name, "competitor")
+        findings_local[name] = {
+            "literature": _make_lit("moderate", 2, 2, direction="mixed"),
+            "clinical_trials": ct,
+        }
+    blurbs = [
+        {"disease": "raynaud", "prose": "live."},
+        {"disease": "copd", "prose": "closed."},
+        {"disease": "aki", "prose": "closed."},
+    ]
+    msg = await _critique_then_finalize(
+        by_name,
+        blurbs,
+        "Candidates assessed for testdrug:\n1. raynaud\n2. copd\n3. aki\n\nClosed signals: raynaud",
+    )
+
+    lines = msg.artifact["summary"].splitlines()
+    assert lines[:4] == [
+        "Candidates assessed for testdrug:",
+        "1. raynaud",
+        "2. copd",
+        "3. aki",
+    ]
+    assert [ln for ln in lines if ln.startswith("Closed signals:")] == [
+        "Closed signals: copd, aki"
+    ]
+
+
+async def test_finalize_discloses_every_investigated_disease_not_ranked():
+    """Every disease that reached the findings stage is either ranked, gate-excluded, or named in a
+    'Not ranked:' line with its reason (absent from ranking / unresolved trial query /
+    combination-only demotion). A gate-excluded disease appears in the gate line only, whether the
+    model submitted it as a blurb or silently left it out.
+    """
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+    fin = by_name["finalize_supervisor"]
+    fin_closure = dict(
+        zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__)
+    )
+    approval_labels = fin_closure["approval_labels"].cell_contents
+
+    supported = _make_lit("moderate", 2, 2, direction="supports")
+    for name in ("ranked one", "endothelial dysfunction", "obesity"):
+        allowed_diseases[name] = (name, "competitor")
+        findings_local[name] = {
+            "literature": supported,
+            "clinical_trials": _make_ct(
+                1, 1, 0, signals=TrialSignals(dev_stage="untested")
+            ),
+        }
+    allowed_diseases["unresolved one"] = ("unresolved one", "competitor")
+    findings_local["unresolved one"] = {
+        "literature": supported,
+        "clinical_trials": ClinicalTrialsOutput(
+            search=SearchTrialsResult(resolution_status="unresolved")
+        ),
+    }
+    for name in ("gate drop", "silent gate drop"):
+        allowed_diseases[name] = (name, "competitor")
+        findings_local[name] = {
+            "literature": _make_lit("none", 0, 0, direction="none"),
+            "clinical_trials": _make_ct(
+                0, 0, 0, signals=TrialSignals(dev_stage="untested")
+            ),
+        }
+    approval_labels["obesity"] = "combination_only"
+
+    blurbs = [
+        {"disease": "ranked one", "prose": "ranked."},
+        {"disease": "gate drop", "prose": "dropped by gate."},
+    ]
+    msg = await _critique_then_finalize(
+        by_name,
+        blurbs,
+        "Candidates assessed for testdrug:\n1. ranked one\n2. gate drop",
+    )
+
+    assert msg.artifact["summary"] == (
+        "Candidates assessed for testdrug:\n"
+        "1. ranked one\n"
+        "Not ranked: endothelial dysfunction — investigated but absent from the supervisor's "
+        "ranking; obesity — demoted: approved only as a fixed-dose combination; "
+        "unresolved one — trial search coverage unavailable (disease could not be resolved to a "
+        "MeSH descriptor)\n"
+        "Evidence gate exclusions: gate drop — 0 relevant trials and no usable literature signal "
+        "(direction=none, study_count=0); silent gate drop — 0 relevant trials and no usable "
+        "literature signal (direction=none, study_count=0)"
+    )

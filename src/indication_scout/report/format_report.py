@@ -409,7 +409,7 @@ def _splice_blurbs_into_summary(summary: str, findings: list[CandidateFindings])
     # discarded either way — the blurb replaces it.
     rank_line = re.compile(r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)(?:\s+—\s+.+)?$")
     footer_line = re.compile(
-        r"^\s*(?:Demoted\s+—|Closed\s+signals\s*:|Evidence\s+gate\s+exclusions\s*:)",
+        r"^\s*(?:Demoted\s+—|Closed\s+signals\s*:|Not\s+ranked\s*:|Evidence\s+gate\s+exclusions\s*:)",
         re.IGNORECASE,
     )
     out_lines: list[str] = []

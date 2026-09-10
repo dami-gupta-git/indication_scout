@@ -1031,15 +1031,13 @@ async def test_cache_trial_reference_abstracts_fetches_missing_paper(svc):
 
     with (
         patch.object(svc, "get_stored_pmids", return_value=set()),
-        patch.object(svc, "embed_abstracts", new=AsyncMock(return_value=[(abstract, [0.1])])),
-        patch.object(svc, "insert_abstracts") as insert_abstracts,
-        patch(
-            "indication_scout.services.retrieval.PubMedClient", return_value=client
+        patch.object(
+            svc, "embed_abstracts", new=AsyncMock(return_value=[(abstract, [0.1])])
         ),
+        patch.object(svc, "insert_abstracts") as insert_abstracts,
+        patch("indication_scout.services.retrieval.PubMedClient", return_value=client),
     ):
-        result = await svc.cache_trial_reference_abstracts(
-            ["40487775"], mock_db, None
-        )
+        result = await svc.cache_trial_reference_abstracts(["40487775"], mock_db, None)
 
     assert result == ["40487775"]
     client.fetch_abstracts.assert_awaited_once_with(["40487775"])
@@ -1059,9 +1057,7 @@ async def test_cache_trial_reference_abstracts_applies_holdout_post_guard(svc):
             "_filter_pmids_by_date",
             new=AsyncMock(return_value=[]),
         ) as filter_pmids,
-        patch(
-            "indication_scout.services.retrieval.PubMedClient", return_value=client
-        ),
+        patch("indication_scout.services.retrieval.PubMedClient", return_value=client),
     ):
         result = await svc.cache_trial_reference_abstracts(
             ["40487775"], mock_db, cutoff
@@ -2895,6 +2891,7 @@ async def test_classify_indication_harm_parses_true(svc):
     assert harm is True
     assert summary == (
         "Disease-scoped literature for rofecoxib in colorectal cancer reported: "
+        "increased cardiovascular thrombotic events — "
         '"Rofecoxib increased cardiovascular thrombotic events versus placebo." '
         "(PMID: 11696466)."
     )

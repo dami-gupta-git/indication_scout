@@ -62,8 +62,14 @@ For each PMID choose exactly one status:
 
 For "confirmed_harm", provide a short adverse_outcome and a short exact evidence_quote of no more
 than 80 words copied contiguously from the title or abstract — copy the whole sentence rather than
-shortening it, and never join text across a gap. For every other status, return null for both
-fields. Return one verdict for every input PMID and no other PMIDs.
+shortening it, and never join text across a gap. Quote only the sentence (or adjacent sentences)
+that report the harm. Do not start the quote with, or include, a sentence saying a harm did NOT
+occur or that the drug was tolerated; the quote must read as a harm on its own.
+  e.g. for "He increased the dose to 2250 mg/d without seizures. CONCLUSION: This case highlights
+  the possibility of oral bupropion addiction after cocaine dependence." quote only the CONCLUSION
+  sentence.
+For every other status, return null for both fields. Return one verdict for every input PMID and
+no other PMIDs.
 
 Abstracts:
 {abstracts}

@@ -81,6 +81,11 @@ _UNRESOLVED_TRIAL_STAGE = (
     "Trial search unavailable — disease name could not be resolved to a MeSH descriptor"
 )
 _UNRESOLVED_ACTIVE_PROGRAMS = "Unknown — registry search was not run"
+# Summary footer accounting. Every disease that reached the findings stage must appear either in the ranked block or
+# in exactly one footer line, so a dropped candidate always leaves a trace with its reason.
+_NOT_RANKED_REASON_UNRESOLVED = "trial search coverage unavailable (disease could not be resolved to a MeSH descriptor)"
+_NOT_RANKED_REASON_COMBINATION = "demoted: approved only as a fixed-dose combination"
+_NOT_RANKED_REASON_ABSENT = "investigated but absent from the supervisor's ranking"
 
 
 def _safety_flag(es) -> str:
@@ -235,6 +240,41 @@ from indication_scout.agents.mechanism.mechanism_agent import (
 )
 from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 from indication_scout.services.retrieval import RetrievalService
+
+
+def _evidence_gate_reason(slot: dict) -> str | None:
+    """Top-N evidence gate over one findings slot: the exclusion reason, or None when the candidate survives.
+
+    Excludes a candidate with 0 relevant trials AND no usable literature signal — direction "none" OR study_count 0
+    (OR both). Strong/moderate/weak literature with at least one relevant abstract and 0 trials is a legitimate
+    repurposing signal and is kept. PMID-count fallback applies only when synthesize didn't run. The gate keys off
+    DIRECTION, not strength: a contradicting body is real evidence and must survive, ranked as a negative. An
+    unresolved trial query has n_trials None, never 0, so it cannot satisfy the gate.
+    """
+    lit = slot.get("literature")
+    ct = slot.get("clinical_trials")
+    n_pmids = len(lit.pmids) if lit else 0
+    coverage = ct.search_coverage if ct is not None else None
+    n_trials = coverage.relevant_records if coverage is not None else None
+    es = lit.evidence_summary if lit and lit.evidence_summary else None
+    lit_direction = es.direction if es else None
+    lit_study_count = es.study_count if es else None
+    no_lit_signal = (
+        lit_direction == "none"
+        or lit_study_count == 0
+        or (
+            lit_direction is None
+            and lit_study_count is None
+            and n_pmids < SUPERVISOR_MIN_PMIDS_NO_TRIALS
+        )
+    )
+    if n_trials == 0 and no_lit_signal:
+        return (
+            f"0 relevant trials and no usable literature signal "
+            f"(direction={lit_direction or 'unavailable'}, "
+            f"study_count={lit_study_count if lit_study_count is not None else 'unavailable'})"
+        )
+    return None
 
 
 def _trial_query_unresolved(ct: "ClinicalTrialsOutput | None") -> bool:
@@ -1732,6 +1772,9 @@ def build_supervisor_tools(
         # the LLM has been observed naming a candidate it kept (semaglutide × hypoglycemia) on a
         # criterion it invented, which claims an exclusion that never happened.
         gate_excluded: list[tuple[str, str]] = []
+        # Lowercase keys already accepted into `validated`. The critic has returned the same disease twice
+        # (metformin x cardiovascular disorder), which rendered as two ranked lines; keep the first (critic-order) entry.
+        seen_validated: set[str] = set()
         structured_keys = (
             "stage",
             "literature",
@@ -1757,6 +1800,12 @@ def build_supervisor_tools(
                     disease,
                 )
                 continue
+            if disease_key in seen_validated:
+                logger.warning(
+                    "[TOOL] finalize_supervisor dropping duplicate blurb for disease=%r",
+                    disease,
+                )
+                continue
             # Top-N evidence gate: drop candidates where 0 trials AND synthesize indicates no usable literature signal —
             # strength="none" OR study_count==0 (OR both). Strong/moderate/weak literature with at least one relevant
             # abstract and 0 trials is a legitimate repurposing signal and is kept. PMID-count fallback applies only when
@@ -1765,51 +1814,16 @@ def build_supervisor_tools(
             slot = findings_local.get(disease_key) or {}
             lit = slot.get("literature")
             ct = slot.get("clinical_trials")
-            n_pmids = len(lit.pmids) if lit else 0
             coverage = ct.search_coverage if ct is not None else None
-            n_trials = coverage.relevant_records if coverage is not None else None
-            lit_strength = (
-                lit.evidence_summary.strength if lit and lit.evidence_summary else None
-            )
-            lit_direction = (
-                lit.evidence_summary.direction if lit and lit.evidence_summary else None
-            )
-            lit_study_count = (
-                lit.evidence_summary.study_count
-                if lit and lit.evidence_summary
-                else None
-            )
-            # Zero-evidence gate keys off DIRECTION, not strength: a contradicting body is real evidence and must survive the
-            # gate, ranked as a negative.
-            no_lit_signal = (
-                lit_direction == "none"
-                or lit_study_count == 0
-                or (
-                    lit_direction is None
-                    and lit_study_count is None
-                    and n_pmids < SUPERVISOR_MIN_PMIDS_NO_TRIALS
-                )
-            )
-            if n_trials == 0 and no_lit_signal:
+            gate_reason = _evidence_gate_reason(slot)
+            if gate_reason is not None:
                 logger.warning(
-                    "[TOOL] finalize_supervisor dropping blurb for disease=%r "
-                    "(evidence gate: %d trials, %d PMIDs, strength=%s, "
-                    "direction=%s, study_count=%s)",
+                    "[TOOL] finalize_supervisor dropping blurb for disease=%r (evidence gate: %s)",
                     disease,
-                    n_trials,
-                    n_pmids,
-                    lit_strength,
-                    lit_direction,
-                    lit_study_count,
+                    gate_reason,
                 )
-                gate_excluded.append(
-                    (
-                        disease,
-                        f"0 relevant trials and no usable literature signal "
-                        f"(direction={lit_direction or 'unavailable'}, "
-                        f"study_count={lit_study_count if lit_study_count is not None else 'unavailable'})",
-                    )
-                )
+                gate_excluded.append((disease, gate_reason))
+                seen_validated.add(disease_key)
                 continue
             # Deterministic STAGE override: the development-stage tier is a fact the LLM must NOT author. The clinical-trials
             # sub-agent computed an authoritative dev_stage from the relevance-filtered signals; render its phrase verbatim,
@@ -1874,6 +1888,7 @@ def build_supervisor_tools(
                 if (ct is not None and ct.approval is not None)
                 else None
             )
+            closure_text = _closure_text(ct, es)
             interp_facts = (
                 {
                     "stage": stage_phrase,
@@ -1888,7 +1903,7 @@ def build_supervisor_tools(
                     # Closure and late-stage terminations are decided upstream but were not reaching the writer, so it
                     # judged closure itself ("uncertain but not closed" on a pair already graded closed) and read the
                     # stage alone (a completed Phase 3 outranks the terminated-for-cause tier, hiding the stops).
-                    "closure": _closure_text(ct, es),
+                    "closure": closure_text,
                     "terminations": _terminations_text(sig),
                 }
                 if stage_phrase is not None
@@ -1898,9 +1913,13 @@ def build_supervisor_tools(
                 "disease": disease,
                 "prose": prose,
                 "_interp_facts": interp_facts,
+                # The same closure fact the interpretive writer sees; the "Closed signals:" footer is rebuilt from it
+                # so the footer cannot disagree with a card's "Closed signal" assessment.
+                "_closed": closure_text.startswith("CLOSED"),
                 **fields,
             }
             validated.append(entry)
+            seen_validated.add(disease_key)
 
         # Enrich pass: synthesize the interpretive fields from the resolved facts, concurrently. judge_interpretive is the
         # SINGLE author of blocker/key_risk/verdict/prose — fed the already-resolved stage/active_programs/literature/
@@ -1929,8 +1948,10 @@ def build_supervisor_tools(
                     e["key_risk"] = j.key_risk
                     e["verdict"] = j.verdict
                     e["prose"] = j.prose
+        closed_diseases = [e["disease"] for e in validated if e.get("_closed")]
         for e in validated:
             e.pop("_interp_facts", None)
+            e.pop("_closed", None)
 
         # Filter the LLM-written summary to drop ranked lines whose disease didn't pass the evidence gate (not in validated).
         # Non-ranked lines (e.g. trailing "Closed signals:") pass through unchanged. Surviving lines are renumbered to stay
@@ -2019,8 +2040,10 @@ def build_supervisor_tools(
         rank_line = re.compile(
             r"^\s*(?P<rank>\d+)\.\s+(?P<head>.+?)(?:\s+—\s+(?P<tail>.+))?$"
         )
-        gate_exclusions_line = re.compile(
-            r"^\s*Evidence\s+gate\s+exclusions\s*:", re.IGNORECASE
+        # Footer lines rebuilt below from finalize's own decisions; the LLM's versions are discarded.
+        rebuilt_footer_line = re.compile(
+            r"^\s*(?:Evidence\s+gate\s+exclusions|Closed\s+signals|Not\s+ranked)\s*:",
+            re.IGNORECASE,
         )
         # Normalize the heading line to "Candidates assessed for <drug>:" regardless of what the LLM wrote. The legacy
         # "Ranked repurposing <noun>" wording is still matched so a model that reverts to it is rewritten rather than
@@ -2065,10 +2088,10 @@ def build_supervisor_tools(
                 continue
             m = rank_line.match(line)
             if m is None:
-                # The LLM's own "Evidence gate exclusions:" line is discarded — it is rebuilt below from the gate's actual
-                # decisions. Everything else (demotion footer entries) passes through with a false stage clause corrected
-                # against the authoritative dev_stage.
-                if gate_exclusions_line.match(line):
+                # The LLM's own "Evidence gate exclusions:" / "Closed signals:" / "Not ranked:" lines are discarded —
+                # they are rebuilt below from finalize's actual decisions. Everything else (demotion footer entries)
+                # passes through with a false stage clause corrected against the authoritative dev_stage.
+                if rebuilt_footer_line.match(line):
                     continue
                 passthrough.append(_repair_footer_stage(line))
                 continue
@@ -2109,12 +2132,60 @@ def build_supervisor_tools(
             else:
                 filtered_lines.append(item)
 
-        # Derived exclusions footer. Omitted entirely when the gate dropped nothing — an absent line says nothing, whereas
-        # the LLM's version could assert an exclusion that never happened.
+        # Derived footers, each omitted entirely when empty — an absent line says nothing, whereas the LLM's version
+        # could assert an exclusion or closure that never happened. Order: closed signals, not ranked, gate exclusions.
+        if closed_diseases:
+            filtered_lines.append("Closed signals: " + ", ".join(closed_diseases))
+
+        # Every disease that reached the findings stage (direct tool calls and fan-out) and is neither ranked nor
+        # gate-excluded gets a "Not ranked:" line with its reason, so an assessed candidate cannot vanish silently.
+        investigated_keys = list(findings_local.keys()) + [
+            k for k in auto_findings if k not in findings_local
+        ]
+        gate_excluded_keys = {d.lower().strip() for d, _ in gate_excluded}
+        not_ranked: list[tuple[str, str]] = []
+        for dkey in investigated_keys:
+            if dkey in validated_diseases or dkey in gate_excluded_keys:
+                continue
+            canonical, _src = allowed_diseases.get(dkey, (dkey, "competitor"))
+            # The gate above only sees blurbs the model submitted. A disease the model silently left out gets the
+            # same zero-evidence check here, so its footer reason depends on the evidence, not on whether the model
+            # happened to list it first. "Absent from ranking" is then reserved for candidates that had evidence.
+            unranked_gate_reason = _evidence_gate_reason(
+                findings_local.get(dkey) or auto_findings.get(dkey) or {}
+            )
+            if unranked_gate_reason is not None:
+                logger.warning(
+                    "[TOOL] finalize_supervisor unranked disease=%r fails evidence gate: %s",
+                    canonical,
+                    unranked_gate_reason,
+                )
+                gate_excluded.append((canonical, unranked_gate_reason))
+                continue
+            if dkey in unresolved_trial_queries:
+                reason = _NOT_RANKED_REASON_UNRESOLVED
+            elif approval_labels.get(dkey) == "combination_only":
+                reason = _NOT_RANKED_REASON_COMBINATION
+            else:
+                reason = _NOT_RANKED_REASON_ABSENT
+            logger.warning(
+                "[TOOL] finalize_supervisor footer 'Not ranked' disease=%r (%s)",
+                canonical,
+                reason,
+            )
+            not_ranked.append((canonical, reason))
+        if not_ranked:
+            filtered_lines.append(
+                "Not ranked: "
+                + "; ".join(f"{disease} — {reason}" for disease, reason in not_ranked)
+            )
+
         if gate_excluded:
             filtered_lines.append(
                 "Evidence gate exclusions: "
-                + "; ".join(f"{disease} — {reason}" for disease, reason in gate_excluded)
+                + "; ".join(
+                    f"{disease} — {reason}" for disease, reason in gate_excluded
+                )
             )
         filtered_summary = "\n".join(filtered_lines)
 

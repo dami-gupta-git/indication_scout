@@ -694,3 +694,30 @@ def test_fmt_clinical_trials_no_dev_stage_line_when_no_signals():
     out = ClinicalTrialsOutput(summary="some prose")
     rendered = _fmt_clinical_trials(out)
     assert "**Development stage:**" not in rendered
+
+
+def test_format_report_separates_not_ranked_footer_from_blurbs():
+    """The 'Not ranked:' footer is a footer line: the separator is emitted before it."""
+    output = SupervisorOutput(
+        drug_name="testdrug",
+        candidate_diseases=["Disease A", "Disease B"],
+        top_diseases=["Disease A"],
+        disease_findings=[
+            CandidateFindings(
+                disease="Disease A",
+                source="competitor",
+                blurb=CandidateBlurb(verdict="Promising", prose="A prose."),
+            ),
+        ],
+        summary=(
+            "Candidates assessed for testdrug:\n1. Disease A\n"
+            "Not ranked: Disease B — investigated but absent from the supervisor's ranking"
+        ),
+    )
+
+    rendered = format_report(output)
+
+    assert (
+        "A prose._\n\n---\n\nNot ranked: Disease B — investigated but absent from the "
+        "supervisor's ranking"
+    ) in rendered

@@ -730,10 +730,10 @@ class RetrievalService:
                 )
             stored = self.get_stored_pmids(linked_pmids, db)
             db.rollback()
-            new_abstracts = await self.fetch_new_abstracts(
-                linked_pmids, stored, client
-            )
-        abstracts_with_text = [abstract for abstract in new_abstracts if abstract.abstract]
+            new_abstracts = await self.fetch_new_abstracts(linked_pmids, stored, client)
+        abstracts_with_text = [
+            abstract for abstract in new_abstracts if abstract.abstract
+        ]
         pairs = await self.embed_abstracts(abstracts_with_text)
         self.insert_abstracts(pairs, db)
         return linked_pmids
@@ -1279,9 +1279,7 @@ class RetrievalService:
         if linked_pmids:
             trial_reference_set = set(linked_pmids)
             linked = [
-                result
-                for result, _, _ in scored
-                if result.pmid in trial_reference_set
+                result for result, _, _ in scored if result.pmid in trial_reference_set
             ]
             drug_identity = await _judge_pmid_drug_identity(
                 chembl_id, drug_names, linked, self.cache_dir
@@ -1295,15 +1293,11 @@ class RetrievalService:
                 chembl_id, pref_name, disease, exact_drug, self.cache_dir
             )
             eligible_pmids = {
-                result.pmid
-                for result in exact_drug
-                if on_topic.get(result.pmid, False)
+                result.pmid for result in exact_drug if on_topic.get(result.pmid, False)
             }
-            reserved = [
-                item
-                for item in scored
-                if item[0].pmid in eligible_pmids
-            ][:LITERATURE_TRIAL_REFERENCE_RESERVE]
+            reserved = [item for item in scored if item[0].pmid in eligible_pmids][
+                :LITERATURE_TRIAL_REFERENCE_RESERVE
+            ]
             reserved_pmids = {item[0].pmid for item in reserved}
             if reserved_pmids and not reserved_pmids.intersection(
                 item[0].pmid for item in baseline_scored[:top_k]
@@ -1945,7 +1939,7 @@ class RetrievalService:
             "chembl_id": chembl_id,
             "disease": disease,
             "pmid": abstract.pmid,
-            "logic_version": "per_paper_harm_v1",
+            "logic_version": "per_paper_harm_v2",
             "llm_model": _settings.llm_model,
         }
         cached = cache_get("indication_harm_verdict", cache_params, self.cache_dir)
@@ -2074,14 +2068,17 @@ class RetrievalService:
 
         if confirmed:
             pmids = [verdict.pmid for verdict in confirmed]
-            quotes = [
-                verdict.evidence_quote.strip()
+            # Lead each quote with the named outcome. A quote alone can read as "no harm" when the
+            # harm sits in its last sentence (bupropion x cocaine use disorder, PMID 25494008:
+            # "...without seizures. CONCLUSION: ...possibility of oral bupropion addiction").
+            findings = [
+                f'{verdict.adverse_outcome.strip()} — "{verdict.evidence_quote.strip()}"'
                 for verdict in confirmed
-                if verdict.evidence_quote
+                if verdict.evidence_quote and verdict.adverse_outcome
             ]
             summary = (
                 f"Disease-scoped literature for {pref_name} in {disease} reported: "
-                f'"{"; ".join(dict.fromkeys(quotes))}" '
+                f"{'; '.join(dict.fromkeys(findings))} "
                 f"(PMID{'s' if len(pmids) != 1 else ''}: {', '.join(pmids)})."
             )
             harm: bool | None = True
