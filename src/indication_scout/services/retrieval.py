@@ -1707,6 +1707,99 @@ class RetrievalService:
             )
         return assessment
 
+    async def _judge_one_indication_harm(
+        self,
+        chembl_id: str,
+        pref_name: str,
+        disease: str,
+        abstract: AbstractResult,
+        semaphore: asyncio.Semaphore,
+    ) -> SafetyPaperVerdict:
+        """Adjudicate ONE disease-scoped abstract in isolation.
+
+        The prompt is unchanged; only the batch size is. Judged alongside nineteen other abstracts,
+        a paper reporting a real attributable harm was graded "safety_assessed_only" because the
+        surrounding abstracts read as reassuring (sildenafil x heart failure, PMID 25782985: reduced
+        left-ventricular contractility versus placebo, confirmed_harm 3/3 alone and
+        safety_assessed_only 3/3 in its batch). Every failure mode returns "unclear", which the
+        aggregate turns into an unknown harm verdict rather than a "no harm" one.
+        """
+        cache_params = {
+            "chembl_id": chembl_id,
+            "disease": disease,
+            "pmid": abstract.pmid,
+            "logic_version": "per_paper_harm_v1",
+            "llm_model": _settings.llm_model,
+        }
+        cached = cache_get("indication_harm_verdict", cache_params, self.cache_dir)
+        if cached is not None:
+            return SafetyPaperVerdict(**cached)
+
+        unclear = SafetyPaperVerdict(pmid=abstract.pmid, status="unclear")
+        template = (_PROMPTS_DIR / "classify_indication_harm.txt").read_text()
+        prompt = template.format(
+            drug=pref_name,
+            disease=disease,
+            abstracts=(
+                f"PMID: {abstract.pmid}\nTitle: {abstract.title}\n"
+                f"Abstract: {abstract.abstract}"
+            ),
+        )
+        async with semaphore:
+            try:
+                response = await query_llm(prompt)
+            except DataSourceError as exc:
+                logger.warning(
+                    "classify_indication_harm: LLM call failed for %s / %s / PMID %s: %s",
+                    chembl_id,
+                    disease,
+                    abstract.pmid,
+                    exc,
+                )
+                return unclear
+
+        data = parse_last_json_object(response)
+        if not isinstance(data, dict) or not isinstance(data.get("verdicts"), list):
+            logger.warning(
+                "classify_indication_harm: unparseable response for %s / %s / PMID %s: %s",
+                chembl_id,
+                disease,
+                abstract.pmid,
+                response,
+            )
+            return unclear
+
+        try:
+            verdicts = [SafetyPaperVerdict(**item) for item in data["verdicts"]]
+        except (TypeError, ValidationError) as exc:
+            logger.warning(
+                "classify_indication_harm: invalid verdict for %s / %s / PMID %s: %s",
+                chembl_id,
+                disease,
+                abstract.pmid,
+                exc,
+            )
+            return unclear
+
+        if len(verdicts) != 1 or verdicts[0].pmid != abstract.pmid:
+            logger.warning(
+                "classify_indication_harm: PMID mismatch for %s / %s / PMID %s; got %s",
+                chembl_id,
+                disease,
+                abstract.pmid,
+                [verdict.pmid for verdict in verdicts],
+            )
+            return unclear
+
+        cache_set(
+            "indication_harm_verdict",
+            cache_params,
+            verdicts[0].model_dump(mode="json"),
+            self.cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return verdicts[0]
+
     async def classify_indication_harm(
         self,
         chembl_id: str,
@@ -1717,62 +1810,17 @@ class RetrievalService:
         if not safety_abstracts:
             return None, "", []
 
-        cache_params = {
-            "chembl_id": chembl_id,
-            "disease": disease,
-            "logic_version": "disease_risk_modifier_v3",
-            "pmids": sorted(r.pmid for r in safety_abstracts),
-            "llm_model": _settings.llm_model,
-        }
-        cached = cache_get("classify_indication_harm", cache_params, self.cache_dir)
-        if cached is not None:
-            return (
-                cached["indication_harm"],
-                cached["indication_harm_summary"],
-                cached["indication_harm_pmids"],
-            )
-
         pref_name = (await get_all_drug_names(chembl_id, self.cache_dir))[0]
-        formatted = "\n\n".join(
-            f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
-            for r in safety_abstracts
-        )
-        template = (_PROMPTS_DIR / "classify_indication_harm.txt").read_text()
-        prompt = template.format(drug=pref_name, disease=disease, abstracts=formatted)
-
-        response = await query_llm(prompt)
-        data = parse_last_json_object(response)
-        if not isinstance(data, dict) or not isinstance(data.get("verdicts"), list):
-            logger.warning(
-                "classify_indication_harm: unparseable response for %s / %s: %s",
-                chembl_id,
-                disease,
-                response,
-            )
-            return None, "", []
-
-        try:
-            verdicts = [SafetyPaperVerdict(**item) for item in data["verdicts"]]
-        except (TypeError, ValidationError) as exc:
-            logger.warning(
-                "classify_indication_harm: invalid verdicts for %s / %s: %s",
-                chembl_id,
-                disease,
-                exc,
-            )
-            return None, "", []
-
         abstracts_by_pmid = {abstract.pmid: abstract for abstract in safety_abstracts}
-        verdict_pmids = [verdict.pmid for verdict in verdicts]
-        if len(verdict_pmids) != len(set(verdict_pmids)) or set(verdict_pmids) != set(
-            abstracts_by_pmid
-        ):
-            logger.warning(
-                "classify_indication_harm: PMID coverage mismatch for %s / %s",
-                chembl_id,
-                disease,
+        semaphore = asyncio.Semaphore(_settings.rag_llm_concurrency)
+        verdicts = await asyncio.gather(
+            *(
+                self._judge_one_indication_harm(
+                    chembl_id, pref_name, disease, abstract, semaphore
+                )
+                for abstract in abstracts_by_pmid.values()
             )
-            return None, "", []
+        )
 
         confirmed: list[SafetyPaperVerdict] = []
         has_unclear = False
@@ -1827,17 +1875,8 @@ class RetrievalService:
             summary = ""
             pmids = []
 
-        cache_set(
-            "classify_indication_harm",
-            cache_params,
-            {
-                "indication_harm": harm,
-                "indication_harm_summary": summary,
-                "indication_harm_pmids": pmids,
-            },
-            self.cache_dir,
-            ttl=CACHE_TTL,
-        )
+        # No aggregate cache entry: the per-paper verdicts are already cached, and a whole-batch key
+        # threw away every verdict for a disease as soon as one abstract joined or left the set.
         return harm, summary, pmids
 
     async def _get_label_safety_records(

@@ -1158,16 +1158,16 @@ async def _finalize(tools: list, treats: dict[str, bool] | None = None, **args):
         )
 
 
-async def test_finalize_analysis_target_gate_demotes_trial_aimed_at_a_complication():
+async def test_finalize_analysis_target_gate_rejects_then_accepts_rewritten_reasoning():
     """A trial that studies the drug in patients who have the candidate disease but targets a
-    complication of it is moved from relevant to contaminated, and the agent's own verdict cannot
-    keep it."""
+    complication of it is rejected back to the agent, so the reasoning it publishes describes the
+    split that is actually stored."""
     tools = build_clinical_trials_tools(
         date_before=None, target_drug="sildenafil", assigned_indication="hypertension"
     )
     await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
 
-    msg = await _finalize(
+    rejection = await _finalize(
         tools,
         treats={"NCT00000002": False},
         verdicts=[
@@ -1176,11 +1176,65 @@ async def test_finalize_analysis_target_gate_demotes_trial_aimed_at_a_complicati
         ],
         relevance_reasoning="both study sildenafil in this indication.",
     )
+    assert rejection.content.startswith("REJECTED:")
+    assert "NCT00000002" in rejection.content
+    assert rejection.artifact == ""
+
+    msg = await _finalize(
+        tools,
+        treats={"NCT00000002": False},
+        verdicts=[
+            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
+            {"nct": "NCT00000002", "drug_role": "studied", "verdict": "contaminated"},
+        ],
+        relevance_reasoning="NCT00000002 targets a complication, not hypertension itself.",
+    )
 
     art = msg.artifact
     assert art.relevant_ncts == ["NCT00000001"]
     assert art.contaminated_ncts == ["NCT00000002"]
-    assert art.relevance_reasoning == "both study sildenafil in this indication."
+    assert art.relevance_reasoning == (
+        "Relevant trials: NCT00000001. Excluded trials: NCT00000002."
+    )
+    assert "Analysis complete" in msg.content
+
+
+async def test_finalize_analysis_target_gate_replaces_reasoning_when_agent_insists():
+    """When the agent re-submits a gate-rejected trial as relevant, the demotion is applied and its
+    stale reasoning is replaced rather than published against the stored split."""
+    tools = build_clinical_trials_tools(
+        date_before=None, target_drug="sildenafil", assigned_indication="hypertension"
+    )
+    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
+
+    verdicts = [
+        {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
+        {"nct": "NCT00000002", "drug_role": "studied", "verdict": "relevant"},
+    ]
+    reasoning = "both study sildenafil in this indication."
+
+    first = await _finalize(
+        tools,
+        treats={"NCT00000002": False},
+        verdicts=verdicts,
+        relevance_reasoning=reasoning,
+    )
+    assert first.content.startswith("REJECTED:")
+
+    msg = await _finalize(
+        tools,
+        treats={"NCT00000002": False},
+        verdicts=verdicts,
+        relevance_reasoning=reasoning,
+    )
+
+    art = msg.artifact
+    assert art.relevant_ncts == ["NCT00000001"]
+    assert art.contaminated_ncts == ["NCT00000002"]
+    assert "both study sildenafil" not in art.relevance_reasoning
+    assert art.relevance_reasoning == (
+        "Relevant trials: NCT00000001. Excluded trials: NCT00000002."
+    )
     assert "Analysis complete" in msg.content
 
 
@@ -1205,9 +1259,9 @@ async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():
     art = msg.artifact
     assert art.relevant_ncts == ["NCT00000001", "NCT00000002"]
     assert art.contaminated_ncts == ["NCT00000099"]
-    assert (
-        art.relevance_reasoning
-        == "NCT99 is a PAH trial; the query is systemic hypertension."
+    assert art.relevance_reasoning == (
+        "Relevant trials: NCT00000001, NCT00000002. "
+        "Excluded trials: NCT00000099."
     )
     assert "Analysis complete" in msg.content
 

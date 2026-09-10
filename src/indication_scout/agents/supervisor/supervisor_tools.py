@@ -1609,7 +1609,22 @@ def build_supervisor_tools(
             repaired = cand
         else:
             logger.warning("[TOOL] fact_critic: blurb set mismatch — keeping originals")
-        return repaired
+
+        # Closure is an authoritative upstream fact, not a ranking preference. The critic receives
+        # the fact but can still leave a closed candidate above live candidates. Apply one stable
+        # partition after its review so all live signals precede all closed signals while preserving
+        # the critic's relative order within each group.
+        def _is_closed(item: dict) -> bool:
+            disease = (item.get("disease") or "").strip().lower()
+            slot = findings_local.get(disease) or {}
+            ct = slot.get("clinical_trials")
+            lit = slot.get("literature")
+            es = lit.evidence_summary if lit else None
+            return _closure_text(ct, es).startswith("CLOSED")
+
+        return [item for item in repaired if not _is_closed(item)] + [
+            item for item in repaired if _is_closed(item)
+        ]
 
     @tool
     async def critique_ranking(blurbs: list[dict] | None = None) -> str:

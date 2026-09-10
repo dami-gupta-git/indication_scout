@@ -3,12 +3,14 @@
 # Authored against gold_standard/metformin_2026-09-08_19-13-23.json. Each assertion encodes a
 # domain-meaningful invariant a regression must NOT flip.
 #
-# Anchors are pinned only where they held across the 2026-09-08 19:13, 22:01 and 23:34 runs. All
-# three surface the SAME sixteen ranked indications. Citation sets are deterministic across runs —
-# 19:13 and 22:01 cite identically — so a cited-PMID anchor moving means a grading rule changed,
-# not run noise. Rank order is NOT deterministic: those same two runs cite identically yet order the
-# sixteen differently, and 23:34 differs again. Order is therefore not pinned for any indication;
-# membership is pinned broadly instead.
+# Anchors are cut from the LATEST run under the current code, not from agreement across runs. The
+# grading prompts and gates change often enough that an older snapshot describes different code, so
+# intersecting several runs pins whatever survived the changes rather than what is correct now. Each
+# anchor below is a paper or trial that is on-point for its indication AND surfaced by the current
+# code — the two exceptions are called out at required_pmids_cited.
+#
+# Rank order is not pinned for any indication. No two metformin snapshots have ever ordered the
+# sixteen ranked indications the same way, so membership is pinned and position is not.
 #
 # Candidate-set shift from the prior (2026-08-03) gold: that snapshot pinned NCT00343395 under
 # cardiovascular disease. It is a rosiglitazone-AND-metformin trial, and the relevance gate now
@@ -25,9 +27,12 @@ aliases:
   hepatic steatosis:
     - metabolic dysfunction-associated steatotic liver disease
     - non-alcoholic fatty liver disease
+  # Only true renames belong here. "coronary artery disorder" is NOT an alias of the broader
+  # cardiovascular candidate: both surface in the same report with disjoint trial sets and
+  # citations, so aliasing them made the anchor resolve to whichever came first in the report.
+  # They are pinned separately below.
   cardiovascular disease:
     - cardiovascular disorder
-    - coronary artery disorder
 
 # Present in the ranked set; exact rank permutes run to run, so no order is pinned.
 required_in_ranked:
@@ -72,7 +77,7 @@ candidate_set_contains:
     - diabetes mellitus
 
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
-# each stable across both 2026-09-08 runs.
+# each surfaced by the latest run.
 required_ncts_surfaced:
   - bucket: literature_coverage
     indication: preeclampsia
@@ -102,17 +107,24 @@ required_ncts_surfaced:
     indication: cardiovascular disease
     section: relevant
     ncts:
+      - NCT01037660
+      - NCT00400231
+  - bucket: literature_coverage
+    indication: coronary artery disorder
+    section: relevant
+    ncts:
       - NCT00510705
       - NCT00723307
 
 # Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease.
 #
-# Preeclampsia and atherosclerosis pin papers the 22:45 therapeutic-target-gate rewrite reclassified
-# as contaminated: metformin given to women with PCOS or gestational diabetes with preeclampsia
-# incidence as the measured outcome, and metformin measured on carotid artery diameter and arterial
-# properties. The gate names the condition the drug is given to TREAT, which has no answer for a
-# prevention trial, so the candidate disease appearing as the prevented outcome grades as
-# contaminated. These anchors stay pinned and are expected to fail until the gate handles prevention.
+# The preeclampsia and atherosclerosis anchors are the deliberate exceptions: they pin papers the
+# current code does NOT cite, and are expected to fail. The 2026-09-08 22:45 therapeutic-target-gate
+# rewrite moved them to contaminated — metformin given to women with PCOS or gestational diabetes
+# with preeclampsia incidence as the measured outcome, and metformin measured on carotid artery
+# diameter and arterial properties. The gate names the condition the drug is given to TREAT, which
+# has no answer for a prevention trial, so the candidate disease appearing as the prevented outcome
+# grades as contaminated. They stay pinned until the gate handles prevention.
 required_pmids_cited:
   - bucket: literature_coverage
     indication: preeclampsia
@@ -142,8 +154,13 @@ required_pmids_cited:
     indication: cardiovascular disease
     mode: cited
     pmids:
-      - "23230096"
       - "21205121"
+      - "35032305"
+  - bucket: literature_coverage
+    indication: coronary artery disorder
+    mode: cited
+    pmids:
+      - "23230096"
 
 # Safety — metformin carries black-box warnings (lactic acidosis). Production derives black_box from
 # OT; holdout would fall back to serious.
@@ -157,6 +174,8 @@ safety_severity:
   - indication: hepatic steatosis
     allowed: [black_box, serious]
   - indication: cardiovascular disease
+    allowed: [black_box, serious]
+  - indication: coronary artery disorder
     allowed: [black_box, serious]
 
 # Drug-level collapsed safety signal must surface (empty = collapse regression).

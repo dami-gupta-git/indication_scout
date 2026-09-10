@@ -7,6 +7,7 @@ from indication_scout.agents._trial_formatting import (
     _truncate_brief_summary,
 )
 from indication_scout.models.model_clinical_trials import (
+    ArmGroup,
     Intervention,
     Trial,
 )
@@ -39,6 +40,55 @@ def test_format_trial_row_renders_interventions_and_brief_summary():
     assert "interventions: Drug: Sildenafil; Drug: Placebo" in row
     assert "A study of sildenafil" in row
     assert "summary: Sildenafil for systemic hypertension in adults." in row
+
+
+def test_format_trial_row_renders_separate_active_drug_arms():
+    trial = _trial(
+        arm_groups=[
+            ArmGroup(
+                label="Tadalafil",
+                arm_type="Experimental",
+                intervention_names=["Drug: Tadalafil"],
+            ),
+            ArmGroup(
+                label="Sildenafil",
+                arm_type="Experimental",
+                intervention_names=["Drug: Sildenafil"],
+            ),
+        ]
+    )
+
+    row = _format_trial_row(trial, columns=("nct_id", "interventions", "arms"))
+
+    assert row == (
+        "NCT00000001 | interventions: Drug: Sildenafil; Drug: Placebo | "
+        "arms: Tadalafil [Experimental]: Drug: Tadalafil; "
+        "Sildenafil [Experimental]: Drug: Sildenafil"
+    )
+
+
+def test_format_trial_row_renders_fixed_combination_and_background_arms():
+    trial = _trial(
+        arm_groups=[
+            ArmGroup(
+                label="Combination",
+                arm_type="Experimental",
+                intervention_names=["Drug: Sildenafil", "Drug: Tadalafil"],
+            ),
+            ArmGroup(
+                label="Standard care",
+                arm_type="Active Comparator",
+                intervention_names=["Drug: Background therapy"],
+            ),
+        ]
+    )
+
+    row = _format_trial_row(trial, columns=("arms",))
+
+    assert row == (
+        "arms: Combination [Experimental]: Drug: Sildenafil, Drug: Tadalafil; "
+        "Standard care [Active Comparator]: Drug: Background therapy"
+    )
 
 
 def test_format_interventions_empty_renders_none():

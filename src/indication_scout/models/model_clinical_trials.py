@@ -20,6 +20,23 @@ class Intervention(BaseModel):
     intervention_type: str = ""  # "Drug", "Biological", "Device", etc.
     intervention_name: str = ""  # e.g. "Semaglutide"
     description: str | None = None
+    arm_group_labels: list[str] = []
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class ArmGroup(BaseModel):
+    """A ClinicalTrials.gov treatment arm and its assigned interventions."""
+
+    label: str = ""
+    arm_type: str = ""
+    intervention_names: list[str] = []
 
     @model_validator(mode="before")
     @classmethod
@@ -73,6 +90,7 @@ class Trial(BaseModel):
     mesh_conditions: list[MeshTerm] = []
     mesh_ancestors: list[MeshTerm] = []
     interventions: list[Intervention] = []
+    arm_groups: list[ArmGroup] = []
     sponsor: str = ""
     enrollment: int | None = None
     start_date: str | None = None

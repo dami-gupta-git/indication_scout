@@ -899,6 +899,52 @@ async def test_fact_critic_accepts_repairs_after_prose_reasoning():
     assert "original" not in out.content
 
 
+async def test_fact_critic_places_controlled_efficacy_failure_after_live_signal():
+    """Combined closure from controlled negative literature overrides the critic's ordering."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+
+    for name in ("closed disease", "live disease"):
+        allowed_diseases[name] = (name, "competitor")
+    findings_local["closed disease"] = {
+        "literature": LiteratureOutput(
+            evidence_summary=EvidenceSummary(
+                strength="moderate",
+                direction="contradicts",
+                evidence_basis="drug_specific",
+                is_observational=False,
+            )
+        ),
+        "clinical_trials": ClinicalTrialsOutput(closure="live"),
+    }
+    findings_local["live disease"] = {
+        "literature": _make_lit("weak", 1, 1, direction="supports"),
+        "clinical_trials": ClinicalTrialsOutput(closure="live"),
+    }
+    blurbs = [
+        {"disease": "closed disease", "prose": "failed"},
+        {"disease": "live disease", "prose": "live"},
+    ]
+
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.query_llm",
+        new=AsyncMock(return_value=json.dumps({"blurbs": blurbs})),
+    ):
+        out = await by_name["critique_ranking"].ainvoke(
+            {
+                "name": "critique_ranking",
+                "args": {"blurbs": blurbs},
+                "id": "test_critique",
+                "type": "tool_call",
+            }
+        )
+
+    returned = json.loads(out.content.split("THESE:\n", 1)[1])
+    assert [item["disease"] for item in returned] == [
+        "live disease",
+        "closed disease",
+    ]
+
+
 async def test_finalize_uses_critic_order_not_llm_repassed_order():
     """The finalize trust-gap: when the critic REORDERS the blurbs, finalize must use the critic's
     order even if the LLM re-passes finalize with its ORIGINAL (bad) order. Guards the humira run

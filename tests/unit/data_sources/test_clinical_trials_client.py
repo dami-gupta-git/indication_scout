@@ -40,6 +40,67 @@ def _make_study(
     }
 
 
+def test_parse_trial_preserves_arm_intervention_assignments(tmp_path):
+    """Separate active-drug arms remain separate in the typed trial contract."""
+    study = _make_study("NCT01359670")
+    module = study["protocolSection"]["armsInterventionsModule"]
+    module["armGroups"] = [
+        {
+            "label": "Tadalafil",
+            "type": "EXPERIMENTAL",
+            "interventionNames": ["Drug: Tadalafil"],
+        },
+        {
+            "label": "Sildenafil",
+            "type": "EXPERIMENTAL",
+            "interventionNames": ["Drug: Sildenafil"],
+        },
+    ]
+    module["interventions"] = [
+        {
+            "type": "DRUG",
+            "name": "Tadalafil",
+            "description": "Once daily",
+            "armGroupLabels": ["Tadalafil"],
+        },
+        {
+            "type": "DRUG",
+            "name": "Sildenafil",
+            "description": "Four times daily",
+            "armGroupLabels": ["Sildenafil"],
+        },
+    ]
+
+    trial = ClinicalTrialsClient(cache_dir=tmp_path)._parse_trial(study)
+
+    assert [arm.model_dump() for arm in trial.arm_groups] == [
+        {
+            "label": "Tadalafil",
+            "arm_type": "Experimental",
+            "intervention_names": ["Drug: Tadalafil"],
+        },
+        {
+            "label": "Sildenafil",
+            "arm_type": "Experimental",
+            "intervention_names": ["Drug: Sildenafil"],
+        },
+    ]
+    assert [intervention.model_dump() for intervention in trial.interventions] == [
+        {
+            "intervention_type": "Drug",
+            "intervention_name": "Tadalafil",
+            "description": "Once daily",
+            "arm_group_labels": ["Tadalafil"],
+        },
+        {
+            "intervention_type": "Drug",
+            "intervention_name": "Sildenafil",
+            "description": "Four times daily",
+            "arm_group_labels": ["Sildenafil"],
+        },
+    ]
+
+
 # ------------------------------------------------------------------
 # _count_trials_total — single-call countTotal
 # ------------------------------------------------------------------

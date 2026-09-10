@@ -13,7 +13,7 @@ reason over has to be in the content string. These helpers build that string.
 """
 
 from indication_scout.constants import NEGATION_PREFIXES, STOP_KEYWORDS
-from indication_scout.models.model_clinical_trials import MeshTerm, Trial
+from indication_scout.models.model_clinical_trials import ArmGroup, MeshTerm, Trial
 
 
 def _classify_stop_reason(why_stopped: str | None) -> str:
@@ -88,6 +88,19 @@ def _format_interventions(interventions: list, cap: int = _INTERVENTIONS_CAP) ->
     return "; ".join(rendered)
 
 
+def _format_arm_groups(arm_groups: list[ArmGroup]) -> str:
+    """Render each arm with the interventions ClinicalTrials.gov assigns to it."""
+    if not arm_groups:
+        return "(none reported)"
+    rendered = []
+    for arm in arm_groups:
+        names = ", ".join(name for name in arm.intervention_names if name)
+        label = arm.label or "(unlabelled)"
+        arm_type = f" [{arm.arm_type}]" if arm.arm_type else ""
+        rendered.append(f"{label}{arm_type}: {names or '(none)'}")
+    return "; ".join(rendered)
+
+
 def _truncate_brief_summary(summary: str | None, cap: int = _BRIEF_SUMMARY_CAP) -> str:
     """Trim brief_summary to `cap`, preserving the original text."""
     if not summary:
@@ -156,7 +169,7 @@ def _format_trial_row(
     """Render one trial as a pipe-separated row.
 
     Columns supported: nct_id, phase, status, start_date, completion_date,
-    stop_reason, mesh, interventions, brief_summary, refs, title. The phase
+    stop_reason, mesh, interventions, arms, brief_summary, refs, title. The phase
     column is padded for visual alignment; other columns render their value
     verbatim.
 
@@ -198,6 +211,8 @@ def _format_trial_row(
             parts.append(f"mesh: {_format_mesh_list(trial.mesh_conditions)}")
         elif col == "interventions":
             parts.append(f"interventions: {_format_interventions(trial.interventions)}")
+        elif col == "arms":
+            parts.append(f"arms: {_format_arm_groups(trial.arm_groups)}")
         elif col == "brief_summary":
             parts.append(f"summary: {_truncate_brief_summary(trial.brief_summary)}")
         elif col == "refs":

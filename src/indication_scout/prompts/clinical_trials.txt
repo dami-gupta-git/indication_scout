@@ -59,6 +59,11 @@ regardless of how relevant the disease is. Only if this drug IS the studied agen
     monotherapy arm that tests THIS drug alone and therefore isolates its effect. For a
     combination-only trial whose regimen is the experimental intervention, record drug_role as
     "studied" but verdict as "contaminated".
+    Read the `arms` field to decide this. Multiple drugs in the overall `interventions` field are
+    NOT a combination when they are assigned to separate arms. An arm listing only THIS drug is a
+    monotherapy arm even when another arm lists a different active drug. Treat drugs as a
+    combination only when the same arm assigns them together. If arm groups are not reported, use
+    the title and summary; do not infer a combination from the flattened intervention list alone.
   - The rule is about which drug the trial is ABOUT, not which drugs it administers. Do not rescue a
     trial to "relevant" just because this drug's name is in the interventions.
   - NON-THERAPEUTIC STUDY OBJECT. If this drug is not listed as a Drug or Biological intervention

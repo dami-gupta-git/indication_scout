@@ -12,7 +12,7 @@ Be brief by default. Judge for yourself what level of detail the moment calls fo
 
 ## Session Startup
 
-At the start of every session, read the most recent `session_*.md` file in the project root, `sessions_summary.md`, `README.md`, and `for_me/findings.md`.
+At the start of every session, read the most recent `session_*.md` file in the project root, `sessions_summary.md`, `README.md`, and `for_me/findings.md`. Also look at `for_me/errors/errors.md`, these are issues we decided to not address for now.
 
 ## Findings Workflow
 

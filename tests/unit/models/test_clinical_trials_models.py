@@ -1,7 +1,9 @@
 """Unit tests for Clinical Trials models."""
 
 import pytest
+
 from indication_scout.models.model_clinical_trials import (
+    ArmGroup,
     ApprovalCheck,
     CompetitorEntry,
     CompletedTrialsResult,
@@ -13,6 +15,18 @@ from indication_scout.models.model_clinical_trials import (
     TerminatedTrialsResult,
     Trial,
 )
+
+
+def test_arm_group_preserves_intervention_assignments():
+    arm = ArmGroup(
+        label="Sildenafil plus tadalafil",
+        arm_type="Experimental",
+        intervention_names=["Drug: Sildenafil", "Drug: Tadalafil"],
+    )
+
+    assert arm.label == "Sildenafil plus tadalafil"
+    assert arm.arm_type == "Experimental"
+    assert arm.intervention_names == ["Drug: Sildenafil", "Drug: Tadalafil"]
 
 
 # --- Intervention and PrimaryOutcome ---

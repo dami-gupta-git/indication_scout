@@ -117,6 +117,11 @@ def build_clinical_trials_tools(
     # fetched it, and a later fetch simply rewrites the same entry.
     records_by_nct: dict[str, Trial] = {}
 
+    # NCTs the therapeutic-target gate has already rejected and named back to the agent. Rejecting
+    # the call once lets the agent correct its structured verdicts; this set bounds that to one
+    # round before the deterministic gate applies the demotion itself.
+    gate_rejected_told: set[str] = set()
+
     # The drug this agent instance was launched to analyze. Pinned by the caller so the
     # finalize drug-role question is anchored to one agent: were it taken from the tools' own
     # `drug` argument, a model querying under another drug's name would widen its own check.
@@ -250,11 +255,9 @@ def build_clinical_trials_tools(
             f"column against this descriptor to judge relevance vs contamination."
         )
         phase_dist = _phase_distribution(result.trials)
-        # `interventions` + `brief_summary` feed the relevance gate's TEST 0 (is THIS drug the
-        # studied agent, or only a comparator/background arm?). The summary states what the trial is
-        # actually testing; interventions list the drugs present. Together they let the gate name the
-        # studied agent without inferring from the title alone. Both come off the same _parse_trial
-        # Trial objects, so this is display-only — no extra fetch.
+        # `interventions` + `arms` + `brief_summary` feed the relevance gate's TEST 0. Arm groups
+        # distinguish a fixed combination from separate active-drug arms; the summary states what
+        # the trial is testing. All fields come from the same Trial object, so this adds no fetch.
         table = _format_trial_table(
             result.trials,
             columns=(
@@ -262,6 +265,7 @@ def build_clinical_trials_tools(
                 "phase",
                 "status",
                 "interventions",
+                "arms",
                 "mesh",
                 "brief_summary",
                 "title",
@@ -361,7 +365,14 @@ def build_clinical_trials_tools(
         phase_dist = _phase_distribution(result.trials)
         table = _format_trial_table(
             result.trials,
-            columns=("nct_id", "phase", "interventions", "title", "brief_summary"),
+            columns=(
+                "nct_id",
+                "phase",
+                "interventions",
+                "arms",
+                "title",
+                "brief_summary",
+            ),
             cap=len(result.trials),
         )
         content = (
@@ -463,6 +474,7 @@ def build_clinical_trials_tools(
                 "nct_id",
                 "phase",
                 "interventions",
+                "arms",
                 "stop_reason",
                 "title",
                 "brief_summary",
@@ -659,8 +671,8 @@ def build_clinical_trials_tools(
 
         Rejected (re-call to fix) when: any shown trial is missing an entry; an entry names an
         NCT that was not shown; a trial has more than one entry; an entry is malformed or uses
-        a value outside those listed; or an entry is "relevant" while drug_role is not
-        "studied".
+        a value outside those listed; an entry is "relevant" while drug_role is not
+        "studied"; or a trial marked "relevant" did not set out to treat this indication.
         """
         # The supervisor builds a fresh agent (fresh, empty shown_by_indication) per
         # analyze_clinical_trials call, so this instance investigates ONE indication —
@@ -782,12 +794,30 @@ def build_clinical_trials_tools(
                     _assigned,
                     ", ".join(demoted),
                 )
+                unreported = [n for n in demoted if n not in gate_rejected_told]
+                gate_rejected_told.update(demoted)
+                if unreported:
+                    named = _assigned or "this indication"
+                    return (
+                        f"REJECTED: {len(unreported)} trial(s) marked relevant did not set out "
+                        f"to TREAT {named} — the objective is a complication, comorbidity, "
+                        f"distinct disease, or a pharmacokinetic/safety characterization: "
+                        f"{', '.join(sorted(unreported))}. This verdict is final. Re-call with "
+                        f"those trial(s) marked contaminated and relevance_reasoning rewritten "
+                        f"to match.",
+                        "",
+                    )
                 relevant_ncts = [n for n in relevant_ncts if n not in demoted]
                 contaminated_ncts = contaminated_ncts + demoted
+        relevant_text = ", ".join(sorted(relevant_ncts)) or "none"
+        contaminated_text = ", ".join(sorted(contaminated_ncts)) or "none"
+        relevance_reasoning = (
+            f"Relevant trials: {relevant_text}. Excluded trials: {contaminated_text}."
+        )
         artifact = FinalizeClinicalTrialsArtifact(
             relevant_ncts=relevant_ncts,
             contaminated_ncts=contaminated_ncts,
-            relevance_reasoning=relevance_reasoning or "",
+            relevance_reasoning=relevance_reasoning,
         )
         return "Analysis complete.", artifact
 

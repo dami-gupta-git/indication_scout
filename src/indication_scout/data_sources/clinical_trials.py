@@ -49,6 +49,7 @@ def _mesh_cond(mesh_term: str) -> str:
 
 
 from indication_scout.models.model_clinical_trials import (
+    ArmGroup,
     CompetitorEntry,
     CompletedTrialsResult,
     IndicationLandscape,
@@ -128,6 +129,7 @@ class ClinicalTrialsClient(BaseClient):
             "date_before": date_before.isoformat() if date_before else None,
             "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
             "coverage_version": "active_union_v1",
+            "trial_schema_version": "arm_groups_v1",
         }
         cached = cache_get("ct_search", cache_params, self.cache_dir)
         if cached is not None:
@@ -305,6 +307,7 @@ class ClinicalTrialsClient(BaseClient):
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
             "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
+            "trial_schema_version": "arm_groups_v1",
         }
         cached = cache_get("ct_terminated", cache_params, self.cache_dir)
         if cached is not None:
@@ -411,6 +414,7 @@ class ClinicalTrialsClient(BaseClient):
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
             "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
+            "trial_schema_version": "arm_groups_v1",
         }
         cached = cache_get("ct_completed", cache_params, self.cache_dir)
         if cached is not None:
@@ -648,8 +652,18 @@ class ClinicalTrialsClient(BaseClient):
                 intervention_type=i.get("type", "").replace("_", " ").title(),
                 intervention_name=i.get("name", ""),
                 description=i.get("description"),
+                arm_group_labels=i.get("armGroupLabels", []),
             )
             for i in arms.get("interventions", [])
+        ]
+
+        arm_groups = [
+            ArmGroup(
+                label=group.get("label", ""),
+                arm_type=group.get("type", "").replace("_", " ").title(),
+                intervention_names=group.get("interventionNames", []),
+            )
+            for group in arms.get("armGroups", [])
         ]
 
         # Primary outcomes
@@ -683,6 +697,7 @@ class ClinicalTrialsClient(BaseClient):
             mesh_conditions=mesh_conditions,
             mesh_ancestors=mesh_ancestors,
             interventions=interventions,
+            arm_groups=arm_groups,
             sponsor=sponsor_mod.get("leadSponsor", {}).get("name", ""),
             enrollment=enrollment,
             start_date=self._extract_date(status.get("startDateStruct")),
