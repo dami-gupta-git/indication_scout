@@ -11,8 +11,8 @@ Emission is best-effort and side-channel only: when no callback is bound (CLI ru
 """
 
 import logging
+from collections.abc import Callable
 from contextvars import ContextVar
-from typing import Callable
 
 logger = logging.getLogger(__name__)
 

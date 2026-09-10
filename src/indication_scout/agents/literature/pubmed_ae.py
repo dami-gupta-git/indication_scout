@@ -56,9 +56,7 @@ def _disease_scoped_query(
         AE_DISEASE_DISEASE_LEG.format(disease=term) for term in disease_terms
     ]
     disease_leg = (
-        disease_legs[0]
-        if len(disease_legs) == 1
-        else f"({' OR '.join(disease_legs)})"
+        disease_legs[0] if len(disease_legs) == 1 else f"({' OR '.join(disease_legs)})"
     )
     return f"({drug_leg} AND {AE_DISEASE_AE_LEG}) AND {disease_leg}"
 

@@ -17,7 +17,6 @@ Run: .venv/bin/python tests/harness_tests/interpretive_fields_harness.py
 import asyncio
 import json
 import sys
-from collections import Counter
 
 from anthropic import AsyncAnthropic
 
@@ -202,7 +201,8 @@ def contradicts(fields, stage):
     """Return the list of phase understatements in the interpretive fields (incl. prose) that
     contradict the stage. Only enforced when the stage asserts a COMPLETED or ACTIVE Phase 3 —
     for genuinely sub-Phase-3 stages (Phase 4 only, completed P2, terminated, unknown-status,
-    early, untested) a 'no Phase 3 program' statement is ACCURATE, not a contradiction."""
+    early, untested) a 'no Phase 3 program' statement is ACCURATE, not a contradiction.
+    """
     s = stage.lower()
     asserts_phase3 = (
         ("phase 3 completed" in s)
@@ -224,12 +224,12 @@ async def main():
         results = await asyncio.gather(*(judge(facts) for _ in range(RUNS_PER_CASE)))
         bad_runs = [contradicts(r, facts["stage"]) for r in results]
         n_clean = sum(1 for b in bad_runs if not b)
-        verdict = "PASS" if n_clean == RUNS_PER_CASE else (
-            "FLAKY" if n_clean else "FAIL"
+        verdict = (
+            "PASS" if n_clean == RUNS_PER_CASE else ("FLAKY" if n_clean else "FAIL")
         )
         print(f"[{verdict}] {n_clean}/{RUNS_PER_CASE}  {name}")
         # Show one contradicting example if any.
-        for r, bad in zip(results, bad_runs):
+        for r, bad in zip(results, bad_runs, strict=False):
             if bad:
                 print(f"        contradiction {bad}: {json.dumps(r)[:200]}")
                 break

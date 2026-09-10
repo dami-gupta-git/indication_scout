@@ -111,12 +111,36 @@ CASES = [
         "2 Phase 3 recruiting (NCT_D, NCT_E)",
         1923,  # an old generic (insulin-era) — no-approval must not read as closure
         [
-            {"nct": "NCT_A", "phase": "Phase 2", "status": "COMPLETED", "title": "P2 study"},
-            {"nct": "NCT_B", "phase": "Phase 4", "status": "COMPLETED", "title": "P4 study"},
-            {"nct": "NCT_C", "phase": "Phase 2/Phase 3", "status": "COMPLETED",
-             "title": "Pivotal P2/3"},
-            {"nct": "NCT_D", "phase": "Phase 3", "status": "Recruiting", "title": "Active P3"},
-            {"nct": "NCT_E", "phase": "Phase 3", "status": "Recruiting", "title": "Active P3"},
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 2",
+                "status": "COMPLETED",
+                "title": "P2 study",
+            },
+            {
+                "nct": "NCT_B",
+                "phase": "Phase 4",
+                "status": "COMPLETED",
+                "title": "P4 study",
+            },
+            {
+                "nct": "NCT_C",
+                "phase": "Phase 2/Phase 3",
+                "status": "COMPLETED",
+                "title": "Pivotal P2/3",
+            },
+            {
+                "nct": "NCT_D",
+                "phase": "Phase 3",
+                "status": "Recruiting",
+                "title": "Active P3",
+            },
+            {
+                "nct": "NCT_E",
+                "phase": "Phase 3",
+                "status": "Recruiting",
+                "title": "Active P3",
+            },
         ],
         "live",
         True,
@@ -127,9 +151,18 @@ CASES = [
         "None active",
         1880,  # cocaine-era; old, no approval ≠ closed
         [
-            {"nct": "NCT02111798", "phase": "Phase 2/Phase 3", "status": "COMPLETED",
-             "title": "Pivotal"},
-            {"nct": "NCT00227812", "phase": "Phase 2", "status": "COMPLETED", "title": "P2"},
+            {
+                "nct": "NCT02111798",
+                "phase": "Phase 2/Phase 3",
+                "status": "COMPLETED",
+                "title": "Pivotal",
+            },
+            {
+                "nct": "NCT00227812",
+                "phase": "Phase 2",
+                "status": "COMPLETED",
+                "title": "P2",
+            },
         ],
         "live",
         True,
@@ -139,8 +172,14 @@ CASES = [
         "Phase 3 completed for this indication",
         "None active",
         2005,
-        [{"nct": "NCT_A", "phase": "Phase 3/Phase 4", "status": "COMPLETED",
-          "title": "P3/4 pivotal"}],
+        [
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 3/Phase 4",
+                "status": "COMPLETED",
+                "title": "P3/4 pivotal",
+            }
+        ],
         "live",
         True,
     ),
@@ -150,8 +189,13 @@ CASES = [
         "None active",
         2010,
         [
-            {"nct": "NCT_A", "phase": "Phase 3", "status": "Terminated",
-             "title": "Pivotal P3", "why_stopped": "halted for serious adverse events"},
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 3",
+                "status": "Terminated",
+                "title": "Pivotal P3",
+                "why_stopped": "halted for serious adverse events",
+            },
             {"nct": "NCT_B", "phase": "Phase 2", "status": "COMPLETED", "title": "P2"},
         ],
         "closed",
@@ -163,8 +207,13 @@ CASES = [
         "None active",
         2012,
         [
-            {"nct": "NCT_A", "phase": "Phase 3", "status": "Terminated",
-             "title": "P3", "why_stopped": "terminated due to low enrollment"},
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 3",
+                "status": "Terminated",
+                "title": "P3",
+                "why_stopped": "terminated due to low enrollment",
+            },
         ],
         "live",  # operational stop is not closure; live (or unknown) acceptable
         False,
@@ -174,7 +223,14 @@ CASES = [
         "Phase 2 completed for this indication, no Phase 3",
         "None active",
         1957,  # metformin-era
-        [{"nct": "NCT_A", "phase": "Phase 2", "status": "COMPLETED", "title": "P2 readout"}],
+        [
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 2",
+                "status": "COMPLETED",
+                "title": "P2 readout",
+            }
+        ],
         "live",
         False,
     ),
@@ -183,7 +239,14 @@ CASES = [
         "Active Phase 3 development on record for this indication",
         "1 Phase 3 recruiting (NCT_A)",
         2018,
-        [{"nct": "NCT_A", "phase": "Phase 3", "status": "Recruiting", "title": "Ongoing P3"}],
+        [
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 3",
+                "status": "Recruiting",
+                "title": "Ongoing P3",
+            }
+        ],
         "live",
         False,
     ),
@@ -195,12 +258,17 @@ async def judge(case):
     resp = await client.messages.create(
         model=MODEL,
         max_tokens=600,
-        messages=[{"role": "user", "content": PROMPT.format(
-            stage=stage,
-            active_programs=active,
-            first_approval=first_approval,
-            trials=fmt(trials),
-        )}],
+        messages=[
+            {
+                "role": "user",
+                "content": PROMPT.format(
+                    stage=stage,
+                    active_programs=active,
+                    first_approval=first_approval,
+                    trials=fmt(trials),
+                ),
+            }
+        ],
     )
     text = resp.content[0].text.strip()
     if text.startswith("```"):
@@ -239,7 +307,9 @@ async def main():
         closures = Counter(c for _, c in results)
         n_closure_ok = sum(closure_ok(c, expected_closure) for _, c in results)
         # Contradiction check only where the stage asserts a completed Phase 3.
-        bad_runs = [contradicts(p) for p, _ in results] if forbid else [[] for _ in results]
+        bad_runs = (
+            [contradicts(p) for p, _ in results] if forbid else [[] for _ in results]
+        )
         n_clean = sum(not b for b in bad_runs)
 
         closure_pass = n_closure_ok == RUNS_PER_CASE
@@ -248,8 +318,10 @@ async def main():
         if verdict == "FAIL":
             all_pass = False
         print(f"[{verdict}] {name}")
-        print(f"        closure {n_closure_ok}/{RUNS_PER_CASE} ok "
-              f"(expected={expected_closure}, got={dict(closures)})")
+        print(
+            f"        closure {n_closure_ok}/{RUNS_PER_CASE} ok "
+            f"(expected={expected_closure}, got={dict(closures)})"
+        )
         if forbid:
             print(f"        prose   {n_clean}/{RUNS_PER_CASE} contradiction-free")
             hits = [h for b in bad_runs for h in b]

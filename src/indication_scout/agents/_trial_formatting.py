@@ -77,9 +77,11 @@ def _format_interventions(interventions: list, cap: int = _INTERVENTIONS_CAP) ->
     if not interventions:
         return "(none)"
     rendered = [
-        f"{i.intervention_type}: {i.intervention_name}"
-        if i.intervention_type
-        else i.intervention_name
+        (
+            f"{i.intervention_type}: {i.intervention_name}"
+            if i.intervention_type
+            else i.intervention_name
+        )
         for i in interventions[:cap]
         if i.intervention_name
     ]

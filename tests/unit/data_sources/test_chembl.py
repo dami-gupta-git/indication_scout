@@ -14,7 +14,6 @@ from indication_scout.data_sources.chembl import (
 from indication_scout.models.model_chembl import (
     ATCDescription,
     MoleculeData,
-    MoleculeSynonym,
 )
 
 CHEMBL894_FIXTURE = {

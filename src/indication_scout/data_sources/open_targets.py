@@ -24,8 +24,6 @@ from indication_scout.constants import (
     INTERACTION_TYPE_MAP,
     OPEN_TARGETS_BASE_URL,
 )
-from indication_scout.markers import no_review
-from indication_scout.utils.cache import cache_get, cache_set
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
 from indication_scout.data_sources.chembl import (
     ChEMBLClient,
@@ -33,30 +31,30 @@ from indication_scout.data_sources.chembl import (
     get_drug_family_chembl_ids,
 )
 from indication_scout.helpers.drug_helpers import normalize_drug_name
-
 from indication_scout.models.model_open_targets import (
-    Association,
-    Pathway,
-    Interaction,
-    ClinicalDisease,
-    DrugSummary,
-    MousePhenotype,
-    TargetData,
-    GeneticConstraint,
     AdverseEvent,
+    Association,
     BiologicalModel,
-    DrugData,
-    DrugTarget,
-    EvidenceRecord,
-    MechanismOfAction,
-    DrugWarning,
-    Indication,
-    SafetyLiability,
-    SafetyEffect,
+    ClinicalDisease,
     DiseaseSynonyms,
+    DrugData,
+    DrugSummary,
+    DrugTarget,
+    DrugWarning,
+    EvidenceRecord,
+    GeneticConstraint,
+    Indication,
+    Interaction,
+    MechanismOfAction,
+    MousePhenotype,
+    Pathway,
     RichDrugData,
+    SafetyEffect,
+    SafetyLiability,
+    TargetData,
     VariantFunctionalConsequence,
 )
+from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
@@ -276,7 +274,7 @@ class OpenTargetsClient(BaseClient):
         all_summaries = await asyncio.gather(
             *[self.get_target_data_drug_summaries(t.target_id) for t in targets]
         )
-        for t, summaries in zip(targets, all_summaries):
+        for t, summaries in zip(targets, all_summaries, strict=True):
             logger.debug(t.mechanism_of_action)
             for summary in summaries:
                 stage_rank = CLINICAL_STAGE_RANK.get(
@@ -536,7 +534,7 @@ class OpenTargetsClient(BaseClient):
                 *[self._fetch_evidences_single(target_id, efo) for efo in missing]
             )
             new_serialized: dict[str, list[dict[str, Any]]] = {}
-            for efo_id, records in zip(missing, fresh):
+            for efo_id, records in zip(missing, fresh, strict=True):
                 results[efo_id] = records
                 new_serialized[efo_id] = [r.model_dump() for r in records]
             _save_target_evidences(

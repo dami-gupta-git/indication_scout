@@ -2,10 +2,10 @@
 Unit tests for services/embeddings — does not do model loading.
 """
 
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 import pytest
-from pathlib import Path
-from unittest.mock import MagicMock, patch
 
 import indication_scout.services.embeddings as embeddings_module
 from indication_scout.services.embeddings import _is_model_cached, embed
@@ -63,11 +63,7 @@ def test_is_model_cached_returns_false_when_snapshots_dir_empty(tmp_path):
 def test_is_model_cached_returns_true_when_snapshot_present(tmp_path):
     """_is_model_cached() returns True when a non-empty snapshots directory exists."""
     snapshot_dir = (
-        tmp_path
-        / "hub"
-        / "models--FremyCompany--BioLORD-2023"
-        / "snapshots"
-        / "abc123"
+        tmp_path / "hub" / "models--FremyCompany--BioLORD-2023" / "snapshots" / "abc123"
     )
     snapshot_dir.mkdir(parents=True)
     (snapshot_dir / "config.json").write_text("{}")
@@ -79,7 +75,11 @@ def test_is_model_cached_uses_hf_home_env_var(tmp_path):
     """_is_model_cached() resolves the cache root from the HF_HOME env var."""
     custom_home = tmp_path / "custom_hf"
     snapshot_dir = (
-        custom_home / "hub" / "models--FremyCompany--BioLORD-2023" / "snapshots" / "rev1"
+        custom_home
+        / "hub"
+        / "models--FremyCompany--BioLORD-2023"
+        / "snapshots"
+        / "rev1"
     )
     snapshot_dir.mkdir(parents=True)
     (snapshot_dir / "pytorch_model.bin").write_bytes(b"\x00")

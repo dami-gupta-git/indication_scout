@@ -2,7 +2,6 @@
 
 import json
 import logging
-
 from datetime import datetime
 from pathlib import Path
 
@@ -140,7 +139,7 @@ class ChEMBLClient(BaseClient):
             raise DataSourceError(
                 self._source_name,
                 f"Unexpected error fetching ATC code '{atc_code}': {e}",
-            )
+            ) from e
 
         if not isinstance(raw, dict):
             raise DataSourceError(
@@ -189,7 +188,7 @@ class ChEMBLClient(BaseClient):
             except Exception as e:
                 raise DataSourceError(
                     self._source_name, f"Unexpected error fetching {chembl_id}: {e}"
-                )
+                ) from e
             if isinstance(raw, dict):
                 cache_set(_CHEMBL_MOLECULE_NS, cache_params, raw, self.cache_dir)
 

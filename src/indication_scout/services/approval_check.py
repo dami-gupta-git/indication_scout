@@ -587,7 +587,7 @@ async def get_fda_approved_disease_mapping(
         on any failure (chembl, FDA fetch, LLM parse) — a failure must NOT
         drop a candidate.
     """
-    result: dict[str, ApprovalLabel] = {c: "none" for c in candidate_diseases}
+    result: dict[str, ApprovalLabel] = dict.fromkeys(candidate_diseases, "none")
 
     if not drug_name or not candidate_diseases:
         return result

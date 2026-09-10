@@ -42,7 +42,9 @@ MAX_CONCURRENCY = 6
 ROOT = Path(__file__).parent.parent
 SEED_DIR = ROOT / "seed_examples"
 CURRENT_PROMPT = (ROOT / "src/indication_scout/prompts/synthesize.txt").read_text()
-CANDIDATE_PROMPT = (Path(__file__).parent / "prompts" / "adverse_event_synthesis_prompt.txt").read_text()
+CANDIDATE_PROMPT = (
+    Path(__file__).parent / "prompts" / "adverse_event_synthesis_prompt.txt"
+).read_text()
 
 _sem = asyncio.Semaphore(MAX_CONCURRENCY)
 
@@ -122,8 +124,12 @@ async def main():
         )
         cur_dir, cand_dir = modal(cur, "direction"), modal(cand, "direction")
         cur_str, cand_str = modal(cur, "strength"), modal(cand, "strength")
-        cur_contra, cand_contra = pmid_set(cur, "contradicting_pmids"), pmid_set(cand, "contradicting_pmids")
-        cur_supp, cand_supp = pmid_set(cur, "supporting_pmids"), pmid_set(cand, "supporting_pmids")
+        cur_contra, cand_contra = pmid_set(cur, "contradicting_pmids"), pmid_set(
+            cand, "contradicting_pmids"
+        )
+        cur_supp, cand_supp = pmid_set(cur, "supporting_pmids"), pmid_set(
+            cand, "supporting_pmids"
+        )
 
         diverged = (
             cur_dir != cand_dir

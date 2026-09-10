@@ -86,9 +86,7 @@ def setup_tracing() -> None:
         base_url = settings.langfuse_base_url.rstrip("/")
         endpoint = f"{base_url}{_OTEL_TRACES_PATH}"
         auth_token = base64.b64encode(
-            f"{settings.langfuse_public_key}:{settings.langfuse_secret_key}".encode(
-                "utf-8"
-            )
+            f"{settings.langfuse_public_key}:{settings.langfuse_secret_key}".encode()
         ).decode("ascii")
 
         # langfuse.release maps to the trace's `release` field; include the HEAD

@@ -65,15 +65,15 @@ async def test_search_trials_with_resolved_mesh_term(
         )
 
         # Fetch is capped by CLINICAL_TRIALS_FETCH_MAX; never exceeds total.
-        assert fetched <= total, (
-            f"{drug} x {indication}: fetched {fetched} exceeds total {total}"
-        )
+        assert (
+            fetched <= total
+        ), f"{drug} x {indication}: fetched {fetched} exceeds total {total}"
 
     # Allow at most one pair to return zero trials (e.g. resolver mis-pick
     # on an ambiguous indication). If more than one is empty, the pipeline
     # is broken across the board.
     nonempty = sum(1 for *_, total, _ in results if total > 0)
     min_nonempty = max(1, len(results) - 1)
-    assert nonempty >= min_nonempty, (
-        f"only {nonempty}/{len(results)} pairs returned trials: {results}"
-    )
+    assert (
+        nonempty >= min_nonempty
+    ), f"only {nonempty}/{len(results)} pairs returned trials: {results}"

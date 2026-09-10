@@ -156,7 +156,11 @@ CASES = [
     (
         "terminated Phase 3 for SAFETY, plus a completed Phase 2",
         [
-            {"nct": "NCT_A", "phase": "Phase 3", "status": "Terminated (safety concerns)"},
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 3",
+                "status": "Terminated (safety concerns)",
+            },
             {"nct": "NCT_B", "phase": "Phase 2", "status": "COMPLETED"},
         ],
         # No COMPLETED Phase 3; a terminated-for-cause P3 is a closure signal, not a completed
@@ -166,7 +170,11 @@ CASES = [
     (
         "ALL Phase 3 terminated for enrollment (operational), none completed",
         [
-            {"nct": "NCT_A", "phase": "Phase 3", "status": "Terminated (low enrollment)"},
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 3",
+                "status": "Terminated (low enrollment)",
+            },
             {"nct": "NCT_B", "phase": "Phase 3", "status": "Terminated (slow accrual)"},
         ],
         # No completed/active P3. Operational terminations aren't a completed program.
@@ -175,7 +183,11 @@ CASES = [
     (
         "active Phase 2/3 (recruiting) + completed Phase 1",
         [
-            {"nct": "NCT_A", "phase": "Phase 2/Phase 3", "status": "Active, not recruiting"},
+            {
+                "nct": "NCT_A",
+                "phase": "Phase 2/Phase 3",
+                "status": "Active, not recruiting",
+            },
             {"nct": "NCT_B", "phase": "Phase 1", "status": "COMPLETED"},
         ],
         "active_phase3",
@@ -257,16 +269,12 @@ def ok(got, expected):
 async def main():
     print(f"=== model: {MODEL} ===")
     # Subset = the 5 crux cases (Phase-4 traps + the recurring bug + status edges).
-    cases = (
-        [CASES[0], CASES[1], CASES[2], CASES[9], CASES[6]] if _SUBSET else CASES
-    )
+    cases = [CASES[0], CASES[1], CASES[2], CASES[9], CASES[6]] if _SUBSET else CASES
     for name, trials, expected in cases:
         results = await asyncio.gather(*(judge(trials) for _ in range(RUNS_PER_CASE)))
         counts = Counter(results)
         n_ok = sum(ok(r, expected) for r in results)
-        verdict = "PASS" if n_ok == RUNS_PER_CASE else (
-            "FLAKY" if n_ok else "FAIL"
-        )
+        verdict = "PASS" if n_ok == RUNS_PER_CASE else ("FLAKY" if n_ok else "FAIL")
         print(f"[{verdict}] {n_ok}/{RUNS_PER_CASE}  {name}")
         print(f"        expected={expected}  got={dict(counts)}")
 

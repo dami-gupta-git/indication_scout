@@ -43,4 +43,6 @@ def test_downweighted_datasource_uses_published_weight() -> None:
     # europepmc has weight 0.2; a lone europepmc row should score far below its raw value.
     raw = 0.8
     scored = recompute_overall({"europepmc": raw}, exclude=set())
-    assert scored < raw * 0.2  # weighted then normalized by the harmonic-of-ones constant
+    assert (
+        scored < raw * 0.2
+    )  # weighted then normalized by the harmonic-of-ones constant

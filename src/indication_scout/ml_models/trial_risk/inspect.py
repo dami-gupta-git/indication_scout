@@ -19,9 +19,8 @@ from pathlib import Path
 from sqlalchemy import text
 
 from indication_scout.constants import DEFAULT_CACHE_DIR
+from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
 from indication_scout.db.session import get_db
-from indication_scout.services.embeddings import embed_async
-from indication_scout.services.retrieval import RetrievalService
 from indication_scout.ml_models.trial_risk.data import load_labeled_trials
 from indication_scout.ml_models.trial_risk.literature import (
     DEFAULT_LOOKBACK_MONTHS,
@@ -31,7 +30,8 @@ from indication_scout.ml_models.trial_risk.literature import (
     SAFETY_QUERY,
     cutoff_for_trial,
 )
-from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
+from indication_scout.services.embeddings import embed_async
+from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
 

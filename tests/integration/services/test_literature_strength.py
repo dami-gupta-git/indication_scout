@@ -234,9 +234,9 @@ def _assert_self_consistent(s):
     # drug X, not this drug"), which is exactly the class-level/approved disclaimer case.
     for kf in s.key_findings:
         cited = set(_re.findall(r"PMID:\s*(\d+)", kf))
-        assert cited <= relevant, (
-            f"key_finding cites non-relevant PMID(s) {cited - relevant}: {kf}"
-        )
+        assert (
+            cited <= relevant
+        ), f"key_finding cites non-relevant PMID(s) {cited - relevant}: {kf}"
 
 
 @pytest.mark.approval_aware
@@ -290,16 +290,16 @@ async def test_paired_program_splits_positive_and_negative_trials(test_cache_dir
     )
     # BRAVE-I met its primary endpoint -> must appear in supporting (it may also be in
     # contradicting if graded mixed for missing secondaries — that is acceptable).
-    assert "36848918" in s.supporting_pmids, (
-        f"BRAVE-I (positive) not in supporting: {s.supporting_pmids}"
-    )
+    assert (
+        "36848918" in s.supporting_pmids
+    ), f"BRAVE-I (positive) not in supporting: {s.supporting_pmids}"
     # BRAVE-II is a clean primary-endpoint failure -> contradicting, and must NOT be in supporting.
-    assert "36848919" in s.contradicting_pmids, (
-        f"BRAVE-II (negative) not in contradicting: {s.contradicting_pmids}"
-    )
-    assert "36848919" not in s.supporting_pmids, (
-        f"BRAVE-II (clean failure) leaked into supporting: {s.supporting_pmids}"
-    )
+    assert (
+        "36848919" in s.contradicting_pmids
+    ), f"BRAVE-II (negative) not in contradicting: {s.contradicting_pmids}"
+    assert (
+        "36848919" not in s.supporting_pmids
+    ), f"BRAVE-II (clean failure) leaked into supporting: {s.supporting_pmids}"
     # Both are this-drug-this-disease evidence with one positive and one negative -> mixed overall.
     assert s.direction == "mixed", f"expected mixed, got {s.direction!r}"
     _assert_self_consistent(s)
@@ -310,7 +310,8 @@ async def test_comparator_benefit_not_credited_to_drug(test_cache_dir):
     """Arm-attribution (the regex guard could not do this): an abstract where a COMPARATOR
     (ipragliflozin) 'significantly improved' steatosis while metformin 'showed minimal change' must
     be CONTRADICTING for metformin — the benefit belongs to the other drug. The flat-negative
-    metformin RCT is also contradicting. So neither lands in supporting and the pair is contradicts."""
+    metformin RCT is also contradicting. So neither lands in supporting and the pair is contradicts.
+    """
     s = await _synthesize(
         _STEATOSIS_ARM_ATTRIBUTION_ABSTRACTS,
         drug="metformin",
@@ -318,9 +319,9 @@ async def test_comparator_benefit_not_credited_to_drug(test_cache_dir):
         cache_dir=test_cache_dir,
     )
     # The comparator-benefit abstract must NOT be credited to metformin.
-    assert "39806556" not in s.supporting_pmids, (
-        f"comparator's benefit credited to metformin: {s.supporting_pmids}"
-    )
+    assert (
+        "39806556" not in s.supporting_pmids
+    ), f"comparator's benefit credited to metformin: {s.supporting_pmids}"
     assert "39806556" in s.contradicting_pmids
     # The flat-negative metformin RCT is contradicting too.
     assert "19811343" in s.contradicting_pmids
@@ -561,20 +562,25 @@ async def test_animal_only_murine_asthma_is_true(test_cache_dir):
         indication="Asthma",
         cache_dir=test_cache_dir,
     )
-    assert s.is_animal_only is True, f"murine-only asthma graded {s.is_animal_only!r}: {s!r}"
+    assert (
+        s.is_animal_only is True
+    ), f"murine-only asthma graded {s.is_animal_only!r}: {s!r}"
     _assert_self_consistent(s)
 
 
 @pytest.mark.approval_aware
 async def test_animal_only_false_when_relevant_human_rct_present(test_cache_dir):
     """A human adalimumab PsA RCT is relevant human evidence → is_animal_only False. The off-disease
-    murine asthma abstract is excluded as contaminated, so the graded evidence is human-only."""
+    murine asthma abstract is excluded as contaminated, so the graded evidence is human-only.
+    """
     s = await _synthesize(
         [_ASTHMA_MURINE_ABSTRACT, _PSA_HUMAN_RCT],
         drug="adalimumab",
         indication="Psoriatic Arthritis",
         cache_dir=test_cache_dir,
     )
-    assert s.is_animal_only is False, f"human RCT present but graded {s.is_animal_only!r}: {s!r}"
+    assert (
+        s.is_animal_only is False
+    ), f"human RCT present but graded {s.is_animal_only!r}: {s!r}"
     assert "16200601" in s.relevant_pmids, "human PsA RCT should be relevant"
     _assert_self_consistent(s)

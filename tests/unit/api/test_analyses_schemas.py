@@ -28,7 +28,10 @@ def test_status_response_serializes_supervisor_output():
     assert dumped["status"] == "done"
     assert dumped["error"] is None
     assert dumped["result"]["drug_name"] == "metformin"
-    assert dumped["result"]["candidate_diseases"] == ["breast cancer", "alzheimer disease"]
+    assert dumped["result"]["candidate_diseases"] == [
+        "breast cancer",
+        "alzheimer disease",
+    ]
     assert dumped["result"]["top_diseases"] == ["breast cancer"]
     assert dumped["result"]["summary"] == "Promising in oncology."
 

@@ -2,7 +2,6 @@
 
 import logging
 
-
 from indication_scout.services.llm import query_llm, query_small_llm
 
 logger = logging.getLogger(__name__)

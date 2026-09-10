@@ -94,9 +94,9 @@ class EuropePMCArticle(BaseModel):
         list. Those are read directly; a shape outside them raises rather than being coerced. A
         record with no first-publication date is genuinely undated and raises.
         """
-        journal = (
-            ((raw.get("journalInfo") or {}).get("journal") or {}).get("title") or None
-        )
+        journal = ((raw.get("journalInfo") or {}).get("journal") or {}).get(
+            "title"
+        ) or None
 
         pub_types = (raw.get("pubTypeList") or {}).get("pubType") or []
         pub_types = list(dict.fromkeys(pt for pt in pub_types if pt))

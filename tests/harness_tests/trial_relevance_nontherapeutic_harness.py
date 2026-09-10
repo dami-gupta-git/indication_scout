@@ -57,7 +57,7 @@ _CASES = [
                 "Not Applicable",
                 "Understanding the Effect of Metformin on Corus CAD (or ASGES)",
                 "The study goal was to understand the effect of Metformin on Age/Sex/Gene "
-                "Expression Score (ASGES) or Corus CAD (henceforth \"Corus\") in pre-diabetic "
+                'Expression Score (ASGES) or Corus CAD (henceforth "Corus") in pre-diabetic '
                 "patients who are medication naive. This study provided data to determine if the "
                 "Corus CAD (ASGES) signature was different in pre-diabetic patients when metformin "
                 "was newly prescribed and taken.",
@@ -114,7 +114,10 @@ _CASES = [
                 "Prediabetes is a predictor of high cardiovascular mortality. Insulin resistance is "
                 "one of the crucial mechanisms for the development and progression of chronic heart "
                 "failure (CHF).",
-                [("Drug", "Metformin Hydrochloride"), ("Other", "lifestyle modification")],
+                [
+                    ("Drug", "Metformin Hydrochloride"),
+                    ("Other", "lifestyle modification"),
+                ],
                 "relevant",
                 "control — non-drug intervention co-listed, metformin still the studied drug",
             ),
@@ -152,7 +155,8 @@ def _row(nct: str, phase: str, title: str, summary: str, interventions) -> str:
         title=title,
         brief_summary=summary,
         interventions=[
-            Intervention(intervention_type=t, intervention_name=n) for t, n in interventions
+            Intervention(intervention_type=t, intervention_name=n)
+            for t, n in interventions
         ],
     )
     return _format_trial_row(trial, _COLUMNS)
@@ -200,7 +204,9 @@ async def main() -> None:
     total_hits = 0
     total_slots = 0
     for candidate, trials in _CASES:
-        results = await asyncio.gather(*(_run_one(candidate, trials) for _ in range(RUNS)))
+        results = await asyncio.gather(
+            *(_run_one(candidate, trials) for _ in range(RUNS))
+        )
         print(f"--- candidate: {candidate}")
         for nct, _phase, title, _summary, _ints, expected, note in trials:
             hits = sum(1 for r in results if r.get(nct) == expected)

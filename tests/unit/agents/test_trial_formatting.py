@@ -14,18 +14,18 @@ from indication_scout.models.model_clinical_trials import (
 
 
 def _trial(**overrides) -> Trial:
-    base = dict(
-        nct_id="NCT00000001",
-        title="A study of sildenafil",
-        phase="Phase 3",
-        overall_status="COMPLETED",
-        brief_summary="Sildenafil for systemic hypertension in adults.",
-        interventions=[
+    base = {
+        "nct_id": "NCT00000001",
+        "title": "A study of sildenafil",
+        "phase": "Phase 3",
+        "overall_status": "COMPLETED",
+        "brief_summary": "Sildenafil for systemic hypertension in adults.",
+        "interventions": [
             Intervention(intervention_type="Drug", intervention_name="Sildenafil"),
             Intervention(intervention_type="Drug", intervention_name="Placebo"),
         ],
-        sponsor="S",
-    )
+        "sponsor": "S",
+    }
     base.update(overrides)
     return Trial(**base)
 

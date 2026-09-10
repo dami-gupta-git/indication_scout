@@ -53,9 +53,7 @@ async def test_removes_approved_indications(monkeypatch):
     monkeypatch.setattr(
         condition_grouping,
         "merge_duplicate_diseases",
-        _merge_returning(
-            {"rheumatoid arthritis": ["RA"]}, ["rheumatoid arthritis"]
-        ),
+        _merge_returning({"rheumatoid arthritis": ["RA"]}, ["rheumatoid arthritis"]),
     )
 
     grouped = await group_conditions(

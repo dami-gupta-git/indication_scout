@@ -38,7 +38,9 @@ def _reset_provider():
 def test_setup_noop_when_disabled():
     """tracing_enabled=False -> no provider set, instrumentor never called."""
     with (
-        patch.object(tracing, "get_settings", return_value=_settings(tracing_enabled=False)),
+        patch.object(
+            tracing, "get_settings", return_value=_settings(tracing_enabled=False)
+        ),
         patch(
             "openinference.instrumentation.langchain.LangChainInstrumentor"
         ) as instrumentor,
@@ -83,9 +85,7 @@ def test_setup_initialises_when_enabled_and_keyed():
                 langfuse_base_url="https://us.cloud.langfuse.com",
             ),
         ),
-        patch(
-            "opentelemetry.sdk.trace.TracerProvider", return_value=fake_provider
-        ),
+        patch("opentelemetry.sdk.trace.TracerProvider", return_value=fake_provider),
         patch("opentelemetry.sdk.trace.export.BatchSpanProcessor") as bsp,
         patch(
             "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter"

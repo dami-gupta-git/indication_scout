@@ -8,7 +8,7 @@ import logging
 import time
 from pathlib import Path
 
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 
 from indication_scout.agents._react_loop import (
     _trailing_tool_messages,
@@ -148,32 +148,32 @@ async def run_clinical_trials_agent(
     _agent_elapsed = time.perf_counter() - _agent_t0
 
     # Per-turn LLM accounting. Each AIMessage is one round-trip. Read-only.
-    ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
-    total_out = 0
-    for i, msg in enumerate(ai_turns):
-        usage = msg.usage_metadata or {}
-        in_tok = usage.get("input_tokens", 0)
-        out_tok = usage.get("output_tokens", 0)
-        # cache_read==0 across turns 2+ means a silent cache invalidator. langchain-anthropic
-        # reports fresh writes under the ephemeral keys, not cache_creation.
-        details = usage.get("input_token_details", {})
-        cache_read = details.get("cache_read", 0)
-        cache_write = (
-            details.get("ephemeral_5m_input_tokens", 0)
-            + details.get("ephemeral_1h_input_tokens", 0)
-        ) or details.get("cache_creation", 0)
-        total_out += out_tok
+    # ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
+    # total_out = 0
+    # for i, msg in enumerate(ai_turns):
+    #     usage = msg.usage_metadata or {}
+    #     in_tok = usage.get("input_tokens", 0)
+    #     out_tok = usage.get("output_tokens", 0)
+    #     # cache_read==0 across turns 2+ means a silent cache invalidator. langchain-anthropic
+    #     # reports fresh writes under the ephemeral keys, not cache_creation.
+    #     details = usage.get("input_token_details", {})
+    #     cache_read = details.get("cache_read", 0)
+    #     cache_write = (
+    #         details.get("ephemeral_5m_input_tokens", 0)
+    #         + details.get("ephemeral_1h_input_tokens", 0)
+    #     ) or details.get("cache_creation", 0)
+    #     total_out += out_tok
 
-        # Args show what each retry queries, not just that a tool re-ran. Truncated —
-        # finalize_analysis carries hundreds of per-NCT verdicts.
-        def _fmt_args(args: dict) -> str:
-            rendered = ", ".join(f"{k}={v!r}" for k, v in args.items())
-            return rendered if len(rendered) <= 200 else rendered[:200] + "…"
+    #     # Args show what each retry queries, not just that a tool re-ran. Truncated —
+    #     # finalize_analysis carries hundreds of per-NCT verdicts.
+    #     def _fmt_args(args: dict) -> str:
+    #         rendered = ", ".join(f"{k}={v!r}" for k, v in args.items())
+    #         return rendered if len(rendered) <= 200 else rendered[:200] + "…"
 
-        called = (
-            ", ".join(f"{tc['name']}({_fmt_args(tc['args'])})" for tc in msg.tool_calls)
-            or "(final)"
-        )
+    #     called = (
+    #         ", ".join(f"{tc['name']}({_fmt_args(tc['args'])})" for tc in msg.tool_calls)
+    #         or "(final)"
+    #     )
     # logger.warn(
     #     "[LLMTURN] clinical_trials %s: %d turns, %d total output tokens, "
     #     "agent loop %.1fs",

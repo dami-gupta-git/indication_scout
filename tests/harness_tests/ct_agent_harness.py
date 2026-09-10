@@ -38,9 +38,17 @@ _FULL = os.environ.get("FULL") == "1"
 
 # Bug A cases from BUGS_2026-06-14.md, plus first_approval years (generic → no-NDA cue).
 CASES: list[tuple[str, str, int | None]] = [
-    ("metformin", "polycystic ovary syndrome", 1995),   # A2: 22 completed Phase 3, must be LIVE
-    ("metformin", "hepatic steatosis", 1995),           # A1: terminations operational, NOT closed
-    ("sildenafil", "covid-19", 1998),                   # B: MeSH mis-resolution (separate bug)
+    (
+        "metformin",
+        "polycystic ovary syndrome",
+        1995,
+    ),  # A2: 22 completed Phase 3, must be LIVE
+    (
+        "metformin",
+        "hepatic steatosis",
+        1995,
+    ),  # A1: terminations operational, NOT closed
+    ("sildenafil", "covid-19", 1998),  # B: MeSH mis-resolution (separate bug)
 ]
 
 
@@ -73,13 +81,17 @@ def _dump_messages(messages: list, full: bool = False) -> None:
                 print(f"      text: {text.strip() if full else text.strip()[:600]}")
         elif isinstance(m, ToolMessage):
             content = m.content if isinstance(m.content, str) else str(m.content)
-            print(f"[{i}] TOOL {m.name}: {content.strip() if full else content.strip()[:300]}")
+            print(
+                f"[{i}] TOOL {m.name}: {content.strip() if full else content.strip()[:300]}"
+            )
 
 
 def _dump_decision(output) -> None:
     """Print the assembled decision — what the supervisor would consume."""
     print("\n--- ASSEMBLED DECISION (ClinicalTrialsOutput) ---")
-    print(f"relevant_nct_ids   ({len(output.relevant_nct_ids)}): {output.relevant_nct_ids}")
+    print(
+        f"relevant_nct_ids   ({len(output.relevant_nct_ids)}): {output.relevant_nct_ids}"
+    )
     print(
         f"contaminated_nct_ids ({len(output.contaminated_nct_ids)}): "
         f"{output.contaminated_nct_ids}"

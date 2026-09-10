@@ -23,12 +23,11 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.supervisor.supervisor_tools import build_supervisor_tools
-from indication_scout.services.retrieval import RetrievalService
 from indication_scout.config import get_settings
 from indication_scout.constants import (
-    DEFAULT_CACHE_DIR,
     DISEASE_SYNONYM_CANONICAL,
 )
+from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +53,11 @@ def _allowlist_state(tools: dict) -> tuple[dict, dict]:
     the seed-phase asyncio.Event); walk one layer down to the impl to find them.
     """
     fc = tools["find_candidates"]
-    outer = dict(zip(fc.coroutine.__code__.co_freevars, fc.coroutine.__closure__))
+    outer = dict(
+        zip(fc.coroutine.__code__.co_freevars, fc.coroutine.__closure__, strict=False)
+    )
     impl = outer["_find_candidates_impl"].cell_contents
-    inner = dict(zip(impl.__code__.co_freevars, impl.__closure__))
+    inner = dict(zip(impl.__code__.co_freevars, impl.__closure__, strict=False))
     return (
         inner["allowed_diseases"].cell_contents,
         inner["allowed_efo_ids"].cell_contents,
@@ -76,7 +77,9 @@ def _preset_mechanism_gate(tools: dict) -> None:
     over it because it doesn't reference it by name. Read from the outer wrapper.
     """
     am = tools["analyze_mechanism"]
-    outer = dict(zip(am.coroutine.__code__.co_freevars, am.coroutine.__closure__))
+    outer = dict(
+        zip(am.coroutine.__code__.co_freevars, am.coroutine.__closure__, strict=False)
+    )
     outer["analyze_mechanism_done"].cell_contents.set()
 
 
@@ -90,7 +93,9 @@ def _preset_both_gates(tools: dict) -> None:
     are closed over by the analyze_literature wrapper, so read them from there.
     """
     al = tools["analyze_literature"]
-    closure = dict(zip(al.coroutine.__code__.co_freevars, al.coroutine.__closure__))
+    closure = dict(
+        zip(al.coroutine.__code__.co_freevars, al.coroutine.__closure__, strict=False)
+    )
     closure["find_candidates_done"].cell_contents.set()
     closure["analyze_mechanism_done"].cell_contents.set()
 
@@ -781,7 +786,9 @@ _UNDERSTATEMENT_PHRASES = (
 def _finalize_closure(tools: dict) -> tuple[dict, dict]:
     """Reach finalize_supervisor's closure-scoped findings_local + allowed_diseases."""
     fin = tools["finalize_supervisor"]
-    closure = dict(zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__))
+    closure = dict(
+        zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__, strict=False)
+    )
     return (
         closure["findings_local"].cell_contents,
         closure["allowed_diseases"].cell_contents,

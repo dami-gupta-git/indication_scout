@@ -7,7 +7,7 @@ history to pull typed artifacts off the ToolMessages and assembles them into a L
 import logging
 from pathlib import Path
 
-from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
+from langchain_core.messages import HumanMessage, ToolMessage
 from langgraph.prebuilt import create_react_agent
 
 from indication_scout.agents._react_loop import (
@@ -70,24 +70,24 @@ async def run_literature_agent(
     # tokens (what it generated). Logged at WARNING so the round-trip breakdown
     # surfaces — isolates whether loop overhead is many turns, large output, or
     # context growth. Pure read of the returned history; no loop logic touched.
-    ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
-    total_out = 0
-    for i, msg in enumerate(ai_turns):
-        usage = msg.usage_metadata or {}
-        in_tok = usage.get("input_tokens", 0)
-        out_tok = usage.get("output_tokens", 0)
-        # cache_read/cache_write surface whether the prompt-caching breakpoints are
-        # hitting; cache_read==0 across turns 2+ means a silent invalidator (e.g. prefix
-        # below the model's min cacheable size) is at work. langchain-anthropic reports
-        # freshly-written tokens under the TTL-specific ephemeral keys, not cache_creation.
-        details = usage.get("input_token_details", {})
-        cache_read = details.get("cache_read", 0)
-        cache_write = (
-            details.get("ephemeral_5m_input_tokens", 0)
-            + details.get("ephemeral_1h_input_tokens", 0)
-        ) or details.get("cache_creation", 0)
-        total_out += out_tok
-        called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
+    # ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
+    # total_out = 0
+    # for i, msg in enumerate(ai_turns):
+    #     usage = msg.usage_metadata or {}
+    #     in_tok = usage.get("input_tokens", 0)
+    #     out_tok = usage.get("output_tokens", 0)
+    #     # cache_read/cache_write surface whether the prompt-caching breakpoints are
+    #     # hitting; cache_read==0 across turns 2+ means a silent invalidator (e.g. prefix
+    #     # below the model's min cacheable size) is at work. langchain-anthropic reports
+    #     # freshly-written tokens under the TTL-specific ephemeral keys, not cache_creation.
+    #     details = usage.get("input_token_details", {})
+    #     cache_read = details.get("cache_read", 0)
+    #     cache_write = (
+    #         details.get("ephemeral_5m_input_tokens", 0)
+    #         + details.get("ephemeral_1h_input_tokens", 0)
+    #     ) or details.get("cache_creation", 0)
+    #     total_out += out_tok
+    #     called = ", ".join(tc["name"] for tc in msg.tool_calls) or "(final)"
     #     logger.info(
     #         "[LLMTURN] %s turn %d/%d: in=%d out=%d cache_read=%d cache_write=%d -> %s",
     #         disease_name,

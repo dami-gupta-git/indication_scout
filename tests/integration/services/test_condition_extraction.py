@@ -75,7 +75,8 @@ async def test_extraction_finds_indication_when_the_abstract_states_it(
     europe_pmc_client,
 ):
     """The counterpart to the leakage tests: when the text does name the indication, it is
-    extracted. Without this, a model that always returned NONE would pass the leak checks."""
+    extracted. Without this, a model that always returned NONE would pass the leak checks.
+    """
     from datetime import date
 
     pool = await europe_pmc_client.search_by_drug(
@@ -85,7 +86,9 @@ async def test_extraction_finds_indication_when_the_abstract_states_it(
     positives = [
         a for a in pool if pattern.search(a.title) and "sildenafil" in a.title.lower()
     ][:5]
-    assert positives, "no pre-2004 sildenafil paper names pulmonary hypertension in its title"
+    assert (
+        positives
+    ), "no pre-2004 sildenafil paper names pulmonary hypertension in its title"
 
     result = await extract_conditions("sildenafil", positives)
     hits = [
@@ -93,9 +96,9 @@ async def test_extraction_finds_indication_when_the_abstract_states_it(
         for a in result.articles
         if any(pattern.search(c) for c in a.conditions)
     ]
-    assert len(hits) >= 3, (
-        f"only {len(hits)} of {len(positives)} title-explicit papers yielded the indication"
-    )
+    assert (
+        len(hits) >= 3
+    ), f"only {len(hits)} of {len(positives)} title-explicit papers yielded the indication"
 
 
 async def test_extraction_empty_pool(europe_pmc_client):

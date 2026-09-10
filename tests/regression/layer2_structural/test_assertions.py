@@ -17,7 +17,6 @@ from indication_scout.models.model_clinical_trials import (
     Trial,
 )
 from indication_scout.models.model_evidence_summary import EvidenceSummary
-
 from tests.regression.common.failure_buckets import Bucket, has_errors
 from tests.regression.layer2_structural.assertions import (
     check_candidate_set_contains,
@@ -375,7 +374,9 @@ class TestRunSpec:
             forbidden_phrases=[
                 ForbiddenPhrase(phrase="approved for obesity", scope="summary"),
             ],
-            candidate_set_contains=CandidateSetContains(indications=["adhd", "obesity"]),
+            candidate_set_contains=CandidateSetContains(
+                indications=["adhd", "obesity"]
+            ),
         )
         assert run_spec(spec, r) == []
 
@@ -538,9 +539,7 @@ class TestAliasing:
             aliases={"cocaine use disorder": ["cocaine dependence"]},
             required_in_ranked=[RequiredInRanked(indication="cocaine use disorder")],
             safety_severity=[
-                SafetySeverity(
-                    indication="cocaine use disorder", allowed=["black_box"]
-                )
+                SafetySeverity(indication="cocaine use disorder", allowed=["black_box"])
             ],
             indication_harm=[
                 IndicationHarm(indication="cocaine use disorder", expected=True)

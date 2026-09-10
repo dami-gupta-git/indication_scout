@@ -24,9 +24,8 @@ import json
 import sys
 from collections import Counter
 
-from sqlalchemy import create_engine, text
-
 from anthropic import AsyncAnthropic
+from sqlalchemy import create_engine, text
 
 from indication_scout.config import get_settings
 
@@ -140,7 +139,10 @@ CASES = [
         "Schizophrenia",
         ["12079730", "11694208", "15876899", "34735098", "17632223"],
         "none",
-        {"strong", "moderate"},  # no treats-schizophrenia evidence → not strong/moderate
+        {
+            "strong",
+            "moderate",
+        },  # no treats-schizophrenia evidence → not strong/moderate
     ),
     # ---- other drugs ----
     (

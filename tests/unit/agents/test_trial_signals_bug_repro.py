@@ -56,7 +56,9 @@ def test_buggy_floor_mislabels_terminated_phase4_as_phase3_cause():
         _buggy_is_pivotal_phase3_floor(trial)
         and _classify_stop_reason(trial.why_stopped) in _CAUSE_STOP_CATEGORIES
     )
-    assert would_be_flagged_cause is True  # the original bug: Phase 4 read as "Phase 3 for cause"
+    assert (
+        would_be_flagged_cause is True
+    )  # the original bug: Phase 4 read as "Phase 3 for cause"
 
 
 def test_fixed_derive_trial_signals_does_not_reproduce_bug_on_real_case():

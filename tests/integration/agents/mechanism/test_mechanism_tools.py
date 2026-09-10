@@ -8,7 +8,6 @@ that happens to paper over them.
 import logging
 
 from indication_scout.agents.mechanism.mechanism_tools import build_mechanism_tools
-from indication_scout.models.model_open_targets import MechanismOfAction
 
 logger = logging.getLogger(__name__)
 

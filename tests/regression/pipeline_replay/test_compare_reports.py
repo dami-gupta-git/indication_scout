@@ -36,12 +36,16 @@ def _make_report(
 ) -> SupervisorOutput:
     candidates = candidates if candidates is not None else ["dm2", "pcos", "cancer"]
     top = top if top is not None else candidates[:2]
-    with_findings_for = with_findings_for if with_findings_for is not None else candidates
+    with_findings_for = (
+        with_findings_for if with_findings_for is not None else candidates
+    )
 
     findings = [
         CandidateFindings(
             disease=d,
-            literature=LiteratureOutput(pmids=[f"PMID{i}" for i in range(pmids_per_disease)]),
+            literature=LiteratureOutput(
+                pmids=[f"PMID{i}" for i in range(pmids_per_disease)]
+            ),
             clinical_trials=ClinicalTrialsOutput(
                 search=SearchTrialsResult(total_count=trial_total)
             ),
@@ -55,7 +59,8 @@ def _make_report(
         mechanism = MechanismOutput(
             drug_targets=mechanism_targets,
             candidates=[
-                MechanismCandidate(disease_name=name) for name in (mechanism_candidates or [])
+                MechanismCandidate(disease_name=name)
+                for name in (mechanism_candidates or [])
             ],
         )
 
@@ -133,7 +138,9 @@ class TestCompareReports:
         c = _make_report(summary="short")
         diffs = compare_reports(g, c)
         assert any(
-            d.path == "summary" and d.kind == "length_out_of_bounds" and d.severity == "error"
+            d.path == "summary"
+            and d.kind == "length_out_of_bounds"
+            and d.severity == "error"
             for d in diffs
         )
 
@@ -142,14 +149,17 @@ class TestCompareReports:
         c = _make_report(mechanism_targets={"TARGET_B": "ENS2"})
         diffs = compare_reports(g, c)
         assert any(
-            d.path == "mechanism.drug_targets" and d.kind == "set_divergence" for d in diffs
+            d.path == "mechanism.drug_targets" and d.kind == "set_divergence"
+            for d in diffs
         )
 
     def test_mechanism_presence_change_is_error(self):
         g = _make_report(mechanism_targets={"TARGET_A": "ENS1"})
         c = _make_report(mechanism_targets=None)
         diffs = compare_reports(g, c)
-        assert any(d.path == "mechanism" and d.kind == "presence_changed" for d in diffs)
+        assert any(
+            d.path == "mechanism" and d.kind == "presence_changed" for d in diffs
+        )
 
     def test_pmid_count_drift_within_tolerance_is_not_error(self):
         g = _make_report(pmids_per_disease=10)

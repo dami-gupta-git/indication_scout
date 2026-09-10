@@ -328,7 +328,7 @@ async def main_async(
         inspect_pipe.fit(X, y)
         inspect_lr = inspect_pipe.named_steps["lr"]
         coefs = sorted(
-            zip(columns, inspect_lr.coef_[0].tolist()),
+            zip(columns, inspect_lr.coef_[0].tolist(), strict=True),
             key=lambda kv: abs(kv[1]),
             reverse=True,
         )

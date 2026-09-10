@@ -72,7 +72,9 @@ async def test_semantic_search_promotes_trial_paper_absent_from_the_query_pool(
         )
     assert "40487775" not in pool, "baseline query must not already retrieve the paper"
 
-    await svc.fetch_and_cache(pool, db_session, direct_query='bupropion AND "Alcoholism"')
+    await svc.fetch_and_cache(
+        pool, db_session, direct_query='bupropion AND "Alcoholism"'
+    )
 
     results = await svc.semantic_search(
         "alcohol dependence", "CHEMBL894", pool, db_session, date_before=None
@@ -180,7 +182,9 @@ async def test_semantic_search_promotes_trial_paper_absent_from_the_query_pool(
 #     assert "pmid" in str(result) or hasattr(result, "pmids")
 
 
-async def test_synthesize_evidence_summary_is_self_consistent(svc, db_session_truncating):
+async def test_synthesize_evidence_summary_is_self_consistent(
+    svc, db_session_truncating
+):
     """synthesize's deterministic post-processing invariants on a REAL run (hits the LLM).
 
     The combined synthesize+judge call authors verdicts/strength/basis; the service then applies
@@ -222,9 +226,9 @@ async def test_synthesize_evidence_summary_is_self_consistent(svc, db_session_tr
         f"supporting ∪ contradicting ∪ neutral != relevant; "
         f"missing={rel - (sup | con | neu)}, extra={(sup | con | neu) - rel}"
     )
-    assert not (neu & (sup | con)), (
-        f"neutral PMID(s) also in a directional list: {neu & (sup | con)}"
-    )
+    assert not (
+        neu & (sup | con)
+    ), f"neutral PMID(s) also in a directional list: {neu & (sup | con)}"
     # 2. relevant/contaminated partition the input set exactly.
     assert not (rel & cont), f"PMID(s) in both relevant and contaminated: {rel & cont}"
     assert rel | cont == input_pmids, (
@@ -233,12 +237,12 @@ async def test_synthesize_evidence_summary_is_self_consistent(svc, db_session_tr
     )
     # 3. Deterministic strength cap: non-drug_specific basis forces strength/direction to none.
     if summary.evidence_basis != "drug_specific":
-        assert summary.strength == "none", (
-            f"basis={summary.evidence_basis} but strength={summary.strength}"
-        )
-        assert summary.direction == "none", (
-            f"basis={summary.evidence_basis} but direction={summary.direction}"
-        )
+        assert (
+            summary.strength == "none"
+        ), f"basis={summary.evidence_basis} but strength={summary.strength}"
+        assert (
+            summary.direction == "none"
+        ), f"basis={summary.evidence_basis} but direction={summary.direction}"
 
 
 async def test_extract_organ_term_returns_string(svc):
@@ -390,7 +394,12 @@ async def test_build_drug_profile(
     ],
 )
 async def test_build_drug_profile_carries_opentargets_safety_signal(
-    svc, chembl_id, drug, expected_warning_types, expected_desc_keyword, expected_tox_class
+    svc,
+    chembl_id,
+    drug,
+    expected_warning_types,
+    expected_desc_keyword,
+    expected_tox_class,
 ):
     """build_drug_profile carries OpenTargets drugWarnings + adverseEvents onto the DrugProfile
     (previously fetched then discarded). Each drug has a stable, curated OT withdrawal/black-box
@@ -441,7 +450,9 @@ async def test_summarize_safety_prod_reports_ot_signal_and_severity(svc):
         "CHEMBL122", "arthritis", profile, abstracts.combined
     )
 
-    assert result.safety_summary != "", "expected a non-empty safety summary for rofecoxib"
+    assert (
+        result.safety_summary != ""
+    ), "expected a non-empty safety summary for rofecoxib"
     assert "withdrawn" in result.regulatory_summary.lower()
     assert "not proof of causation" in result.pharmacovigilance_summary.lower()
     assert result.safety_severity == "withdrawn"
@@ -458,7 +469,9 @@ async def test_classify_indication_harm_true_for_colorectal(svc):
         "CHEMBL122", "colorectal cancer", abstracts.disease_scoped
     )
 
-    assert harm is True, "expected an indication-context harm for rofecoxib × colorectal"
+    assert (
+        harm is True
+    ), "expected an indication-context harm for rofecoxib × colorectal"
     assert summary != ""
     pool = {r.pmid for r in abstracts.disease_scoped}
     assert all(p in pool for p in pmids), f"cited PMIDs not in provenance pool: {pmids}"
@@ -706,27 +719,6 @@ async def test_recovery_in_results(svc, db_session_truncating):
     )
     result_pmids = [r.pmid for r in top_5]
     assert "37865101" in result_pmids  # RECOVERY trial
-
-
-async def test_semantic_search_returns_relevant_results(svc, db_session_truncating):
-    """Semantic search should return abstracts about empagliflozin + MI."""
-    queries = [
-        "empagliflozin AND myocardial infarction",
-        "empagliflozin AND cardiovascular outcome",
-    ]
-    pmids = await svc.fetch_and_cache(queries, db_session_truncating)
-    results = await svc.semantic_search(
-        "myocardial infarction", "CHEMBL2107830", pmids, db_session_truncating
-    )
-
-    assert len(results) == get_settings().semantic_search_top_k
-    # All results should have reasonable similarity
-    assert all(r.similarity > 0.5 for r in results)
-    # At least one title should mention empagliflozin or SGLT2
-    assert any(
-        "empagliflozin" in r.title.lower() or "sglt2" in r.title.lower()
-        for r in results
-    )
 
 
 async def test_semantic_search_returns_relevant_results(svc, db_session_truncating):

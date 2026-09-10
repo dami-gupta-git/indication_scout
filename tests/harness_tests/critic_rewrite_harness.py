@@ -24,7 +24,9 @@ logger = logging.getLogger("critic_rewrite_harness")
 def _fact_line(i: int, blurb: dict, has_p3: bool, highest: str | None) -> str:
     disease = (blurb.get("disease") or "").strip() or "(unnamed)"
     if has_p3:
-        fact = f"relevant COMPLETED Phase 3 IS on record (highest={highest or 'Phase 3'})"
+        fact = (
+            f"relevant COMPLETED Phase 3 IS on record (highest={highest or 'Phase 3'})"
+        )
     else:
         fact = "no relevant completed Phase 3 on record"
     return (
@@ -96,10 +98,14 @@ def _score(repaired: dict, must_change: dict, must_keep: dict) -> list[str]:
     fails = []
     for field, gone in must_change.items():
         if gone.lower() in (repaired.get(field) or "").lower():
-            fails.append(f"  FAIL must_change[{field}]: still contains {gone!r} -> {repaired.get(field)!r}")
+            fails.append(
+                f"  FAIL must_change[{field}]: still contains {gone!r} -> {repaired.get(field)!r}"
+            )
     for field, keep in must_keep.items():
         if keep.lower() not in (repaired.get(field) or "").lower():
-            fails.append(f"  FAIL must_keep[{field}]: lost {keep!r} -> {repaired.get(field)!r}")
+            fails.append(
+                f"  FAIL must_keep[{field}]: lost {keep!r} -> {repaired.get(field)!r}"
+            )
     return fails
 
 

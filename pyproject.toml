@@ -100,6 +100,8 @@ target-version = ["py310", "py311", "py312"]
 [tool.ruff]
 line-length = 88
 target-version = "py310"
+
+[tool.ruff.lint]
 select = [
     "E",      # pycodestyle errors
     "W",      # pycodestyle warnings
@@ -113,7 +115,7 @@ ignore = [
     "E501",   # line too long (handled by black)
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint.isort]
 known-first-party = ["indication_scout"]
 
 [tool.mypy]

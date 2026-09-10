@@ -118,7 +118,9 @@ async def main() -> None:
     for t in TRIALS:
         p = per[t["nct"]]
         flag = "OK " if p == RUNS else "!! "
-        print(f"{flag}{t['nct']} (expect {t['expected']}): {p}/{RUNS}  — {t['title'][:48]}")
+        print(
+            f"{flag}{t['nct']} (expect {t['expected']}): {p}/{RUNS}  — {t['title'][:48]}"
+        )
     total = sum(per.values())
     print(f"\nTOTAL: {total}/{len(TRIALS) * RUNS}")
 

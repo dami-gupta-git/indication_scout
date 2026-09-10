@@ -3041,11 +3041,6 @@ def _make_open_targets_mock(raw: dict) -> AsyncMock:
     return mock_client
 
 
-async def _passthrough_normalize_batch(terms: list[str]) -> dict[str, str]:
-    """Stub for llm_normalize_disease_batch that returns each term unchanged."""
-    return {term: term for term in terms}
-
-
 async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
     """When an alias appears in both merge values and remove, its data must not be merged in."""
     raw = {
@@ -3065,10 +3060,6 @@ async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
         patch(
             "indication_scout.services.retrieval.OpenTargetsClient",
             return_value=mock_client,
-        ),
-        patch(
-            "indication_scout.services.retrieval.llm_normalize_disease_batch",
-            new=_passthrough_normalize_batch,
         ),
         patch(
             "indication_scout.services.retrieval.merge_duplicate_diseases",

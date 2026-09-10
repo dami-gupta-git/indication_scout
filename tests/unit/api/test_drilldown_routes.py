@@ -27,9 +27,13 @@ def _ctx(mock_client: MagicMock):
 
 def test_get_trial_returns_trial(client):
     mock = MagicMock()
-    mock.get_trial = AsyncMock(return_value=Trial(nct_id="NCT12345678", title="A trial", phase="Phase 3"))
+    mock.get_trial = AsyncMock(
+        return_value=Trial(nct_id="NCT12345678", title="A trial", phase="Phase 3")
+    )
 
-    with patch("indication_scout.api.routes.drilldown.ClinicalTrialsClient", _ctx(mock)):
+    with patch(
+        "indication_scout.api.routes.drilldown.ClinicalTrialsClient", _ctx(mock)
+    ):
         resp = client.get("/api/trials/NCT12345678")
 
     assert resp.status_code == 200
@@ -40,9 +44,13 @@ def test_get_trial_returns_trial(client):
 
 def test_get_trial_missing_returns_404(client):
     mock = MagicMock()
-    mock.get_trial = AsyncMock(side_effect=DataSourceError("ClinicalTrials", "not found"))
+    mock.get_trial = AsyncMock(
+        side_effect=DataSourceError("ClinicalTrials", "not found")
+    )
 
-    with patch("indication_scout.api.routes.drilldown.ClinicalTrialsClient", _ctx(mock)):
+    with patch(
+        "indication_scout.api.routes.drilldown.ClinicalTrialsClient", _ctx(mock)
+    ):
         resp = client.get("/api/trials/NCT0")
 
     assert resp.status_code == 404
@@ -76,7 +84,11 @@ def test_get_pubmed_empty_returns_404(client):
 def test_get_target_returns_target(client):
     mock = MagicMock()
     mock.get_target_data = AsyncMock(
-        return_value=TargetData(target_id="ENSG00000146648", symbol="EGFR", name="epidermal growth factor receptor")
+        return_value=TargetData(
+            target_id="ENSG00000146648",
+            symbol="EGFR",
+            name="epidermal growth factor receptor",
+        )
     )
 
     with patch("indication_scout.api.routes.drilldown.OpenTargetsClient", _ctx(mock)):
@@ -90,7 +102,9 @@ def test_get_target_returns_target(client):
 
 def test_get_target_missing_returns_404(client):
     mock = MagicMock()
-    mock.get_target_data = AsyncMock(side_effect=DataSourceError("OpenTargets", "no target"))
+    mock.get_target_data = AsyncMock(
+        side_effect=DataSourceError("OpenTargets", "no target")
+    )
 
     with patch("indication_scout.api.routes.drilldown.OpenTargetsClient", _ctx(mock)):
         resp = client.get("/api/targets/ENSG0")

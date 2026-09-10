@@ -1,5 +1,7 @@
 """Shared fixtures for integration tests."""
 
+# ruff: noqa: E402 — env must be configured before indication_scout imports
+
 import os
 
 # Swap to the integration constants file before any indication_scout import
@@ -7,7 +9,7 @@ import os
 # CONSTANTS_FILE is active. tests/conftest.py runs first and sets this to
 # .env.constants.test for unit tests; we override that here. A genuine shell
 # override (anything other than the unit-test default) is preserved.
-#if os.environ.get("CONSTANTS_FILE") in (None, ".env.constants.test"):
+# if os.environ.get("CONSTANTS_FILE") in (None, ".env.constants.test"):
 os.environ["CONSTANTS_FILE"] = ".env.constants"
 
 # Force the cache onto cache_test before constants is imported — DEFAULT_CACHE_DIR
@@ -151,18 +153,11 @@ async def clinical_trials_client():
 
 
 @pytest.fixture
-async def europe_pmc_client():
-    """Create and tear down a EuropePMCClient."""
-    c = EuropePMCClient()
-    yield c
-    await c.close()
-
-
-@pytest.fixture
 def clinical_trials_graph():
     """Reusable fixture for the ClinicalTrialsAgent graph."""
     """NOTE if you need to set your cutoff date, do not use this fixture"""
     from langchain_anthropic import ChatAnthropic
+
     from for_me.clinical_trials.v3_langgraph.clinical_trials_agent import (
         build_clinical_trials_graph,
     )

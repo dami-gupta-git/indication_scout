@@ -142,7 +142,8 @@ async def test_semaglutide_t1d_active_phase3_count_matches_listed_ids(test_cache
     """semaglutide × T1D regression: the active-programs count must equal the listed NCT ids
     (the '5 Phase 3' / 4-listed miscount), and a not-yet-recruiting Phase 3 (CT.gov underscored
     status) must be counted, not dropped. Tier must be active_phase3. The relevant set mirrors
-    the live T1D run: 4 active pure Phase 3 + 2 active Phase 2/3 + a completed Phase 2."""
+    the live T1D run: 4 active pure Phase 3 + 2 active Phase 2/3 + a completed Phase 2.
+    """
     trials = [
         _t("NCT06082063", "Phase 3", "RECRUITING"),
         _t("NCT06909006", "Phase 3", "NOT_YET_RECRUITING"),

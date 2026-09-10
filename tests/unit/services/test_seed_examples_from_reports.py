@@ -12,7 +12,9 @@ _SCRIPT_PATH = (
 
 
 def _load_module():
-    spec = importlib.util.spec_from_file_location("seed_examples_from_reports", _SCRIPT_PATH)
+    spec = importlib.util.spec_from_file_location(
+        "seed_examples_from_reports", _SCRIPT_PATH
+    )
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
@@ -33,11 +35,15 @@ def _write_report(reports_dir, filename, *, date_before):
 
 def test_is_holdout_production(seed_mod, tmp_path):
     _write_report(tmp_path, "metformin_2026-07-13_16-00-00.json", date_before=None)
-    assert seed_mod._is_holdout(tmp_path / "metformin_2026-07-13_16-00-00.json") is False
+    assert (
+        seed_mod._is_holdout(tmp_path / "metformin_2026-07-13_16-00-00.json") is False
+    )
 
 
 def test_is_holdout_when_date_before_set(seed_mod, tmp_path):
-    _write_report(tmp_path, "metformin_2026-07-13_16-00-00.json", date_before="2022-01-01")
+    _write_report(
+        tmp_path, "metformin_2026-07-13_16-00-00.json", date_before="2022-01-01"
+    )
     assert seed_mod._is_holdout(tmp_path / "metformin_2026-07-13_16-00-00.json") is True
 
 

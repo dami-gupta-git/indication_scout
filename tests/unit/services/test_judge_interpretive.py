@@ -16,16 +16,16 @@ _OK = (
     'sentences here. And a second one."}'
 )
 
-_FACTS = dict(
-    stage="Phase 3 completed for this indication",
-    active_programs="Phase 3 recruiting (NCT_A)",
-    literature="Moderate, supports, RCT-backed",
-    relationship="related_family",
-    approved_indication="Type 2 Diabetes",
-    trial_evidence="4 relevant trials, complete review of 4 registry query matches",
-    closure="LIVE",
-    terminations="none reported",
-)
+_FACTS = {
+    "stage": "Phase 3 completed for this indication",
+    "active_programs": "Phase 3 recruiting (NCT_A)",
+    "literature": "Moderate, supports, RCT-backed",
+    "relationship": "related_family",
+    "approved_indication": "Type 2 Diabetes",
+    "trial_evidence": "4 relevant trials, complete review of 4 registry query matches",
+    "closure": "LIVE",
+    "terminations": "none reported",
+}
 
 
 def test_parse_maps_json_keys_to_blurb_fields():

@@ -1261,8 +1261,7 @@ async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():
     assert art.relevant_ncts == ["NCT00000001", "NCT00000002"]
     assert art.contaminated_ncts == ["NCT00000099"]
     assert art.relevance_reasoning == (
-        "Relevant trials: NCT00000001, NCT00000002. "
-        "Excluded trials: NCT00000099."
+        "Relevant trials: NCT00000001, NCT00000002. " "Excluded trials: NCT00000099."
     )
     assert "Analysis complete" in msg.content
 

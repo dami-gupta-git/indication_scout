@@ -80,9 +80,7 @@ async def test_search_trials_tool_uses_server_side_mesh_filter():
     # descriptor (D006973), via direct conditions or ancestors.
     assert result.trials, "expected at least one semaglutide × hypertension trial"
     for t in result.trials:
-        mesh_ids = {m.id for m in t.mesh_conditions} | {
-            m.id for m in t.mesh_ancestors
-        }
+        mesh_ids = {m.id for m in t.mesh_conditions} | {m.id for m in t.mesh_ancestors}
         assert _HYPERTENSION_MESH_ID in mesh_ids, (
             f"{t.nct_id} not filtered to {_HYPERTENSION_MESH_ID}; "
             f"mesh ids {sorted(mesh_ids)}"

@@ -256,9 +256,7 @@ async def main() -> None:
     total_pass = 0
     total = 0
     for case in CASES:
-        results = await asyncio.gather(
-            *(_run_one(case) for _ in range(RUNS_PER_CASE))
-        )
+        results = await asyncio.gather(*(_run_one(case) for _ in range(RUNS_PER_CASE)))
         passes = sum(1 for o in results if o and case["expect"](o))
         total_pass += passes
         total += RUNS_PER_CASE

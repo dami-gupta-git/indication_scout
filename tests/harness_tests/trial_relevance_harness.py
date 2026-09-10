@@ -107,8 +107,8 @@ SYSTEM = (
     "PAH (a DISTINCT disease) and trials whose primary drug is NOT sildenafil. "
     "For EACH trial id given, output a verdict: 'relevant' if it studies SILDENAFIL "
     "for SYSTEMIC hypertension, else 'contaminated'. You MUST return a verdict for "
-    "every id — omit none. Return JSON: {\"verdicts\": [{\"nct\": str, \"verdict\": "
-    "\"relevant\"|\"contaminated\"}]}."
+    'every id — omit none. Return JSON: {"verdicts": [{"nct": str, "verdict": '
+    '"relevant"|"contaminated"}]}.'
 )
 
 
@@ -116,7 +116,9 @@ def _render(condition: str) -> str:
     lines = []
     for r in DATA:
         if condition == "mesh":
-            lines.append(f"{r['nct']} | phase {r['phase']} | mesh: {'; '.join(r['mesh']) or '(none)'}")
+            lines.append(
+                f"{r['nct']} | phase {r['phase']} | mesh: {'; '.join(r['mesh']) or '(none)'}"
+            )
         else:  # rich
             lines.append(
                 f"{r['nct']} | phase {r['phase']} | drugs: {'; '.join(r['interv']) or '(none)'} "
@@ -142,9 +144,7 @@ async def run(condition: str) -> dict:
     tagged = set(verdicts)
     coverage = len(tagged & all_ncts) / len(all_ncts)
     scored = [n for n in all_ncts if n in verdicts]
-    correct = sum(
-        (verdicts[n] == "relevant") == (LABELS[n] == "R") for n in scored
-    )
+    correct = sum((verdicts[n] == "relevant") == (LABELS[n] == "R") for n in scored)
     accuracy = correct / len(scored) if scored else 0.0
     missed = sorted(all_ncts - tagged)
     wrong = sorted(

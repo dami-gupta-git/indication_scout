@@ -8,8 +8,6 @@ evidence buckets, and the empty-associations edge case.
 
 from unittest.mock import AsyncMock, MagicMock
 
-import pytest
-
 from indication_scout.agents.mechanism.mechanism_row_builder import (
     build_candidate_rows,
 )

@@ -24,49 +24,84 @@ PROMPT = (Path(__file__).parent / "prompts" / "fact_judge_prompt.txt").read_text
 client = AsyncAnthropic()
 
 # Drugs known to be generic/off-patent (for the "no NDA != failure" cue).
-GENERIC = {"bupropion", "metformin", "duloxetine", "gefitinib", "imatinib", "sildenafil",
-           "methotrexate", "raloxifene", "riluzole"}
+GENERIC = {
+    "bupropion",
+    "metformin",
+    "duloxetine",
+    "gefitinib",
+    "imatinib",
+    "sildenafil",
+    "methotrexate",
+    "raloxifene",
+    "riluzole",
+}
 
 # Expected outcome per case — what a fully-informed analyst should conclude.
 EXPECTED = {
-    ("bupropion", "attention deficit hyperactivity disorder"):
-        "LIVE (real Phase 3/4, generic so no NDA — not closed)",
-    ("bupropion", "cocaine dependence"):
-        "NCT01077024 contaminated (smoking trial); not a real Phase 3 for cocaine",
-    ("bupropion", "fibromyalgia"):
-        "NCT04747314 contaminated (low-back-pain title); no real trial for fibromyalgia",
-    ("baricitinib", "systemic lupus erythematosus"):
-        "CLOSED — two Phase 3 terminated for safety / benefit:risk",
-    ("baricitinib", "psoriasis"):
-        "LIVE — Phase 2 only, no negative signal",
+    (
+        "bupropion",
+        "attention deficit hyperactivity disorder",
+    ): "LIVE (real Phase 3/4, generic so no NDA — not closed)",
+    (
+        "bupropion",
+        "cocaine dependence",
+    ): "NCT01077024 contaminated (smoking trial); not a real Phase 3 for cocaine",
+    (
+        "bupropion",
+        "fibromyalgia",
+    ): "NCT04747314 contaminated (low-back-pain title); no real trial for fibromyalgia",
+    (
+        "baricitinib",
+        "systemic lupus erythematosus",
+    ): "CLOSED — two Phase 3 terminated for safety / benefit:risk",
+    ("baricitinib", "psoriasis"): "LIVE — Phase 2 only, no negative signal",
 }
 
 CASES = [
     # Adjacency / contamination cases — the point of feeding MeSH conditions:
-    ("sildenafil", ["hypertension", "pulmonary hypertension"]),  # parent vs child + sitaxsentan
-    ("methotrexate", ["sarcoma"]),                            # over-exclusion check
-    ("bupropion", ["cocaine dependence", "fibromyalgia"]),    # different-disease contam
-    ("baricitinib", ["systemic lupus erythematosus"]),        # genuine closure must survive
+    (
+        "sildenafil",
+        ["hypertension", "pulmonary hypertension"],
+    ),  # parent vs child + sitaxsentan
+    ("methotrexate", ["sarcoma"]),  # over-exclusion check
+    ("bupropion", ["cocaine dependence", "fibromyalgia"]),  # different-disease contam
+    ("baricitinib", ["systemic lupus erythematosus"]),  # genuine closure must survive
 ]
 
 # Fresh cases: expected outcome left as a NOTE (these are genuinely uncertain — that's
 # the point of testing them).
-EXPECTED.update({
-    ("semaglutide", "non-alcoholic fatty liver disease"):
-        "? check if the Phase 2/3 trial is actually a PCOS trial (contamination)",
-    ("sildenafil", "hypertension"):
-        "? the terminated Phase 3s are sitaxsentan (ANOTHER drug) — must NOT close sildenafil on them",
-    ("sildenafil", "pulmonary hypertension"):
-        "? same sitaxsentan terminations — sildenafil itself has real completed P3 for PAH",
-    ("empagliflozin", "diabetic nephropathy"):
-        "? is the terminated P3 a real safety/efficacy stop or operational?",
-    ("metformin", "polycystic ovary syndrome"):
-        "LIVE — 13 real Phase 3, generic, no negative signal",
-    ("methotrexate", "sarcoma"):
-        "? Phase 3 titled Non-Hodgkin's — check contamination",
-    ("imatinib", "glioblastoma multiforme"):
-        "? 2 completed Phase 3, no approval — live or genuinely failed?",
-})
+EXPECTED.update(
+    {
+        (
+            "semaglutide",
+            "non-alcoholic fatty liver disease",
+        ): "? check if the Phase 2/3 trial is actually a PCOS trial (contamination)",
+        (
+            "sildenafil",
+            "hypertension",
+        ): "? the terminated Phase 3s are sitaxsentan (ANOTHER drug) — must NOT close sildenafil on them",
+        (
+            "sildenafil",
+            "pulmonary hypertension",
+        ): "? same sitaxsentan terminations — sildenafil itself has real completed P3 for PAH",
+        (
+            "empagliflozin",
+            "diabetic nephropathy",
+        ): "? is the terminated P3 a real safety/efficacy stop or operational?",
+        (
+            "metformin",
+            "polycystic ovary syndrome",
+        ): "LIVE — 13 real Phase 3, generic, no negative signal",
+        (
+            "methotrexate",
+            "sarcoma",
+        ): "? Phase 3 titled Non-Hodgkin's — check contamination",
+        (
+            "imatinib",
+            "glioblastoma multiforme",
+        ): "? 2 completed Phase 3, no approval — live or genuinely failed?",
+    }
+)
 
 
 def _latest(drug: str) -> str:
@@ -92,6 +127,7 @@ def _fmt_trials(trials, with_stop=False):
 
 async def _query_mesh(disease):
     from indication_scout.services.disease_helper import resolve_mesh_id
+
     r = await resolve_mesh_id(disease)
     return f"{r[1]} ({r[0]})" if r else "unresolved"
 
@@ -100,8 +136,8 @@ async def _build_prompt(drug, disease, f):
     ct = ClinicalTrialsOutput(**(f.get("clinical_trials") or {}))
     es = (f.get("literature") or {}).get("evidence_summary") or {}
     ap = ct.approval
-    comp = [t for t in (ct.completed.trials if ct.completed else [])]
-    term = [t for t in (ct.terminated.trials if ct.terminated else [])]
+    comp = list(ct.completed.trials if ct.completed else [])
+    term = list(ct.terminated.trials if ct.terminated else [])
     return PROMPT.format(
         drug=drug,
         generic=str(drug.lower() in GENERIC),
@@ -118,7 +154,9 @@ async def _build_prompt(drug, disease, f):
 
 async def _judge(model, prompt):
     resp = await client.messages.create(
-        model=model, max_tokens=1200, temperature=0,
+        model=model,
+        max_tokens=1200,
+        temperature=0,
         system="Output ONLY the JSON object. No preamble, no prose before or after.",
         messages=[{"role": "user", "content": prompt}],
     )
@@ -141,9 +179,11 @@ async def main():
             for label, model in models.items():
                 out = await _judge(model, prompt)
                 try:
-                    j = json.loads(out[out.index("{"):out.rindex("}") + 1])
-                    print(f"  [{label}] phase={j.get('highest_real_completed_phase')!r} "
-                          f"verdict={j.get('verdict')!r}")
+                    j = json.loads(out[out.index("{") : out.rindex("}") + 1])
+                    print(
+                        f"  [{label}] phase={j.get('highest_real_completed_phase')!r} "
+                        f"verdict={j.get('verdict')!r}"
+                    )
                     print(f"          reasoning: {j.get('reasoning')}")
                 except Exception:
                     print(f"  [{label}] (unparsed) {out[:200]}")

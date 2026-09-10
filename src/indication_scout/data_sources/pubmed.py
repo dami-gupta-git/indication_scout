@@ -20,8 +20,6 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 
-logger = logging.getLogger(__name__)
-
 from indication_scout.config import get_settings
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
@@ -36,8 +34,10 @@ from indication_scout.constants import (
     PUBMED_SUMMARY_URL,
 )
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
-from indication_scout.utils.cache import cache_get, cache_set
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
+from indication_scout.utils.cache import cache_get, cache_set
+
+logger = logging.getLogger(__name__)
 
 
 class PubMedClient(BaseClient):

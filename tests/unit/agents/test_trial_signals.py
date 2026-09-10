@@ -338,7 +338,6 @@ def test_format_block_renders_active_phase3_yes():
     assert "active_phase_3: yes (NCT_A)" in block
 
 
-
 # ------------------------------------------------------------------
 # status-classification edge cases (E1-E4)
 # ------------------------------------------------------------------

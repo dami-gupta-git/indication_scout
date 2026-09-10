@@ -569,7 +569,9 @@ async def test_run_clinical_trials_agent_second_genuine_approval_call_wins(
         _tool_msg("search_trials", SEARCH),
         _tool_msg("get_landscape", LANDSCAPE),
         _tool_msg("check_fda_approval", APPROVAL),  # first call: good result
-        _tool_msg("check_fda_approval", second_call_approval),  # second call: genuine disagreement
+        _tool_msg(
+            "check_fda_approval", second_call_approval
+        ),  # second call: genuine disagreement
         _tool_msg(
             "finalize_analysis",
             "Semaglutide is FDA-approved for type 2 diabetes mellitus.",

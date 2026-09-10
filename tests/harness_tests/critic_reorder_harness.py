@@ -17,8 +17,8 @@ import sys
 
 from anthropic import AsyncAnthropic
 
-from indication_scout.config import get_settings
 from indication_scout.agents.supervisor.supervisor_tools import _RANKING_CRITIC_SYSTEM
+from indication_scout.config import get_settings
 
 client = AsyncAnthropic(api_key=get_settings().anthropic_api_key)
 MODEL = sys.argv[1] if len(sys.argv) > 1 else "claude-sonnet-4-6"

@@ -264,10 +264,10 @@ DISEASE_SYNONYM_CANONICAL: dict[str, str] = {
     "alzheimer's disease": "alzheimer disease",
     "parkinson disease": "parkinson disease",
     "parkinson's disease": "parkinson disease",
-    "cocaine dependence":"cocaine dependence",
-    "cocaine abuse":"cocaine dependence",
-    "cocaine use disorder":"cocaine dependence",
-    "cocaine-related-disorder":"cocaine dependence"
+    "cocaine dependence": "cocaine dependence",
+    "cocaine abuse": "cocaine dependence",
+    "cocaine use disorder": "cocaine dependence",
+    "cocaine-related-disorder": "cocaine dependence",
 }
 
 # -- Stop-reason keywords → category (ClinicalTrials.gov) ------------------

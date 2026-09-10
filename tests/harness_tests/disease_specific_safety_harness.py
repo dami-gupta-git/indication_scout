@@ -27,11 +27,23 @@ logger = logging.getLogger(__name__)
 # efficacy-only or there is no disease-context safety paper.
 CASES: list[tuple[str, str, bool]] = [
     # Harm reported in the indication's context.
-    ("rofecoxib", "colorectal cancer", True),      # CV thrombotic events in adenoma-prevention trials
-    ("thalidomide", "multiple myeloma", True),     # VTE reported in myeloma treatment
-    ("natalizumab", "multiple sclerosis", True),   # PML reported in MS therapy
-    ("bevacizumab", "colorectal cancer", True),    # GI perforation reported in colorectal use
-    ("warfarin", "atrial fibrillation", True),     # bleeding reported in AF anticoagulation
+    (
+        "rofecoxib",
+        "colorectal cancer",
+        True,
+    ),  # CV thrombotic events in adenoma-prevention trials
+    ("thalidomide", "multiple myeloma", True),  # VTE reported in myeloma treatment
+    ("natalizumab", "multiple sclerosis", True),  # PML reported in MS therapy
+    (
+        "bevacizumab",
+        "colorectal cancer",
+        True,
+    ),  # GI perforation reported in colorectal use
+    (
+        "warfarin",
+        "atrial fibrillation",
+        True,
+    ),  # bleeding reported in AF anticoagulation
     # Cocaine abuse sensitization is reported to precipitate bupropion psychosis at a lower dose.
     # The disease is a risk modifier even though bupropion was prescribed for another condition.
     ("bupropion", "cocaine use disorder", True),
@@ -44,7 +56,11 @@ CASES: list[tuple[str, str, bool]] = [
     # metformin treatment for type 2 diabetes (PMIDs 27987248 and 31034184).
     ("metformin", "type 2 diabetes", True),
     # No disease-context safety finding expected (efficacy-only or thin AE literature for the pair).
-    ("rofecoxib", "migraine", False),              # migraine trials are efficacy; CV signal is not migraine-context
+    (
+        "rofecoxib",
+        "migraine",
+        False,
+    ),  # migraine trials are efficacy; CV signal is not migraine-context
     # The 2026-09-08 sildenafil run flagged ischemic stroke off PMID 19717023: a 12-patient
     # uncontrolled study whose primary outcome was a counted safety event (one sudden death) and
     # whose own conclusion was that the drug appeared safe. An event the authors record without

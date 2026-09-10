@@ -9,8 +9,8 @@ Reproduces the published overall_score to ~0.01 mean abs error (verified against
 """
 
 from indication_scout.constants import (
-    OT_DEFAULT_DATASOURCE_WEIGHT,
     OT_DATASOURCE_WEIGHTS,
+    OT_DEFAULT_DATASOURCE_WEIGHT,
     OT_PLATFORM_DATASOURCE_COUNT,
 )
 

@@ -114,6 +114,6 @@ async def test_no_overlaps_returns_no_decisions():
         mechanism_targets=[],
         candidates=candidates,
     )
-    assert output.decisions == [], (
-        f"expected no overlaps in this candidate list, got {output.decisions!r}"
-    )
+    assert (
+        output.decisions == []
+    ), f"expected no overlaps in this candidate list, got {output.decisions!r}"

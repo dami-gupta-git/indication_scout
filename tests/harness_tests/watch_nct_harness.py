@@ -122,10 +122,14 @@ async def _run_one() -> tuple[bool, list[str]]:
         foreign = cited - own
         # An NCT not belonging to this candidate (whether another candidate's or invented).
         if foreign:
-            violations.append(f"{b.get('disease')}: watch cites foreign {sorted(foreign)}")
+            violations.append(
+                f"{b.get('disease')}: watch cites foreign {sorted(foreign)}"
+            )
         # Gammakinson (no active trial) should have an empty watch.
         if d == "gammakinson" and cited:
-            violations.append(f"Gammakinson: watch should be empty, cites {sorted(cited)}")
+            violations.append(
+                f"Gammakinson: watch should be empty, cites {sorted(cited)}"
+            )
     return (not violations), violations
 
 

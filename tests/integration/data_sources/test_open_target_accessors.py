@@ -1,7 +1,5 @@
 """Integration tests for OpenTargetsClient accessor methods."""
 
-import pytest
-
 # --- Target data accessors ---
 
 

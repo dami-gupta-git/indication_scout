@@ -22,8 +22,11 @@ from pathlib import Path
 
 import pytest
 
-from indication_scout.regression.harness import compare_reports, has_errors, render_diffs
-
+from indication_scout.regression.harness import (
+    compare_reports,
+    has_errors,
+    render_diffs,
+)
 from tests.regression.common.cassette import use_cassette
 from tests.regression.common.constants import CASSETTE_DIR, GOLD_STANDARD_DIR
 

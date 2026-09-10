@@ -63,16 +63,24 @@ STAGE_PHRASE = {
 }
 
 _BAD = (
-    "no dedicated phase 2/3", "no dedicated phase 2 or phase 3", "no phase 2/3 program",
-    "no dedicated development program", "no formal development program",
-    "no development program", "exploratory only", "phase 4 only", "no phase 3",
-    "post-phase 2", "no pivotal program",
+    "no dedicated phase 2/3",
+    "no dedicated phase 2 or phase 3",
+    "no phase 2/3 program",
+    "no dedicated development program",
+    "no formal development program",
+    "no development program",
+    "exploratory only",
+    "phase 4 only",
+    "no phase 3",
+    "post-phase 2",
+    "no pivotal program",
 )
 
 
 async def interp(facts):
     resp = await client.messages.create(
-        model=MODEL, max_tokens=400,
+        model=MODEL,
+        max_tokens=400,
         messages=[{"role": "user", "content": INTERP_PROMPT.format(**facts)}],
     )
     text = resp.content[0].text.strip()
@@ -97,45 +105,99 @@ T1DM = [
 ]
 
 CASES = [
-    ("semaglutide x T1DM (the recurring break)", "semaglutide", "type 1 diabetes mellitus",
-     T1DM, "Moderate, RCT-backed controlled studies", "related_family (type 2 diabetes)"),
-    ("contradicts: drug failed", "drugX", "disease Y",
-     [_t("NCT_A", "Phase 3", "COMPLETED")],
-     "Strong, contradicts — RCTs show no benefit", "none"),
-    ("exploratory Phase 4 only", "drugZ", "disease W",
-     [_t("NCT_A", "Phase 4", "COMPLETED")], "Weak, observational", "related_family"),
-    ("Phase 3 terminated for SAFETY (closed)", "drugT", "disease S",
-     [_t("NCT_A", "Phase 3", "Terminated (safety concerns)"),
-      _t("NCT_B", "Phase 2", "COMPLETED")],
-     "Moderate, mixed", "none"),
-    ("completed P2 only, recruiting P2 ('no Phase 3' is ACCURATE)", "drugP", "disease Q",
-     [_t("NCT_A", "Phase 2", "COMPLETED"), _t("NCT_B", "Phase 2", "Recruiting")],
-     "Moderate, supports", "none"),
-    ("untested, rationale only", "drugU", "disease R",
-     [], "Weak, preclinical only", "none"),
-    ("active P3 only, none completed", "drugA", "disease V",
-     [_t("NCT_A", "Phase 3", "Recruiting"), _t("NCT_B", "Phase 2", "COMPLETED")],
-     "Moderate, supports", "none"),
-    ("completed P3 + active P3 + adverse safety signal", "drugS", "disease T",
-     [_t("NCT_A", "Phase 3", "COMPLETED"), _t("NCT_B", "Phase 3", "Recruiting")],
-     "Strong, mixed — efficacy signal but adverse safety reports", "none"),
-    ("unknown-status Phase 3 only", "drugK", "disease N",
-     [_t("NCT_A", "Phase 3", "UNKNOWN")], "Moderate, supports", "none"),
+    (
+        "semaglutide x T1DM (the recurring break)",
+        "semaglutide",
+        "type 1 diabetes mellitus",
+        T1DM,
+        "Moderate, RCT-backed controlled studies",
+        "related_family (type 2 diabetes)",
+    ),
+    (
+        "contradicts: drug failed",
+        "drugX",
+        "disease Y",
+        [_t("NCT_A", "Phase 3", "COMPLETED")],
+        "Strong, contradicts — RCTs show no benefit",
+        "none",
+    ),
+    (
+        "exploratory Phase 4 only",
+        "drugZ",
+        "disease W",
+        [_t("NCT_A", "Phase 4", "COMPLETED")],
+        "Weak, observational",
+        "related_family",
+    ),
+    (
+        "Phase 3 terminated for SAFETY (closed)",
+        "drugT",
+        "disease S",
+        [
+            _t("NCT_A", "Phase 3", "Terminated (safety concerns)"),
+            _t("NCT_B", "Phase 2", "COMPLETED"),
+        ],
+        "Moderate, mixed",
+        "none",
+    ),
+    (
+        "completed P2 only, recruiting P2 ('no Phase 3' is ACCURATE)",
+        "drugP",
+        "disease Q",
+        [_t("NCT_A", "Phase 2", "COMPLETED"), _t("NCT_B", "Phase 2", "Recruiting")],
+        "Moderate, supports",
+        "none",
+    ),
+    (
+        "untested, rationale only",
+        "drugU",
+        "disease R",
+        [],
+        "Weak, preclinical only",
+        "none",
+    ),
+    (
+        "active P3 only, none completed",
+        "drugA",
+        "disease V",
+        [_t("NCT_A", "Phase 3", "Recruiting"), _t("NCT_B", "Phase 2", "COMPLETED")],
+        "Moderate, supports",
+        "none",
+    ),
+    (
+        "completed P3 + active P3 + adverse safety signal",
+        "drugS",
+        "disease T",
+        [_t("NCT_A", "Phase 3", "COMPLETED"), _t("NCT_B", "Phase 3", "Recruiting")],
+        "Strong, mixed — efficacy signal but adverse safety reports",
+        "none",
+    ),
+    (
+        "unknown-status Phase 3 only",
+        "drugK",
+        "disease N",
+        [_t("NCT_A", "Phase 3", "UNKNOWN")],
+        "Moderate, supports",
+        "none",
+    ),
 ]
 
 
 async def run_case(label, drug, indication, trials, literature, approval):
     # Stage 1 — facts (real service, no cache dir pollution: use a tmp path).
-    from pathlib import Path
     import tempfile
+    from pathlib import Path
+
     cache = Path(tempfile.mkdtemp())
     j = await judge_dev_stage(trials, cache, drug=drug, indication=indication)
     stage_phrase = STAGE_PHRASE[j.tier]
 
     # Stage 2 — interpretation, FED stage-1 output.
     facts = {
-        "stage": stage_phrase, "active_programs": j.active_programs,
-        "literature": literature, "approval": approval,
+        "stage": stage_phrase,
+        "active_programs": j.active_programs,
+        "literature": literature,
+        "approval": approval,
     }
     fields = await interp(facts)
 

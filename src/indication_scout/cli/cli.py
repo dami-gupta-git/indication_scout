@@ -119,7 +119,9 @@ async def _run_for_pair(
         # snapshots/holdouts/with_disease/ for holdout runs, tagging the filename and
         # prepending a banner for holdouts.
         write_dir = (
-            out_dir / "holdouts" / "with_disease" if date_before else out_dir / "with_disease"
+            out_dir / "holdouts" / "with_disease"
+            if date_before
+            else out_dir / "with_disease"
         )
         write_dir.mkdir(parents=True, exist_ok=True)
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")

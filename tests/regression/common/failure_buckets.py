@@ -89,9 +89,7 @@ def render(diffs: list[BucketedDiff]) -> str:
         return "no diffs"
     lines = [f"{'SEV':<6} {'BUCKET':<28} {'PATH':<48} DETAIL"]
     for d in diffs:
-        lines.append(
-            f"{d.severity:<6} {d.bucket.value:<28} {d.path:<48} {d.detail}"
-        )
+        lines.append(f"{d.severity:<6} {d.bucket.value:<28} {d.path:<48} {d.detail}")
     return "\n".join(lines)
 
 

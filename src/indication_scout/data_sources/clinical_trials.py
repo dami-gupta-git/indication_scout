@@ -29,9 +29,23 @@ from indication_scout.constants import (
 )
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
 from indication_scout.data_sources.pubmed import PubMedClient
+from indication_scout.models.model_clinical_trials import (
+    ArmGroup,
+    CompetitorEntry,
+    CompletedTrialsResult,
+    IndicationLandscape,
+    Intervention,
+    MeshTerm,
+    PrimaryOutcome,
+    RecentStart,
+    SearchTrialsResult,
+    TerminatedTrialsResult,
+    Trial,
+)
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
+
 
 _settings = get_settings()
 
@@ -46,21 +60,6 @@ def _mesh_cond(mesh_term: str) -> str:
     # require the resolved descriptor to appear in the trial's direct
     # mesh_conditions (drop ancestor-only matches), keyed on MeSH ID not term.
     return f'AREA[ConditionMeshTerm]"{mesh_term}"'
-
-
-from indication_scout.models.model_clinical_trials import (
-    ArmGroup,
-    CompetitorEntry,
-    CompletedTrialsResult,
-    IndicationLandscape,
-    Intervention,
-    MeshTerm,
-    PrimaryOutcome,
-    RecentStart,
-    SearchTrialsResult,
-    TerminatedTrialsResult,
-    Trial,
-)
 
 
 class ClinicalTrialsClient(BaseClient):
@@ -381,7 +380,7 @@ class ClinicalTrialsClient(BaseClient):
                     e,
                 )
                 return
-        for trial, pmids in zip(targets, results):
+        for trial, pmids in zip(targets, results, strict=True):
             if isinstance(pmids, Exception):
                 logger.warning(
                     "PubMed NCT-fallback for %s failed: %r — leaving references empty",

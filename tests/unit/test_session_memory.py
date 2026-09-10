@@ -42,7 +42,9 @@ def _write_transcript(path: Path, totals: list[int]) -> Path:
     return path
 
 
-def _run_hook(transcript: Path, session_id: str, tmp_path: Path) -> tuple[str, list[str]]:
+def _run_hook(
+    transcript: Path, session_id: str, tmp_path: Path
+) -> tuple[str, list[str]]:
     """Run the hook once; return its stdout and the marker suffixes it left behind."""
     payload = json.dumps({"transcript_path": str(transcript), "session_id": session_id})
     result = subprocess.run(
@@ -59,7 +61,8 @@ def _run_hook(transcript: Path, session_id: str, tmp_path: Path) -> tuple[str, l
     )
     assert result.returncode == 0, result.stderr
     markers = sorted(
-        p.name.replace(f"claude_session_{session_id}_", "") for p in Path("/tmp").glob(f"claude_session_{session_id}_*")
+        p.name.replace(f"claude_session_{session_id}_", "")
+        for p in Path("/tmp").glob(f"claude_session_{session_id}_*")
     )
     return result.stdout, markers
 
@@ -94,10 +97,16 @@ def session_id(request) -> str:
         # A single small turn between two large ones is a sub-agent, not a compaction: era stays 0.
         ("small_turn_is_noise", [170_000, 500, 170_500], ["80_0"]),
         # Compaction, then a climb back through 60%: the era advances so 50 fires a second time.
-        ("compaction_refires", [60_000, 120_000, 170_000, 40_000, 42_000, 120_000], ["50_1"]),
+        (
+            "compaction_refires",
+            [60_000, 120_000, 170_000, 40_000, 42_000, 120_000],
+            ["50_1"],
+        ),
     ],
 )
-def test_hook_marker_for_occupancy(name, totals, expected_markers, tmp_path, session_id):
+def test_hook_marker_for_occupancy(
+    name, totals, expected_markers, tmp_path, session_id
+):
     transcript = _write_transcript(tmp_path / f"{name}.jsonl", totals)
     stdout, markers = _run_hook(transcript, session_id, tmp_path)
 
@@ -132,7 +141,10 @@ def test_hook_survives_missing_transcript(tmp_path, session_id):
 
 def _run_session_py(*args: str, cwd: Path) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [sys.executable, str(SESSION_PY), *args], capture_output=True, text=True, cwd=str(cwd)
+        [sys.executable, str(SESSION_PY), *args],
+        capture_output=True,
+        text=True,
+        cwd=str(cwd),
     )
 
 
@@ -175,7 +187,9 @@ def test_rotate_archives_and_replaces(tmp_path, monkeypatch):
     module.cmd_rotate(summary_source)
 
     assert not original.exists()
-    assert (tmp_path / "session_archive" / "session_2026-01-01_00-00.md").read_text() == "# S\n\nwork happened\n"
+    assert (
+        tmp_path / "session_archive" / "session_2026-01-01_00-00.md"
+    ).read_text() == "# S\n\nwork happened\n"
 
     summary = (tmp_path / "sessions_summary.md").read_text()
     assert "session_2026-01-01_00-00.md" in summary

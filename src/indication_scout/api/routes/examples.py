@@ -15,15 +15,15 @@ import time
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import PlainTextResponse
 
+from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
 from indication_scout.api.schemas.analyses import AnalysisStatusResponse
-from indication_scout.report.format_report import format_report
 from indication_scout.constants import (
     EXAMPLE_CACHE_DIR,
     EXAMPLE_CACHE_TTL_SECONDS,
     EXAMPLE_DRUGS,
     EXAMPLE_SEED_DIR,
 )
-from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+from indication_scout.report.format_report import format_report
 from indication_scout.services.analysis_runner import run_analysis
 
 logger = logging.getLogger(__name__)

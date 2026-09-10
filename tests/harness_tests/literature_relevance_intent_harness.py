@@ -268,9 +268,7 @@ def _load_abstracts(pmids: set[str]) -> dict[str, HarnessAbstract]:
     return abstracts
 
 
-def _format_abstracts(
-    case: IntentCase, abstracts: dict[str, HarnessAbstract]
-) -> str:
+def _format_abstracts(case: IntentCase, abstracts: dict[str, HarnessAbstract]) -> str:
     return "\n\n".join(
         f"PMID: {abstracts[pmid].pmid}\n"
         f"Title: {abstracts[pmid].title}\n"

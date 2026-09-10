@@ -219,7 +219,7 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
     total_wait = 0.0
     total_enc = 0.0
     n_chunks = 0
-    total_chunks = (len(texts) + chunk_size - 1) // chunk_size
+    # total_chunks = (len(texts) + chunk_size - 1) // chunk_size
     for start in range(0, len(texts), chunk_size):
         chunk = texts[start : start + chunk_size]
         # logger.warning(

@@ -17,7 +17,6 @@ Run: .venv/bin/python tests/harness_tests/approval_input_harness.py
 import asyncio
 import json
 import sys
-from collections import Counter
 
 from anthropic import AsyncAnthropic
 
@@ -52,22 +51,35 @@ Respond with ONLY JSON: \
 {{"constraint":"...","key_risk":"...","assessment":"...","prose":"..."}}"""
 
 _BAD = (
-    "no dedicated phase 2/3", "no dedicated phase 2 or phase 3", "no phase 2/3 program",
-    "no dedicated development program", "no formal development program",
-    "no development program", "exploratory only", "phase 4 only", "no phase 3",
-    "post-phase 2", "no pivotal program",
+    "no dedicated phase 2/3",
+    "no dedicated phase 2 or phase 3",
+    "no phase 2/3 program",
+    "no dedicated development program",
+    "no formal development program",
+    "no development program",
+    "exploratory only",
+    "phase 4 only",
+    "no phase 3",
+    "post-phase 2",
+    "no pivotal program",
 )
 
 # False-approval markers — phrases that claim THIS indication is approved.
 _FALSE_APPROVAL = (
-    "approved for this indication", "is approved for", "fda-approved for this",
-    "already approved for this", "approved in this indication", "has approval for this",
+    "approved for this indication",
+    "is approved for",
+    "fda-approved for this",
+    "already approved for this",
+    "approved in this indication",
+    "has approval for this",
 )
 
 
 def asserts_phase3(stage):
     s = stage.lower()
-    return any(x in s for x in ("phase 3 completed", "active phase 3", "phase 3 development"))
+    return any(
+        x in s for x in ("phase 3 completed", "active phase 3", "phase 3 development")
+    )
 
 
 # (label, facts). approved_indication "none" => NOT approved for this candidate.
@@ -140,7 +152,8 @@ CASES = [
 
 async def judge(facts):
     resp = await client.messages.create(
-        model=MODEL, max_tokens=400,
+        model=MODEL,
+        max_tokens=400,
         messages=[{"role": "user", "content": PROMPT.format(**facts)}],
     )
     text = resp.content[0].text.strip()
@@ -149,7 +162,12 @@ async def judge(facts):
     try:
         return json.loads(text)
     except json.JSONDecodeError:
-        return {"constraint": "PARSE_FAIL", "key_risk": "", "assessment": "", "prose": ""}
+        return {
+            "constraint": "PARSE_FAIL",
+            "key_risk": "",
+            "assessment": "",
+            "prose": "",
+        }
 
 
 def problems(fields, facts):
@@ -171,9 +189,11 @@ async def main():
         results = await asyncio.gather(*(judge(facts) for _ in range(RUNS_PER_CASE)))
         per = [problems(r, facts) for r in results]
         n_clean = sum(1 for p in per if not p)
-        verdict = "PASS" if n_clean == RUNS_PER_CASE else ("FLAKY" if n_clean else "FAIL")
+        verdict = (
+            "PASS" if n_clean == RUNS_PER_CASE else ("FLAKY" if n_clean else "FAIL")
+        )
         print(f"[{verdict}] {n_clean}/{RUNS_PER_CASE}  {name}")
-        for r, p in zip(results, per):
+        for r, p in zip(results, per, strict=False):
             if p:
                 print(f"        {p}: {json.dumps(r)[:220]}")
                 break

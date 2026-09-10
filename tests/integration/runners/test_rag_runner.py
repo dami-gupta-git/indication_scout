@@ -2,9 +2,6 @@
 
 import logging
 
-import pytest
-
-from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.runners.rag_runner import run_rag
 
 logger = logging.getLogger(__name__)
@@ -20,7 +17,7 @@ async def test_run_rag_empagliflozin(db_session_truncating, test_cache_dir):
     assert "support" in summaries or "evidence" in summaries
 
     # Basic structure checks
-    for disease, summary in results.items():
+    for _disease, summary in results.items():
         assert len(summary.summary) > 50
         assert summary.strength in ["strong", "moderate", "weak", "none"]
 
@@ -51,6 +48,6 @@ async def test_run_rag_colchicine_mixed_signals(db_session_truncating, test_cach
         len(matches) >= 3
     ), f"Expected at least 3 cautionary terms in colchicine summaries, found: {matches}"
 
-    for disease, summary in results.items():
+    for _disease, summary in results.items():
         assert len(summary.summary) > 50
         assert summary.strength in ["strong", "moderate", "weak", "none"]

@@ -30,8 +30,11 @@ from pathlib import Path
 import pytest
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
-
-from tests.regression.common.failure_buckets import has_errors, render, summarize_buckets
+from tests.regression.common.failure_buckets import (
+    has_errors,
+    render,
+    summarize_buckets,
+)
 from tests.regression.layer2_structural.assertions import run_spec
 from tests.regression.layer2_structural.loader import discover_specs, load_spec
 

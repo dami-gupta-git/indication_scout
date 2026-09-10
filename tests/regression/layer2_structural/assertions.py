@@ -10,13 +10,12 @@ the supervisor and the spec author may capitalize differently.
 
 from __future__ import annotations
 
-from typing import Iterable
+from collections.abc import Iterable
 
 from indication_scout.agents.supervisor.supervisor_output import (
     CandidateFindings,
     SupervisorOutput,
 )
-
 from tests.regression.common.failure_buckets import BucketedDiff
 from tests.regression.layer2_structural.spec import (
     CandidateSetContains,
@@ -99,7 +98,7 @@ def check_required_ncts(
                 bucket=a.bucket,
                 path=f"disease_findings[{a.indication!r}]",
                 severity="error",
-                detail=f"indication not present in disease_findings",
+                detail="indication not present in disease_findings",
                 spec_ref="required_ncts_surfaced",
             )
         ]
@@ -418,7 +417,9 @@ def run_spec(
     for a in spec.forbidden_phrases:
         diffs.extend(check_forbidden_phrase(report, rendered_md, a))
     if spec.candidate_set_contains is not None:
-        diffs.extend(check_candidate_set_contains(report, spec.candidate_set_contains, aliases))
+        diffs.extend(
+            check_candidate_set_contains(report, spec.candidate_set_contains, aliases)
+        )
     for a in spec.safety_severity:
         diffs.extend(check_safety_severity(report, a, aliases))
     for a in spec.indication_harm:

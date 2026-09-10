@@ -4,8 +4,6 @@ import json
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import pytest
-
 from indication_scout.utils.cache import cache_get, cache_key, cache_set
 
 

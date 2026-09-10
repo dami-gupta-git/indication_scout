@@ -17,7 +17,6 @@ import numpy as np
 
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.db.session import get_db
-from indication_scout.models.model_clinical_trials import Trial
 from indication_scout.ml_models.trial_risk.data import LabeledTrial, load_labeled_trials
 from indication_scout.ml_models.trial_risk.features import build_features
 from indication_scout.ml_models.trial_risk.literature import (
@@ -25,6 +24,7 @@ from indication_scout.ml_models.trial_risk.literature import (
     signals_for_trial,
 )
 from indication_scout.ml_models.trial_risk.train import ARTIFACT_PATH
+from indication_scout.models.model_clinical_trials import Trial
 
 logger = logging.getLogger(__name__)
 

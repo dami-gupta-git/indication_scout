@@ -20,14 +20,12 @@ from pathlib import Path
 
 import pytest
 
-from indication_scout.services.llm import query_llm
 from indication_scout.agents.supervisor.supervisor_tools import _RANKING_CRITIC_SYSTEM
+from indication_scout.services.llm import query_llm
 
 logger = logging.getLogger(__name__)
 
-_PROMPTS_DIR = (
-    Path(__file__).parents[4] / "src" / "indication_scout" / "prompts"
-)
+_PROMPTS_DIR = Path(__file__).parents[4] / "src" / "indication_scout" / "prompts"
 SUPERVISOR_PROMPT = (_PROMPTS_DIR / "supervisor.txt").read_text()
 
 

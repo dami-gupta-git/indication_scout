@@ -9,8 +9,8 @@ import logging
 
 from fastapi import APIRouter, HTTPException
 
-from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
 from indication_scout.data_sources.base_client import DataSourceError
+from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.models.model_clinical_trials import Trial

@@ -34,8 +34,7 @@ def _ptsd_abstracts() -> list[AbstractResult]:
         if item["disease"] == "post-traumatic stress disorder"
     )
     by_pmid = {
-        item["pmid"]: item
-        for item in finding["literature"]["semantic_search_results"]
+        item["pmid"]: item for item in finding["literature"]["semantic_search_results"]
     }
     return [AbstractResult(**by_pmid[pmid]) for pmid in _VERDICTS]
 

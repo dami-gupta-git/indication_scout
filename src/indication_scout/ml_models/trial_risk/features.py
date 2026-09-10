@@ -12,8 +12,8 @@ import math
 import re
 from dataclasses import dataclass
 
-from indication_scout.models.model_clinical_trials import Trial
 from indication_scout.ml_models.trial_risk.literature import LiteratureSignals
+from indication_scout.models.model_clinical_trials import Trial
 
 PHASES = [
     "Early Phase 1",

@@ -13,7 +13,6 @@ from pydantic import BaseModel, ValidationError
 from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
-from typing_extensions import deprecated
 
 from indication_scout.agents.literature.pubmed_ae import search_adverse_events
 from indication_scout.config import get_settings
@@ -53,7 +52,6 @@ from indication_scout.services.citation_guard import (
     unknown_pmids,
 )
 from indication_scout.services.disease_helper import (
-    llm_normalize_disease_batch,
     merge_duplicate_diseases,
     resolve_mesh_id,
 )
@@ -63,7 +61,6 @@ from indication_scout.services.llm import (
     parse_llm_response,
     query_llm,
     query_small_llm,
-    strip_markdown_fences,
 )
 from indication_scout.services.progress import PHASE_LITERATURE, emit_progress
 from indication_scout.sqlalchemy.pubmed_abstracts import PubmedAbstracts
@@ -798,7 +795,7 @@ class RetrievalService:
         emit_progress(PHASE_LITERATURE, f"Embedding {len(abstracts)} new abstracts")
         texts = [f"{a.title}. {a.abstract or ''}" for a in abstracts]
         vectors = await embed_async(texts)
-        return list(zip(abstracts, vectors))
+        return list(zip(abstracts, vectors, strict=True))
 
     def insert_abstracts(
         self,
@@ -1049,7 +1046,7 @@ class RetrievalService:
 
             # Per-query attribution: how many PMIDs each query returned (PMIDs themselves
             # omitted to keep logs readable).
-            for _q, _pmids in zip(queries, search_results):
+            for _q, _pmids in zip(queries, search_results, strict=True):
                 # logger.warning("[QUERYMAP] query=%r returned %d pmids", _q, len(_pmids))
                 pass
 
@@ -1537,7 +1534,7 @@ class RetrievalService:
                 disease,
                 response,
             )
-            verdict_of = {p: "contaminated" for p in input_pmids}
+            verdict_of = dict.fromkeys(input_pmids, "contaminated")
 
         # AUTHORITATIVE per-PMID DIRECTION via an isolated sub-call over the relevant abstracts.
         # synthesize's verdict map decides relevant-vs-contaminated; this sub-call decides the

@@ -2,7 +2,6 @@
 
 from unittest.mock import AsyncMock, patch
 
-
 import pytest
 
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError

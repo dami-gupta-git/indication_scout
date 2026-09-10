@@ -4,12 +4,6 @@ import math
 
 import pytest
 
-from indication_scout.models.model_clinical_trials import (
-    Intervention,
-    MeshTerm,
-    PrimaryOutcome,
-    Trial,
-)
 from indication_scout.ml_models.trial_risk.features import (
     PHASES,
     build_features,
@@ -18,6 +12,12 @@ from indication_scout.ml_models.trial_risk.features import (
     vectorize,
 )
 from indication_scout.ml_models.trial_risk.literature import LiteratureSignals
+from indication_scout.models.model_clinical_trials import (
+    Intervention,
+    MeshTerm,
+    PrimaryOutcome,
+    Trial,
+)
 
 
 @pytest.mark.parametrize(

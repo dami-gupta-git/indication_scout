@@ -4,7 +4,6 @@ Uses content_and_artifact so typed Python objects are preserved on msg.artifact.
 inter-call data via a closure-scoped store dict. No InjectedState, no LangGraph state machinery.
 """
 
-import asyncio
 import logging
 import time
 from datetime import date
@@ -15,10 +14,10 @@ from sqlalchemy.orm import Session
 from indication_scout.config import get_settings
 from indication_scout.data_sources.chembl import resolve_drug_name
 from indication_scout.models.model_drug_profile import DrugProfile
-
-_settings = get_settings()
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.retrieval import AbstractResult, RetrievalService
+
+_settings = get_settings()
 
 logger = logging.getLogger(__name__)
 

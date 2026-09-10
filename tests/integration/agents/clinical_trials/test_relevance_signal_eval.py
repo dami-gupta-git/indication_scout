@@ -70,9 +70,7 @@ async def _score(rows: list[dict], condition: str) -> tuple[float, float]:
     tagged = set(verdicts) & all_ncts
     coverage = len(tagged) / len(all_ncts)
     scored = [n for n in all_ncts if n in verdicts]
-    correct = sum(
-        (verdicts[n] == "relevant") == (LABELS[n] == "R") for n in scored
-    )
+    correct = sum((verdicts[n] == "relevant") == (LABELS[n] == "R") for n in scored)
     accuracy = correct / len(scored) if scored else 0.0
     return coverage, accuracy
 

@@ -27,9 +27,8 @@ import json
 import sys
 from collections import Counter
 
-from sqlalchemy import create_engine, text
-
 from anthropic import AsyncAnthropic
+from sqlalchemy import create_engine, text
 
 from indication_scout.config import get_settings
 
@@ -93,7 +92,9 @@ Respond with ONLY a JSON object:
 def fetch_abstracts(pmids):
     with engine.connect() as c:
         rows = c.execute(
-            text("SELECT pmid, title, abstract FROM pubmed_abstracts WHERE pmid = ANY(:p)"),
+            text(
+                "SELECT pmid, title, abstract FROM pubmed_abstracts WHERE pmid = ANY(:p)"
+            ),
             {"p": pmids},
         ).fetchall()
     by_pmid = {r[0]: (r[1], r[2]) for r in rows}
@@ -131,7 +132,10 @@ CASES = [
         "Hypertension",
         [],
         ["33983650", "33226665", "32634428", "39487423"],
-        {"approved", "none"},  # either acceptable; binding assert is NOT moderate/strong
+        {
+            "approved",
+            "none",
+        },  # either acceptable; binding assert is NOT moderate/strong
         {"strong", "moderate"},
     ),
     # ---- bupropion x mood disorder: the MDD/SAD contamination case ----
@@ -141,7 +145,11 @@ CASES = [
         "bupropion x mood disorder, approved={MDD,SAD}: MDD papers => 'approved', not strong",
         "bupropion",
         "Mood Disorder",
-        ["major depressive disorder", "seasonal affective disorder", "smoking cessation"],
+        [
+            "major depressive disorder",
+            "seasonal affective disorder",
+            "smoking cessation",
+        ],
         ["31301615", "25124683"],
         "approved",
         {"strong", "moderate"},
@@ -151,7 +159,11 @@ CASES = [
         "bupropion x mood disorder, approved={MDD,SAD}: bipolar paper => drug_specific (control)",
         "bupropion",
         "Mood Disorder",
-        ["major depressive disorder", "seasonal affective disorder", "smoking cessation"],
+        [
+            "major depressive disorder",
+            "seasonal affective disorder",
+            "smoking cessation",
+        ],
         ["2856918"],
         "drug_specific",
         set(),
@@ -161,7 +173,11 @@ CASES = [
         "bupropion x ADHD, approved={MDD,SAD,smoking}: no overlap => drug_specific (control)",
         "bupropion",
         "Attention Deficit Hyperactivity Disorder",
-        ["major depressive disorder", "seasonal affective disorder", "smoking cessation"],
+        [
+            "major depressive disorder",
+            "seasonal affective disorder",
+            "smoking cessation",
+        ],
         ["30097390", "24259638", "26601963"],
         "drug_specific",
         set(),
@@ -175,7 +191,11 @@ CASES = [
         "semaglutide x NAFLD, approved={MASH}: NASH papers => 'approved', not strong",
         "semaglutide",
         "Non-alcoholic Fatty Liver Disease",
-        ["metabolic dysfunction-associated steatohepatitis (MASH)", "type 2 diabetes mellitus", "obesity"],
+        [
+            "metabolic dysfunction-associated steatohepatitis (MASH)",
+            "type 2 diabetes mellitus",
+            "obesity",
+        ],
         ["37717295", "37899788", "37355043"],
         "approved",
         {"strong"},
@@ -302,7 +322,9 @@ async def main():
     for name, drug, disease, approved, pmids, exp_basis, bad_strength in CASES:
         abstracts = fetch_abstracts(pmids)
         if len(abstracts) < len(pmids):
-            print(f"[SKIP] {name}\n        missing abstracts: got {len(abstracts)}/{len(pmids)}")
+            print(
+                f"[SKIP] {name}\n        missing abstracts: got {len(abstracts)}/{len(pmids)}"
+            )
             continue
         runs = await asyncio.gather(
             *(judge(drug, disease, approved, abstracts) for _ in range(RUNS_PER_CASE))
@@ -316,8 +338,10 @@ async def main():
         n_pass += ok
         verdict = "PASS" if ok else "FAIL"
         print(f"[{verdict}] {name}")
-        print(f"        basis={dict(basis_votes)} (expected {exp_basis}); "
-              f"strength-in-{sorted(bad_strength) or '∅'}: {bad_hits}/{RUNS_PER_CASE}")
+        print(
+            f"        basis={dict(basis_votes)} (expected {exp_basis}); "
+            f"strength-in-{sorted(bad_strength) or '∅'}: {bad_hits}/{RUNS_PER_CASE}"
+        )
         if not ok:
             print(f"        sample: {json.dumps(runs[0])[:240]}")
     print(f"\n=== {n_pass}/{len(CASES)} cases pass ===")

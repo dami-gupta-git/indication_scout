@@ -64,7 +64,9 @@ async def test_metformin_supervisor_agent(supervisor_agent):
     - summary is non-empty and matches the structured fact-list shape (finalize_supervisor was
       called)
     """
-    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = supervisor_agent
+    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = (
+        supervisor_agent
+    )
     output = await run_supervisor_agent(
         agent,
         get_merged_allowlist,
@@ -203,7 +205,9 @@ async def test_semaglutide_sibling_kept_and_contaminated_labels(supervisor_agent
     approved T2DM) was demoted into a footer and the report surfaced a weaker candidate; NAFLD was
     mislabeled. Now both are KEPT with label-grounded relationships. Verified 2026-06-20.
     """
-    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = supervisor_agent
+    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = (
+        supervisor_agent
+    )
     output = await run_supervisor_agent(
         agent,
         get_merged_allowlist,
@@ -244,7 +248,9 @@ async def test_semaglutide_sibling_kept_and_contaminated_labels(supervisor_agent
 
 
 @pytest.mark.approval_aware
-async def test_sildenafil_hypertension_contaminated_and_pah_trials_tagged(supervisor_agent):
+async def test_sildenafil_hypertension_contaminated_and_pah_trials_tagged(
+    supervisor_agent,
+):
     """Sildenafil: systemic hypertension kept ('contaminated'); PAH search trials tagged contaminated.
 
     Two regressions in one pair:
@@ -255,7 +261,9 @@ async def test_sildenafil_hypertension_contaminated_and_pah_trials_tagged(superv
          cannot inflate the "Phase 3 active" dev-stage signal. NCT07462260 / NCT06317805 are PAH
          active trials that previously leaked through as relevant. Verified 2026-06-20.
     """
-    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = supervisor_agent
+    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = (
+        supervisor_agent
+    )
     output = await run_supervisor_agent(
         agent,
         get_merged_allowlist,
@@ -267,7 +275,9 @@ async def test_sildenafil_hypertension_contaminated_and_pah_trials_tagged(superv
     assert output.drug_name == "sildenafil"
 
     hyp = _find_finding(output, "hypertension")
-    assert hyp is not None, "systemic hypertension must be kept as a candidate, not dropped"
+    assert (
+        hyp is not None
+    ), "systemic hypertension must be kept as a candidate, not dropped"
     # Distinguish systemic hypertension from the approved 'pulmonary (arterial) hypertension'.
     assert "pulmonary" not in hyp.disease.lower()
     assert hyp.approval_relationship == "contaminated"

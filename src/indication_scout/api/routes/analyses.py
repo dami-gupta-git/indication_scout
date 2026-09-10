@@ -64,7 +64,9 @@ async def _execute(job: Job) -> None:
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
-async def create_analysis(req: AnalysisRequest, request: Request) -> AnalysisCreatedResponse:
+async def create_analysis(
+    req: AnalysisRequest, request: Request
+) -> AnalysisCreatedResponse:
     """Launch a background analysis; return its job id immediately."""
     drug = normalize_drug_name(req.drug_name)
     forwarded = request.headers.get("x-forwarded-for")
@@ -73,17 +75,21 @@ async def create_analysis(req: AnalysisRequest, request: Request) -> AnalysisCre
         if forwarded
         else (request.client.host if request.client else "unknown")
     )
-    logger.warning("[VISITOR-LOCATION] ******ANALYSIS REQUESTED FOR DRUG=%s FROM %s******", drug, client_ip)
+    logger.warning(
+        "[VISITOR-LOCATION] ******ANALYSIS REQUESTED FOR DRUG=%s FROM %s******",
+        drug,
+        client_ip,
+    )
     # Fail fast: one quick Open Targets search confirms the drug exists before we spin up
     # a job. Seed-report drugs skip the check (they don't need OT resolution).
     if load_fresh_seed_report(drug) is None:
         try:
             await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
-        except DataSourceError:
+        except DataSourceError as e:
             raise HTTPException(
                 status_code=422,
                 detail=f"No drug found matching '{req.drug_name}'.",
-            )
+            ) from e
     job = job_store.create(req.drug_name)
     job.task = asyncio.create_task(_execute(job))
     return AnalysisCreatedResponse(job_id=job.job_id, status=job.status)

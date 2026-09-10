@@ -178,7 +178,7 @@ async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
         individual = await asyncio.gather(
             *[llm_normalize_disease(term) for term in uncached]
         )
-        for term, normalized in zip(uncached, individual):
+        for term, normalized in zip(uncached, individual, strict=True):
             results[term] = normalized
         return results
 
@@ -532,7 +532,7 @@ async def _resolve_mesh_id_direct(indication: str) -> tuple[str, str] | None:
     async with _mesh_semaphore(), aiohttp.ClientSession(timeout=_timeout) as session:
         # NCBI's MeSH backend intermittently returns empty idlist for valid
         # terms. Retry up to 3 times on empty before treating as a real miss.
-        for attempt in range(3):
+        for _attempt in range(3):
             await asyncio.sleep(0.1)
             async with PubMedClient._get_semaphore():
                 esearch_data = await _ncbi_get_json(

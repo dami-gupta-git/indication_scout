@@ -63,9 +63,7 @@ def test_real_bupropion_spec_loads():
     # Sanity-check the actual committed spec parses cleanly.
     from pathlib import Path
 
-    spec_path = (
-        Path(__file__).parent.parent / "specs" / "bupropion.yaml"
-    )
+    spec_path = Path(__file__).parent.parent / "specs" / "bupropion.yaml"
     spec = load_spec(spec_path)
     assert spec.drug == "bupropion"
     assert spec.ranked_order

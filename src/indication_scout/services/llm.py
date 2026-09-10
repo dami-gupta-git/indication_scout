@@ -4,7 +4,7 @@ import json
 import logging
 import re
 
-from anthropic import AsyncAnthropic, NOT_GIVEN
+from anthropic import NOT_GIVEN, AsyncAnthropic
 from dotenv import load_dotenv
 
 from indication_scout.config import get_settings

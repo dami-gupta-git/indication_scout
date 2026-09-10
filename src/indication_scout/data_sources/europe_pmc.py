@@ -280,7 +280,8 @@ class EuropePMCClient(BaseClient):
                 data = await self._rest_get(EUROPE_PMC_ANNOTATIONS_URL, params)
             except DataSourceError as e:
                 logger.warning(
-                    "europepmc: annotations batch failed (%s); those PMIDs are omitted", e
+                    "europepmc: annotations batch failed (%s); those PMIDs are omitted",
+                    e,
                 )
                 continue
             for article in data or []:

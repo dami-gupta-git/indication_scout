@@ -1,9 +1,5 @@
 """Integration tests for FDAClient — hits real openFDA API."""
 
-import pytest
-
-from indication_scout.data_sources.fda import FDAClient
-
 
 async def test_get_label_indications_wegovy(fda_client):
     """Wegovy returns label text with cardiovascular and weight management indications."""

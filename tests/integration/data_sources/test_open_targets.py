@@ -5,8 +5,6 @@ from unittest.mock import patch
 
 import pytest
 
-
-from indication_scout.constants import BROADENING_BLOCKLIST
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.markers import no_review
 
@@ -23,15 +21,14 @@ async def test_sildenafil_drug_data(open_targets_client):
     indications = drug.indications
     match = [i for i in indications if "kidney" in i.disease_name.lower()]
     approved = [a for a in match if a.disease_id in drug.approved_disease_ids]
-    logger.info(drug.indications)
+    logger.info(approved)
 
 
 @no_review
 async def test_imatinib_drug_data(open_targets_client):
     """Test fetching drug data and indications for semaglutide."""
     drug = await open_targets_client.get_drug("CHEMBL941")
-    indications = drug.indications
-    pass
+    logger.info(drug.indications)
 
 
 # TODO delete
@@ -39,7 +36,6 @@ async def test_imatinib_drug_data(open_targets_client):
 async def test_single_drug_data(open_targets_client):
     """Test fetching drug data and indications for semaglutide."""
     drug = await open_targets_client.get_drug("CHEMBL894")
-    indications = drug.indications
     assert drug.atc_classifications == ["N06AX12"]
 
 
@@ -313,7 +309,7 @@ async def test_drug_target_competitors_semaglutide(open_targets_client):
     assert len(result["GLP1R"]) > 5
 
     # All values must be lists of DrugSummary; check the map has no empty lists
-    for symbol, summaries in result.items():
+    for _symbol, summaries in result.items():
         assert isinstance(summaries, list)
         assert len(summaries) > 0
 

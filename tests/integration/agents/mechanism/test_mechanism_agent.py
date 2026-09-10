@@ -3,8 +3,6 @@
 Hits real Anthropic and Open Targets APIs.
 """
 
-import logging
-
 from langchain_anthropic import ChatAnthropic
 
 from indication_scout.agents.mechanism.mechanism_agent import (

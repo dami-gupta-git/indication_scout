@@ -95,9 +95,7 @@ Candidate diseases:
 """
 
 
-CASES: list[
-    tuple[str, list[str], dict[str, tuple[str, frozenset[str]]]]
-] = [
+CASES: list[tuple[str, list[str], dict[str, tuple[str, frozenset[str]]]]] = [
     (
         "certolizumab pegol",
         [
@@ -232,10 +230,7 @@ async def main() -> int:
     for drug, approved_indications, expected in CASES:
         candidates = list(expected)
         runs = await asyncio.gather(
-            *(
-                classify(approved_indications, candidates)
-                for _ in range(RUNS_PER_CASE)
-            )
+            *(classify(approved_indications, candidates) for _ in range(RUNS_PER_CASE))
         )
         for candidate, (correct_label, correct_anchors) in expected.items():
             decisions = [result.get(candidate) for result in runs]
@@ -244,11 +239,11 @@ async def main() -> int:
                 for decision in decisions
             )
             anchors = Counter(
-                decision.matched_approved_indication
-                if isinstance(decision, ContaminatedDecision)
-                else None
-                if isinstance(decision, NoneDecision)
-                else "MISSING"
+                (
+                    decision.matched_approved_indication
+                    if isinstance(decision, ContaminatedDecision)
+                    else None if isinstance(decision, NoneDecision) else "MISSING"
+                )
                 for decision in decisions
             )
             reasons = Counter(

@@ -98,13 +98,13 @@ async def test_execute_serves_seed_report_without_running(fresh_store):
     seed = SupervisorOutput(drug_name="metformin", summary="seeded")
     run = AsyncMock()
 
-    with patch(
-        "indication_scout.api.routes.analyses.load_fresh_seed_report",
-        return_value=seed,
-    ), patch(
-        "indication_scout.api.routes.analyses.run_analysis", new=run
-    ), patch(
-        "indication_scout.api.routes.analyses.asyncio.sleep", new=AsyncMock()
+    with (
+        patch(
+            "indication_scout.api.routes.analyses.load_fresh_seed_report",
+            return_value=seed,
+        ),
+        patch("indication_scout.api.routes.analyses.run_analysis", new=run),
+        patch("indication_scout.api.routes.analyses.asyncio.sleep", new=AsyncMock()),
     ):
         await _execute(job)
 
@@ -120,10 +120,13 @@ async def test_execute_runs_live_when_no_seed_report(fresh_store):
     output = SupervisorOutput(drug_name="metformin", summary="live")
     run = AsyncMock(return_value=(output, "report"))
 
-    with patch(
-        "indication_scout.api.routes.analyses.load_fresh_seed_report",
-        return_value=None,
-    ), patch("indication_scout.api.routes.analyses.run_analysis", new=run):
+    with (
+        patch(
+            "indication_scout.api.routes.analyses.load_fresh_seed_report",
+            return_value=None,
+        ),
+        patch("indication_scout.api.routes.analyses.run_analysis", new=run),
+    ):
         await _execute(job)
 
     run.assert_awaited_once()
@@ -160,10 +163,15 @@ def test_post_unknown_drug_returns_422_without_creating_job(client, fresh_store)
     from indication_scout.data_sources.base_client import DataSourceError
 
     run = AsyncMock()
-    with patch(
-        "indication_scout.api.routes.analyses.resolve_drug_name",
-        new=AsyncMock(side_effect=DataSourceError("chembl", "No drug found for 'zzzqq'")),
-    ), patch("indication_scout.api.routes.analyses.run_analysis", new=run):
+    with (
+        patch(
+            "indication_scout.api.routes.analyses.resolve_drug_name",
+            new=AsyncMock(
+                side_effect=DataSourceError("chembl", "No drug found for 'zzzqq'")
+            ),
+        ),
+        patch("indication_scout.api.routes.analyses.run_analysis", new=run),
+    ):
         resp = client.post("/api/analyses", json={"drug_name": "zzzqq"})
 
     assert resp.status_code == 422
@@ -238,7 +246,11 @@ def test_structured_result_round_trips_through_post_and_get(client, fresh_store)
     assert body["error"] is None
     result = body["result"]
     assert result["drug_name"] == "duloxetine"
-    assert result["candidate_diseases"] == ["alcohol dependence", "obesity", "bipolar disorder"]
+    assert result["candidate_diseases"] == [
+        "alcohol dependence",
+        "obesity",
+        "bipolar disorder",
+    ]
     assert result["top_diseases"] == ["alcohol dependence", "obesity"]
     assert result["summary"].startswith("Duloxetine shows mechanism-grounded")
     assert len(result["disease_findings"]) == 2

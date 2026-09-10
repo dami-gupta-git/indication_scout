@@ -32,7 +32,11 @@ SYSTEM_PROMPT = (_PROMPTS_DIR / "clinical_trials.txt").read_text()
 
 DRUG = "semaglutide"
 CANDIDATE = "non-alcoholic fatty liver disease"
-APPROVED = ["MASH (NASH) with moderate-to-advanced fibrosis", "type 2 diabetes mellitus", "obesity"]
+APPROVED = [
+    "MASH (NASH) with moderate-to-advanced fibrosis",
+    "type 2 diabetes mellitus",
+    "obesity",
+]
 
 # Each trial: nct, condition/title/summary, drug, expected verdict.
 TRIALS = [
@@ -126,7 +130,9 @@ async def main() -> None:
     for t in TRIALS:
         p = per_trial_pass[t["nct"]]
         flag = "OK " if p == RUNS else "!! "
-        print(f"{flag}{t['nct']} (expect {t['expected']}): {p}/{RUNS}  — {t['title'][:50]}")
+        print(
+            f"{flag}{t['nct']} (expect {t['expected']}): {p}/{RUNS}  — {t['title'][:50]}"
+        )
     total = sum(per_trial_pass.values())
     print(f"\nTOTAL: {total}/{len(TRIALS) * RUNS}")
 

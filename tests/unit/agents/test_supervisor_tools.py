@@ -86,11 +86,17 @@ def _build_tools_with_drug_facts(
     # find_candidates's outer coroutine wraps _find_candidates_impl in a
     # try/finally; _ensure_drug_entry lives in the impl's closure.
     fc = by_name["find_candidates"]
-    fc_outer = dict(zip(fc.coroutine.__code__.co_freevars, fc.coroutine.__closure__))
+    fc_outer = dict(
+        zip(fc.coroutine.__code__.co_freevars, fc.coroutine.__closure__, strict=False)
+    )
     fc_impl = fc_outer["_find_candidates_impl"].cell_contents
-    fc_closure = dict(zip(fc_impl.__code__.co_freevars, fc_impl.__closure__))
+    fc_closure = dict(
+        zip(fc_impl.__code__.co_freevars, fc_impl.__closure__, strict=False)
+    )
     ensure_fn = fc_closure["_ensure_drug_entry"].cell_contents
-    ensure_closure = dict(zip(ensure_fn.__code__.co_freevars, ensure_fn.__closure__))
+    ensure_closure = dict(
+        zip(ensure_fn.__code__.co_freevars, ensure_fn.__closure__, strict=False)
+    )
     drug_facts = ensure_closure["drug_facts"].cell_contents
 
     drug_facts[drug_name.lower().strip()] = {
@@ -237,6 +243,7 @@ async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order
         zip(
             investigate.coroutine.__code__.co_freevars,
             investigate.coroutine.__closure__,
+            strict=False,
         )
     )
     diseases = ["Disease A", "Disease B", "Disease C", "Disease D"]
@@ -300,7 +307,7 @@ async def test_concurrent_literature_calls_use_distinct_sessions():
         MagicMock(name="session_context_1"),
         MagicMock(name="session_context_2"),
     ]
-    for context, call_db in zip(contexts, call_dbs):
+    for context, call_db in zip(contexts, call_dbs, strict=False):
         context.__enter__.return_value = call_db
         context.__exit__.return_value = False
     session_factory = MagicMock(side_effect=contexts)
@@ -355,7 +362,11 @@ async def test_concurrent_literature_calls_use_distinct_sessions():
         )
         analyze = {tool.name: tool for tool in tools}["analyze_literature"]
         closure = dict(
-            zip(analyze.coroutine.__code__.co_freevars, analyze.coroutine.__closure__)
+            zip(
+                analyze.coroutine.__code__.co_freevars,
+                analyze.coroutine.__closure__,
+                strict=False,
+            )
         )
         closure["allowed_diseases"].cell_contents.update(
             {
@@ -425,18 +436,28 @@ def _build_tools_and_allowlists(
     # over allowed_diseases, allowed_efo_ids, and merge_and_dedup. The merge
     # function in turn closes over _merge_and_dedup_impl which holds the same
     # allowlist dicts plus mechanism_candidates_buffer.
-    fc_outer = dict(zip(fc.coroutine.__code__.co_freevars, fc.coroutine.__closure__))
+    fc_outer = dict(
+        zip(fc.coroutine.__code__.co_freevars, fc.coroutine.__closure__, strict=False)
+    )
     fc_impl = fc_outer["_find_candidates_impl"].cell_contents
-    fc_closure = dict(zip(fc_impl.__code__.co_freevars, fc_impl.__closure__))
+    fc_closure = dict(
+        zip(fc_impl.__code__.co_freevars, fc_impl.__closure__, strict=False)
+    )
     allowed_diseases = fc_closure["allowed_diseases"].cell_contents
     allowed_efo_ids = fc_closure["allowed_efo_ids"].cell_contents
     merge_and_dedup = fc_closure["merge_and_dedup"].cell_contents
     # Reach mechanism_candidates_buffer through _merge_and_dedup_impl.
     md_closure = dict(
-        zip(merge_and_dedup.__code__.co_freevars, merge_and_dedup.__closure__)
+        zip(
+            merge_and_dedup.__code__.co_freevars,
+            merge_and_dedup.__closure__,
+            strict=False,
+        )
     )
     md_impl = md_closure["_merge_and_dedup_impl"].cell_contents
-    md_impl_closure = dict(zip(md_impl.__code__.co_freevars, md_impl.__closure__))
+    md_impl_closure = dict(
+        zip(md_impl.__code__.co_freevars, md_impl.__closure__, strict=False)
+    )
     mechanism_candidates_buffer = md_impl_closure[
         "mechanism_candidates_buffer"
     ].cell_contents
@@ -714,7 +735,7 @@ def _finalize_tools_and_closure(cutoff: date | None = None):
     # finalize_supervisor is a direct @tool decoration — closure lives on
     # .coroutine.__closure__ alongside the closure-scoped state we need to seed.
     fin_closure = dict(
-        zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__)
+        zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__, strict=False)
     )
     findings_local = fin_closure["findings_local"].cell_contents
     allowed_diseases = fin_closure["allowed_diseases"].cell_contents
@@ -1865,7 +1886,7 @@ async def test_finalize_discloses_every_investigated_disease_not_ranked():
     by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
     fin = by_name["finalize_supervisor"]
     fin_closure = dict(
-        zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__)
+        zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__, strict=False)
     )
     approval_labels = fin_closure["approval_labels"].cell_contents
 

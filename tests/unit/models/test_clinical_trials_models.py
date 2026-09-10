@@ -3,8 +3,8 @@
 import pytest
 
 from indication_scout.models.model_clinical_trials import (
-    ArmGroup,
     ApprovalCheck,
+    ArmGroup,
     CompetitorEntry,
     CompletedTrialsResult,
     IndicationLandscape,

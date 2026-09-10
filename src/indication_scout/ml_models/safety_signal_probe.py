@@ -14,6 +14,8 @@ Usage:
         --drug thalidomide --disease "Crohn disease" --n 15
 """
 
+# ruff: noqa: E402 — env must be configured before indication_scout imports
+
 import argparse
 import asyncio
 import logging

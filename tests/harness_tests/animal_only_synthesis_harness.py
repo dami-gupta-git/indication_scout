@@ -24,9 +24,8 @@ import json
 import sys
 from collections import Counter
 
-from sqlalchemy import create_engine, text
-
 from anthropic import AsyncAnthropic
+from sqlalchemy import create_engine, text
 
 from indication_scout.config import get_settings
 
@@ -205,7 +204,9 @@ async def main():
     for name, drug, disease, pmids, expected in CASES:
         abstracts = fetch_abstracts(pmids)
         if len(abstracts) != len(pmids):
-            print(f"[SKIP] {name}: only {len(abstracts)}/{len(pmids)} abstracts in DB\n")
+            print(
+                f"[SKIP] {name}: only {len(abstracts)}/{len(pmids)} abstracts in DB\n"
+            )
             all_pass = False
             continue
         results = await asyncio.gather(
@@ -217,7 +218,9 @@ async def main():
         ok = n_ok == RUNS_PER_CASE
         all_pass = all_pass and ok
         print(f"[{'PASS' if ok else 'FAIL'}] {name}")
-        print(f"        is_animal_only {n_ok}/{RUNS_PER_CASE} (exp={expected}, got={dict(counts)})")
+        print(
+            f"        is_animal_only {n_ok}/{RUNS_PER_CASE} (exp={expected}, got={dict(counts)})"
+        )
         if not ok:
             for v, r in results:
                 if v != expected:

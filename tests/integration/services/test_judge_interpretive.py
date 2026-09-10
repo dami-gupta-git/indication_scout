@@ -48,46 +48,46 @@ def _asserts_phase3(stage: str) -> bool:
 _CASES = [
     (
         "T1DM: completed P3 + active P3 + related_family/T2D (the recurring contradiction)",
-        dict(
-            stage="Phase 3 completed for this indication",
-            active_programs="Phase 3 recruiting (NCT06082063, NCT05819138)",
-            literature="moderate, supports, RCT-backed / controlled",
-            relationship="contaminated",
-            approved_indication="Type 2 Diabetes Mellitus",
-        ),
+        {
+            "stage": "Phase 3 completed for this indication",
+            "active_programs": "Phase 3 recruiting (NCT06082063, NCT05819138)",
+            "literature": "moderate, supports, RCT-backed / controlled",
+            "relationship": "contaminated",
+            "approved_indication": "Type 2 Diabetes Mellitus",
+        },
     ),
     (
         "contradicts: drug failed (completed P3, literature contradicts)",
-        dict(
-            stage="Phase 3 completed for this indication",
-            active_programs="None active",
-            literature="strong, contradicts, RCT-backed / controlled",
-            relationship="none",
-            approved_indication=None,
-        ),
+        {
+            "stage": "Phase 3 completed for this indication",
+            "active_programs": "None active",
+            "literature": "strong, contradicts, RCT-backed / controlled",
+            "relationship": "none",
+            "approved_indication": None,
+        },
     ),
     (
         "genuine Phase-4-only ('no program' language IS correct here)",
-        dict(
-            stage=(
+        {
+            "stage": (
                 "Phase 4 exploratory only (post-approval off-label study; no dedicated "
                 "development program for this indication)"
             ),
-            active_programs="None active",
-            literature="weak, observational",
-            relationship="contaminated",
-            approved_indication="Type 2 Diabetes Mellitus",
-        ),
+            "active_programs": "None active",
+            "literature": "weak, observational",
+            "relationship": "contaminated",
+            "approved_indication": "Type 2 Diabetes Mellitus",
+        },
     ),
     (
         "related_family but NO matched indication (must not over-claim approval)",
-        dict(
-            stage="Active Phase 3 development on record for this indication",
-            active_programs="Phase 3 recruiting (NCT_A)",
-            literature="moderate, supports",
-            relationship="contaminated",
-            approved_indication=None,
-        ),
+        {
+            "stage": "Active Phase 3 development on record for this indication",
+            "active_programs": "Phase 3 recruiting (NCT_A)",
+            "literature": "moderate, supports",
+            "relationship": "contaminated",
+            "approved_indication": None,
+        },
     ),
 ]
 

@@ -28,7 +28,6 @@ from __future__ import annotations
 
 import json
 import logging
-from collections import Counter, defaultdict
 from glob import glob
 from pathlib import Path
 
@@ -218,6 +217,7 @@ def load_pubmed_volume(pairs: list[tuple[str, str]]) -> dict[tuple[str, str], in
     Uses ILIKE on title+abstract for the drug name and ANY-array on mesh_terms for the descriptor term.
     """
     import os
+
     from sqlalchemy import create_engine, text
 
     load_dotenv()

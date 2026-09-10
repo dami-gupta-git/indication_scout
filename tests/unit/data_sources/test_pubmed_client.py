@@ -351,8 +351,9 @@ async def test_fetch_abstracts_retries_malformed_then_succeeds(tmp_path):
     """A malformed efetch body (HTTP 200) is re-fetched; the next good body parses."""
     client = PubMedClient(tmp_path)
     mock_get = AsyncMock(side_effect=[_MALFORMED_XML, _GOOD_XML])
-    with patch.object(client, "_rest_get_xml", mock_get), patch(
-        "indication_scout.data_sources.pubmed.asyncio.sleep", new=AsyncMock()
+    with (
+        patch.object(client, "_rest_get_xml", mock_get),
+        patch("indication_scout.data_sources.pubmed.asyncio.sleep", new=AsyncMock()),
     ):
         result = await client.fetch_abstracts(["12345678"])
 
@@ -365,8 +366,9 @@ async def test_fetch_abstracts_raises_after_exhausting_retries(tmp_path):
     """Persistently malformed bodies raise DataSourceError after the retry budget."""
     client = PubMedClient(tmp_path)
     mock_get = AsyncMock(return_value=_MALFORMED_XML)
-    with patch.object(client, "_rest_get_xml", mock_get), patch(
-        "indication_scout.data_sources.pubmed.asyncio.sleep", new=AsyncMock()
+    with (
+        patch.object(client, "_rest_get_xml", mock_get),
+        patch("indication_scout.data_sources.pubmed.asyncio.sleep", new=AsyncMock()),
     ):
         with pytest.raises(DataSourceError) as exc_info:
             await client.fetch_abstracts(["12345678"])

@@ -17,6 +17,35 @@ from typing import Any, Literal
 from langchain_core.tools import tool
 from sqlalchemy.orm import Session, sessionmaker
 
+from indication_scout.agents._trial_formatting import (
+    _borda_rank_by_enrollment_and_recency,
+    _format_trial_table,
+    _phase_distribution,
+)
+from indication_scout.agents._trial_signals import (
+    format_derived_signals,
+)
+from indication_scout.agents.clinical_trials.clinical_trials_agent import (
+    build_clinical_trials_agent,
+    run_clinical_trials_agent,
+)
+from indication_scout.agents.clinical_trials.clinical_trials_output import (
+    ClinicalTrialsOutput,
+    TrialRelevanceCoverage,
+)
+from indication_scout.agents.clinical_trials.clinical_trials_tools import (
+    _classify_stop_reason,
+)
+from indication_scout.agents.literature.literature_agent import (
+    build_literature_agent,
+    run_literature_agent,
+)
+from indication_scout.agents.literature.literature_output import LiteratureOutput
+from indication_scout.agents.mechanism.mechanism_agent import (
+    build_mechanism_agent,
+    run_mechanism_agent,
+)
+from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 from indication_scout.agents.supervisor.candidate_dedup import (
     collapse_synonym_entries,
     merge_mechanism_entries,
@@ -44,6 +73,7 @@ from indication_scout.services.progress import (
     PHASE_TRIALS,
     emit_progress,
 )
+from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
 
@@ -209,38 +239,6 @@ def _log_disease_banner(title: str, diseases: list[str]) -> None:
         lines.append("  (none)")
     lines.append(bar)
     logger.warning("\n%s", "\n".join(lines))
-
-
-from indication_scout.agents._trial_formatting import (
-    _borda_rank_by_enrollment_and_recency,
-    _format_trial_table,
-    _phase_distribution,
-)
-from indication_scout.agents._trial_signals import (
-    format_derived_signals,
-)
-from indication_scout.agents.clinical_trials.clinical_trials_agent import (
-    build_clinical_trials_agent,
-    run_clinical_trials_agent,
-)
-from indication_scout.agents.clinical_trials.clinical_trials_output import (
-    ClinicalTrialsOutput,
-    TrialRelevanceCoverage,
-)
-from indication_scout.agents.clinical_trials.clinical_trials_tools import (
-    _classify_stop_reason,
-)
-from indication_scout.agents.literature.literature_agent import (
-    build_literature_agent,
-    run_literature_agent,
-)
-from indication_scout.agents.literature.literature_output import LiteratureOutput
-from indication_scout.agents.mechanism.mechanism_agent import (
-    build_mechanism_agent,
-    run_mechanism_agent,
-)
-from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
-from indication_scout.services.retrieval import RetrievalService
 
 
 def _evidence_gate_reason(slot: dict) -> str | None:
@@ -1946,7 +1944,7 @@ def build_supervisor_tools(
                     for e in _to_interp
                 )
             )
-            for e, j in zip(_to_interp, _results):
+            for e, j in zip(_to_interp, _results, strict=True):
                 if j is not None:
                     e["blocker"] = j.blocker
                     e["key_risk"] = j.key_risk

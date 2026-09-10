@@ -116,7 +116,11 @@ T = {
     "NCT00519428": {
         "nct": "NCT00519428",
         "conditions": ["Major Depressive Disorder"],
-        "interventions": ["escitalopram", "bupropion extra long (XL)", "escitalopram + bupropion"],
+        "interventions": [
+            "escitalopram",
+            "bupropion extra long (XL)",
+            "escitalopram + bupropion",
+        ],
         "title": "Does Dual Therapy Hasten Antidepressant Response?",
         "summary": "This study will utilize a randomized double-blind design to evaluate whether "
         "initial treatment with two anti-depressant medications (escitalopram and bupropion) "
@@ -154,7 +158,10 @@ T = {
     },
     "NCT03884075": {
         "nct": "NCT03884075",
-        "conditions": ["Non-Alcoholic Steatohepatitis", "Non-Alcoholic Fatty Liver Disease"],
+        "conditions": [
+            "Non-Alcoholic Steatohepatitis",
+            "Non-Alcoholic Fatty Liver Disease",
+        ],
         "interventions": ["Semaglutide"],
         "title": "Non-Alcoholic Fatty Liver Disease, the HEpatic Response to Oral Glucose, and the "
         "Effect of Semaglutide (NAFLD HEROES)",
@@ -222,7 +229,11 @@ CASES = [
         "bupropion x mood disorder, approved={SAD,MDD}: approved-SAD trial => contaminated",
         "bupropion",
         "Mood Disorder",
-        ["seasonal affective disorder", "major depressive disorder", "smoking cessation"],
+        [
+            "seasonal affective disorder",
+            "major depressive disorder",
+            "smoking cessation",
+        ],
         ["NCT00046241"],
         {"NCT00046241": "contaminated"},
     ),
@@ -244,7 +255,11 @@ CASES = [
         "bupropion x mood disorder, approved={SAD,MDD}: MDD=>contaminated, bipolar=>relevant",
         "bupropion",
         "Mood Disorder",
-        ["seasonal affective disorder", "major depressive disorder", "smoking cessation"],
+        [
+            "seasonal affective disorder",
+            "major depressive disorder",
+            "smoking cessation",
+        ],
         ["NCT00519428", "NCT07266545"],
         {"NCT00519428": "contaminated", "NCT07266545": "relevant"},
     ),
@@ -270,7 +285,11 @@ CASES = [
         "semaglutide x NAFLD, approved={MASH}: mixed NASH+NAFLD trial (either verdict ok)",
         "semaglutide",
         "Non-alcoholic Fatty Liver Disease",
-        ["metabolic dysfunction-associated steatohepatitis (MASH)", "type 2 diabetes", "obesity"],
+        [
+            "metabolic dysfunction-associated steatohepatitis (MASH)",
+            "type 2 diabetes",
+            "obesity",
+        ],
         ["NCT03884075"],
         {"NCT03884075": {"contaminated", "relevant"}},
     ),
@@ -316,7 +335,10 @@ CASES = [
         "sotorasib x lung cancer, approved={KRAS G12C NSCLC}: KRAS-NSCLC trial => contaminated",
         "sotorasib",
         "Lung Cancer",
-        ["KRAS G12C-mutated non-small cell lung cancer", "KRAS G12C-mutated colorectal cancer"],
+        [
+            "KRAS G12C-mutated non-small cell lung cancer",
+            "KRAS G12C-mutated colorectal cancer",
+        ],
         ["NCT04303780"],
         {"NCT04303780": "contaminated"},
     ),

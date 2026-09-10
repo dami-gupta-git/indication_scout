@@ -7,7 +7,9 @@ test suite and the `scout diff-report` CLI.
 
 from pathlib import Path
 
-REGRESSION_DIR = Path(__file__).parent.parent  # tests/regression (this file is in common/)
+REGRESSION_DIR = Path(
+    __file__
+).parent.parent  # tests/regression (this file is in common/)
 GOLD_STANDARD_DIR = REGRESSION_DIR / "gold_standard"
 CASSETTE_DIR = REGRESSION_DIR / "pipeline_replay" / "cassettes"
 

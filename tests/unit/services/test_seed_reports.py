@@ -46,7 +46,9 @@ def test_returns_none_when_disabled(seed_dir, monkeypatch):
     monkeypatch.setattr(seed_reports.time, "time", lambda: 1000.0)
     _write_seed(seed_dir, "metformin", 1000.0 - 5 * 86400)  # fresh, but flag off
     monkeypatch.setattr(
-        seed_reports, "get_settings", lambda: SimpleNamespace(seed_reports_enabled=False)
+        seed_reports,
+        "get_settings",
+        lambda: SimpleNamespace(seed_reports_enabled=False),
     )
 
     assert seed_reports.load_fresh_seed_report("metformin") is None
