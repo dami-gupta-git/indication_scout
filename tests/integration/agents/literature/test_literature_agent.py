@@ -14,6 +14,7 @@ from indication_scout.agents.literature.literature_agent import (
     run_literature_agent,
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
+from indication_scout.config import get_settings
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.retrieval import RetrievalService
 
@@ -66,7 +67,7 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
     Verifies:
     - search_results are non-empty keyword queries
     - known PMIDs are present in fetch_and_cache output
-    - top-5 semantic results match expected PMIDs and title prefixes
+    - the semantic shortlist contains the expected PMIDs and title prefixes
     - evidence_summary is moderate with correct supporting PMIDs
     - narrative summary is non-empty
     """
@@ -97,12 +98,19 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
     assert _EXPECTED_PMIDS.issubset(set(output.pmids))
 
     # --- semantic_search_results ---
-    assert len(output.semantic_search_results) == 5
+    # The shortlist is capped at the configured top-k (raised 5 -> 15 on 2026-09-08) but can be
+    # shorter: under a cutoff only the pre-cutoff candidates in the pool are eligible, and the
+    # pool varies with the LLM-written queries (15 in one run, 11 in the next at this cutoff).
+    assert (
+        len(_EXPECTED_TOP5)
+        <= len(output.semantic_search_results)
+        <= get_settings().semantic_search_top_k
+    )
     result_pmids = [r.pmid for r in output.semantic_search_results]
     for expected_pmid, expected_title_fragment in _EXPECTED_TOP5:
         assert (
             expected_pmid in result_pmids
-        ), f"Expected PMID {expected_pmid} not in top-5"
+        ), f"Expected PMID {expected_pmid} not in shortlist"
         match = next(
             r for r in output.semantic_search_results if r.pmid == expected_pmid
         )
@@ -112,8 +120,8 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
         assert isinstance(match.abstract, str) and len(match.abstract) > 0
         assert 0.0 < match.similarity <= 1.0
 
-    similarities = [r.similarity for r in output.semantic_search_results]
-    assert similarities == sorted(similarities, reverse=True)
+    # No raw-similarity ordering assertion: the shortlist is ranked by similarity times a
+    # publication-type boost, with one slot reserved for a trial-linked paper.
 
     # --- evidence_summary ---
     assert isinstance(output.evidence_summary, EvidenceSummary)
@@ -141,6 +149,7 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
     # is non-empty. The authoritative grade is checked above via evidence_summary.strength.
     assert output.summary.strip()
 
+
 async def test_random_literature_agent(db_session_truncating, test_cache_dir):
 
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
@@ -151,7 +160,7 @@ async def test_random_literature_agent(db_session_truncating, test_cache_dir):
         db_session_truncating,
         date_before=_CUTOFF,
     )
-    test_cache_dir="abc"
+    test_cache_dir = "abc"
     output = await run_literature_agent(agent, "Rofecoxib", "arthritis")
 
     assert isinstance(output, LiteratureOutput)

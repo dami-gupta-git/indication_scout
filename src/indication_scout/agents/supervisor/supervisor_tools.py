@@ -173,9 +173,10 @@ FACT block (machine-derived, authoritative).
 FIRST, audit the ORDER. For each candidate, think about what its evidence actually MEANS for \
 whether it is a live repurposing opportunity worth surfacing first — not merely how much or how \
 impressive the evidence is. A candidate that has been tested and shown to FAIL, or whose program \
-is closed, is a weaker opportunity than one that is still live, however thin. If the current order \
-is not defensible on that basis, reorder the candidates so the strongest live opportunities come \
-first. If it is already defensible, keep it.
+is closed, is a weaker opportunity than one that is still live, however thin. A candidate whose \
+only on-record trials were WITHDRAWN before enrolling has no trial evidence at all, and ranks below \
+a candidate with any human data. If the current order is not defensible on that basis, reorder the \
+candidates so the strongest live opportunities come first. If it is already defensible, keep it.
 
 SECOND, repair any blurb field that CONTRADICTS the candidate's FACT (the FACT is authoritative; \
 it states whether a relevant COMPLETED or ACTIVE Phase 3 is on record, or none). Do not let a \
@@ -185,7 +186,7 @@ is not the same as "no trial"). An unresolved registry query is UNKNOWN, not zer
 that no trials or active programs exist when the FACT says the query was unresolved. Change nothing \
 else.
 
-Output a JSON object ONLY — no reasoning, no preamble, no prose before or after it, no fences:
+Output a JSON object ONLY (no prose, no fences):
 {"blurbs": [ <every input blurb, in your final rank order, each a full dict with the same keys; \
 fields you repaired are rewritten, all others verbatim> ]}
 Return every blurb. Preserve every key."""
@@ -579,8 +580,11 @@ def build_supervisor_tools(
                 existing = {
                     ind.lower().strip() for ind in entry["approved_indications"]
                 }
-                for ind in fda_approved:
-                    if ind.lower().strip() not in existing:
+                # Candidate order, not set order: set iteration varies per process (hash randomization) and
+                # this list is embedded verbatim in every sub-agent prompt, so a stable order keeps the
+                # prompts byte-identical between runs (the pipeline replay matches requests on body).
+                for ind in diseases:
+                    if ind in fda_approved and ind.lower().strip() not in existing:
                         entry["approved_indications"].append(ind)
             fda_approved_lower = {d.lower().strip() for d in fda_approved}
 

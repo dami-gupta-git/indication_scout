@@ -15,6 +15,7 @@ from datetime import date
 from langchain_core.messages.tool import ToolCall
 
 from indication_scout.agents.literature.literature_tools import build_literature_tools
+from indication_scout.config import get_settings
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.retrieval import AbstractResult, RetrievalService
@@ -190,7 +191,7 @@ async def test_semantic_search_without_pmids(db_session_truncating, test_cache_d
 
 
 async def test_semantic_search(db_session_truncating, test_cache_dir):
-    """semantic_search returns top-k AbstractResults sorted by descending similarity."""
+    """semantic_search returns at most top-k AbstractResults ranked by boosted similarity."""
     svc = RetrievalService(test_cache_dir)
     tools = _tool_map(_build_tools(svc, db_session_truncating))
 
@@ -206,18 +207,21 @@ async def test_semantic_search(db_session_truncating, test_cache_dir):
     )
 
     results: list[AbstractResult] = msg.artifact
-    assert len(results) == 5
+    # The shortlist is capped at the configured top-k (raised 5 -> 15 on 2026-09-08) but can be
+    # shorter under a cutoff, since only pre-cutoff pool papers are eligible.
+    assert len(_EXPECTED_TOP5) <= len(results) <= get_settings().semantic_search_top_k
     assert all(isinstance(r, AbstractResult) for r in results)
 
+    # No raw-similarity ordering assertion: results are ranked by similarity times a
+    # publication-type boost, with one slot reserved for a trial-linked paper.
     similarities = [r.similarity for r in results]
-    assert similarities == sorted(similarities, reverse=True)
     assert all(0.0 < s <= 1.0 for s in similarities)
 
     result_pmids = [r.pmid for r in results]
     for expected_pmid, expected_title_fragment in _EXPECTED_TOP5:
         assert (
             expected_pmid in result_pmids
-        ), f"Expected PMID {expected_pmid} not in top-5"
+        ), f"Expected PMID {expected_pmid} not in shortlist"
         match = next(r for r in results if r.pmid == expected_pmid)
         assert expected_title_fragment in match.title
         assert isinstance(match.abstract, str) and len(match.abstract) > 0
@@ -263,7 +267,9 @@ async def test_synthesize(db_session_truncating, test_cache_dir):
         | set(evidence.neutral_pmids)
     )
     assert _EXPECTED_CITED_PMIDS.issubset(cited)
-    assert "33185364" in evidence.supporting_pmids  # positive NEJM RCT — unambiguous supporter
+    assert (
+        "33185364" in evidence.supporting_pmids
+    )  # positive NEJM RCT — unambiguous supporter
     assert len(evidence.key_findings) >= 2
 
     # The tool's content string leads with the strength and may append more (e.g. ", direction:
@@ -277,9 +283,16 @@ async def test_safety_search(db_session_truncating, test_cache_dir):
     drug profile on the fly if the store has none.
 
     Semaglutide's stable OT signal: FAERS top adverse events include pancreatitis; the drug-level
-    summary is grounded and cited."""
+    summary is grounded and cited.
+
+    Built WITHOUT a cutoff: the assertions below describe production mode (OT/label facts, no
+    literature synthesis, severity set). Under a cutoff the same tool runs the holdout path, which
+    omits OT and label data, cites date-eligible literature, and leaves severity None.
+    """
     svc = RetrievalService(test_cache_dir)
-    tools = _tool_map(_build_tools(svc, db_session_truncating))
+    tools = _tool_map(
+        build_literature_tools(svc, db_session_truncating, date_before=None)
+    )
 
     msg = await tools["safety_search"].ainvoke(
         _tc("safety_search", drug_name=_DRUG, disease_name=_DISEASE)
