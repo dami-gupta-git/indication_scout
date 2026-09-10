@@ -1557,7 +1557,8 @@ async def test_synthesize_parses_llm_response(svc):
 
 
 async def test_synthesize_downgrades_unsupported_controlled_design_claim(svc):
-    """An uncontrolled Parkinson study cannot render as RCT-backed in the candidate card."""
+    """An uncontrolled Parkinson study cannot render as RCT-backed in the candidate card. The one human efficacy paper
+    keeps the pair off animal-only, so the model's strength stands."""
     abstract = AbstractResult(
         pmid="6431314",
         title="Bupropion in Parkinson's disease",
@@ -1629,9 +1630,11 @@ async def test_synthesize_downgrades_unsupported_controlled_design_claim(svc):
 
 
 async def test_synthesize_neutral_paper_cannot_certify_controlled_design(svc):
-    """Only a paper carrying an efficacy verdict may set the design word. sildenafil x ischemic stroke was graded on two
-    animal studies while an uncontrolled 12-patient safety study — held as context, in neither directional list — supplied
-    the card's "RCT-backed / controlled" claim, because its background sentence described placebo-controlled RAT work.
+    """Only a paper carrying an efficacy verdict may set the design word or count as human evidence. sildenafil x
+    ischemic stroke was graded on two animal studies while an uncontrolled 12-patient safety study — held as context, in
+    neither directional list — supplied the card's "RCT-backed / controlled" claim (its background sentence described
+    placebo-controlled RAT work) and later kept the pair off "animal-only" at "moderate". With no human efficacy paper
+    the pair is animal-only and capped at weak.
     """
     abstracts = [
         AbstractResult(
@@ -1692,11 +1695,12 @@ async def test_synthesize_neutral_paper_cannot_certify_controlled_design(svc):
         result = await svc.synthesize("CHEMBL192", "ischemic stroke", abstracts)
 
     assert result.is_observational is None
+    assert result.is_animal_only is True
     assert result.supporting_pmids == ["12411660"]
     assert result.neutral_pmids == ["19717023"]
     assert result.relevant_pmids == ["12411660", "19717023"]
     assert result.study_count == 2
-    assert result.strength == "moderate"
+    assert result.strength == "weak"
     assert result.direction == "supports"
     assert result.evidence_basis == "drug_specific"
     assert result.contaminated_pmids == []

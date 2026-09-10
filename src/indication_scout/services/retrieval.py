@@ -1362,7 +1362,7 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or DERIVED fields (direction rollup, strength cap)
             # change, so stale judgments cannot preserve behavior that the new rules reject.
-            "logic_version": "per_pmid_class_and_target_gates_v5_per_paper_design",
+            "logic_version": "per_pmid_class_and_target_gates_v6_animal_only_from_judgments",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -1612,6 +1612,29 @@ class RetrievalService:
             )
         ):
             summary.is_observational = None
+
+        # Animal-only is likewise derived from the per-abstract judgments, not the synthesis model. The model counts ANY
+        # human paper — including a neutral safety study with no efficacy result — as human evidence, so sildenafil x
+        # ischemic stroke read "moderate, supports, undetermined design" on two rodent studies plus a 12-patient safety
+        # study, while Duchenne on one mouse study correctly read "weak, animal/in-vitro only". Only papers carrying an
+        # efficacy verdict count. When none of them is human the pair is animal-only and its strength is capped at
+        # "weak" (the prompt's own rule for animal/in-vitro-only evidence); when at least one is human it is not. Both
+        # are one-way: a grade is never raised. With no judgments the synthesis values stand.
+        if summary.evidence_basis == "drug_specific" and directional_judgments:
+            any_human = any(
+                pmid_judgment.is_human for pmid_judgment in directional_judgments
+            )
+            summary.is_animal_only = not any_human
+            if not any_human:
+                summary.is_observational = None
+                if summary.strength in ("strong", "moderate"):
+                    logger.warning(
+                        "synthesize: capping strength %s -> weak for %s / %s (no human efficacy paper)",
+                        summary.strength,
+                        pref_name,
+                        disease,
+                    )
+                    summary.strength = "weak"
 
         # Preserve the synthesis model's evidence-weighted overall direction when individual papers
         # disagree. A presence-only rollup made any positive case report cancel controlled negative
