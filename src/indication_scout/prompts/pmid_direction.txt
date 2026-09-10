@@ -26,9 +26,23 @@ Rules:
   separate publication. An analysis the abstract itself reports (including a pooled or
   post-hoc analysis combining its patients with earlier trials) IS its own result.
 
+Also report, for EACH abstract, the design of the study THAT abstract reports:
+
+- "is_human": true if the reported study was carried out in people (trial, cohort, case series, case
+  report or other human data); false if it was carried out only in animals, cells or tissue. A mouse
+  or rat MODEL of a human disease is not human — judge the subjects studied, not the disease named.
+- "is_controlled": true if the reported study itself compared {drug} against a control or comparator
+  group (randomized, placebo-controlled, active-controlled or crossover); false for single-arm,
+  open-label, uncontrolled, observational, case-report, modelling and preclinical studies.
+
+Judge both fields from the study the abstract reports, never from a study it cites. An abstract often
+opens with background sentences describing earlier work — a placebo-controlled trial mentioned there
+says nothing about this abstract's own design. If the abstract does not state its own design, answer
+false.
+
 Abstracts:
 {abstracts}
 
-Respond with ONLY a JSON object mapping each PMID to its verdict:
-{{"<pmid>": "supporting"|"contradicting"|"mixed"|"neutral", ...}}
+Respond with ONLY a JSON object mapping each PMID to its judgment:
+{{"<pmid>": {{"verdict": "supporting"|"contradicting"|"mixed"|"neutral", "is_human": true|false, "is_controlled": true|false}}, ...}}
 Include every PMID listed above. No prose, no fences.

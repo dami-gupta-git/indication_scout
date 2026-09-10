@@ -173,6 +173,69 @@ _ACCELERATE = {
 }
 
 
+_SILDENAFIL_RATS = {
+    "pmid": "12411660",
+    "title": "Sildenafil (Viagra) induces neurogenesis and promotes functional recovery after stroke in rats. ",
+    "abstract": (
+        "BACKGROUND AND PURPOSE: We tested the hypothesis that sildenafil, a phosphodiesterase type 5 (PDE5) "
+        "inhibitor, promotes functional recovery and neurogenesis after stroke. METHODS: Male Wistar rats were "
+        "subjected to embolic middle cerebral artery occlusion. Sildenafil (Viagra) was administered orally for 7 "
+        "consecutive days starting 2 or 24 hours after stroke onset at doses of 2 or 5 mg/kg per day. Ischemic rats "
+        "administered the same volume of tap water were used as a control group. Functional outcome tests "
+        "(foot-fault, adhesive removal) were performed. Rats were killed 28 days after stroke for analysis of "
+        "infarct volume and newly generated cells within the subventricular zone and the dentate gyrus. RESULTS: "
+        "Treatment with sildenafil significantly (P<0.05) enhanced neurological recovery in all tests performed. "
+        "There was no significant difference of infarct volume among the experimental groups. Treatment with "
+        "sildenafil significantly (P<0.05) increased numbers of bromodeoxyuridine-immunoreactive cells in the "
+        "subventricular zone and the dentate gyrus. CONCLUSIONS: Sildenafil increases brain levels of cGMP, evokes "
+        "neurogenesis, and reduces neurological deficits when given to rats 2 or 24 hours after stroke. "
+    ),
+}
+
+_SILDENAFIL_GERBILS = {
+    "pmid": "39335590",
+    "title": (
+        "Effects of Sildenafil on Cognitive Function Recovery and Neuronal Cell Death Protection after Transient "
+        "Global Cerebral Ischemia in Gerbils. "
+    ),
+    "abstract": (
+        "Cerebral ischemic stroke is a major cause of death worldwide due to brain cell death resulting from "
+        "ischemia-reperfusion injury. However, effective treatment approaches for patients with ischemic stroke are "
+        "still lacking in clinical practice. This study investigated the potential neuroprotective effects of "
+        "sildenafil, a phosphodiesterase-5 inhibitor, in a gerbil model of global brain ischemia. We investigated "
+        "the effects of sildenafil on the expression of glial fibrillary acidic protein and aquaporin-4. "
+        "Immunofluorescence analysis showed that the number of cells co-expressing these markers, which was "
+        "elevated in the ischemia-induced group, was significantly reduced in the sildenafil-treated groups. "
+        "Additionally, we performed various behavioral tests, including the open-field test, novel object "
+        "recognition, Barnes maze, Y-maze, and passive avoidance tests, to evaluate sildenafil's effect on "
+        "cognitive function impaired by ischemia. Overall, the results suggest that sildenafil may serve as a "
+        "neuroprotective agent, potentially alleviating delayed neuronal cell death and improving cognitive "
+        "function impaired by ischemia. "
+    ),
+}
+
+# The abstract whose BACKGROUND sentence ("compared with placebo", about RATS) certified the pair as RCT-backed under the
+# old document-wide phrase match. The study it reports is a single-arm 12-patient safety study.
+_SILDENAFIL_SAFETY = {
+    "pmid": "19717023",
+    "title": "Sildenafil treatment of subacute ischemic stroke: a safety study at 25-mg daily for 2 weeks. ",
+    "abstract": (
+        "BACKGROUND: In several animal studies of young and aged rats with ischemic stroke, treatment with "
+        "sildenafil improved functional outcomes compared with placebo. We conducted a safety study of sildenafil "
+        "(25 mg daily for 2 weeks) shortly after ischemic stroke onset. METHODS: We recruited patients aged 18 to "
+        "80 years with ischemic stroke, National Institutes of Health stroke scale (NIHSS) score 2 to 21, between "
+        "days 2 and 9 after symptom onset. Patients were treated with sildenafil for 2 weeks (25 mg daily). The "
+        "primary outcome measure was the adverse occurrence of any of the following during the treatment period: "
+        "stroke worsening, new stroke, myocardial infarction, vision loss, hearing loss, or death from any cause. "
+        "RESULTS: Twelve patients were recruited. Mean age was 57 years, 5 were female, and median NIHSS score at "
+        "entry was 9.5 (range 2-20). The primary outcome measure occurred in one patient (sudden death). Among the "
+        "10 survivors, at 90 days, median NIHSS score was 2 (range 0-12), median Barthel index was 95 (range "
+        "15-100), and median modified Rankin score was 1.5 (range 0-5). CONCLUSIONS: Sildenafil (25 mg daily for 2 "
+        "weeks) appeared to be safe in this group of patients with mild to moderately severe stroke. "
+    ),
+}
+
+
 def _to_abstracts(dicts: list[dict[str, str]]) -> list[AbstractResult]:
     """Wrap the inline {pmid,title,abstract} dicts as AbstractResults the sub-call accepts."""
     return [
@@ -211,8 +274,64 @@ async def test_pmid_direction(
     expected: dict[str, set[str]],
 ) -> None:
     """Grade one real batch for one drug-disease pair against the live sub-call."""
-    verdicts = await _judge_pmid_directions(drug, disease, _to_abstracts(abstracts))
+    judgments = await _judge_pmid_directions(drug, disease, _to_abstracts(abstracts))
 
-    assert set(verdicts) == set(expected)
+    assert set(judgments) == set(expected)
     for pmid, allowed in expected.items():
-        assert verdicts[pmid] in allowed, f"{pmid} graded {verdicts[pmid]}"
+        assert (
+            judgments[pmid].verdict in allowed
+        ), f"{pmid} graded {judgments[pmid].verdict}"
+
+
+@pytest.mark.parametrize(
+    "drug, disease, abstracts, expected",
+    [
+        (
+            "sildenafil",
+            "Ischemic Stroke",
+            [_SILDENAFIL_RATS, _SILDENAFIL_GERBILS, _SILDENAFIL_SAFETY],
+            {
+                # The rodent studies ARE controlled (a tap-water control group); what disqualifies them is the species,
+                # so is_controlled is left unasserted for them.
+                "12411660": (False, None),
+                "39335590": (False, None),
+                "19717023": (True, False),
+            },
+        ),
+        (
+            "metformin",
+            "Miscarriage",
+            [_PREGMET2],
+            {"30792154": (True, True)},
+        ),
+    ],
+)
+async def test_pmid_design(
+    drug: str,
+    disease: str,
+    abstracts: list[dict[str, str]],
+    expected: dict[str, tuple[bool, bool | None]],
+) -> None:
+    """The design fields must describe the study each abstract REPORTS, not one it cites. The sildenafil safety abstract
+    opens by describing placebo-controlled RAT experiments; the study it reports is a single-arm 12-patient safety study,
+    and grading it controlled is what rendered a rodent-graded candidate as "RCT-backed / controlled". A rodent study is
+    never human, whatever the disease it models. PregMet2 is the positive control: a real placebo-controlled human trial
+    must still read human and controlled.
+    """
+
+    judgments = await _judge_pmid_directions(drug, disease, _to_abstracts(abstracts))
+
+    assert set(judgments) == set(expected)
+    for pmid, (is_human, is_controlled) in expected.items():
+        assert judgments[pmid].is_human is is_human, f"{pmid} is_human"
+        if is_controlled is not None:
+            assert (
+                judgments[pmid].is_controlled is is_controlled
+            ), f"{pmid} is_controlled"
+
+    # The claim the report actually makes: a pair may render as "RCT-backed / controlled" only if some abstract is BOTH
+    # human and controlled. Only the metformin batch qualifies.
+    certifies_controlled = any(
+        judgment.is_human and judgment.is_controlled for judgment in judgments.values()
+    )
+    assert certifies_controlled is (drug == "metformin")

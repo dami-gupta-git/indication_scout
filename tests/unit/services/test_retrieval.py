@@ -8,7 +8,7 @@ import pytest
 
 from indication_scout.models.model_chembl import ATCDescription
 from indication_scout.models.model_drug_profile import DrugProfile
-from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.models.model_evidence_summary import EvidenceSummary, PmidJudgment
 from indication_scout.models.model_open_targets import (
     DrugData,
     DrugTarget,
@@ -22,6 +22,16 @@ from indication_scout.services.retrieval import (
 )
 
 # --- Fixtures ---
+
+
+def _judgments(*rows: tuple[str, str, bool, bool]) -> dict[str, PmidJudgment]:
+    """Build a per-PMID sub-call result from (pmid, verdict, is_human, is_controlled) rows."""
+    return {
+        pmid: PmidJudgment(
+            verdict=verdict, is_human=is_human, is_controlled=is_controlled
+        )
+        for pmid, verdict, is_human, is_controlled in rows
+    }
 
 
 @pytest.fixture
@@ -1247,7 +1257,10 @@ async def test_synthesize_calls_llm_with_correct_prompt(svc):
         patch(
             "indication_scout.services.retrieval._judge_pmid_directions",
             new=AsyncMock(
-                return_value={"11111111": "supporting", "22222222": "supporting"}
+                return_value=_judgments(
+                    ("11111111", "supporting", True, True),
+                    ("22222222", "supporting", False, False),
+                )
             ),
         ),
     ):
@@ -1281,7 +1294,10 @@ async def test_synthesize_prompt_uses_pref_name(svc):
         patch(
             "indication_scout.services.retrieval._judge_pmid_directions",
             new=AsyncMock(
-                return_value={"11111111": "supporting", "22222222": "supporting"}
+                return_value=_judgments(
+                    ("11111111", "supporting", True, True),
+                    ("22222222", "supporting", False, False),
+                )
             ),
         ),
     ):
@@ -1394,7 +1410,9 @@ async def test_synthesize_downgrades_unsupported_controlled_design_claim(svc):
         ),
         patch(
             "indication_scout.services.retrieval._judge_pmid_directions",
-            new=AsyncMock(return_value={"6431314": "supporting"}),
+            new=AsyncMock(
+                return_value=_judgments(("6431314", "supporting", True, False))
+            ),
         ),
     ):
         result = await svc.synthesize("CHEMBL894", "Parkinson disease", [abstract])
@@ -1425,6 +1443,80 @@ async def test_synthesize_downgrades_unsupported_controlled_design_claim(svc):
         "indication_harm_summary": "",
         "indication_harm_pmids": [],
     }
+
+
+async def test_synthesize_neutral_paper_cannot_certify_controlled_design(svc):
+    """Only a paper carrying an efficacy verdict may set the design word. sildenafil x ischemic stroke was graded on two
+    animal studies while an uncontrolled 12-patient safety study — held as context, in neither directional list — supplied
+    the card's "RCT-backed / controlled" claim, because its background sentence described placebo-controlled RAT work.
+    """
+    abstracts = [
+        AbstractResult(
+            pmid="12411660",
+            title="Sildenafil promotes neurogenesis after stroke in rats",
+            abstract="Sildenafil improved functional recovery in rats with embolic middle cerebral artery occlusion.",
+            similarity=0.95,
+        ),
+        AbstractResult(
+            pmid="19717023",
+            title="Safety of sildenafil after acute ischemic stroke",
+            abstract=(
+                "In several animal studies of rats with ischemic stroke, treatment with sildenafil improved functional "
+                "outcomes compared with placebo. We conducted a safety study of sildenafil in 12 patients."
+            ),
+            similarity=0.93,
+        ),
+    ]
+    response = json.dumps(
+        {
+            "verdicts": {"12411660": "supporting", "19717023": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Sildenafil aided recovery in rodents (PMID: 12411660).",
+            "strength": "moderate",
+            "direction": "supports",
+            "is_observational": False,
+            "is_animal_only": False,
+            "key_findings": ["Rodent recovery improved (PMID: 12411660)."],
+        }
+    )
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["sildenafil"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(return_value={"12411660": "studied", "19717023": "studied"}),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_treats_disease",
+            new=AsyncMock(return_value={"12411660": True, "19717023": True}),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=response),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_directions",
+            new=AsyncMock(
+                return_value=_judgments(
+                    ("12411660", "supporting", False, False),
+                    ("19717023", "neutral", True, True),
+                )
+            ),
+        ),
+    ):
+        result = await svc.synthesize("CHEMBL192", "ischemic stroke", abstracts)
+
+    assert result.is_observational is None
+    assert result.supporting_pmids == ["12411660"]
+    assert result.neutral_pmids == ["19717023"]
+    assert result.relevant_pmids == ["12411660", "19717023"]
+    assert result.study_count == 2
+    assert result.strength == "moderate"
+    assert result.direction == "supports"
+    assert result.evidence_basis == "drug_specific"
+    assert result.contaminated_pmids == []
 
 
 async def test_synthesize_degrades_to_safe_floor_on_invalid_json(svc):
@@ -1605,7 +1697,9 @@ async def test_synthesize_class_level_paper_never_counts_as_drug_specific_eviden
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
         patch(
             "indication_scout.services.retrieval._judge_pmid_directions",
-            new=AsyncMock(return_value={"11111111": "supporting"}),
+            new=AsyncMock(
+                return_value=_judgments(("11111111", "supporting", False, True))
+            ),
         ),
     ):
         result = await svc.synthesize("CHEMBL192", "ischemic stroke", abstracts)
@@ -1718,7 +1812,9 @@ async def test_synthesize_target_gate_excludes_disease_observed_but_not_treated(
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
         patch(
             "indication_scout.services.retrieval._judge_pmid_directions",
-            new=AsyncMock(return_value={"11111111": "supporting"}),
+            new=AsyncMock(
+                return_value=_judgments(("11111111", "supporting", False, True))
+            ),
         ),
     ):
         result = await svc.synthesize("CHEMBL192", "ischemic stroke", abstracts)
@@ -1850,7 +1946,9 @@ async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(sv
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
         patch(
             "indication_scout.services.retrieval._judge_pmid_directions",
-            new=AsyncMock(return_value={"11111111": "supporting"}),
+            new=AsyncMock(
+                return_value=_judgments(("11111111", "supporting", True, True))
+            ),
         ),
     ):
         result = await svc.synthesize("CHEMBL192", "diabetic nephropathy", abstracts)
@@ -1890,8 +1988,8 @@ async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(sv
 
 
 async def test_judge_pmid_directions_parses_and_validates():
-    """The sub-call returns a {pmid: direction} map, keeping only valid directions for PMIDs that
-    were actually sent (an out-of-set or unrecognized verdict is dropped, not trusted).
+    """The sub-call returns a {pmid: judgment} map carrying the verdict and the study's own design, keeping only valid
+    judgments for PMIDs that were actually sent (an out-of-set or unrecognized verdict is dropped, not trusted).
     """
     from indication_scout.services.retrieval import _judge_pmid_directions
 
@@ -1900,7 +1998,12 @@ async def test_judge_pmid_directions_parses_and_validates():
         AbstractResult(pmid="2", title="t2", abstract="a2", similarity=0.9),
     ]
     resp = json.dumps(
-        {"1": "supporting", "2": "neutral", "999": "supporting", "3": "bogus"}
+        {
+            "1": {"verdict": "supporting", "is_human": True, "is_controlled": True},
+            "2": {"verdict": "neutral", "is_human": True, "is_controlled": False},
+            "999": {"verdict": "supporting", "is_human": True, "is_controlled": True},
+            "3": {"verdict": "bogus", "is_human": True, "is_controlled": True},
+        }
     )
     with patch(
         "indication_scout.services.retrieval.query_small_llm",
@@ -1908,7 +2011,23 @@ async def test_judge_pmid_directions_parses_and_validates():
     ):
         out = await _judge_pmid_directions("metformin", "colorectal cancer", abstracts)
     # neutral is a valid verdict and kept; out-of-set (999) and unrecognized (bogus) dropped.
-    assert out == {"1": "supporting", "2": "neutral"}
+    assert out == _judgments(
+        ("1", "supporting", True, True), ("2", "neutral", True, False)
+    )
+
+
+async def test_judge_pmid_directions_missing_design_fields_are_not_controlled():
+    """A judgment that omits the design fields must not certify controlled human evidence: both default to False so an
+    incomplete answer can never render as RCT-backed."""
+    from indication_scout.services.retrieval import _judge_pmid_directions
+
+    abstracts = [AbstractResult(pmid="1", title="t1", abstract="a1", similarity=0.9)]
+    with patch(
+        "indication_scout.services.retrieval.query_small_llm",
+        new=AsyncMock(return_value=json.dumps({"1": {"verdict": "supporting"}})),
+    ):
+        out = await _judge_pmid_directions("metformin", "colorectal cancer", abstracts)
+    assert out == _judgments(("1", "supporting", False, False))
 
 
 async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
@@ -1925,7 +2044,20 @@ async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
             "key_findings": [],
         }
     )
-    sub = json.dumps({"11111111": "supporting", "22222222": "neutral"})
+    sub = json.dumps(
+        {
+            "11111111": {
+                "verdict": "supporting",
+                "is_human": True,
+                "is_controlled": True,
+            },
+            "22222222": {
+                "verdict": "neutral",
+                "is_human": True,
+                "is_controlled": False,
+            },
+        }
+    )
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -1972,7 +2104,20 @@ async def test_synthesize_focuses_final_judgment_when_papers_disagree(svc):
             "key_findings": ["The controlled trial found no benefit (PMID: 22222222)."],
         }
     )
-    sub = json.dumps({"11111111": "supporting", "22222222": "contradicting"})
+    sub = json.dumps(
+        {
+            "11111111": {
+                "verdict": "supporting",
+                "is_human": True,
+                "is_controlled": True,
+            },
+            "22222222": {
+                "verdict": "contradicting",
+                "is_human": True,
+                "is_controlled": True,
+            },
+        }
+    )
     query_llm = AsyncMock(side_effect=[main, focused])
     with (
         patch(
@@ -2029,7 +2174,20 @@ async def test_all_neutral_abstracts_force_direction_none(svc):
             "key_findings": [],
         }
     )
-    sub = json.dumps({"11111111": "neutral", "22222222": "neutral"})
+    sub = json.dumps(
+        {
+            "11111111": {
+                "verdict": "neutral",
+                "is_human": True,
+                "is_controlled": False,
+            },
+            "22222222": {
+                "verdict": "neutral",
+                "is_human": True,
+                "is_controlled": False,
+            },
+        }
+    )
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -2091,7 +2249,20 @@ async def test_synthesize_pmid_direction_overrides_verdict(svc):
             "key_findings": [],
         }
     )
-    sub = json.dumps({"11111111": "contradicting", "22222222": "contradicting"})
+    sub = json.dumps(
+        {
+            "11111111": {
+                "verdict": "contradicting",
+                "is_human": True,
+                "is_controlled": True,
+            },
+            "22222222": {
+                "verdict": "contradicting",
+                "is_human": True,
+                "is_controlled": True,
+            },
+        }
+    )
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",

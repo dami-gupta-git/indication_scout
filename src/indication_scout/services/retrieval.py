@@ -35,6 +35,7 @@ from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import (
     EvidenceDirectionJudgment,
     EvidenceSummary,
+    PmidJudgment,
 )
 from indication_scout.models.model_fda import FDALabelSafetyRecord
 from indication_scout.models.model_open_targets import AdverseEvent, DrugWarning
@@ -116,12 +117,6 @@ _PMID_DRUG_IDENTITY_PROMPT = (_PROMPTS_DIR / "pmid_drug_identity.txt").read_text
 _PMID_DRUG_IDENTITY_VERDICTS = {"studied", "class_level", "not_studied"}
 _PMID_TREATS_DISEASE_PROMPT = (_PROMPTS_DIR / "pmid_treats_disease.txt").read_text()
 _PMID_TREATS_DISEASE_VERDICTS = {"treats", "not_treats"}
-# "neutral" = a relevant abstract with NO efficacy result (PK / safety-only / mechanism). It stays
-# RELEVANT (counts in study_count) but is kept OUT of supporting AND contradicting, so a PK paper
-# can't flip a clean "supports" to "mixed" (thalidomide × prostate: a PK study force-bucketed as
-# contradicting; baricitinib safety analysis force-bucketed as supporting).
-_PMID_DIRECTIONS = {"supporting", "contradicting", "mixed", "neutral"}
-
 # Appended on the retry after a prose field cited a PMID that was not in the supplied abstracts.
 _PMID_RETRY_NOTE = """
 
@@ -139,15 +134,6 @@ _CONTROLLED_DESIGN_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _CONTROLLED_PUBTYPES = {"Randomized Controlled Trial", "Controlled Clinical Trial"}
-
-
-def _has_explicit_controlled_design(abstracts: list["AbstractResult"]) -> bool:
-    """Return whether relevant evidence explicitly identifies a controlled study design."""
-    return any(
-        bool(_CONTROLLED_PUBTYPES.intersection(result.pubtype))
-        or bool(_CONTROLLED_DESIGN_PATTERN.search(f"{result.title} {result.abstract}"))
-        for result in abstracts
-    )
 
 
 def _mentions_exact_drug(drug_names: list[str], result: "AbstractResult") -> bool:
@@ -338,15 +324,17 @@ async def _judge_pmid_treats_disease(
 
 async def _judge_pmid_directions(
     drug: str, disease: str, relevant_abstracts: list["AbstractResult"]
-) -> dict[str, str]:
-    """Per-PMID direction (supporting | contradicting | mixed) over the RELEVANT abstracts, via a
-    small isolated sub-call. This is the AUTHORITATIVE direction for each relevant abstract — it
-    replaces both the in-prompt verdict-direction and the old regex guards, which could not
-    reliably attribute a benefit to the right drug-arm (metformin × hepatic steatosis: a benefit
-    that belonged to the comparator, or a metabolic-marker improvement, read as "supporting" for
-    metformin). The narrow one-question-per-abstract framing handles attribution that phrase
-    matching cannot. Returns a {pmid: direction} map; a PMID the sub-call omits or labels
-    unrecognizably is left out (the caller keeps the synthesize verdict for it)."""
+) -> dict[str, PmidJudgment]:
+    """Per-PMID direction (supporting | contradicting | mixed | neutral) AND study design over the RELEVANT abstracts, via
+    a small isolated sub-call. This is the AUTHORITATIVE direction for each relevant abstract — it replaces both the
+    in-prompt verdict-direction and the old regex guards, which could not reliably attribute a benefit to the right
+    drug-arm (metformin × hepatic steatosis: a benefit that belonged to the comparator, or a metabolic-marker improvement,
+    read as "supporting" for metformin). The narrow one-question-per-abstract framing handles attribution that phrase
+    matching cannot. The same call answers whether each study is in humans and whether it is itself controlled, which
+    phrase matching over the whole abstract could not (sildenafil × ischemic stroke: an uncontrolled human safety study
+    whose background described placebo-controlled RAT experiments certified the pair as RCT-backed). Returns a
+    {pmid: judgment} map; a PMID the sub-call omits or labels unrecognizably is left out (the caller keeps the synthesize
+    verdict for it)."""
     if not relevant_abstracts:
         return {}
     formatted = "\n\n".join(
@@ -366,12 +354,23 @@ async def _judge_pmid_directions(
             response,
         )
         return {}
-    out: dict[str, str] = {}
+    out: dict[str, PmidJudgment] = {}
     valid_pmids = {r.pmid for r in relevant_abstracts}
-    for pmid, verdict in data.items():
-        v = str(verdict).strip().lower()
-        if str(pmid) in valid_pmids and v in _PMID_DIRECTIONS:
-            out[str(pmid)] = v
+    for pmid, payload in data.items():
+        if str(pmid) not in valid_pmids or not isinstance(payload, dict):
+            continue
+        try:
+            out[str(pmid)] = PmidJudgment(**payload)
+        except ValidationError:
+            # An unrecognized verdict drops the whole abstract, as before: the caller then keeps the synthesize verdict
+            # for it, and it can never certify the pair as controlled human evidence.
+            logger.warning(
+                "pmid_direction: unusable judgment for PMID %s (%s / %s): %s",
+                pmid,
+                drug,
+                disease,
+                payload,
+            )
     return out
 
 
@@ -1241,7 +1240,7 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or DERIVED fields (direction rollup, strength cap)
             # change, so stale judgments cannot preserve behavior that the new rules reject.
-            "logic_version": "per_pmid_class_and_target_gates_v4_cited_pmid_guard",
+            "logic_version": "per_pmid_class_and_target_gates_v5_per_paper_design",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -1428,20 +1427,20 @@ class RetrievalService:
         relevant_for_direction = [
             r for r in synthesis_abstracts if verdict_of[r.pmid] in _RELEVANT_VERDICTS
         ]
-        pmid_directions = await _judge_pmid_directions(
+        pmid_judgments = await _judge_pmid_directions(
             pref_name, disease, relevant_for_direction
         )
-        for p, d in pmid_directions.items():
-            if verdict_of.get(p) != d:
+        for p, pmid_judgment in pmid_judgments.items():
+            if verdict_of.get(p) != pmid_judgment.verdict:
                 logger.info(
                     "synthesize: pmid_direction set PMID %s %s->%s for %s / %s",
                     p,
                     verdict_of.get(p),
-                    d,
+                    pmid_judgment.verdict,
                     chembl_id,
                     disease,
                 )
-                verdict_of[p] = d
+                verdict_of[p] = pmid_judgment.verdict
 
         relevant_pmids = [p for p in input_pmids if verdict_of[p] in _RELEVANT_VERDICTS]
         contaminated_pmids = [
@@ -1467,14 +1466,28 @@ class RetrievalService:
         data["study_count"] = len(relevant_pmids)
         summary = EvidenceSummary(**data)
 
-        # The synthesis model sometimes emits is_observational=False even while describing every
-        # relevant human study as uncontrolled. The card renders False as "RCT-backed / controlled",
-        # so require an explicit controlled-design signal before allowing that claim. This guard is
-        # one-way: it prevents an unsupported controlled claim without upgrading any study to one.
+        # The synthesis model sometimes emits is_observational=False even while describing every relevant human study as
+        # uncontrolled. The card renders False as "RCT-backed / controlled", so require a per-abstract controlled-design
+        # signal before allowing that claim. Only a paper carrying an EFFICACY verdict may certify the pair: a neutral
+        # (PK/safety/mechanism) paper is excluded from the grade, so it must not set the design word either. The judgment
+        # is per-abstract because a document-wide phrase match cannot tell a study's own design from one it cites
+        # (sildenafil × ischemic stroke: two animal studies graded the pair, and an uncontrolled 12-patient safety study
+        # whose background described placebo-controlled RAT experiments supplied the "RCT-backed" claim). The guard is
+        # one-way: it withdraws an unsupported controlled claim without upgrading any study to one. With no judgments at
+        # all (sub-call failure) there is no evidence either way, so the synthesis value stands.
+        directional_judgments = [
+            pmid_judgment
+            for pmid, pmid_judgment in pmid_judgments.items()
+            if verdict_of[pmid] in ("supporting", "contradicting", "mixed")
+        ]
         if (
             summary.evidence_basis == "drug_specific"
             and summary.is_observational is False
-            and not _has_explicit_controlled_design(relevant_for_direction)
+            and directional_judgments
+            and not any(
+                pmid_judgment.is_human and pmid_judgment.is_controlled
+                for pmid_judgment in directional_judgments
+            )
         ):
             summary.is_observational = None
 

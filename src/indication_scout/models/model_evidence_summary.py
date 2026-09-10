@@ -5,6 +5,29 @@ from typing import Any, Literal
 from pydantic import BaseModel, field_validator, model_validator
 
 
+class PmidJudgment(BaseModel):
+    """One abstract's judgment from the isolated per-PMID sub-call: its efficacy verdict for the pair, plus the design of
+    the study THAT abstract reports."""
+
+    # "neutral" = a relevant abstract with NO efficacy result (PK / safety-only / mechanism). It stays RELEVANT (counts in
+    # study_count) but is kept OUT of supporting AND contradicting, so a PK paper can't flip a clean "supports" to "mixed"
+    # (thalidomide × prostate: a PK study force-bucketed as contradicting; baricitinib safety analysis force-bucketed as
+    # supporting).
+    verdict: Literal["supporting", "contradicting", "mixed", "neutral"]
+    # Design of the study the abstract itself reports — never of a trial it merely cites. Both default False so an omitted
+    # or unparseable field can never certify the pair as controlled human evidence.
+    is_human: bool = False
+    is_controlled: bool = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values):
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
 class EvidenceDirectionJudgment(BaseModel):
     """Focused LLM judgment over already-relevant, directionally conflicting papers."""
 
