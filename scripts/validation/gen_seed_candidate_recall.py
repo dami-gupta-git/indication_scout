@@ -45,6 +45,10 @@ from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.db.session import _make_engine
 from indication_scout.helpers.drug_helpers import normalize_drug_name
 from indication_scout.services.llm import query_small_llm
+from indication_scout.services.precision_metrics import (
+    CandidatePrediction,
+    stable_review_id,
+)
 from indication_scout.services.retrieval import RetrievalService
 
 logging.basicConfig(level=logging.ERROR, format="%(message)s")
@@ -155,7 +159,8 @@ def _ensure_header(cap: int) -> None:
     env_line = (
         f"### env constants : SUPERVISOR_CANDIDATE_CAP={s.supervisor_candidate_cap} "
         f"SUPERVISOR_INVESTIGATION_CAP={s.supervisor_investigation_cap}, "
-        f"MECHANISM_ASSOCIATIONS_PER_TARGET={per_target}"
+        f"MECHANISM_ASSOCIATIONS_PER_TARGET={per_target}, "
+        f"MECHANISM_TOP_CANDIDATES={s.mechanism_top_candidates}"
     )
     lines = [
         "# Holdout Validation — leak-free candidate recall (seed phase only)",
@@ -189,12 +194,43 @@ def _append_row(r: dict) -> None:
         )
 
 
+def _write_candidate_predictions(
+    writer: csv.DictWriter,
+    drug: str,
+    cutoff: str,
+    merged: list[tuple[str, str]],
+) -> None:
+    """Write the candidates eligible to enter the configured investigation fan-out."""
+    settings = get_settings()
+    for position, (disease, source) in enumerate(
+        merged[: settings.supervisor_investigation_cap], start=1
+    ):
+        prediction = CandidatePrediction(
+            review_id=stable_review_id(drug, cutoff, disease),
+            drug=drug,
+            cutoff=date.fromisoformat(cutoff),
+            position=position,
+            source=source,
+            disease=disease,
+            investigation_limit=settings.supervisor_investigation_cap,
+            supervisor_candidate_cap=settings.supervisor_candidate_cap,
+            mechanism_associations_per_target=settings.mechanism_associations_per_target,
+            mechanism_top_candidates=settings.mechanism_top_candidates,
+        )
+        writer.writerow(
+            {
+                **prediction.model_dump(mode="json"),
+            }
+        )
+
+
 async def main() -> None:
     global OUT_MD
     argv = sys.argv[1:]
 
     # --lines 3-7,12 or --lines=3-7,12; default = all.
     line_spec: str | None = None
+    candidate_out: Path | None = None
     skip = set()
     for i, a in enumerate(argv):
         if a.startswith("--lines="):
@@ -202,6 +238,12 @@ async def main() -> None:
             skip.add(i)
         elif a == "--lines" and i + 1 < len(argv):
             line_spec = argv[i + 1]
+            skip.update({i, i + 1})
+        elif a.startswith("--candidate-out="):
+            candidate_out = Path(a.split("=", 1)[1])
+            skip.add(i)
+        elif a == "--candidate-out" and i + 1 < len(argv):
+            candidate_out = Path(argv[i + 1])
             skip.update({i, i + 1})
 
     paths = [a for i, a in enumerate(argv) if i not in skip and not a.startswith("-")]
@@ -232,34 +274,54 @@ async def main() -> None:
 
     _ensure_header(cap)
 
+    candidate_handle = None
+    candidate_writer = None
+    if candidate_out is not None:
+        candidate_out.parent.mkdir(parents=True, exist_ok=True)
+        candidate_handle = candidate_out.open("w", newline="", encoding="utf-8")
+        candidate_writer = csv.DictWriter(
+            candidate_handle,
+            fieldnames=list(CandidatePrediction.model_fields),
+        )
+        candidate_writer.writeheader()
+
     # One seed-phase run per distinct (drug, cutoff).
     cache: dict[tuple[str, str], list[tuple[str, str]]] = {}
-    for n, r in numbered:
-        drug, indication, cutoff = r["drug"].strip(), r["indication"].strip(), r["date"].strip()
-        key = (drug, cutoff)
-        try:
-            if key not in cache:
-                cache[key] = await _merged_for_drug(
-                    llm, svc, session_factory, drug, date.fromisoformat(cutoff)
-                )
-        except Exception as e:  # noqa: BLE001 - record ERROR, keep going
-            logger.error("%s / %s -> ERROR: %s", drug, indication, e)
-            _append_row({"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
-                         "present": "ERROR", "rank": "", "source": ""})
-            continue
-        merged = cache[key]
-        names = [n for n, _ in merged]
-        idx = await _match(indication, names)
-        if idx is None:
-            row = {"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
-                   "present": "out", "rank": "", "source": ""}
-        else:
-            name, source = merged[idx]
-            row = {"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
-                   "present": "in", "rank": str(idx + 1), "source": source,
-                   "matched": name}
-        _append_row(row)  # write as we go
-        logger.error("%s / %s -> %s", drug, indication, row.get("rank") or row["present"])
+    try:
+        for n, r in numbered:
+            drug, indication, cutoff = r["drug"].strip(), r["indication"].strip(), r["date"].strip()
+            key = (drug, cutoff)
+            try:
+                if key not in cache:
+                    cache[key] = await _merged_for_drug(
+                        llm, svc, session_factory, drug, date.fromisoformat(cutoff)
+                    )
+                    if candidate_writer is not None:
+                        _write_candidate_predictions(
+                            candidate_writer, drug, cutoff, cache[key]
+                        )
+                        candidate_handle.flush()
+            except Exception as e:  # noqa: BLE001 - record ERROR, keep going
+                logger.error("%s / %s -> ERROR: %s", drug, indication, e)
+                _append_row({"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
+                             "present": "ERROR", "rank": "", "source": ""})
+                continue
+            merged = cache[key]
+            names = [n for n, _ in merged]
+            idx = await _match(indication, names)
+            if idx is None:
+                row = {"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
+                       "present": "out", "rank": "", "source": ""}
+            else:
+                name, source = merged[idx]
+                row = {"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
+                       "present": "in", "rank": str(idx + 1), "source": source,
+                       "matched": name}
+            _append_row(row)  # write as we go
+            logger.error("%s / %s -> %s", drug, indication, row.get("rank") or row["present"])
+    finally:
+        if candidate_handle is not None:
+            candidate_handle.close()
     print(f"wrote {OUT_MD}")
 
 

@@ -408,7 +408,7 @@ async def _ncbi_get_json(
                 )
                 resp.raise_for_status()
                 return await resp.json()
-        except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+        except (TimeoutError, aiohttp.ClientError) as e:
             last_exc = e
             if attempt < max_retries:
                 # NCBI eutils is a per-second rate limit, so a transient

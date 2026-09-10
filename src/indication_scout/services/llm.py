@@ -116,7 +116,6 @@ async def query_llm(prompt: str, system: str = "") -> str:
     response = await client.messages.create(
         model=_model,
         max_tokens=_settings.llm_max_tokens,
-        temperature=0,
         system=system or omit,
         messages=[{"role": "user", "content": prompt}],
     )
@@ -134,7 +133,6 @@ async def query_small_llm(
     response = await client.messages.create(
         model=_small_model,
         max_tokens=max_tokens or _settings.small_llm_max_tokens,
-        temperature=0,
         system=system or omit,
         messages=[{"role": "user", "content": prompt}],
     )

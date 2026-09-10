@@ -11,10 +11,9 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Self
 
 import aiohttp
-from typing_extensions import Self
 
 from indication_scout.config import get_settings
 from indication_scout.constants import DEFAULT_CACHE_DIR, RETRY_BACKOFF_SCHEDULE
@@ -269,7 +268,7 @@ class BaseClient(ABC):
 
                 return await resp.text() if as_text else await resp.json()
 
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 last_error = DataSourceError(self._source_name, "Request timeout")
             except aiohttp.ClientError as e:
                 last_error = DataSourceError(

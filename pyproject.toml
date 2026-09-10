@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "A machine learning toolkit for drug repurposing and indication discovery"
 readme = "README.md"
 license = { text = "MIT" }
-requires-python = ">=3.10"
+requires-python = ">=3.12"
 authors = [
     { name = "Dhruv Gupta" }
 ]
@@ -25,8 +25,6 @@ classifiers = [
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
-    "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Scientific/Engineering :: Bio-Informatics",
@@ -95,11 +93,11 @@ indication_scout = ["py.typed"]
 
 [tool.black]
 line-length = 88
-target-version = ["py310", "py311", "py312"]
+target-version = ["py312"]
 
 [tool.ruff]
 line-length = 88
-target-version = "py310"
+target-version = "py312"
 
 [tool.ruff.lint]
 select = [
@@ -119,7 +117,7 @@ ignore = [
 known-first-party = ["indication_scout"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 plugins = ["pydantic.mypy"]
 warn_return_any = false
 warn_unused_configs = true

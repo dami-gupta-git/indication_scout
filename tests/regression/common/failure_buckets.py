@@ -14,13 +14,13 @@ string matches the enum.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 Severity = Literal["error", "warn", "info"]
 
 
-class Bucket(str, Enum):
+class Bucket(StrEnum):
     """The failure-mode taxonomy.
 
     Keep this list compact — every new bucket dilutes the rollup. If a new

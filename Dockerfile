@@ -26,7 +26,7 @@ RUN npm run build
 # Stage 2: shared Python base. Installs the package and its deps once; both
 # the prod and dev targets build on top of it.
 # ---------------------------------------------------------------------------
-FROM python:3.11-slim AS python-base
+FROM python:3.12-slim AS python-base
 WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
