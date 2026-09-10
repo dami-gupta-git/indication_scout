@@ -43,6 +43,11 @@ from indication_scout.models.model_safety import (
     DrugSafetyAssessment,
     SafetyPaperVerdict,
 )
+from indication_scout.services.citation_guard import (
+    strip_findings_with_unknown_pmids,
+    strip_sentences_with_unknown_pmids,
+    unknown_pmids,
+)
 from indication_scout.services.disease_helper import (
     llm_normalize_disease_batch,
     merge_duplicate_diseases,
@@ -116,6 +121,13 @@ _PMID_TREATS_DISEASE_VERDICTS = {"treats", "not_treats"}
 # can't flip a clean "supports" to "mixed" (thalidomide × prostate: a PK study force-bucketed as
 # contradicting; baricitinib safety analysis force-bucketed as supporting).
 _PMID_DIRECTIONS = {"supporting", "contradicting", "mixed", "neutral"}
+
+# Appended on the retry after a prose field cited a PMID that was not in the supplied abstracts.
+_PMID_RETRY_NOTE = """
+
+CORRECTION: your previous answer cited a PMID that is not among the abstracts above. Every PMID you
+write must be copied digit by digit from those abstracts. Do not cite any other paper.
+"""
 _CONTROLLED_DESIGN_PATTERN = re.compile(
     r"\brandomi[sz](?:ed|ation)\b|"
     r"\bplacebo[- ]controlled\b|"
@@ -133,9 +145,7 @@ def _has_explicit_controlled_design(abstracts: list["AbstractResult"]) -> bool:
     """Return whether relevant evidence explicitly identifies a controlled study design."""
     return any(
         bool(_CONTROLLED_PUBTYPES.intersection(result.pubtype))
-        or bool(
-            _CONTROLLED_DESIGN_PATTERN.search(f"{result.title} {result.abstract}")
-        )
+        or bool(_CONTROLLED_DESIGN_PATTERN.search(f"{result.title} {result.abstract}"))
         for result in abstracts
     )
 
@@ -387,33 +397,65 @@ async def _judge_overall_evidence_direction(
         disease=disease,
         abstracts=formatted,
     )
-    response = await query_llm(prompt)
-    data = parse_last_json_object(response)
-    if not isinstance(data, dict):
-        logger.warning(
-            "evidence_direction: unparseable response for %s / %s: %s",
-            drug,
-            disease,
-            response,
+    allowed_pmids = {result.pmid for result in abstracts}
+    context = f"{drug} / {disease} evidence direction"
+    judgment: EvidenceDirectionJudgment | None = None
+    for attempt in (1, 2):
+        response = await query_llm(
+            prompt if attempt == 1 else prompt + _PMID_RETRY_NOTE
         )
-        return None
+        data = parse_last_json_object(response)
+        if not isinstance(data, dict):
+            logger.warning(
+                "evidence_direction: unparseable response for %s / %s: %s",
+                drug,
+                disease,
+                response,
+            )
+            return None
 
-    try:
-        judgment = EvidenceDirectionJudgment(**data)
-    except ValidationError as exc:
-        logger.warning(
-            "evidence_direction: invalid response for %s / %s: %s",
-            drug,
-            disease,
-            exc,
+        try:
+            judgment = EvidenceDirectionJudgment(**data)
+        except ValidationError as exc:
+            logger.warning(
+                "evidence_direction: invalid response for %s / %s: %s",
+                drug,
+                disease,
+                exc,
+            )
+            return None
+        if not judgment.summary.strip():
+            logger.warning(
+                "evidence_direction: incomplete response for %s / %s: %s",
+                drug,
+                disease,
+                response,
+            )
+            return None
+        bad = unknown_pmids(judgment.summary, allowed_pmids)
+        for finding in judgment.key_findings:
+            bad.extend(unknown_pmids(finding, allowed_pmids))
+        if not bad:
+            return judgment
+        logger.error(
+            "evidence_direction: cited PMID(s) %s not among the abstracts supplied for %s "
+            "(attempt %d)",
+            ", ".join(bad),
+            context,
+            attempt,
         )
-        return None
+
+    judgment.summary = strip_sentences_with_unknown_pmids(
+        judgment.summary, allowed_pmids, context=context
+    )
+    judgment.key_findings = strip_findings_with_unknown_pmids(
+        judgment.key_findings, allowed_pmids, context=context
+    )
     if not judgment.summary.strip():
-        logger.warning(
-            "evidence_direction: incomplete response for %s / %s: %s",
-            drug,
-            disease,
-            response,
+        logger.error(
+            "evidence_direction: every sentence of the summary for %s cited an unknown PMID; "
+            "keeping the synthesis summary instead",
+            context,
         )
         return None
     return judgment
@@ -1199,7 +1241,7 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or DERIVED fields (direction rollup, strength cap)
             # change, so stale judgments cannot preserve behavior that the new rules reject.
-            "logic_version": "per_pmid_class_and_target_gates_v3",
+            "logic_version": "per_pmid_class_and_target_gates_v4_cited_pmid_guard",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -1280,13 +1322,47 @@ class RetrievalService:
             approved_indications=", ".join(approved) if approved else "(none)",
         )
 
-        response = await query_llm(prompt)
-        # Tolerant parse: the merged prompt is long, so the model sometimes emits prose before the
-        # JSON or an empty/overflowed response. parse_last_json_object scans for the last balanced
-        # {...} block (same tolerance the retired judge had). On a genuine parse failure, DEGRADE
-        # to a safe floor (basis=none, strength none, all abstracts contaminated) rather than
-        # `raise` — one bad LLM response must not crash the whole analysis pipeline.
-        data = parse_last_json_object(response)
+        # The identifier lists below are rebuilt in code, so they cannot name an abstract that was
+        # not supplied. The prose is the exception — the model types those digits itself — so a
+        # cited PMID that was never supplied costs a retry, and then the offending sentence.
+        allowed_pmids = {r.pmid for r in synthesis_abstracts}
+        prose_context = f"{pref_name} / {disease} synthesis"
+        data = None
+        for attempt in (1, 2):
+            response = await query_llm(
+                prompt if attempt == 1 else prompt + _PMID_RETRY_NOTE
+            )
+            # Tolerant parse: the merged prompt is long, so the model sometimes emits prose before
+            # the JSON or an empty/overflowed response. parse_last_json_object scans for the last
+            # balanced {...} block (same tolerance the retired judge had). On a genuine parse
+            # failure, DEGRADE to a safe floor (basis=none, strength none, all abstracts
+            # contaminated) rather than `raise` — one bad LLM response must not crash the whole
+            # analysis pipeline.
+            data = parse_last_json_object(response)
+            if data is None:
+                break
+            bad = unknown_pmids(str(data.get("summary") or ""), allowed_pmids)
+            for finding in data.get("key_findings") or []:
+                bad.extend(unknown_pmids(str(finding), allowed_pmids))
+            if not bad:
+                break
+            logger.error(
+                "synthesize: cited PMID(s) %s not among the abstracts supplied for %s "
+                "(attempt %d)",
+                ", ".join(bad),
+                prose_context,
+                attempt,
+            )
+        else:
+            data["summary"] = strip_sentences_with_unknown_pmids(
+                str(data.get("summary") or ""), allowed_pmids, context=prose_context
+            )
+            data["key_findings"] = strip_findings_with_unknown_pmids(
+                [str(f) for f in (data.get("key_findings") or [])],
+                allowed_pmids,
+                context=prose_context,
+            )
+
         if data is None:
             logger.error(
                 "synthesize: could not parse a JSON object for %s / %s; returning a safe "

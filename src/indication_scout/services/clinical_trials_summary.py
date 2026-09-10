@@ -25,12 +25,23 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 )
 from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
+from indication_scout.services.citation_guard import (
+    strip_sentences_with_unknown_nct_ids,
+    unknown_nct_ids,
+)
 from indication_scout.services.llm import parse_last_json_object, query_llm
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
 _CLOSURE_VALUES = ("live", "closed", "unknown")
+
+# Appended on the retry after the prose cited an NCT id that was not in the supplied trial list.
+_NCT_RETRY_NOTE = """
+
+CORRECTION: your previous answer cited an NCT id that is not in the trial list above. Every NCT id
+you write must be copied character by character from that list. Do not cite any other trial.
+"""
 
 _CT_SUMMARY_PROMPT = """You are a clinical development analyst writing the Clinical Trials \
 section for one drug x indication pair.
@@ -172,6 +183,7 @@ async def judge_ct_summary(
         "coverage": coverage.model_dump(mode="json") if coverage else None,
         "first_approval": first_approval_str,
         "trials": facts,
+        "logic_version": "cited_nct_guard_v1",
     }
     cached = cache_get("ct_summary", cache_params, cache_dir)
     if isinstance(cached, dict) and cached.get("closure") in _CLOSURE_VALUES:
@@ -188,17 +200,50 @@ async def judge_ct_summary(
         first_approval=first_approval_str,
         trials=_format_trials(relevant_trials),
     )
-    response = await query_llm(prompt)
-    summary = _parse_summary(response)
-    if summary is None:
-        logger.warning(
-            "judge_ct_summary: could not parse a valid summary for %s x %s; leaving summary "
-            "empty. Response was: %s",
-            drug,
-            indication,
-            response,
+    allowed_ncts = {t.nct_id for t in relevant_trials if t.nct_id}
+    context = f"{drug} x {indication} trial prose"
+    summary: CTSummary | None = None
+    for attempt in (1, 2):
+        response = await query_llm(prompt if attempt == 1 else prompt + _NCT_RETRY_NOTE)
+        summary = _parse_summary(response)
+        if summary is None:
+            logger.warning(
+                "judge_ct_summary: could not parse a valid summary for %s x %s; leaving summary "
+                "empty. Response was: %s",
+                drug,
+                indication,
+                response,
+            )
+            return None
+        bad = unknown_nct_ids(summary.prose, allowed_ncts) + unknown_nct_ids(
+            summary.closure_reason, allowed_ncts
         )
-        return None
+        if not bad:
+            break
+        logger.error(
+            "judge_ct_summary: prose cited NCT id(s) %s not among the trials supplied for %s "
+            "(attempt %d)",
+            ", ".join(bad),
+            context,
+            attempt,
+        )
+    else:
+        summary = CTSummary(
+            prose=strip_sentences_with_unknown_nct_ids(
+                summary.prose, allowed_ncts, context=context
+            ),
+            closure=summary.closure,
+            closure_reason=strip_sentences_with_unknown_nct_ids(
+                summary.closure_reason, allowed_ncts, context=context
+            ),
+        )
+        if not summary.prose:
+            logger.error(
+                "judge_ct_summary: every sentence of the prose for %s cited an unknown NCT id; "
+                "leaving the summary empty",
+                context,
+            )
+            return None
 
     cache_set(
         "ct_summary",
