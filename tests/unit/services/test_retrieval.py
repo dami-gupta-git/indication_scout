@@ -2983,7 +2983,13 @@ async def test_classify_indication_harm_rejects_unverified_quote(svc):
     assert harm is None
     assert summary == ""
     assert pmids == []
-    mock_cache_set.assert_not_called()
+    # The per-paper verdict is still cached: it records what the model read, and the verbatim check
+    # that rejects it is deterministic and re-runs on every read. Only the harm itself is withheld.
+    assert mock_cache_set.call_count == 1
+    namespace, params, value, _cache_dir = mock_cache_set.call_args.args
+    assert namespace == "indication_harm_verdict"
+    assert params["pmid"] == "11696466"
+    assert value["evidence_quote"] == "Metformin caused renal failure."
 
 
 @pytest.mark.parametrize("subjects", ["animals", "cells_or_tissue", "unclear", None])

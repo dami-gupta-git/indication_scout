@@ -5,6 +5,40 @@ from typing import Any
 from pydantic import BaseModel, model_validator
 
 
+class TextMinedAnnotation(BaseModel):
+    """One Europe PMC SciLite entity mention attached to an article section."""
+
+    exact: str
+    concept_name: str
+    concept_uri: str
+    section: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class ArticleAnnotations(BaseModel):
+    """Europe PMC SciLite annotations grouped by entity type for one PMID."""
+
+    pmid: str
+    diseases: list[TextMinedAnnotation]
+    chemicals: list[TextMinedAnnotation]
+    gene_proteins: list[TextMinedAnnotation]
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
 class EuropePMCArticle(BaseModel):
     """A single Europe PMC search result.
 

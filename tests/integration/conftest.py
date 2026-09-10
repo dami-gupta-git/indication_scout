@@ -151,6 +151,14 @@ async def clinical_trials_client():
 
 
 @pytest.fixture
+async def europe_pmc_client():
+    """Create and tear down a EuropePMCClient."""
+    c = EuropePMCClient()
+    yield c
+    await c.close()
+
+
+@pytest.fixture
 def clinical_trials_graph():
     """Reusable fixture for the ClinicalTrialsAgent graph."""
     """NOTE if you need to set your cutoff date, do not use this fixture"""

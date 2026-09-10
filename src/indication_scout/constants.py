@@ -493,6 +493,28 @@ EUROPE_PMC_MAX_CONDITION_WORDS: int = 12
 # "undetermined". Observed worst case ran to 73 words.
 SAFETY_QUOTE_MAX_WORDS: int = 100
 
+# Europe PMC Annotations API (SciLite) — pre-tagged entity annotations (disease, gene/protein,
+# etc.) per article, text-mined by Europe PMC. Separate host from the search/webservices REST API.
+EUROPE_PMC_ANNOTATIONS_URL: str = (
+    "https://www.ebi.ac.uk/europepmc/annotations_api/annotationsByArticleIds"
+)
+# Max article IDs per annotationsByArticleIds request (EBI-documented limit).
+EUROPE_PMC_ANNOTATIONS_BATCH: int = 8
+
+# Drug-anchored search. TITLE_ABS restricts the drug term to title/abstract, where the drug is the
+# subject of the paper rather than an incidental mention. The alternatives were compared on
+# duloxetine: CHEM (MeSH substance) 2079 hits, TITLE_ABS 3654, CHEBITERM (text-mined, fulltext
+# reach) 11496, bare free text 16661. The two fulltext-reaching fields surface papers where the
+# drug appears only in a comparator table or reference list, so TITLE_ABS is the precision/recall
+# balance for drug-anchored retrieval. SRC:MED restricts to PubMed-indexed records, so every hit
+# carries a PMID.
+EUROPE_PMC_DRUG_TITLE_ABS_QUERY: str = 'TITLE_ABS:"{drug}" AND SRC:MED'
+# Max records per search request (Europe PMC caps pageSize at 1000).
+EUROPE_PMC_SEARCH_PAGE_SIZE: int = 100
+# Valid `sort` values. Omitting sort entirely gives Europe PMC's relevance order — note that the
+# literal string "RELEVANCE" is NOT accepted by the API and errors, hence None rather than a value.
+EUROPE_PMC_SORT_CITED: str = "CITED desc"
+EUROPE_PMC_SORT_RECENT: str = "P_PDATE_D desc"
 
 # Curated per-drug list of candidate disease phrasings to short-circuit as
 # FDA-approved (return True without calling the LLM). Acts strictly as an

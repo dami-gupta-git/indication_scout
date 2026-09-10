@@ -14,22 +14,34 @@ from typing import Any
 
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
+    EUROPE_PMC_ANNOTATIONS_BATCH,
+    EUROPE_PMC_ANNOTATIONS_URL,
     EUROPE_PMC_CITATION_BATCH,
     EUROPE_PMC_CITATION_NS,
     EUROPE_PMC_CURSOR_PARAM,
     EUROPE_PMC_CURSOR_START,
     EUROPE_PMC_DRUG_QUERY,
+    EUROPE_PMC_DRUG_TITLE_ABS_QUERY,
     EUROPE_PMC_PAGE_SIZE,
     EUROPE_PMC_RESULT_TYPE,
     EUROPE_PMC_SEARCH_NS,
+    EUROPE_PMC_SEARCH_PAGE_SIZE,
     EUROPE_PMC_SEARCH_URL,
     EUROPE_PMC_YEAR_CLAUSE,
 )
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
-from indication_scout.models.model_europe_pmc import EuropePMCArticle
+from indication_scout.models.model_europe_pmc import (
+    ArticleAnnotations,
+    EuropePMCArticle,
+    TextMinedAnnotation,
+)
 from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
+
+# Europe PMC SciLite annotation types this client fetches in one request. "Pathway" is a legacy
+# annotation type Europe PMC's current text-mining pipeline no longer produces — omitted.
+_ANNOTATION_TYPES = "Diseases,Chemicals,Gene_Proteins"
 
 
 class EuropePMCClient(BaseClient):
@@ -176,3 +188,126 @@ class EuropePMCClient(BaseClient):
                     self.cache_dir,
                 )
         return counts
+
+    async def search_filtered_by_drug(
+        self,
+        drug: str,
+        pub_types: list[str] | None = None,
+        year_from: int | None = None,
+        year_to: int | None = None,
+        sort: str | None = None,
+        page_size: int = EUROPE_PMC_SEARCH_PAGE_SIZE,
+    ) -> list[EuropePMCArticle]:
+        """Return articles where ``drug`` appears in the title or abstract.
+
+        ``pub_types`` are OR-ed together and AND-ed onto the query (Europe PMC ``PUB_TYPE`` values,
+        e.g. "Case Reports", "Randomized Controlled Trial", "Review"). ``year_from``/``year_to``
+        bound ``PUB_YEAR``; either end may be given alone, and the open end becomes a wildcard.
+        ``sort`` takes ``EUROPE_PMC_SORT_CITED`` or ``EUROPE_PMC_SORT_RECENT``; leaving it None
+        gives Europe PMC's relevance order (the API rejects a literal "RELEVANCE" value).
+
+        Returns at most ``page_size`` articles — this is a single page, not a full crawl of the
+        result set. Unlike the citation/annotation lookups, a failure here is raised, not
+        swallowed: the caller asked for this pool and an empty list would be indistinguishable
+        from a drug with no literature.
+        """
+        if not drug:
+            return []
+
+        query = EUROPE_PMC_DRUG_TITLE_ABS_QUERY.format(drug=drug)
+
+        if pub_types:
+            clause = " OR ".join(f'PUB_TYPE:"{p}"' for p in pub_types)
+            query += f" AND ({clause})"
+
+        if year_from is not None or year_to is not None:
+            lo = year_from if year_from is not None else "*"
+            hi = year_to if year_to is not None else "*"
+            query += f" AND PUB_YEAR:[{lo} TO {hi}]"
+
+        params: dict[str, str | int] = {
+            "query": query,
+            "format": "json",
+            "resultType": "core",
+            "pageSize": page_size,
+        }
+        if sort:
+            params["sort"] = sort
+
+        data = await self._rest_get(self.SEARCH_URL, params)
+
+        results = (data.get("resultList", {}) or {}).get("result", []) or []
+        articles = [
+            EuropePMCArticle.from_search_result(result)
+            for result in results
+            if result.get("pmid")
+        ]
+        logger.info(
+            "europepmc: drug=%s hits=%s returned=%s query=%s",
+            drug,
+            data.get("hitCount"),
+            len(articles),
+            query,
+        )
+        return articles
+
+    async def fetch_disease_annotations(
+        self, pmids: list[str], batch_size: int = EUROPE_PMC_ANNOTATIONS_BATCH
+    ) -> dict[str, ArticleAnnotations]:
+        """Return {pmid: ArticleAnnotations} of pre-tagged disease, chemical, and gene/protein
+        mentions per article.
+
+        Uses Europe PMC's Annotations API (SciLite text-mining), not an LLM — every entity name
+        returned was tagged by Europe PMC's own pipeline against a specific article section, and
+        linked to its ontology (UMLS for diseases, CHEBI for chemicals, UniProt for gene/proteins).
+        Only articles Europe PMC has text-mined are covered; a PMID with no mined terms of any of
+        these types (or not indexed at all) is simply absent from the result. A failed batch is
+        logged and skipped, never raised — this is a best-effort literature signal, not a hard
+        dependency.
+        """
+        if not pmids:
+            return {}
+
+        results: dict[str, ArticleAnnotations] = {}
+        for i in range(0, len(pmids), batch_size):
+            chunk = pmids[i : i + batch_size]
+            params = {
+                "articleIds": ",".join(f"MED:{p}" for p in chunk),
+                "type": _ANNOTATION_TYPES,
+                "format": "JSON",
+            }
+            try:
+                data = await self._rest_get(EUROPE_PMC_ANNOTATIONS_URL, params)
+            except DataSourceError as e:
+                logger.warning(
+                    "europepmc: annotations batch failed (%s); those PMIDs are omitted", e
+                )
+                continue
+            for article in data or []:
+                pmid = article.get("extId")
+                if not pmid:
+                    continue
+                by_type: dict[str, list[TextMinedAnnotation]] = {
+                    "Diseases": [],
+                    "Chemicals": [],
+                    "Gene_Proteins": [],
+                }
+                for ann in article.get("annotations", []) or []:
+                    ann_type = ann.get("type")
+                    if ann_type not in by_type:
+                        continue
+                    by_type[ann_type].append(
+                        TextMinedAnnotation(
+                            exact=ann.get("exact") or "",
+                            concept_name=(ann.get("tags") or [{}])[0].get("name") or "",
+                            concept_uri=(ann.get("tags") or [{}])[0].get("uri") or "",
+                            section=ann.get("section") or "",
+                        )
+                    )
+                results[pmid] = ArticleAnnotations(
+                    pmid=pmid,
+                    diseases=by_type["Diseases"],
+                    chemicals=by_type["Chemicals"],
+                    gene_proteins=by_type["Gene_Proteins"],
+                )
+        return results
