@@ -56,6 +56,12 @@ tracing/eval utilities. None are part of the installed package; run them directl
 - **session.py** — Session-file manager for IndicationScout (see its docstring for
   usage and rules).
 
+- **check_seed_recall.py** — CI gate for seed-phase candidate recall. Runs the seed
+  phase per runbook row for the drugs named in
+  `tests/regression/specs/seed_recall.yaml` and fails when a row's expectation is
+  not met. Writes `results/ci/seed_recall.json`. See
+  `docs/SEED_RECALL_CHECK.md`; run with `make seed-recall`.
+
 ## validation/
 
 Holdout-validation harnesses for checking the pipeline against known approvals;

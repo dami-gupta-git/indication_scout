@@ -3,10 +3,14 @@ from datetime import date
 
 import pytest
 
+from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
 from indication_scout.services.precision_metrics import (
+    CandidatePrecisionSpec,
     CandidatePrediction,
     CandidateReview,
+    CandidateValidityLabel,
     load_reviews,
+    score_ranked_candidate_precision,
     score_reviews,
     stable_review_id,
     write_review_template,
@@ -138,3 +142,97 @@ def test_load_reviews_accepts_completed_generated_template(tmp_path) -> None:
     reviews = load_reviews(path)
 
     assert reviews == [_review(prediction, "valid")]
+
+
+def test_score_ranked_candidate_precision_uses_candidate_labels_and_aliases() -> None:
+    spec = CandidatePrecisionSpec(
+        top_k=2,
+        minimum_precision=0.75,
+        labels=[
+            CandidateValidityLabel(
+                drug="drug-a",
+                disease="disease one",
+                aliases=["disease 1"],
+                decision="valid",
+                rationale="Reviewed as a valid candidate.",
+            ),
+            CandidateValidityLabel(
+                drug="drug-a",
+                disease="disease two",
+                aliases=[],
+                decision="invalid",
+                rationale="Reviewed as an invalid candidate.",
+            ),
+            CandidateValidityLabel(
+                drug="drug-b",
+                disease="disease three",
+                aliases=[],
+                decision="valid",
+                rationale="Reviewed as a valid candidate.",
+            ),
+            CandidateValidityLabel(
+                drug="drug-b",
+                disease="disease four",
+                aliases=[],
+                decision="valid",
+                rationale="Reviewed as a valid candidate.",
+            ),
+        ],
+    )
+    reports = [
+        SupervisorOutput(drug_name="drug-a", top_diseases=["Disease 1", "disease two"]),
+        SupervisorOutput(
+            drug_name="drug-b",
+            top_diseases=["disease three", "disease four"],
+        ),
+    ]
+
+    result = score_ranked_candidate_precision(reports, spec)
+
+    assert result.top_k == 2
+    assert result.minimum_precision == 0.75
+    assert result.valid == 3
+    assert result.invalid == 1
+    assert result.precision == 0.75
+    assert result.precision_ci_low == pytest.approx(0.3006418426)
+    assert result.precision_ci_high == pytest.approx(0.9544127392)
+    assert [item.model_dump() for item in result.per_drug] == [
+        {
+            "drug": "drug-a",
+            "valid": 1,
+            "invalid": 1,
+            "precision": 0.5,
+        },
+        {
+            "drug": "drug-b",
+            "valid": 2,
+            "invalid": 0,
+            "precision": 1.0,
+        },
+    ]
+
+
+def test_ranked_precision_requires_review_for_unknown_candidate() -> None:
+    spec = CandidatePrecisionSpec(
+        top_k=1,
+        minimum_precision=0.9,
+        labels=[
+            CandidateValidityLabel(
+                drug="drug-a",
+                disease="reviewed disease",
+                aliases=[],
+                decision="valid",
+                rationale="Reviewed as a valid candidate.",
+            )
+        ],
+    )
+    report = SupervisorOutput(drug_name="drug-a", top_diseases=["unreviewed disease"])
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "review required for unlabeled ranked candidates: "
+            "drug-a: unreviewed disease"
+        ),
+    ):
+        score_ranked_candidate_precision([report], spec)

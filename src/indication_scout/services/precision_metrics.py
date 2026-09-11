@@ -12,8 +12,11 @@ from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+
 ReviewDecision = Literal["valid", "invalid", "uncertain"]
 CandidateSource = Literal["competitor", "mechanism", "both"]
+CandidateValidityDecision = Literal["valid", "invalid"]
 
 _REVIEW_CONTEXT_FIELDS = {"drug", "cutoff", "position", "source", "disease"}
 _REVIEW_FIELDS = {"review_id", "decision", "reason_category", "rationale", "evidence"}
@@ -113,6 +116,86 @@ class PrecisionSummary(BaseModel):
         return values
 
 
+class CandidateValidityLabel(BaseModel):
+    """Human-reviewed validity of one drug and candidate disease pair."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    drug: str = Field(min_length=1)
+    disease: str = Field(min_length=1)
+    aliases: list[str]
+    decision: CandidateValidityDecision
+    rationale: str = Field(min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class CandidatePrecisionSpec(BaseModel):
+    """Reviewed labels and release threshold for candidate precision at k."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    top_k: int = Field(gt=0)
+    minimum_precision: float = Field(ge=0, le=1)
+    labels: list[CandidateValidityLabel] = Field(min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class DrugCandidatePrecision(BaseModel):
+    """Candidate-selection precision for one live report."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    drug: str
+    valid: int = Field(ge=0)
+    invalid: int = Field(ge=0)
+    precision: float
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
+class CandidatePrecisionResult(BaseModel):
+    """Micro and per-drug candidate-selection precision for live reports."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    top_k: int = Field(gt=0)
+    minimum_precision: float = Field(ge=0, le=1)
+    valid: int = Field(ge=0)
+    invalid: int = Field(ge=0)
+    precision: float
+    precision_ci_low: float
+    precision_ci_high: float
+    per_drug: list[DrugCandidatePrecision] = Field(min_length=1)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_nones(cls, values: dict) -> dict:
+        for field_name, field_info in cls.model_fields.items():
+            if values.get(field_name) is None and field_info.default is not None:
+                values[field_name] = field_info.default
+        return values
+
+
 def stable_review_id(drug: str, cutoff: date | str, disease: str) -> str:
     """Return a stable identifier for one drug, cutoff, and candidate disease."""
     cutoff_text = cutoff.isoformat() if isinstance(cutoff, date) else cutoff
@@ -156,6 +239,147 @@ def load_reviews(path: Path) -> list[CandidateReview]:
         ]
     _reject_duplicate_ids([review.review_id for review in reviews], "review")
     return reviews
+
+
+def load_candidate_precision_spec(path: Path) -> CandidatePrecisionSpec:
+    """Load and validate the candidate-precision specification."""
+    return CandidatePrecisionSpec.model_validate_json(path.read_text(encoding="utf-8"))
+
+
+def score_ranked_candidate_precision(
+    reports: list[SupervisorOutput], spec: CandidatePrecisionSpec
+) -> CandidatePrecisionResult:
+    """Score ranked candidates against committed human validity labels."""
+    label_lookup: dict[tuple[str, str], CandidateValidityLabel] = {}
+    expected_drugs: set[str] = set()
+    for label in spec.labels:
+        drug = _normalize_label(label.drug)
+        expected_drugs.add(drug)
+        for disease in [label.disease, *label.aliases]:
+            key = (drug, _normalize_label(disease))
+            existing = label_lookup.get(key)
+            if existing is not None:
+                raise ValueError(
+                    f"duplicate candidate label for {label.drug!r} and {disease!r}"
+                )
+            label_lookup[key] = label
+
+    reports_by_drug: dict[str, SupervisorOutput] = {}
+    for report in reports:
+        drug = _normalize_label(report.drug_name)
+        if drug in reports_by_drug:
+            raise ValueError(f"duplicate report for drug {report.drug_name!r}")
+        reports_by_drug[drug] = report
+
+    actual_drugs = set(reports_by_drug)
+    if actual_drugs != expected_drugs:
+        missing = sorted(expected_drugs - actual_drugs)
+        unexpected = sorted(actual_drugs - expected_drugs)
+        parts: list[str] = []
+        if missing:
+            parts.append(f"missing reports: {', '.join(missing)}")
+        if unexpected:
+            parts.append(f"unexpected reports: {', '.join(unexpected)}")
+        raise ValueError("; ".join(parts))
+
+    per_drug: list[DrugCandidatePrecision] = []
+    unknown: list[str] = []
+    for drug in sorted(expected_drugs):
+        report = reports_by_drug[drug]
+        ranked = report.top_diseases[: spec.top_k]
+        if not ranked:
+            raise ValueError(
+                f"report for {report.drug_name!r} has no ranked candidates"
+            )
+        normalized_ranked = [_normalize_label(disease) for disease in ranked]
+        if len(normalized_ranked) != len(set(normalized_ranked)):
+            raise ValueError(
+                f"report for {report.drug_name!r} has duplicate ranked candidates"
+            )
+
+        decisions: list[CandidateValidityDecision] = []
+        for disease in ranked:
+            matched_label = label_lookup.get((drug, _normalize_label(disease)))
+            if matched_label is None:
+                unknown.append(f"{report.drug_name}: {disease}")
+                continue
+            decisions.append(matched_label.decision)
+        if len(decisions) != len(ranked):
+            continue
+
+        valid = decisions.count("valid")
+        invalid = decisions.count("invalid")
+        per_drug.append(
+            DrugCandidatePrecision(
+                drug=report.drug_name,
+                valid=valid,
+                invalid=invalid,
+                precision=valid / len(decisions),
+            )
+        )
+
+    if unknown:
+        raise ValueError(
+            "review required for unlabeled ranked candidates: " + "; ".join(unknown)
+        )
+
+    valid = sum(item.valid for item in per_drug)
+    invalid = sum(item.invalid for item in per_drug)
+    total = valid + invalid
+    ci_low, ci_high = _wilson_interval(valid, total)
+    assert ci_low is not None and ci_high is not None
+    return CandidatePrecisionResult(
+        top_k=spec.top_k,
+        minimum_precision=spec.minimum_precision,
+        valid=valid,
+        invalid=invalid,
+        precision=valid / total,
+        precision_ci_low=ci_low,
+        precision_ci_high=ci_high,
+        per_drug=per_drug,
+    )
+
+
+def write_candidate_precision_report(
+    result: CandidatePrecisionResult, report_paths: list[Path], path: Path
+) -> None:
+    """Write the live candidate-selection precision result as Markdown."""
+    status = "pass" if result.precision >= result.minimum_precision else "fail"
+    lines = [
+        "# Live candidate-selection precision",
+        "",
+        "This measurement scores only whether each ranked drug-disease pair is a valid repurposing candidate. Report "
+        "wording, evidence interpretation, and card correctness are outside this measurement.",
+        "",
+        "| Measurement | Result |",
+        "|---|---:|",
+        f"| Precision at {result.top_k} | {result.valid}/{result.valid + result.invalid} "
+        f"({_format_percent(result.precision)}) |",
+        "| Approximate 95% Wilson interval | "
+        f"{_format_interval(result.precision_ci_low, result.precision_ci_high)} |",
+        f"| CI threshold | {_format_percent(result.minimum_precision)} |",
+        f"| Status | {status} |",
+        "",
+        "## By drug",
+        "",
+        "| Drug | Valid | Invalid | Precision |",
+        "|---|---:|---:|---:|",
+    ]
+    for item in result.per_drug:
+        lines.append(
+            f"| {item.drug} | {item.valid} | {item.invalid} | "
+            f"{_format_percent(item.precision)} |"
+        )
+    lines.extend(
+        [
+            "",
+            "## Reports",
+            "",
+            *(f"- `{report_path.name}`" for report_path in sorted(report_paths)),
+        ]
+    )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
 def write_review_template(predictions: list[CandidatePrediction], path: Path) -> None:
@@ -328,6 +552,10 @@ def _reject_duplicate_ids(ids: list[str], label: str) -> None:
         seen.add(item_id)
     if duplicates:
         raise ValueError(f"duplicate {label} ids: {', '.join(sorted(duplicates))}")
+
+
+def _normalize_label(value: str) -> str:
+    return " ".join(value.lower().split())
 
 
 def _format_percent(value: float | None) -> str:

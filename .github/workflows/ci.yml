@@ -32,6 +32,88 @@ jobs:
         run: make typecheck
       - name: Unit tests
         run: make test
+      - name: Offline regression tests
+        run: make test-regression
+
+  regression:
+    runs-on: ubuntu-latest
+    # Four full pipeline runs against a cold database: every abstract is fetched
+    # from PubMed and embedded on CPU before the specs can be checked.
+    timeout-minutes: 180
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/ci
+      DB_PASSWORD: ci
+      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      HF_HOME: ${{ github.workspace }}/.hf-cache
+      SCOUT_CACHE_DIR: ${{ github.workspace }}/cache
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install CPU-only torch
+        run: pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - name: Install
+        run: make install
+      - name: Create tables
+        run: make create-tables
+      # Key on the configured model name so switching models misses the cache
+      # instead of reusing the old snapshot.
+      - name: Resolve embedding model name
+        id: embedding-model
+        run: |
+          python -c "from indication_scout.config import get_settings; print(f'name={get_settings().embedding_model}')" >> "$GITHUB_OUTPUT"
+      - name: Cache embedding model
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.HF_HOME }}
+          key: hf-${{ runner.os }}-${{ steps.embedding-model.outputs.name }}
+      - name: Prefetch embedding model
+        run: make prefetch-model
+      - name: Current week
+        id: week
+        run: echo "stamp=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
+      # Data-source responses. One entry per week: within a week runs reuse it and
+      # skip the upstream API calls; each new week starts from the previous week's
+      # entry and refetches whatever the cache no longer covers.
+      - name: Cache data-source responses
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SCOUT_CACHE_DIR }}
+          key: scout-cache-${{ runner.os }}-${{ steps.week.outputs.stamp }}
+          restore-keys: |
+            scout-cache-${{ runner.os }}-
+      - name: Generate reports
+        run: make regression-reports
+      - name: Structural regression specs
+        run: make regression-specs
+      - name: Candidate-selection precision
+        run: make candidate-precision
+      - name: Upload candidate-selection precision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: candidate-selection-precision
+          path: results/precision/live_candidate_precision.md
+          if-no-files-found: warn
+      - name: Seed-phase candidate recall
+        run: make seed-recall
 
   frontend:
     runs-on: ubuntu-latest

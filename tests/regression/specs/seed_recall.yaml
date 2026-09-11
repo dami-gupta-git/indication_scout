@@ -1,0 +1,24 @@
+# Seed-phase candidate recall for the regression drugs, checked in CI.
+#
+# Each runbook row for these drugs must surface its target indication in the merged candidate
+# list, matched by exact name against the row's `indication` plus its `accepted` column.
+# Rows listed under known_missing are expected to be absent; the check fails if one of them
+# starts passing, so that a fix is recorded here rather than going unnoticed.
+
+drugs:
+  - bupropion
+  - semaglutide
+  - sildenafil
+
+known_missing:
+  - drug: bupropion
+    indication: seasonal affective disorder
+    reason: >-
+      No seasonal affective disorder term exists in the Open Targets competitor pool for this
+      drug; only broader depression terms are present.
+  - drug: sildenafil
+    indication: pulmonary arterial hypertension
+    reason: >-
+      The competitor merge collapses "pulmonary arterial hypertension" into "pulmonary
+      hypertension", so the subtype name never reaches the candidate list. See
+      for_me/errors/errors.md (2026-09-11).

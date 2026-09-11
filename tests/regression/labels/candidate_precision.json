@@ -1,0 +1,146 @@
+{
+  "top_k": 5,
+  "minimum_precision": 0.9,
+  "labels": [
+    {
+      "drug": "semaglutide",
+      "disease": "metabolic dysfunction-associated steatohepatitis",
+      "aliases": ["MASH", "non-alcoholic steatohepatitis", "NASH"],
+      "decision": "invalid",
+      "rationale": "Wegovy is FDA-approved for eligible adults with MASH."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "type 1 diabetes mellitus",
+      "aliases": ["type 1 diabetes"],
+      "decision": "valid",
+      "rationale": "Direct controlled evidence and active trials support an unapproved candidate."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "alcohol use disorder",
+      "aliases": ["alcohol abuse", "alcohol dependence"],
+      "decision": "valid",
+      "rationale": "Direct randomized evidence and an active trial support an unapproved candidate."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "stroke",
+      "aliases": [],
+      "decision": "valid",
+      "rationale": "Registered acute-stroke treatment trials make this a legitimate candidate."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "nicotine dependence",
+      "aliases": ["smoking cessation", "tobacco use disorder"],
+      "decision": "valid",
+      "rationale": "A direct feasibility study makes this a legitimate preliminary candidate."
+    },
+    {
+      "drug": "metformin",
+      "disease": "polycystic ovary syndrome",
+      "aliases": ["PCOS"],
+      "decision": "valid",
+      "rationale": "Direct controlled studies support an unapproved candidate."
+    },
+    {
+      "drug": "metformin",
+      "disease": "obesity",
+      "aliases": ["obesity disorder"],
+      "decision": "valid",
+      "rationale": "Direct controlled evidence and dedicated trials support an unapproved candidate."
+    },
+    {
+      "drug": "metformin",
+      "disease": "metabolic syndrome",
+      "aliases": [],
+      "decision": "valid",
+      "rationale": "Direct human evidence supports an unapproved candidate."
+    },
+    {
+      "drug": "metformin",
+      "disease": "miscarriage",
+      "aliases": ["spontaneous abortion"],
+      "decision": "valid",
+      "rationale": "Controlled studies in pregnancies affected by PCOS support an unapproved candidate."
+    },
+    {
+      "drug": "metformin",
+      "disease": "preeclampsia",
+      "aliases": ["pre-eclampsia"],
+      "decision": "valid",
+      "rationale": "Dedicated controlled studies support an unapproved candidate."
+    },
+    {
+      "drug": "sildenafil",
+      "disease": "heart failure",
+      "aliases": [],
+      "decision": "valid",
+      "rationale": "Dedicated human trials support an unapproved candidate."
+    },
+    {
+      "drug": "sildenafil",
+      "disease": "raynaud disease",
+      "aliases": ["Raynaud's disease", "Raynaud phenomenon"],
+      "decision": "valid",
+      "rationale": "Direct controlled studies support an unapproved candidate."
+    },
+    {
+      "drug": "sildenafil",
+      "disease": "COVID-19",
+      "aliases": ["COVID19", "coronavirus disease 2019"],
+      "decision": "valid",
+      "rationale": "A direct randomized pilot and a dedicated registry study support an unapproved candidate."
+    },
+    {
+      "drug": "sildenafil",
+      "disease": "infertility",
+      "aliases": ["female infertility"],
+      "decision": "valid",
+      "rationale": "Direct controlled evidence supports an unapproved candidate."
+    },
+    {
+      "drug": "sildenafil",
+      "disease": "stroke",
+      "aliases": [],
+      "decision": "valid",
+      "rationale": "A dedicated registered treatment study supports an unapproved candidate."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "attention deficit-hyperactivity disorder",
+      "aliases": ["attention deficit hyperactivity disorder", "ADHD"],
+      "decision": "valid",
+      "rationale": "Multiple direct controlled trials support an unapproved candidate."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "bipolar disorder",
+      "aliases": ["bipolar depression"],
+      "decision": "valid",
+      "rationale": "Direct human evidence supports an unapproved candidate."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "cocaine dependence",
+      "aliases": ["cocaine use disorder", "cocaine abuse"],
+      "decision": "valid",
+      "rationale": "Multiple direct randomized studies support an unapproved candidate."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "alcohol dependence",
+      "aliases": ["alcohol use disorder", "alcohol abuse"],
+      "decision": "valid",
+      "rationale": "A direct randomized study with a bupropion-only arm supports an unapproved candidate."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "neuropathic pain",
+      "aliases": [],
+      "decision": "valid",
+      "rationale": "A direct randomized placebo-controlled study supports an unapproved candidate."
+    }
+  ]
+}

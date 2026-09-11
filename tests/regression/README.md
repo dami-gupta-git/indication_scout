@@ -12,7 +12,7 @@ set of drugs.
 gold_standard/          # frozen SupervisorOutput snapshots (JSON) + rendered reports (MD)
 specs/                  # per-drug YAML: the invariants extracted from each snapshot
 layer1_deterministic/   # pure-unit tests of the evidence gate (no fixtures)
-layer2_structural/      # spec-driven assertions run against the gold_standard snapshots
+layer2_structural/      # spec-driven assertions run against the newest generated report
 pipeline_replay/        # full-pipeline replay test + its cassettes + compare_reports unit tests
 common/                 # shared helpers: constants, failure-mode taxonomy, cassette wiring
 ```
@@ -28,10 +28,14 @@ function and hand-built inputs. Runs in the default `pytest` suite.
 ### Layer 2 — structural specs (`layer2_structural/` + `specs/`)
 
 The main regression layer. For each `specs/<drug>.yaml`, the test loads the
-matching `gold_standard/<drug>_*.json` snapshot, deserializes it into a
-`SupervisorOutput`, and runs every assertion in the spec against it. The test
-harness and assertion functions are shared across all drugs — only the spec
-data (which invariants to pin) differs per drug.
+newest `test_reports/<drug>_*.json` — the payload a fresh `scout find -d <drug>`
+writes — deserializes it into a `SupervisorOutput`, and runs every assertion in
+the spec against it. The spec itself is authored from the frozen
+`gold_standard/` snapshot, but the assertions run against the latest generated
+report, so a regression in the live pipeline is what fails here. With no such
+report present the drug is skipped. The test harness and assertion functions are
+shared across all drugs — only the spec data (which invariants to pin) differs
+per drug.
 
 ## What we test — the assertion types
 
@@ -97,7 +101,8 @@ The default `relevant` / `cited` pools pin the **curated** facts the report
 surfaces to the user — not the raw retrieval pools, where a trial or PMID being
 present says nothing about whether the report actually used it.
 
-No LLM, no network — this layer reads only the committed snapshots.
+No LLM, no network in this layer itself — but it asserts against a report that
+had to be generated first.
 
 ### Full-pipeline replay (`test_pipeline_regression.py`)
 
@@ -114,7 +119,9 @@ external HTTP/LLM traffic).
 # Layer 1 runs in the default suite:
 pytest tests/regression/layer1_deterministic/
 
-# Layer 2 (marked, excluded from the default run — opt in with -m):
+# Layer 2 (marked, excluded from the default run — opt in with -m).
+# Generate the reports first, or every drug skips:
+make regression-reports
 pytest -m regression_layer2
 pytest -m regression_layer2 -k bupropion        # one drug
 
@@ -122,6 +129,15 @@ pytest -m regression_layer2 -k bupropion        # one drug
 pytest -m regression                             # replay (default cassette mode)
 SCOUT_CASSETTE_MODE=live   pytest -m regression  # bypass cassette, hit real APIs
 ```
+
+## In CI
+
+A separate job stands up an empty Postgres with pgvector, creates the tables,
+regenerates the reports for the four pinned drugs (`make regression-reports`),
+then runs Layer 2 against those fresh reports. It hits the real data sources and
+the LLM on every push. Layer 1 and the `compare_reports` unit tests run offline
+in the main job via `make test-regression`. The full-pipeline replay does not
+run in CI.
 
 The `regression` and `regression_layer2` markers are excluded from the default
 `pytest` run (see `addopts` in `pytest.ini`) — you must opt in with `-m`.
