@@ -596,9 +596,16 @@ async def test_analyze_mechanism_merges_by_efo_id(
             MechanismCandidate(disease_name=name, disease_id=efo)
         )
 
-    with patch(
-        "indication_scout.agents.supervisor.supervisor_tools.OpenTargetsClient",
-        new=_ot_client_mock(resolved_ids),
+    # Step 5 (LLM merge) is out of scope here and must not reach the network.
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.OpenTargetsClient",
+            new=_ot_client_mock(resolved_ids),
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.merge_mechanism_entries",
+            new=AsyncMock(return_value=[]),
+        ),
     ):
         await merge_and_dedup(drug_name="testdrug")
 
