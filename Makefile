@@ -1,6 +1,9 @@
-.PHONY: lint lint-fix format format-check typecheck test check fix
+.PHONY: install lint lint-fix format format-check typecheck test frontend-check check fix
 
 SRC = src/ tests/
+
+install:
+	pip install -e ".[dev]"
 
 lint:
 	ruff check $(SRC)
@@ -20,6 +23,9 @@ typecheck:
 test:
 	pytest tests/unit/
 
-check: lint format-check typecheck test
+frontend-check:
+	cd frontend && npm ci && npm run lint && npm run build && npm test
+
+check: lint format-check typecheck test frontend-check
 
 fix: lint-fix format

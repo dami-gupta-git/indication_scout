@@ -303,17 +303,25 @@ def _closure_text(
 ) -> str:
     """Render the overall live/closed verdict as a sentence for the interpretive writer.
 
-    A controlled, moderate-or-strong contradictory literature body closes the overall signal even
-    when the registry-only verdict is live or unknown.
+    A moderate-or-strong contradictory literature body closes the overall signal even when the
+    registry-only verdict is live or unknown, provided the evidence is human clinical data and not
+    graded observational-only. `is_animal_only is False` is the per-abstract-derived flag that at
+    least one paper carrying the efficacy verdict studied people; a controlled design is NOT
+    required, because a single-arm Phase 2 that showed no activity is legitimate negative evidence
+    (the standard screening design in oncology — imatinib x glioblastoma, ovarian, prostate all
+    read "live" while every trial had failed). A body the synthesis graded observational-only
+    (`is_observational is True`) still cannot close; the controlled-design flag keeps its only
+    other job, the "RCT-backed / controlled" wording on the card.
     """
     if (
         literature is not None
         and literature.evidence_basis == "drug_specific"
         and literature.strength in {"moderate", "strong"}
         and literature.direction == "contradicts"
-        and literature.is_observational is False
+        and literature.is_animal_only is False
+        and literature.is_observational is not True
     ):
-        return "CLOSED — controlled literature contradicts efficacy for this indication"
+        return "CLOSED — human clinical literature contradicts efficacy for this indication"
     if ct is None or ct.closure == "unknown":
         # Must not read as "the hypothesis is not established" — that phrasing was turned into a "Closed signal"
         # assessment for a candidate with no trials at all, which is the opposite of what an undecided verdict means.

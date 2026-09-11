@@ -616,32 +616,40 @@ async def test_analyze_mechanism_merges_by_efo_id(
 # --- finalize_supervisor closure helpers (shared by the blurb-repair tests below) --
 
 
-def test_controlled_contradicting_literature_closes_card_signal():
+@pytest.mark.parametrize(
+    "is_observational, is_animal_only, closes",
+    [
+        (False, False, True),  # controlled human trial
+        (
+            None,
+            False,
+            True,
+        ),  # single-arm / open-label human trial (design undetermined)
+        (True, False, False),  # observational-only human body
+        (None, True, False),  # animal / in-vitro only
+        (False, None, False),  # no per-abstract judgments: no human-evidence proof
+    ],
+)
+def test_contradicting_literature_closes_card_signal_on_human_clinical_evidence(
+    is_observational, is_animal_only, closes
+):
     clinical_trials = ClinicalTrialsOutput(
         closure="live",
         closure_reason="No registry termination",
     )
-    controlled_negative = EvidenceSummary(
+    negative = EvidenceSummary(
         strength="moderate",
         direction="contradicts",
         evidence_basis="drug_specific",
-        is_observational=False,
+        is_observational=is_observational,
+        is_animal_only=is_animal_only,
     )
-    observational_negative = EvidenceSummary(
-        strength="moderate",
-        direction="contradicts",
-        evidence_basis="drug_specific",
-        is_observational=True,
+    expected = (
+        "CLOSED — human clinical literature contradicts efficacy for this indication"
+        if closes
+        else "LIVE — not closed (No registry termination)"
     )
-
-    assert (
-        _closure_text(clinical_trials, controlled_negative)
-        == "CLOSED — controlled literature contradicts efficacy for this indication"
-    )
-    assert (
-        _closure_text(clinical_trials, observational_negative)
-        == "LIVE — not closed (No registry termination)"
-    )
+    assert _closure_text(clinical_trials, negative) == expected
 
 
 def _make_lit(
@@ -940,6 +948,7 @@ async def test_fact_critic_places_controlled_efficacy_failure_after_live_signal(
                 direction="contradicts",
                 evidence_basis="drug_specific",
                 is_observational=False,
+                is_animal_only=False,
             )
         ),
         "clinical_trials": ClinicalTrialsOutput(closure="live"),
