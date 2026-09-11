@@ -3066,7 +3066,7 @@ async def test_get_drug_competitors_alias_in_removed_not_merged(tmp_path):
             new=AsyncMock(return_value=merge_result),
         ),
     ):
-        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1", [])
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert "narcolepsy-cataplexy syndrome" not in result
     assert "narcolepsy" in result
@@ -3099,7 +3099,7 @@ async def test_get_drug_competitors_filters_broad_canonical_after_merge(tmp_path
             new=AsyncMock(return_value=merge_result),
         ),
     ):
-        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1", [])
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert result == {"psoriasis": {"competitor_c"}}
 
@@ -3135,7 +3135,7 @@ async def test_get_drug_competitors_merge_retains_empty_competitor_set(tmp_path)
             new=AsyncMock(return_value=merge_result),
         ),
     ):
-        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1", [])
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert result == {"canonical sleep disorder": set()}
     assert cache_get(
@@ -3162,8 +3162,7 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
             "chembl_id": "CHEMBL1",
             "date_before": None,
             "top_k": get_settings().literature_top_k,
-            "approved_indications": [],
-            "logic_version": "cache_disease_aliases_v2",
+            "logic_version": "cache_disease_aliases_v1",
         },
         cached,
         tmp_path,
@@ -3174,7 +3173,7 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
         "indication_scout.services.retrieval.OpenTargetsClient",
         return_value=mock_client,
     ):
-        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1", [])
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert result == {"depression": {"competitor_a"}}
     mock_client.__aenter__.assert_not_called()
@@ -3190,8 +3189,7 @@ async def test_get_drug_competitors_returns_cached_empty_result(tmp_path):
             "chembl_id": "CHEMBL1",
             "date_before": None,
             "top_k": get_settings().literature_top_k,
-            "approved_indications": [],
-            "logic_version": "cache_disease_aliases_v2",
+            "logic_version": "cache_disease_aliases_v1",
         },
         {},
         tmp_path,
@@ -3202,7 +3200,7 @@ async def test_get_drug_competitors_returns_cached_empty_result(tmp_path):
         "indication_scout.services.retrieval.OpenTargetsClient",
         return_value=mock_client,
     ):
-        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1", [])
+        result = await RetrievalService(tmp_path).get_drug_competitors("CHEMBL1")
 
     assert result == {}
     mock_client.__aenter__.assert_not_called()

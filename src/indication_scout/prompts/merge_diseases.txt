@@ -60,7 +60,6 @@ Rules for REMOVE:
 - "diabetic nephropathy" is NOT "type 2 diabetes mellitus" — one is a kidney disease, the other is a metabolic disease
 - "cardiovascular disease" is NOT "obesity" — do not remove it
 - "obesity" is NOT "type 2 diabetes mellitus" — they are distinct diseases that are comorbid and share a patient population, but neither is the same condition as the other. Do not remove "obesity" (or "overweight body mass index status") because the indication is type 2 diabetes, and do not remove diabetes because the indication is obesity.
-- The parent/subtype prohibition above applies to REMOVE as well. A subtype is NEVER the same condition as its parent, so never remove a subtype because the parent (or a sibling subtype) is a current indication. "type 1 diabetes mellitus" is NOT "diabetes mellitus" and NOT "type 2 diabetes mellitus"; "gestational diabetes" is NOT "diabetes mellitus"; "non-alcoholic steatohepatitis" is NOT "fatty liver disease". Remove a parent only when the parent itself is listed as a current indication.
 
 Drug's current indications: {drug_indications}
 

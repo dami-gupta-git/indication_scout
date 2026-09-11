@@ -553,11 +553,7 @@ def build_supervisor_tools(
         # approved-DROP filter over competitor diseases (below) is NOT part of this and stays here.
         intake = await _get_drug_intake(drug_name)
         chembl_id = intake.chembl_id
-        competitors = await svc.get_drug_competitors(
-            chembl_id,
-            list(intake.approved_indications),
-            date_before=date_before,
-        )
+        competitors = await svc.get_drug_competitors(chembl_id, date_before=date_before)
         diseases = list(competitors.keys())
 
         entry = _ensure_drug_entry(drug_name)
