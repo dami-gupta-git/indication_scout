@@ -136,6 +136,14 @@ async def stop_tracing() -> None:
     shutdown_tracing()
 
 
+@app.on_event("shutdown")
+async def close_run_persistence() -> None:
+    """Dispose the run-ledger connection pool after request handling stops."""
+    from indication_scout.api.routes.analyses import dispose_run_session_factory
+
+    dispose_run_session_factory()
+
+
 @app.on_event("startup")
 async def seed_examples() -> None:
     """Seed the example cache from committed snapshots when the volume is empty."""

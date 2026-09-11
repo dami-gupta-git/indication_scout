@@ -1,10 +1,7 @@
-"""In-memory job store for analysis runs.
+"""In-memory task registry for API analysis runs.
 
-Backs the async job model: `POST /api/analyses` creates a `Job` and launches the runner in a
-background `asyncio.Task`; the frontend polls `GET /api/analyses/{job_id}` for status/result.
-
-In-memory by design: jobs live in a module-level dict keyed by `job_id`, lost on restart, no
-persisted history. Single-worker only — multiple uvicorn workers would not share this dict.
+Postgres owns durable lifecycle state. This registry retains live `asyncio.Task` handles so the
+API process that started a run can cancel it. It is lost on restart and remains single-process.
 """
 
 import logging
@@ -48,17 +45,17 @@ class Job:
 
 
 class JobStore:
-    """Module-singleton dict of `job_id -> Job`. Not thread-safe; single-worker asyncio only."""
+    """Process-local registry of live tasks and their convenience state mirror."""
 
     def __init__(self) -> None:
         self._jobs: dict[str, Job] = {}
 
-    def create(self, drug_name: str) -> Job:
-        """Create a `pending` job with a fresh id and register it."""
-        job_id = uuid.uuid4().hex
-        job = Job(job_id=job_id, drug_name=drug_name)
-        self._jobs[job_id] = job
-        logger.info("Created job %s for drug=%s", job_id, drug_name)
+    def create(self, drug_name: str, *, job_id: str | None = None) -> Job:
+        """Register a pending runtime job, using a supplied durable id when present."""
+        resolved_job_id = job_id or uuid.uuid4().hex
+        job = Job(job_id=resolved_job_id, drug_name=drug_name)
+        self._jobs[resolved_job_id] = job
+        logger.info("Created job %s for drug=%s", resolved_job_id, drug_name)
         return job
 
     def get(self, job_id: str) -> Job | None:

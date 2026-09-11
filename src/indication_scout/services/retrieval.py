@@ -549,7 +549,9 @@ class RetrievalService:
             "chembl_id": chembl_id,
             "date_before": date_before.isoformat() if date_before else None,
             "top_k": _settings.literature_top_k,
-            "logic_version": "cache_disease_aliases_v1",
+            # The merge runs over the prefetched disease list, so a change to the prefetch size changes this result.
+            "prefetch_max": _settings.open_targets_competitor_prefetch_max,
+            "logic_version": "cache_disease_aliases_v2_opus_merge",
         }
         cached = cache_get("competitors_merged", cache_params, self.cache_dir)
         if cached is not None:

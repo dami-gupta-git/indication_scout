@@ -1,6 +1,6 @@
 """Unit tests for durable analysis-run SQLAlchemy models."""
 
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from indication_scout.sqlalchemy.analysis_runs import (
     AnalysisAttempt,
@@ -15,8 +15,12 @@ def test_analysis_run_mapping_and_fields():
     record = AnalysisRun(
         run_id="a" * 32,
         drug_name="metformin",
+        disease_name=None,
         status="done",
         execution_mode="live",
+        submission_source="cli",
+        analysis_kind="find",
+        date_before=date(2026, 1, 1),
         result={"drug_name": "metformin"},
         integrity_status="passed",
         cancellation_requested_at=None,
@@ -31,8 +35,12 @@ def test_analysis_run_mapping_and_fields():
     assert {column.name for column in AnalysisRun.__table__.columns} == {
         "run_id",
         "drug_name",
+        "disease_name",
         "status",
         "execution_mode",
+        "submission_source",
+        "analysis_kind",
+        "date_before",
         "result",
         "integrity_status",
         "cancellation_requested_at",
@@ -43,8 +51,12 @@ def test_analysis_run_mapping_and_fields():
     }
     assert record.run_id == "a" * 32
     assert record.drug_name == "metformin"
+    assert record.disease_name is None
     assert record.status == "done"
     assert record.execution_mode == "live"
+    assert record.submission_source == "cli"
+    assert record.analysis_kind == "find"
+    assert record.date_before == date(2026, 1, 1)
     assert record.result == {"drug_name": "metformin"}
     assert record.integrity_status == "passed"
     assert record.cancellation_requested_at is None

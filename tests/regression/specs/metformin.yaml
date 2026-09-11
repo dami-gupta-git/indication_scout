@@ -32,23 +32,29 @@ aliases:
   hepatic steatosis:
     - metabolic dysfunction-associated steatotic liver disease
     - non-alcoholic fatty liver disease
+    - fatty liver disease  # survivor name the Opus merge picks for this group (2026-09-11)
   # Only true renames belong here. "coronary artery disorder" is NOT an alias of the broader
   # cardiovascular candidate: both surface in the same report with disjoint trial sets and
   # citations, so aliasing them made the anchor resolve to whichever came first in the report.
   # They are pinned separately below.
   cardiovascular disease:
     - cardiovascular disorder
+  coronary artery disorder:
+    - coronary artery disease  # rename only: the Opus merge picks "disease" as survivor (2026-09-11)
 
 # Present in the ranked set; exact rank permutes run to run, so no order is pinned.
 # Preeclampsia, atherosclerosis and insulin resistance are not pinned in the ranking: they sit at
 # the edge of the investigation cap, and a run whose merge keeps gestational diabetes, prediabetes
 # and type 1 diabetes as candidates pushes all three out (2026-09-10 20:54). They stay pinned as
 # surfaced candidates only.
+# hepatic steatosis and coronary artery disorder are no longer pinned as investigated (2026-09-11):
+# under the Opus merge + 80-name prefetch, the liver group survives as "fatty liver disease" at
+# position ~54 (past the 16-slot cap) and "coronary artery disorder" is renamed to a name not in the
+# input, which the merge-apply code appends at the end of the list, past the 60-name cut. Both are
+# deferred (see for_me/errors/errors.md). hepatic steatosis stays in candidate_set_contains via alias.
 required_in_ranked:
   - bucket: ranking
     indication: polycystic ovary syndrome
-  - bucket: ranking
-    indication: hepatic steatosis
   - bucket: ranking
     indication: metabolic syndrome
   - bucket: ranking
@@ -87,19 +93,7 @@ required_ncts_surfaced:
     section: relevant
     ncts:
       - NCT00151411
-      - NCT04175964
-  - bucket: literature_coverage
-    indication: hepatic steatosis
-    section: relevant
-    ncts:
-      - NCT00063232
-      - NCT00063635
-  - bucket: literature_coverage
-    indication: coronary artery disorder
-    section: relevant
-    ncts:
-      - NCT02744976
-      - NCT02915198
+      - NCT02635386   # NCT04175964 flipped to contaminated on 2026-09-11 (trials-agent verdict)
 
 # Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each cited in
 # both 2026-09-10 runs.
@@ -116,33 +110,18 @@ required_pmids_cited:
       - "10206447"
       - "10634377"
   - bucket: literature_coverage
-    indication: hepatic steatosis
-    mode: cited
-    pmids:
-      - "18721166"
-      - "19811343"
-  - bucket: literature_coverage
     indication: cardiovascular disease
     mode: cited
     pmids:
       - "21205121"
       - "35032305"
-  - bucket: literature_coverage
-    indication: coronary artery disorder
-    mode: cited
-    pmids:
-      - "24622715"   # 23230096 is now graded contaminated
 
 # Safety — metformin carries black-box warnings (lactic acidosis). Production derives black_box from
 # OT; holdout would fall back to serious.
 safety_severity:
   - indication: polycystic ovary syndrome
     allowed: [black_box, serious]
-  - indication: hepatic steatosis
-    allowed: [black_box, serious]
   - indication: cardiovascular disease
-    allowed: [black_box, serious]
-  - indication: coronary artery disorder
     allowed: [black_box, serious]
 
 # Drug-level collapsed safety signal must surface (empty = collapse regression).

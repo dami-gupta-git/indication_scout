@@ -1,7 +1,7 @@
 """Transactional persistence for analysis runs, attempts, and events."""
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from typing import Any, Literal
 
 from sqlalchemy import func, select
@@ -9,15 +9,19 @@ from sqlalchemy.orm import Session
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
 from indication_scout.sqlalchemy.analysis_runs import (
+    ANALYSIS_KINDS,
     ATTEMPT_STATUSES,
     EVENT_SEVERITIES,
     EXECUTION_MODES,
+    SUBMISSION_SOURCES,
     AnalysisAttempt,
     AnalysisEvent,
     AnalysisRun,
 )
 
 ExecutionMode = Literal["live", "seed"]
+SubmissionSource = Literal["api", "cli"]
+AnalysisKind = Literal["find", "investigate"]
 EventSeverity = Literal["debug", "info", "warning", "error", "critical"]
 
 _TERMINAL_RUN_STATUSES = {"done", "error", "cancelled"}
@@ -50,6 +54,10 @@ class AnalysisRunRepository:
         drug_name: str,
         execution_mode: ExecutionMode,
         *,
+        submission_source: SubmissionSource,
+        analysis_kind: AnalysisKind,
+        disease_name: str | None,
+        date_before: date | None,
         run_id: str | None = None,
     ) -> AnalysisRun:
         """Create a pending run and its initial event in one transaction."""
@@ -58,13 +66,26 @@ class AnalysisRunRepository:
             raise ValueError("drug_name must not be empty")
         if execution_mode not in EXECUTION_MODES:
             raise ValueError(f"Unsupported execution mode: {execution_mode}")
+        if submission_source not in SUBMISSION_SOURCES:
+            raise ValueError(f"Unsupported submission source: {submission_source}")
+        if analysis_kind not in ANALYSIS_KINDS:
+            raise ValueError(f"Unsupported analysis kind: {analysis_kind}")
+        normalized_disease = disease_name.strip() if disease_name is not None else None
+        if analysis_kind == "find" and normalized_disease is not None:
+            raise ValueError("find runs must not include disease_name")
+        if analysis_kind == "investigate" and not normalized_disease:
+            raise ValueError("investigate runs require disease_name")
 
         now = _utcnow()
         run = AnalysisRun(
             run_id=run_id or uuid.uuid4().hex,
             drug_name=normalized_drug,
+            disease_name=normalized_disease,
             status="pending",
             execution_mode=execution_mode,
+            submission_source=submission_source,
+            analysis_kind=analysis_kind,
+            date_before=date_before,
             result=None,
             integrity_status=None,
             cancellation_requested_at=None,
@@ -247,6 +268,41 @@ class AnalysisRunRepository:
                         occurred_at=now,
                     )
                 )
+            self._db.commit()
+        except Exception:
+            self._db.rollback()
+            raise
+        self._db.refresh(run)
+        return run
+
+    def cancel_pending_run(self, run_id: str) -> AnalysisRun:
+        """Atomically cancel a pending run before an attempt starts."""
+        now = _utcnow()
+        try:
+            run = self._require_run(run_id, for_update=True)
+            self._require_run_status(run, {"pending"})
+            run.status = "cancelled"
+            run.cancellation_requested_at = now
+            run.finished_at = now
+            run.updated_at = now
+            self._db.add(
+                self._new_event(
+                    run_id=run_id,
+                    attempt_id=None,
+                    event_name="analysis.cancellation_requested",
+                    severity="info",
+                    occurred_at=now,
+                )
+            )
+            self._db.add(
+                self._new_event(
+                    run_id=run_id,
+                    attempt_id=None,
+                    event_name="analysis.cancelled",
+                    severity="info",
+                    occurred_at=now,
+                )
+            )
             self._db.commit()
         except Exception:
             self._db.rollback()

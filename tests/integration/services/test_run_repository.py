@@ -1,6 +1,6 @@
 """Database integration tests for durable analysis-run persistence."""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from unittest.mock import patch
 
 import pytest
@@ -17,7 +17,15 @@ def test_create_run_persists_initial_state_and_event(run_db_session):
     repository = AnalysisRunRepository(run_db_session)
 
     with patch("indication_scout.services.run_repository._utcnow", return_value=now):
-        created = repository.create_run("metformin", "live", run_id="a" * 32)
+        created = repository.create_run(
+            "metformin",
+            "live",
+            submission_source="api",
+            analysis_kind="find",
+            disease_name=None,
+            date_before=None,
+            run_id="a" * 32,
+        )
 
     persisted = repository.get_run(created.run_id)
     events = repository.list_events(created.run_id)
@@ -25,8 +33,12 @@ def test_create_run_persists_initial_state_and_event(run_db_session):
     assert persisted is not None
     assert persisted.run_id == "a" * 32
     assert persisted.drug_name == "metformin"
+    assert persisted.disease_name is None
     assert persisted.status == "pending"
     assert persisted.execution_mode == "live"
+    assert persisted.submission_source == "api"
+    assert persisted.analysis_kind == "find"
+    assert persisted.date_before is None
     assert persisted.result is None
     assert persisted.integrity_status is None
     assert persisted.cancellation_requested_at is None
@@ -60,7 +72,15 @@ def test_successful_attempt_persists_progress_heartbeat_and_result(run_db_sessio
     )
 
     with patch("indication_scout.services.run_repository._utcnow", side_effect=times):
-        run = repository.create_run("metformin", "live", run_id="a" * 32)
+        run = repository.create_run(
+            "metformin",
+            "live",
+            submission_source="cli",
+            analysis_kind="find",
+            disease_name=None,
+            date_before=date(2026, 1, 1),
+            run_id="a" * 32,
+        )
         attempt = repository.start_attempt(
             run.run_id,
             worker_id="worker-1",
@@ -88,8 +108,12 @@ def test_successful_attempt_persists_progress_heartbeat_and_result(run_db_sessio
     events = repository.list_events(run.run_id)
     assert completed.run_id == run.run_id
     assert completed.drug_name == "metformin"
+    assert completed.disease_name is None
     assert completed.status == "done"
     assert completed.execution_mode == "live"
+    assert completed.submission_source == "cli"
+    assert completed.analysis_kind == "find"
+    assert completed.date_before == date(2026, 1, 1)
     assert completed.result == result.model_dump(mode="json")
     assert completed.integrity_status == "passed"
     assert completed.cancellation_requested_at is None
@@ -142,7 +166,15 @@ def test_failure_is_terminal_and_preserves_classification(run_db_session):
         "indication_scout.services.run_repository._utcnow",
         side_effect=[start, start, failure],
     ):
-        run = repository.create_run("metformin", "live", run_id="a" * 32)
+        run = repository.create_run(
+            "metformin",
+            "live",
+            submission_source="api",
+            analysis_kind="find",
+            disease_name=None,
+            date_before=None,
+            run_id="a" * 32,
+        )
         attempt = repository.start_attempt(
             run.run_id,
             worker_id=None,
@@ -163,8 +195,12 @@ def test_failure_is_terminal_and_preserves_classification(run_db_session):
     events = repository.list_events(run.run_id)
     assert failed.run_id == run.run_id
     assert failed.drug_name == "metformin"
+    assert failed.disease_name is None
     assert failed.status == "error"
     assert failed.execution_mode == "live"
+    assert failed.submission_source == "api"
+    assert failed.analysis_kind == "find"
+    assert failed.date_before is None
     assert failed.result is None
     assert failed.integrity_status is None
     assert failed.cancellation_requested_at is None
@@ -206,7 +242,15 @@ def test_cancellation_request_is_idempotent_and_cancel_is_terminal(run_db_sessio
     repository = AnalysisRunRepository(run_db_session)
 
     with patch("indication_scout.services.run_repository._utcnow", side_effect=times):
-        run = repository.create_run("metformin", "seed", run_id="a" * 32)
+        run = repository.create_run(
+            "metformin",
+            "seed",
+            submission_source="api",
+            analysis_kind="find",
+            disease_name=None,
+            date_before=None,
+            run_id="a" * 32,
+        )
         attempt = repository.start_attempt(
             run.run_id,
             worker_id="worker-1",
@@ -225,8 +269,12 @@ def test_cancellation_request_is_idempotent_and_cancel_is_terminal(run_db_sessio
     assert requested_again.cancellation_requested_at == times[2]
     assert cancelled.run_id == run.run_id
     assert cancelled.drug_name == "metformin"
+    assert cancelled.disease_name is None
     assert cancelled.status == "cancelled"
     assert cancelled.execution_mode == "seed"
+    assert cancelled.submission_source == "api"
+    assert cancelled.analysis_kind == "find"
+    assert cancelled.date_before is None
     assert cancelled.result is None
     assert cancelled.integrity_status is None
     assert cancelled.cancellation_requested_at == times[2]
@@ -253,6 +301,38 @@ def test_cancellation_request_is_idempotent_and_cancel_is_terminal(run_db_sessio
     assert [event.event_name for event in events] == [
         "analysis.created",
         "analysis.started",
+        "analysis.cancellation_requested",
+        "analysis.cancelled",
+    ]
+
+
+def test_pending_run_can_be_cancelled_before_attempt_starts(run_db_session):
+    now = datetime(2026, 9, 10, 15, 0, tzinfo=UTC)
+    repository = AnalysisRunRepository(run_db_session)
+
+    with patch(
+        "indication_scout.services.run_repository._utcnow",
+        side_effect=[now, now + timedelta(seconds=1)],
+    ):
+        run = repository.create_run(
+            "sildenafil",
+            "live",
+            submission_source="cli",
+            analysis_kind="investigate",
+            disease_name="Raynaud disease",
+            date_before=None,
+            run_id="c" * 32,
+        )
+        cancelled = repository.cancel_pending_run(run.run_id)
+
+    assert cancelled.status == "cancelled"
+    assert cancelled.submission_source == "cli"
+    assert cancelled.analysis_kind == "investigate"
+    assert cancelled.disease_name == "Raynaud disease"
+    assert cancelled.started_at is None
+    assert cancelled.finished_at == now + timedelta(seconds=1)
+    assert [event.event_name for event in repository.list_events(run.run_id)] == [
+        "analysis.created",
         "analysis.cancellation_requested",
         "analysis.cancelled",
     ]

@@ -246,7 +246,7 @@ async def test_merge_duplicate_diseases_parses_response_formats(
         "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
     )
     with patch(
-        "indication_scout.services.disease_helper.query_llm",
+        "indication_scout.services.disease_helper.query_big_llm",
         new=AsyncMock(return_value=llm_response),
     ) as mock_llm:
         result = await merge_duplicate_diseases(
@@ -267,7 +267,7 @@ async def test_merge_duplicate_diseases_raises_on_invalid_json():
     novel candidate.
     """
     with patch(
-        "indication_scout.services.disease_helper.query_llm",
+        "indication_scout.services.disease_helper.query_big_llm",
         new=AsyncMock(return_value="not valid json at all"),
     ):
         with pytest.raises(DataSourceError, match="unparseable response"):
@@ -666,7 +666,7 @@ async def test_merge_duplicate_diseases_raises_on_wrong_shape(
         "indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path
     )
     with patch(
-        "indication_scout.services.disease_helper.query_llm",
+        "indication_scout.services.disease_helper.query_big_llm",
         new=AsyncMock(return_value=bad_response),
     ):
         with pytest.raises(DataSourceError):

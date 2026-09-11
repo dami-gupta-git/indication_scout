@@ -47,10 +47,14 @@ async def _run_for_drug(
 ) -> None:
     # Imports are deferred until after _load_env() runs in main(), because
     # base_client.py calls get_settings() at import time.
+    from indication_scout.db.session import make_session_factory
     from indication_scout.helpers.drug_helpers import normalize_drug_name
     from indication_scout.services.analysis_runner import run_analysis
+    from indication_scout.services.progress import reset_emitter, set_emitter
+    from indication_scout.services.run_repository import AnalysisRunRepository
     from indication_scout.tracing import setup_tracing, shutdown_tracing
 
+    session_factory = make_session_factory()
     setup_tracing()
     try:
         # Normalize at the entry point so filenames/logs below see the same lowercased form
@@ -58,7 +62,62 @@ async def _run_for_drug(
         drug = normalize_drug_name(drug)
 
         logger.info("Starting %s (date_before=%s)", drug, date_before)
-        output, report_md = await run_analysis(drug, date_before=date_before)
+        with session_factory() as db:
+            repository = AnalysisRunRepository(db)
+            run = repository.create_run(
+                drug,
+                "live",
+                submission_source="cli",
+                analysis_kind="find",
+                disease_name=None,
+                date_before=date_before,
+            )
+            run_id = run.run_id
+            attempt = repository.start_attempt(
+                run_id,
+                worker_id=os.environ.get("RAILWAY_REPLICA_ID"),
+                deployment_id=os.environ.get("RAILWAY_DEPLOYMENT_ID"),
+                release=os.environ.get("RAILWAY_GIT_COMMIT_SHA"),
+            )
+            attempt_id = attempt.attempt_id
+        logger.info("Created durable CLI run %s", run_id)
+
+        def persist_progress(phase: str, message: str) -> None:
+            with session_factory() as db:
+                AnalysisRunRepository(db).append_event(
+                    run_id,
+                    "analysis.progress",
+                    "info",
+                    attempt_id=attempt_id,
+                    stage=phase,
+                    attributes={"message": message},
+                )
+
+        token = set_emitter(persist_progress)
+        try:
+            output, report_md = await run_analysis(drug, date_before=date_before)
+        except asyncio.CancelledError:
+            with session_factory() as db:
+                AnalysisRunRepository(db).cancel_attempt(run_id, attempt_id)
+            raise
+        except Exception as exc:
+            with session_factory() as db:
+                AnalysisRunRepository(db).fail_attempt(
+                    run_id,
+                    attempt_id,
+                    error_code=type(exc).__name__,
+                    error_message=f"{type(exc).__name__}: {exc}",
+                    retryable=False,
+                    integrity_failed=False,
+                )
+            raise
+        else:
+            with session_factory() as db:
+                AnalysisRunRepository(db).complete_validated_attempt(
+                    run_id, attempt_id, output
+                )
+        finally:
+            reset_emitter(token)
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
@@ -88,6 +147,7 @@ async def _run_for_drug(
         click.echo(f"Report:    {md_path}")
 
     finally:
+        session_factory.kw["bind"].dispose()
         shutdown_tracing()
 
 
@@ -99,17 +159,79 @@ async def _run_for_pair(
     date_before: date | None = None,
 ) -> None:
     # Imports deferred until after _load_env() runs in main() (base_client.py reads settings at import time).
+    from indication_scout.db.session import make_session_factory
     from indication_scout.helpers.drug_helpers import normalize_drug_name
     from indication_scout.services.analysis_runner import run_pair_analysis
+    from indication_scout.services.progress import reset_emitter, set_emitter
+    from indication_scout.services.run_repository import AnalysisRunRepository
     from indication_scout.tracing import setup_tracing, shutdown_tracing
 
+    session_factory = make_session_factory()
     setup_tracing()
     try:
         drug = normalize_drug_name(drug)
+        disease = disease.strip()
         logger.info(
             "Starting pair %s x %s (date_before=%s)", drug, disease, date_before
         )
-        _, report_md = await run_pair_analysis(drug, disease, date_before=date_before)
+        with session_factory() as db:
+            repository = AnalysisRunRepository(db)
+            run = repository.create_run(
+                drug,
+                "live",
+                submission_source="cli",
+                analysis_kind="investigate",
+                disease_name=disease,
+                date_before=date_before,
+            )
+            run_id = run.run_id
+            attempt = repository.start_attempt(
+                run_id,
+                worker_id=os.environ.get("RAILWAY_REPLICA_ID"),
+                deployment_id=os.environ.get("RAILWAY_DEPLOYMENT_ID"),
+                release=os.environ.get("RAILWAY_GIT_COMMIT_SHA"),
+            )
+            attempt_id = attempt.attempt_id
+        logger.info("Created durable CLI run %s", run_id)
+
+        def persist_progress(phase: str, message: str) -> None:
+            with session_factory() as db:
+                AnalysisRunRepository(db).append_event(
+                    run_id,
+                    "analysis.progress",
+                    "info",
+                    attempt_id=attempt_id,
+                    stage=phase,
+                    attributes={"message": message},
+                )
+
+        token = set_emitter(persist_progress)
+        try:
+            output, report_md = await run_pair_analysis(
+                drug, disease, date_before=date_before
+            )
+        except asyncio.CancelledError:
+            with session_factory() as db:
+                AnalysisRunRepository(db).cancel_attempt(run_id, attempt_id)
+            raise
+        except Exception as exc:
+            with session_factory() as db:
+                AnalysisRunRepository(db).fail_attempt(
+                    run_id,
+                    attempt_id,
+                    error_code=type(exc).__name__,
+                    error_message=f"{type(exc).__name__}: {exc}",
+                    retryable=False,
+                    integrity_failed=False,
+                )
+            raise
+        else:
+            with session_factory() as db:
+                AnalysisRunRepository(db).complete_validated_attempt(
+                    run_id, attempt_id, output
+                )
+        finally:
+            reset_emitter(token)
 
         if not write:
             click.echo(report_md)
@@ -135,6 +257,7 @@ async def _run_for_pair(
         logger.info("Finished pair %s x %s -> %s", drug, disease, md_path)
         click.echo(f"Report:    {md_path}")
     finally:
+        session_factory.kw["bind"].dispose()
         shutdown_tracing()
 
 

@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 _settings = get_settings()
 _model = _settings.llm_model
 _small_model = _settings.small_llm_model
+_big_model = _settings.big_llm_model
 client = AsyncAnthropic()
 
 
@@ -115,6 +116,26 @@ def parse_last_json_object(response: str) -> dict | None:
 async def query_llm(prompt: str, system: str = "") -> str:
     response = await client.messages.create(
         model=_model,
+        max_tokens=_settings.llm_max_tokens,
+        system=system or omit,
+        messages=[{"role": "user", "content": prompt}],
+        # The 1.x SDK dropped temperature from the create signature; the API still accepts it in the body.
+        extra_body={"temperature": 0},
+    )
+    if not response.content:
+        raise DataSourceError(
+            "llm", f"Empty content in LLM response (stop_reason={response.stop_reason})"
+        )
+    # The first block is read as text today; a non-text first block raises AttributeError either way.
+    return cast(TextBlock, response.content[0]).text
+
+
+async def query_big_llm(prompt: str, system: str = "") -> str:
+    """Query the big (Opus-tier) model. Used where a judgement must be stable and Sonnet's is not:
+    the competitor merge's REMOVE rule (Sonnet removed type 1 diabetes 3/3 and Eisenmenger 2/3 on
+    identical input; Opus kept both 3/3 with identical remove lists)."""
+    response = await client.messages.create(
+        model=_big_model,
         max_tokens=_settings.llm_max_tokens,
         system=system or omit,
         messages=[{"role": "user", "content": prompt}],

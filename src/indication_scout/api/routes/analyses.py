@@ -1,42 +1,134 @@
 """Analyses routes.
 
-Blocking runner inside an asyncio background task; the frontend polls `GET` for status/result.
-No orchestration touch — the runner calls the existing blocking `run_analysis`.
+The runner remains inside an asyncio background task, while Postgres owns lifecycle state,
+progress, errors, and validated results for the polling and report routes.
 """
 
 import asyncio
 import logging
+import os
+from collections.abc import Iterator
+from contextlib import contextmanager
+from functools import lru_cache
 
 from fastapi import APIRouter, HTTPException, Request, Response, status
 from fastapi.responses import PlainTextResponse
+from sqlalchemy.orm import sessionmaker
 
+from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
 from indication_scout.api.schemas.analyses import (
     AnalysisCreatedResponse,
     AnalysisRequest,
     AnalysisStatusResponse,
 )
+from indication_scout.api.schemas.progress import ProgressEvent
 from indication_scout.constants import DEFAULT_CACHE_DIR, SEED_REPORT_SPINNER_SECONDS
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import resolve_drug_name
+from indication_scout.db.session import make_session_factory
 from indication_scout.helpers.drug_helpers import normalize_drug_name
 from indication_scout.report.format_report import format_report
 from indication_scout.services.analysis_runner import run_analysis
 from indication_scout.services.job_store import Job, job_store
 from indication_scout.services.progress import reset_emitter, set_emitter
+from indication_scout.services.run_repository import (
+    AnalysisRunRepository,
+    RunStateError,
+)
 from indication_scout.services.seed_reports import load_fresh_seed_report
+from indication_scout.sqlalchemy.analysis_runs import AnalysisEvent
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/analyses", tags=["analyses"])
 
 
+@lru_cache(maxsize=1)
+def _get_run_session_factory() -> sessionmaker:
+    """Create one shared database connection pool for API run persistence."""
+    return make_session_factory()
+
+
+def dispose_run_session_factory() -> None:
+    """Dispose the shared run-persistence pool during application shutdown."""
+    if _get_run_session_factory.cache_info().currsize == 0:
+        return
+    _get_run_session_factory().kw["bind"].dispose()
+    _get_run_session_factory.cache_clear()
+
+
+@contextmanager
+def _repository_scope() -> Iterator[AnalysisRunRepository]:
+    """Provide one short-lived repository session."""
+    with _get_run_session_factory()() as db:
+        yield AnalysisRunRepository(db)
+
+
+def _execution_identity() -> tuple[str | None, str | None, str | None]:
+    """Return Railway execution identifiers when present."""
+    return (
+        os.environ.get("RAILWAY_REPLICA_ID"),
+        os.environ.get("RAILWAY_DEPLOYMENT_ID"),
+        os.environ.get("RAILWAY_GIT_COMMIT_SHA"),
+    )
+
+
+def _persist_progress(job: Job, attempt_id: str, phase: str, message: str) -> None:
+    """Persist a progress event and retain the process-local mirror."""
+    job.emit(phase, message)
+    with _repository_scope() as repository:
+        repository.append_event(
+            job.job_id,
+            "analysis.progress",
+            "info",
+            attempt_id=attempt_id,
+            stage=phase,
+            attributes={"message": message},
+        )
+
+
+def _progress_from_events(events: list[AnalysisEvent]) -> list[ProgressEvent]:
+    """Rebuild the API progress feed from durable events."""
+    progress = []
+    for event in events:
+        attributes = event.attributes or {}
+        message = attributes.get("message")
+        if (
+            event.event_name == "analysis.progress"
+            and event.stage is not None
+            and isinstance(message, str)
+        ):
+            progress.append(ProgressEvent(phase=event.stage, message=message))
+    return progress
+
+
 async def _execute(job: Job) -> None:
     """Run the analysis for `job`, recording status/result/error. Catches cancellation."""
+    worker_id, deployment_id, release = _execution_identity()
+    try:
+        with _repository_scope() as repository:
+            attempt = repository.start_attempt(
+                job.job_id,
+                worker_id=worker_id,
+                deployment_id=deployment_id,
+                release=release,
+            )
+    except RunStateError:
+        with _repository_scope() as repository:
+            run = repository.get_run(job.job_id)
+        if run is not None and run.status == "cancelled":
+            job.status = "cancelled"
+            return
+        raise
+
     job.status = "running"
-    # Bind this job's progress feed for the duration of the run. The supervisor tools and
-    # retrieval service call emit_progress(...) at user-facing milestones; those append to
-    # job.progress and ride the existing poll. Reset in finally so the contextvar doesn't leak.
-    token = set_emitter(job.emit)
+    # Bind this attempt's durable progress feed for the duration of the run. Reset in finally
+    # so the context variable does not leak into other analyses.
+    token = set_emitter(
+        lambda phase, message: _persist_progress(
+            job, attempt.attempt_id, phase, message
+        )
+    )
     try:
         seed = load_fresh_seed_report(job.drug_name)
         if seed is not None:
@@ -45,17 +137,37 @@ async def _execute(job: Job) -> None:
                 "Job %s served from seed report for %s", job.job_id, job.drug_name
             )
             await asyncio.sleep(SEED_REPORT_SPINNER_SECONDS)
+            with _repository_scope() as repository:
+                repository.complete_validated_attempt(
+                    job.job_id, attempt.attempt_id, seed
+                )
             job.result = seed
             job.status = "done"
             return
         output, _ = await run_analysis(job.drug_name)
+        with _repository_scope() as repository:
+            repository.complete_validated_attempt(
+                job.job_id, attempt.attempt_id, output
+            )
         job.result = output
         job.status = "done"
     except asyncio.CancelledError:
+        with _repository_scope() as repository:
+            repository.cancel_attempt(job.job_id, attempt.attempt_id)
         job.status = "cancelled"
         logger.info("Job %s cancelled", job.job_id)
         raise
     except Exception as exc:  # noqa: BLE001 — surface any runner failure to the client
+        persisted_error = f"{type(exc).__name__}: {exc}"
+        with _repository_scope() as repository:
+            repository.fail_attempt(
+                job.job_id,
+                attempt.attempt_id,
+                error_code=type(exc).__name__,
+                error_message=persisted_error,
+                retryable=False,
+                integrity_failed=False,
+            )
         job.error = str(exc)
         job.status = "error"
         logger.exception("Job %s failed", job.job_id)
@@ -82,7 +194,8 @@ async def create_analysis(
     )
     # Fail fast: one quick Open Targets search confirms the drug exists before we spin up
     # a job. Seed-report drugs skip the check (they don't need OT resolution).
-    if load_fresh_seed_report(drug) is None:
+    seed = load_fresh_seed_report(drug)
+    if seed is None:
         try:
             await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
         except DataSourceError as e:
@@ -90,7 +203,16 @@ async def create_analysis(
                 status_code=422,
                 detail=f"No drug found matching '{req.drug_name}'.",
             ) from e
-    job = job_store.create(req.drug_name)
+    with _repository_scope() as repository:
+        run = repository.create_run(
+            drug,
+            "seed" if seed is not None else "live",
+            submission_source="api",
+            analysis_kind="find",
+            disease_name=None,
+            date_before=None,
+        )
+    job = job_store.create(drug, job_id=run.run_id)
     job.task = asyncio.create_task(_execute(job))
     return AnalysisCreatedResponse(job_id=job.job_id, status=job.status)
 
@@ -98,38 +220,70 @@ async def create_analysis(
 @router.get("/{job_id}")
 async def get_analysis(job_id: str) -> AnalysisStatusResponse:
     """Return current status and, when done, the analysis result."""
-    job = job_store.get(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+    with _repository_scope() as repository:
+        run = repository.get_run(job_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail="Job not found")
+        attempts = repository.list_attempts(job_id)
+        events = repository.list_events(job_id)
+    result = (
+        SupervisorOutput.model_validate(run.result) if run.result is not None else None
+    )
+    error = attempts[-1].error_message if run.status == "error" and attempts else None
     return AnalysisStatusResponse(
-        job_id=job.job_id,
-        drug_name=job.drug_name,
-        status=job.status,
-        result=job.result,
-        error=job.error,
-        progress=job.progress,
+        job_id=run.run_id,
+        drug_name=run.drug_name,
+        status=run.status,
+        result=result,
+        error=error,
+        progress=_progress_from_events(events),
     )
 
 
 @router.get("/{job_id}/report.md", response_class=PlainTextResponse)
 async def get_analysis_report(job_id: str) -> str:
     """Return the formatted Markdown report for a completed job."""
-    job = job_store.get(job_id)
-    if job is None:
+    with _repository_scope() as repository:
+        run = repository.get_run(job_id)
+    if run is None:
         raise HTTPException(status_code=404, detail="Job not found")
-    if job.status != "done" or job.result is None:
+    if run.status != "done" or run.result is None:
         raise HTTPException(
-            status_code=409, detail=f"Job not done (status={job.status})"
+            status_code=409, detail=f"Job not done (status={run.status})"
         )
-    return format_report(job.result)
+    return format_report(SupervisorOutput.model_validate(run.result))
 
 
 @router.delete("/{job_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def cancel_analysis(job_id: str) -> Response:
     """Cancel a running job. Idempotent: finished jobs are left as-is; absent → 404."""
+    cancel_runtime = False
+    with _repository_scope() as repository:
+        run = repository.get_run(job_id)
+        if run is None:
+            raise HTTPException(status_code=404, detail="Job not found")
+        if run.status == "pending":
+            try:
+                repository.cancel_pending_run(job_id)
+                cancel_runtime = True
+            except RunStateError:
+                current = repository.get_run(job_id)
+                if current is not None and current.status == "running":
+                    repository.request_cancellation(job_id)
+                    cancel_runtime = True
+        elif run.status == "running":
+            try:
+                repository.request_cancellation(job_id)
+                cancel_runtime = True
+            except RunStateError:
+                pass
+
     job = job_store.get(job_id)
-    if job is None:
-        raise HTTPException(status_code=404, detail="Job not found")
-    if job.task is not None and not job.task.done():
+    if (
+        cancel_runtime
+        and job is not None
+        and job.task is not None
+        and not job.task.done()
+    ):
         job.task.cancel()
     return Response(status_code=status.HTTP_204_NO_CONTENT)

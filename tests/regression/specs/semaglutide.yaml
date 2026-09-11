@@ -40,6 +40,8 @@ aliases:
   alcohol abuse:
     - alcohol use disorder
     - alcohol dependence
+  cardiovascular disorder:
+    - cardiovascular disease
 
 # No ranked_order: MASH and type 1 diabetes swap ranks 1-2, and stroke / nicotine dependence /
 # alcohol abuse permute across ranks 3-5 (2026-09-10 17:49, 19:38, 19:57, 19:58). Membership only.
@@ -56,8 +58,9 @@ required_in_ranked:
     indication: nicotine dependence
   - bucket: ranking
     indication: heart failure
-  - bucket: ranking
-    indication: myocardial infarction
+  # myocardial infarction is investigated every run but the supervisor left it out of its ranked
+  # list on 2026-09-11 14:29 (ranked 10 of 16; footer records the omission). Not pinned in the
+  # ranking; still guarded in candidate_set_contains below.
   - bucket: ranking
     indication: polycystic ovary syndrome
   - bucket: ranking
@@ -80,7 +83,10 @@ candidate_set_contains:
     - type 1 diabetes mellitus
     - alcohol abuse
     - stroke
-    - cardiovascular disorder
+    - myocardial infarction
+    # cardiovascular disorder is not pinned either: the Opus merge (2026-09-11) names the group
+    # "cardiovascular disease", which then matches the label's approved MACE indication and is
+    # dropped outright instead of kept as contaminated. forbidden_in_ranked guards both spellings.
     # kidney disorder is not pinned: the merge step folds it into chronic kidney disease in some
     # runs (2026-09-10 21:06). forbidden_in_ranked above still guards it when it does surface.
 

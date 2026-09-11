@@ -1,12 +1,13 @@
 """SQLAlchemy models for durable analysis-run lifecycle records."""
 
-from datetime import datetime
+from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
     BigInteger,
     Boolean,
     CheckConstraint,
+    Date,
     DateTime,
     ForeignKey,
     Index,
@@ -22,13 +23,15 @@ from indication_scout.db.base import Base
 
 RUN_STATUSES = ("pending", "running", "done", "error", "cancelled")
 EXECUTION_MODES = ("live", "seed")
+SUBMISSION_SOURCES = ("api", "cli")
+ANALYSIS_KINDS = ("find", "investigate")
 ATTEMPT_STATUSES = ("running", "done", "error", "cancelled", "interrupted")
 INTEGRITY_STATUSES = ("passed", "failed")
 EVENT_SEVERITIES = ("debug", "info", "warning", "error", "critical")
 
 
 class AnalysisRun(Base):
-    """One logical analysis request exposed through the API."""
+    """One logical analysis submitted through the API or CLI."""
 
     __tablename__ = "analysis_runs"
     __table_args__ = (
@@ -36,6 +39,19 @@ class AnalysisRun(Base):
         CheckConstraint(
             f"execution_mode IN {EXECUTION_MODES}",
             name="ck_analysis_runs_execution_mode",
+        ),
+        CheckConstraint(
+            f"submission_source IN {SUBMISSION_SOURCES}",
+            name="ck_analysis_runs_submission_source",
+        ),
+        CheckConstraint(
+            f"analysis_kind IN {ANALYSIS_KINDS}",
+            name="ck_analysis_runs_analysis_kind",
+        ),
+        CheckConstraint(
+            "(analysis_kind = 'find' AND disease_name IS NULL) OR "
+            "(analysis_kind = 'investigate' AND disease_name IS NOT NULL)",
+            name="ck_analysis_runs_disease_for_kind",
         ),
         CheckConstraint(
             f"integrity_status IN {INTEGRITY_STATUSES}",
@@ -47,8 +63,12 @@ class AnalysisRun(Base):
 
     run_id: Mapped[str] = mapped_column(String(32), primary_key=True)
     drug_name: Mapped[str] = mapped_column(Text, nullable=False)
+    disease_name: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), nullable=False)
     execution_mode: Mapped[str] = mapped_column(String(20), nullable=False)
+    submission_source: Mapped[str] = mapped_column(String(20), nullable=False)
+    analysis_kind: Mapped[str] = mapped_column(String(20), nullable=False)
+    date_before: Mapped[date | None] = mapped_column(Date, nullable=True)
     result: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
     integrity_status: Mapped[str | None] = mapped_column(String(20), nullable=True)
     cancellation_requested_at: Mapped[datetime | None] = mapped_column(

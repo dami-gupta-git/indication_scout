@@ -25,6 +25,7 @@ def _response(text: str):
     [
         (llm.query_llm, llm._model, llm._settings.llm_max_tokens),
         (llm.query_small_llm, llm._small_model, llm._settings.small_llm_max_tokens),
+        (llm.query_big_llm, llm._big_model, llm._settings.llm_max_tokens),
     ],
 )
 async def test_helpers_send_temperature_zero(fn, model, max_tokens):

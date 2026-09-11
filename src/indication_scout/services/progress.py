@@ -1,13 +1,11 @@
-"""Per-run progress feed for the live "what's happening now" UI.
+"""Per-run progress emission for API and CLI analyses.
 
-A run is driven inside one asyncio task (`_execute` in the analyses route). That task sets the
-active job's `emit` callback in a contextvar; the supervisor tools and the retrieval service
-call `emit_progress(...)` at a handful of user-facing milestones. The frontend already polls
-`GET /api/analyses/{job_id}` every ~1.5s, so the emitted events ride that existing poll — no
-SSE, no new endpoint, no added latency (emit is a contextvar lookup + list append).
+A run binds a callback in a context variable. Supervisor tools and the retrieval service call
+`emit_progress(...)` at user-facing milestones, and the callback persists those events for the
+run. The frontend reads them through its existing polling endpoint.
 
-Emission is best-effort and side-channel only: when no callback is bound (CLI runs, tests),
-`emit_progress` is a no-op. It must never raise into the pipeline.
+Emission is best-effort and side-channel only. When no callback is bound, `emit_progress` is a
+no-op. It must never raise into the pipeline.
 """
 
 import logging

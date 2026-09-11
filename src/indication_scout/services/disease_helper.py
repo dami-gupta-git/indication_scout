@@ -35,7 +35,7 @@ from indication_scout.data_sources.base_client import (
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.services.llm import (
     parse_last_json_object,
-    query_llm,
+    query_big_llm,
     query_small_llm,
     strip_markdown_fences,
 )
@@ -210,7 +210,7 @@ async def merge_duplicate_diseases(
     drug_indications: list[str],
 ) -> MergeResult:
     """
-    Ask the main LLM to collapse synonymous/duplicate disease terms.
+    Ask the big LLM to collapse synonymous/duplicate disease terms.
 
     Returns a MergeResult with a `merge` map (canonical → list of aliases) and a
     `remove` list (terms to drop, e.g. already-approved indications). Cached by the
@@ -227,7 +227,7 @@ async def merge_duplicate_diseases(
     cache_params = {
         "diseases": sorted(diseases),
         "drug_indications": sorted(drug_indications),
-        "llm_model": _settings.llm_model,
+        "big_llm_model": _settings.big_llm_model,
     }
     cached = cache_get("disease_merge", cache_params, DEFAULT_CACHE_DIR)
     if cached is not None:
@@ -240,7 +240,7 @@ async def merge_duplicate_diseases(
         .read_text()
         .format(disease_names=diseases, drug_indications=drug_indications)
     )
-    response = await query_llm(prompt)
+    response = await query_big_llm(prompt)
     # The model routinely prefaces the JSON with its reasoning, so take the last complete JSON object
     # rather than parsing the whole reply. A reply carrying no JSON object at all is still an error.
     parsed = parse_last_json_object(response)
