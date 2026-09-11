@@ -39,7 +39,7 @@ to the expectations file instead of passing unnoticed.
 
 - `scripts/check_seed_recall.py` — the check. Reads the spec, selects the matching runbook rows,
   runs one seed phase per distinct drug and cutoff, and exits non-zero on any mismatch.
-- `tests/regression/specs/seed_recall.yaml` — which drugs to cover and which rows are expected to
+- `tests/regression/labels/seed_recall.yaml` — which drugs to cover and which rows are expected to
   be absent, each with the reason it is absent.
 - `scripts/validation/runbook.txt` — the ground truth: one row per approval, holding drug,
   indication, cutoff date, and accepted names.
@@ -52,7 +52,7 @@ to the expectations file instead of passing unnoticed.
 ## Running
 
 ```
-make seed-recall                          # uses tests/regression/specs/seed_recall.yaml
+make seed-recall                          # uses tests/regression/labels/seed_recall.yaml
 python scripts/check_seed_recall.py --out /tmp/recall.json
 ```
 

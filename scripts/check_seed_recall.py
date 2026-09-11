@@ -1,7 +1,7 @@
 """Assert seed-phase candidate recall for the regression drugs.
 
 CI guard, not part of the live pipeline. For every runbook row belonging to a drug named in
-`tests/regression/specs/seed_recall.yaml`, run the seed phase under that row's holdout cutoff and
+`tests/regression/labels/seed_recall.yaml`, run the seed phase under that row's holdout cutoff and
 check that the target indication reaches the merged candidate list. Matching is exact name against
 the row's `indication` plus its `accepted` column — the same rule
 `scripts/validation/gen_seed_candidate_recall.py` scores with.
@@ -58,7 +58,7 @@ logger.addHandler(_handler)
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 RUNBOOK = PROJECT_ROOT / "scripts" / "validation" / "runbook.txt"
-SPEC = PROJECT_ROOT / "tests" / "regression" / "specs" / "seed_recall.yaml"
+SPEC = PROJECT_ROOT / "tests" / "regression" / "labels" / "seed_recall.yaml"
 DEFAULT_OUT = PROJECT_ROOT / "results" / "ci" / "seed_recall.json"
 
 

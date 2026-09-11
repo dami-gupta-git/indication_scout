@@ -45,11 +45,23 @@ prefetch-model:
 # Regenerate the pinned drugs' reports. Hits the real data sources and the LLM.
 # The structural specs assert against the newest test_reports/<drug>_*.json, so
 # this must run before them.
+#
+# The drugs run concurrently, REGRESSION_PARALLEL at a time. A run's output is
+# buffered to its own log file and replayed in one go when that run finishes, so
+# the concurrent runs stay readable instead of interleaving line by line. xargs
+# exits non-zero if any run failed.
+REGRESSION_LOG_DIR = results/regression-logs
+REGRESSION_PARALLEL = 2
+
 regression-reports:
-	@for drug in $(REGRESSION_DRUGS); do \
-		echo "=== scout find -d $$drug ==="; \
-		scout find -d $$drug || exit 1; \
-	done
+	@mkdir -p $(REGRESSION_LOG_DIR)
+	@printf '%s\n' $(REGRESSION_DRUGS) | xargs -P $(REGRESSION_PARALLEL) -I{} \
+		sh -c '{ echo "=== scout find -d {} ==="; scout find -d {}; } \
+			> $(REGRESSION_LOG_DIR)/{}.log 2>&1; \
+		status=$$?; \
+		echo "=== scout find -d {} finished (exit $$status) ===" >> $(REGRESSION_LOG_DIR)/{}.log; \
+		cat $(REGRESSION_LOG_DIR)/{}.log; \
+		exit $$status'
 
 regression-specs:
 	pytest -m regression_layer2 tests/regression/layer2_structural/
@@ -60,7 +72,7 @@ candidate-precision:
 		test_reports \
 		results/precision/live_candidate_precision.md
 
-# Seed-phase candidate recall for the drugs named in tests/regression/specs/seed_recall.yaml.
+# Seed-phase candidate recall for the drugs named in tests/regression/labels/seed_recall.yaml.
 # One seed run per runbook cutoff; independent of the generated reports.
 seed-recall:
 	python scripts/check_seed_recall.py
