@@ -114,7 +114,8 @@ async def run_rag(
 
     svc = RetrievalService(cache_dir)
 
-    top_15 = await svc.get_drug_competitors(drug_name)
+    # This runner has no label intake, so nothing is removed as already approved here.
+    top_15 = await svc.get_drug_competitors(drug_name, [])
 
     logger.info(
         "run_rag: %d disease indications found for \n%s",

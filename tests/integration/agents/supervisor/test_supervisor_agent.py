@@ -198,12 +198,13 @@ def _find_finding(output: SupervisorOutput, substr: str) -> CandidateFindings | 
 
 
 @pytest.mark.approval_aware
-async def test_semaglutide_sibling_kept_and_contaminated_labels(supervisor_agent):
-    """Semaglutide: T1DM sibling kept (label 'none'); NAFLD broader-parent kept ('contaminated').
+async def test_semaglutide_t1dm_sibling_kept(supervisor_agent):
+    """Semaglutide: T1DM sibling kept (label 'none'); approved T2DM and obesity dropped.
 
-    Regression for the approval-relationship upstream labeling. Before the fix, T1DM (a sibling of
-    approved T2DM) was demoted into a footer and the report surfaced a weaker candidate; NAFLD was
-    mislabeled. Now both are KEPT with label-grounded relationships. Verified 2026-06-20.
+    Regression for the approval-relationship upstream labeling and for the competitor merge's
+    REMOVE rule. Before the fixes, T1DM (a sibling of approved T2DM) was demoted into a footer or
+    removed by the merge when Open Targets listed the broad "diabetes mellitus" as an approval.
+    Verified 2026-06-20; merge regression 2026-09-10.
     """
     agent, get_merged_allowlist, get_auto_findings, get_approval_labels = (
         supervisor_agent
@@ -223,28 +224,57 @@ async def test_semaglutide_sibling_kept_and_contaminated_labels(supervisor_agent
     assert t1dm is not None, "Type 1 Diabetes must be kept as a candidate, not dropped"
     assert t1dm.approval_relationship == "none"
 
-    # NAFLD — broader parent of approved MASH — kept and labeled "contaminated".
-    nafld = _find_finding(output, "non-alcoholic fatty liver")
-    assert nafld is not None, "NAFLD must be kept as a candidate, not dropped"
-    assert nafld.approval_relationship == "contaminated"
-
-    # Approval-aware relevance (severity-qualifier rule): semaglutide's approval is "MASH with
-    # fibrosis". A NASH trial/paper is the approved sub-indication (the fibrosis qualifier is
-    # stripped), so it must be EXCLUDED from the broad NAFLD candidate's evidence — keeping the
-    # trial gate and the literature judge consistent (they previously disagreed run-to-run).
-    # Literature: NASH/MASH papers are the only relevant ones here, so the broad candidate grades
-    # evidence_basis "approved" (no genuinely-broader NAFLD repurposing evidence).
-    assert nafld.literature is not None
-    assert nafld.literature.evidence_summary is not None
-    assert nafld.literature.evidence_summary.evidence_basis == "approved"
-    # Trials: the pivotal NASH Phase 3 (NCT04822181) is the approved sub-indication → contaminated,
-    # so it does NOT credit the broad NAFLD candidate with Phase 3 maturity.
-    assert nafld.clinical_trials is not None
-    assert "NCT04822181" in set(nafld.clinical_trials.contaminated_nct_ids)
-
     # Approved indications (T2DM, obesity) must NOT appear as kept findings — dropped upstream.
     assert _find_finding(output, "type 2 diabetes") is None
     assert _find_finding(output, "obesity") is None
+
+
+@pytest.mark.approval_aware
+@pytest.mark.xfail(
+    reason="openFDA name search returns a 2024 repackager Wegovy label without the MASH approval, "
+    "so the steatotic-liver parent is labeled 'none' and the pivotal MASH trial counts as relevant. "
+    "See for_me/errors/errors.md: openFDA name search misses the current manufacturer label.",
+    strict=True,
+)
+async def test_semaglutide_steatotic_liver_parent_contaminated(supervisor_agent):
+    """Semaglutide: the steatotic-liver parent of approved MASH is kept and labeled 'contaminated'.
+
+    Open Targets now names the parent "metabolic dysfunction-associated steatotic liver disease"
+    (formerly NAFLD); the competitor merge may fold it into the competitor entry "hepatic
+    steatosis", so either name is accepted. Verified 2026-06-20 under a label that carried MASH.
+    """
+    agent, get_merged_allowlist, get_auto_findings, get_approval_labels = (
+        supervisor_agent
+    )
+    output = await run_supervisor_agent(
+        agent,
+        get_merged_allowlist,
+        "semaglutide",
+        get_auto_findings=get_auto_findings,
+        get_approval_labels=get_approval_labels,
+    )
+
+    parent = _find_finding(output, "steatotic liver disease") or _find_finding(
+        output, "hepatic steatosis"
+    )
+    assert (
+        parent is not None
+    ), "Steatotic liver parent must be kept as a candidate, not dropped"
+    assert parent.approval_relationship == "contaminated"
+
+    # Approval-aware relevance (severity-qualifier rule): semaglutide's approval is "MASH with
+    # fibrosis". A NASH trial/paper is the approved sub-indication (the fibrosis qualifier is
+    # stripped), so it must be EXCLUDED from the broad parent's evidence — keeping the
+    # trial gate and the literature judge consistent (they previously disagreed run-to-run).
+    # Literature: NASH/MASH papers are the only relevant ones here, so the broad candidate grades
+    # evidence_basis "approved" (no genuinely-broader repurposing evidence).
+    assert parent.literature is not None
+    assert parent.literature.evidence_summary is not None
+    assert parent.literature.evidence_summary.evidence_basis == "approved"
+    # Trials: the pivotal NASH Phase 3 (NCT04822181) is the approved sub-indication → contaminated,
+    # so it does NOT credit the broad parent candidate with Phase 3 maturity.
+    assert parent.clinical_trials is not None
+    assert "NCT04822181" in set(parent.clinical_trials.contaminated_nct_ids)
 
 
 @pytest.mark.approval_aware

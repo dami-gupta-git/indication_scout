@@ -124,6 +124,7 @@ tests/
 - If you see potential bugs or improvements, list them separately rather than fixing automatically.
 - When asked to make changes, only make those changes, do not introduce new functionality without getting approval.
 - Do not delete commented code.
+- A lint, type-check or SDK-compatibility fix must not change runtime behaviour. Never remove model parameters (e.g. `temperature=0`) as part of such a fix; if a parameter is no longer accepted, find the supported way to pass it and say so in the commit message.
 - Wrap docstrings and comments at a maximum of 130 characters per line. Preserve exact wording when reflowing — only adjust line breaks, never change words.
 
 ## Planning & Implementation Rules

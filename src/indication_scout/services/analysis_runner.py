@@ -44,6 +44,7 @@ def build_agent(
     settings = get_settings()
     llm = ChatAnthropic(
         model=settings.llm_model,
+        temperature=0,
         max_tokens=settings.llm_max_tokens,
         anthropic_api_key=settings.anthropic_api_key,
     )
@@ -105,6 +106,7 @@ async def run_pair_analysis(
     settings = get_settings()
     llm = ChatAnthropic(
         model=settings.llm_model,
+        temperature=0,
         max_tokens=settings.llm_max_tokens,
         anthropic_api_key=settings.anthropic_api_key,
     )

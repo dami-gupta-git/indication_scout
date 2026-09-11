@@ -1,16 +1,23 @@
 # Semaglutide regression spec.
 #
-# Authored against gold_standard/semaglutide_2026-09-10_15-03-38.json. Each assertion encodes a
+# Authored against gold_standard/semaglutide_2026-09-10_20-41-53.json. Each assertion encodes a
 # domain-meaningful invariant a regression must NOT flip.
 #
-# Anchors are pinned only where they held across ALL THREE 2026-09-10 runs (14:38, 14:46, 15:03).
-# MASH and type 1 diabetes hold ranks 1-2 but swap between runs, so they are pinned present-in-top;
-# alcohol abuse, stroke and nicotine dependence hold ranks 3-5 in the same order in every run.
+# Anchors are pinned only where they held across ALL THREE post-fix 2026-09-10 runs (20:15, 20:22,
+# 20:41 — temperature 0 restored, competitor merge fed the label-derived approved list). MASH and
+# type 1 diabetes hold ranks 1-2 but swap between runs, so they are pinned present-in-top; stroke
+# precedes nicotine dependence in every run.
+#
+# Alcohol abuse is NOT pinned in the ranking. It is surfaced every run (candidate_set_contains) but
+# sits at the edge of the 16-slot investigation cap: the 20:41 merge kept hyperglycemia as a
+# survivor, which pushed alcohol abuse past the cap and out of the report. See
+# for_me/errors/errors.md ("Investigation cap is decided by an LLM merge"). Its NCT/PMID pins are
+# dropped for the same reason — an uninvestigated candidate has no evidence to check.
 #
 # Shift from the 2026-09-08 gold: the per-trial therapeutic-target gate (2026-09-09) moves every
 # heart-failure trial to contaminated (NCT07090343 targets aortic stenosis / TAVR; NCT06541509 is a
-# biomarker mechanism study), and heart failure falls from #2 to #10 on literature alone. No heart
-# failure NCT is pinned any more. NCT05819138 (type 1 diabetes) is gated out too.
+# biomarker mechanism study), and heart failure falls from #2 to the lower half on literature alone.
+# No heart failure NCT is pinned any more. NCT05819138 (type 1 diabetes) is gated out too.
 #
 # Candidate-set shift from the prior (2026-08-03) gold: cardiovascular disorder and kidney disorder
 # were ranked #1 and #2 there. Both are now FDA-approved uses on the semaglutide label — MACE risk
@@ -33,11 +40,10 @@ aliases:
     - alcohol use disorder
     - alcohol dependence
 
-# The stable middle of the ranking: ranks 3-5 in every run.
+# Stroke precedes nicotine dependence in every post-fix run.
 ranked_order:
   bucket: ranking
   indications:
-    - alcohol abuse
     - stroke
     - nicotine dependence
 
@@ -47,6 +53,10 @@ required_in_ranked:
     indication: metabolic dysfunction-associated steatohepatitis
   - bucket: ranking
     indication: type 1 diabetes mellitus
+  - bucket: ranking
+    indication: stroke
+  - bucket: ranking
+    indication: nicotine dependence
   - bucket: ranking
     indication: heart failure
   - bucket: ranking
@@ -77,7 +87,7 @@ candidate_set_contains:
     - kidney disorder
 
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
-# each stable across all three 2026-09-10 runs.
+# each stable across all three post-fix 2026-09-10 runs.
 required_ncts_surfaced:
   - bucket: literature_coverage
     indication: metabolic dysfunction-associated steatohepatitis
@@ -92,12 +102,6 @@ required_ncts_surfaced:
       - NCT05205928
       - NCT06057077
   - bucket: literature_coverage
-    indication: alcohol abuse
-    section: relevant
-    ncts:
-      - NCT05520775
-      - NCT05891587
-  - bucket: literature_coverage
     indication: stroke
     section: relevant
     ncts:
@@ -105,7 +109,7 @@ required_ncts_surfaced:
       - NCT06788626
 
 # Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each stable
-# across all three 2026-09-10 runs.
+# across all three post-fix 2026-09-10 runs.
 required_pmids_cited:
   - bucket: literature_coverage
     indication: metabolic dysfunction-associated steatohepatitis
@@ -126,12 +130,6 @@ required_pmids_cited:
       - "39794615"
       - "40550013"
   - bucket: literature_coverage
-    indication: alcohol abuse
-    mode: cited
-    pmids:
-      - "38806481"
-      - "39937469"
-  - bucket: literature_coverage
     indication: stroke
     mode: cited
     pmids:
@@ -146,8 +144,6 @@ safety_severity:
   - indication: heart failure
     allowed: [black_box, serious]
   - indication: type 1 diabetes mellitus
-    allowed: [black_box, serious]
-  - indication: alcohol abuse
     allowed: [black_box, serious]
   - indication: stroke
     allowed: [black_box, serious]

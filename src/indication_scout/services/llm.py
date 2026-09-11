@@ -118,6 +118,8 @@ async def query_llm(prompt: str, system: str = "") -> str:
         max_tokens=_settings.llm_max_tokens,
         system=system or omit,
         messages=[{"role": "user", "content": prompt}],
+        # The 1.x SDK dropped temperature from the create signature; the API still accepts it in the body.
+        extra_body={"temperature": 0},
     )
     if not response.content:
         raise DataSourceError(
@@ -135,6 +137,8 @@ async def query_small_llm(
         max_tokens=max_tokens or _settings.small_llm_max_tokens,
         system=system or omit,
         messages=[{"role": "user", "content": prompt}],
+        # The 1.x SDK dropped temperature from the create signature; the API still accepts it in the body.
+        extra_body={"temperature": 0},
     )
     if not response.content:
         raise DataSourceError(

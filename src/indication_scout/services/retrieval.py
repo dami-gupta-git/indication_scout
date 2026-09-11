@@ -528,7 +528,10 @@ class RetrievalService:
     #     return merged
 
     async def get_drug_competitors(
-        self, chembl_id: str, date_before: date | None = None
+        self,
+        chembl_id: str,
+        approved_indications: list[str],
+        date_before: date | None = None,
     ) -> dict[str, set[str]]:
         """Fetch top disease indications and their competitor drugs from Open Targets.
 
@@ -537,6 +540,10 @@ class RetrievalService:
 
         Args:
             chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
+            approved_indications: The drug's label-derived approved indications, used by the
+                merge step's REMOVE rule. Open Targets' own "approval" list is not used here: it
+                carries broad and unapproved terms (e.g. "diabetes mellitus", "hypertension" for
+                semaglutide) that led the merge to drop sibling subtypes such as type 1 diabetes.
             date_before: Optional temporal holdout cutoff. Forwarded to the
                 OT client to suppress its current-state approved-indications
                 strip; cache key is keyed on the cutoff so cutoff and no-cutoff
@@ -549,7 +556,8 @@ class RetrievalService:
             "chembl_id": chembl_id,
             "date_before": date_before.isoformat() if date_before else None,
             "top_k": _settings.literature_top_k,
-            "logic_version": "cache_disease_aliases_v1",
+            "approved_indications": sorted(i.lower() for i in approved_indications),
+            "logic_version": "cache_disease_aliases_v2",
         }
         cached = cache_get("competitors_merged", cache_params, self.cache_dir)
         if cached is not None:
@@ -569,9 +577,10 @@ class RetrievalService:
 
         top_40 = raw["diseases"]
 
-        drug_indications = raw["drug_indications"]
         disease_names = list(top_40.keys())
-        merge_result = await merge_duplicate_diseases(disease_names, drug_indications)
+        merge_result = await merge_duplicate_diseases(
+            disease_names, list(approved_indications)
+        )
         # logger.warning(
         #     "[COMP] merge_result: merge=%s remove=%s",
         #     merge_result["merge"],
