@@ -2,9 +2,16 @@
 
 from unittest.mock import AsyncMock, patch
 
+import aiohttp
 import pytest
 
-from indication_scout.data_sources.base_client import BaseClient, DataSourceError
+from indication_scout.data_sources.base_client import (
+    BaseClient,
+    DataSourceError,
+    _build_context_string,
+    redact_sensitive_log_value,
+    summarize_http_exception,
+)
 
 
 def _make_client(timeout: float = 30.0, max_retries: int = 3) -> "ConcreteTestClient":
@@ -21,6 +28,37 @@ class ConcreteTestClient(BaseClient):
     @property
     def _source_name(self) -> str:
         return "test_client"
+
+
+def test_summarize_http_exception_omits_message_and_url():
+    """HTTP exception summaries retain the status without exposing the request URL."""
+    error = aiohttp.ClientResponseError(
+        request_info=None,
+        history=(),
+        status=429,
+        message="https://example.com/search?api_key=super-secret",
+    )
+
+    assert summarize_http_exception(error) == "ClientResponseError(status=429)"
+
+
+def test_redact_sensitive_log_value_removes_secrets_and_control_characters():
+    """Persistent log fields cannot expose URL credentials or create extra records."""
+    value = "GET https://example.com?a=1&api_key=super-secret&retmode=json\tfailed\n"
+
+    assert redact_sensitive_log_value(value) == (
+        "GET https://example.com?a=1&api_key=<redacted>&retmode=json failed "
+    )
+
+
+def test_context_fallback_logs_keys_without_parameter_values():
+    """Unknown request parameters are identifiable without logging their values."""
+    context = _build_context_string(
+        {"api_key": "super-secret", "retmode": "json"},
+        None,
+    )
+
+    assert context == "keys=['api_key', 'retmode']"
 
 
 # --- BaseClient session lifecycle (no network calls) ---

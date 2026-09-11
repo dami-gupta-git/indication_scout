@@ -30,6 +30,7 @@ from indication_scout.constants import (
 from indication_scout.data_sources.base_client import (
     DataSourceError,
     log_data_source_failure,
+    summarize_http_exception,
 )
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.services.llm import (
@@ -410,6 +411,7 @@ async def _ncbi_get_json(
                 return await resp.json()
         except (TimeoutError, aiohttp.ClientError) as e:
             last_exc = e
+            error_summary = summarize_http_exception(e)
             if attempt < max_retries:
                 # NCBI eutils is a per-second rate limit, so a transient
                 # failure clears within ~1s — short linear backoff is enough.
@@ -418,7 +420,7 @@ async def _ncbi_get_json(
                     "MeSH resolver: NCBI request failed for '%s': %s; sleeping %ds "
                     "and retrying (attempt %d/%d)",
                     indication,
-                    e,
+                    error_summary,
                     delay,
                     attempt + 1,
                     max_retries,
@@ -431,7 +433,7 @@ async def _ncbi_get_json(
                     indication,
                     max_retries,
                     max_retries + 1,
-                    e,
+                    error_summary,
                 )
     # All attempts exhausted. NCBI is unreachable / sustainedly throttling us;
     # downstream MeSH-dependent analysis cannot proceed correctly without it.
@@ -443,11 +445,11 @@ async def _ncbi_get_json(
         source="ncbi-mesh",
         url=url,
         context=indication,
-        error=last_exc,
+        error=summarize_http_exception(last_exc),
     )
     sys.exit(
         f"FATAL: NCBI eutils unreachable after {max_retries + 1} attempts for "
-        f"indication {indication!r}: {last_exc}"
+        f"indication {indication!r}: {summarize_http_exception(last_exc)}"
     )
 
 

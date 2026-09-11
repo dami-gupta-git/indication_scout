@@ -6,6 +6,7 @@ Provides: retry with exponential backoff and session management.
 
 import asyncio
 import logging
+import re
 import sys
 import time
 from abc import ABC, abstractmethod
@@ -27,6 +28,26 @@ _settings = get_settings()
 # all clients. Read/reset via api_timing_snapshot() / reset_api_timing() to attribute
 # how much of a run is external API calls vs. agent/LLM work.
 _API_TIMING: dict[str, list[float]] = {}
+
+_SENSITIVE_QUERY_PARAMETER_RE = re.compile(
+    r"([?&](?:api_key|apikey|access_token|token|key|secret|password)=)" r"[^&\s'\"<>]+",
+    re.IGNORECASE,
+)
+
+
+def redact_sensitive_log_value(value: object) -> str:
+    """Return a single-line log value with sensitive URL parameters redacted."""
+    redacted = _SENSITIVE_QUERY_PARAMETER_RE.sub(r"\1<redacted>", str(value))
+    return redacted.replace("\t", " ").replace("\r", " ").replace("\n", " ")
+
+
+def summarize_http_exception(error: BaseException) -> str:
+    """Return a non-sensitive HTTP exception summary suitable for logs."""
+    summary = type(error).__name__
+    status = getattr(error, "status", None)
+    if isinstance(status, int) and status > 0:
+        return f"{summary}(status={status})"
+    return summary
 
 
 def reset_api_timing() -> None:
@@ -54,10 +75,15 @@ def log_data_source_failure(
     """
     log_path = cache_dir / "data_source_failures.log"
     try:
+        safe_source = redact_sensitive_log_value(source)
+        safe_url = redact_sensitive_log_value(url)
+        safe_context = redact_sensitive_log_value(context)
+        safe_error = redact_sensitive_log_value(error)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         with log_path.open("a") as f:
             f.write(
-                f"{datetime.now().isoformat()}\t{source}\t{url}\t{context}\t{error}\n"
+                f"{datetime.now().isoformat()}\t{safe_source}\t{safe_url}\t"
+                f"{safe_context}\t{safe_error}\n"
             )
     except OSError as log_err:
         logger.warning("Could not write to data_source_failures.log: %s", log_err)
@@ -120,7 +146,7 @@ def _build_context_string(
 
     if not candidates:
         return ""
-    fallback = repr(candidates[0])
+    fallback = f"keys={sorted(str(key) for key in candidates[0])!r}"
     if len(fallback) > _CONTEXT_MAX_LEN:
         fallback = fallback[: _CONTEXT_MAX_LEN - 3] + "..."
     return fallback
@@ -202,6 +228,7 @@ class BaseClient(ABC):
         # in the persistent failure log so a reader can tell which call
         # failed without losing the URL+source signal.
         context = _build_context_string(params, json_body)
+        safe_url = redact_sensitive_log_value(url)
 
         for attempt in range(self.max_retries + 1):
             try:
@@ -233,7 +260,7 @@ class BaseClient(ABC):
                             "%s: HTTP %d on %s%s; sleeping %ds and retrying (attempt %d/%d)",
                             self._source_name,
                             resp.status,
-                            url,
+                            safe_url,
                             ctx_suffix,
                             delay,
                             attempt + 1,
@@ -253,7 +280,7 @@ class BaseClient(ABC):
                         )
                         sys.exit(
                             f"FATAL: {self._source_name} unreachable after "
-                            f"{self.max_retries + 1} attempts on {url} "
+                            f"{self.max_retries + 1} attempts on {safe_url} "
                             f"({context}): {err}"
                         )
                     raise err
@@ -272,7 +299,8 @@ class BaseClient(ABC):
                 last_error = DataSourceError(self._source_name, "Request timeout")
             except aiohttp.ClientError as e:
                 last_error = DataSourceError(
-                    self._source_name, f"Connection error: {e}"
+                    self._source_name,
+                    f"Connection error: {summarize_http_exception(e)}",
                 )
 
             if attempt < self.max_retries:
@@ -286,7 +314,7 @@ class BaseClient(ABC):
                     "%s: %s on %s%s; sleeping %ds and retrying (attempt %d/%d)",
                     self._source_name,
                     last_error,
-                    url,
+                    safe_url,
                     ctx_suffix,
                     delay,
                     attempt + 1,
@@ -304,7 +332,7 @@ class BaseClient(ABC):
             )
             sys.exit(
                 f"FATAL: {self._source_name} unreachable after "
-                f"{self.max_retries + 1} attempts on {url} "
+                f"{self.max_retries + 1} attempts on {safe_url} "
                 f"({context}): {final_error}"
             )
         raise final_error
