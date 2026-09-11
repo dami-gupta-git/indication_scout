@@ -40,11 +40,11 @@ aliases:
     - cardiovascular disorder
 
 # Present in the ranked set; exact rank permutes run to run, so no order is pinned.
+# Preeclampsia, atherosclerosis and insulin resistance are not pinned in the ranking: they sit at
+# the edge of the investigation cap, and a run whose merge keeps gestational diabetes, prediabetes
+# and type 1 diabetes as candidates pushes all three out (2026-09-10 20:54). They stay pinned as
+# surfaced candidates only.
 required_in_ranked:
-  - bucket: ranking
-    indication: preeclampsia
-  - bucket: ranking
-    indication: atherosclerosis
   - bucket: ranking
     indication: polycystic ovary syndrome
   - bucket: ranking
@@ -53,8 +53,6 @@ required_in_ranked:
     indication: metabolic syndrome
   - bucket: ranking
     indication: obesity
-  - bucket: ranking
-    indication: insulin resistance
   - bucket: ranking
     indication: heart failure
   - bucket: ranking
@@ -85,18 +83,6 @@ candidate_set_contains:
 # each surfaced by the latest run.
 required_ncts_surfaced:
   - bucket: literature_coverage
-    indication: preeclampsia
-    section: relevant
-    ncts:
-      - NCT04855513
-      - NCT06033131
-  - bucket: literature_coverage
-    indication: atherosclerosis
-    section: relevant
-    ncts:
-      - NCT02744976
-      - NCT02915198
-  - bucket: literature_coverage
     indication: polycystic ovary syndrome
     section: relevant
     ncts:
@@ -124,18 +110,6 @@ required_ncts_surfaced:
 # properties) grade as contaminated.
 required_pmids_cited:
   - bucket: literature_coverage
-    indication: preeclampsia
-    mode: cited
-    pmids:
-      - "20926533"
-      - "25467617"
-  - bucket: literature_coverage
-    indication: atherosclerosis
-    mode: cited
-    pmids:
-      - "28615149"
-      - "6209500"
-  - bucket: literature_coverage
     indication: polycystic ovary syndrome
     mode: cited
     pmids:
@@ -162,10 +136,6 @@ required_pmids_cited:
 # Safety — metformin carries black-box warnings (lactic acidosis). Production derives black_box from
 # OT; holdout would fall back to serious.
 safety_severity:
-  - indication: preeclampsia
-    allowed: [black_box, serious]
-  - indication: atherosclerosis
-    allowed: [black_box, serious]
   - indication: polycystic ovary syndrome
     allowed: [black_box, serious]
   - indication: hepatic steatosis

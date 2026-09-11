@@ -22,6 +22,7 @@ os.environ["SCOUT_CACHE_DIR"] = str(_PROJECT_ROOT / "cache_test")
 
 import pytest
 from dotenv import load_dotenv
+from langgraph.graph.state import CompiledStateGraph
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
@@ -153,14 +154,14 @@ async def clinical_trials_client():
 
 
 @pytest.fixture
-def clinical_trials_graph():
+def clinical_trials_graph() -> CompiledStateGraph:
     """Reusable fixture for the ClinicalTrialsAgent graph."""
     """NOTE if you need to set your cutoff date, do not use this fixture"""
     from langchain_anthropic import ChatAnthropic
 
-    from for_me.clinical_trials.v3_langgraph.clinical_trials_agent import (
-        build_clinical_trials_graph,
+    from indication_scout.agents.clinical_trials.clinical_trials_agent import (
+        build_clinical_trials_agent,
     )
 
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
-    return build_clinical_trials_graph(llm, max_search_results=30)
+    return build_clinical_trials_agent(llm)

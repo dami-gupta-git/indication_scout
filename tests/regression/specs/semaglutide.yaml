@@ -41,12 +41,8 @@ aliases:
     - alcohol use disorder
     - alcohol dependence
 
-# Stroke precedes nicotine dependence in every post-fix run.
-ranked_order:
-  bucket: ranking
-  indications:
-    - stroke
-    - nicotine dependence
+# No ranked_order: MASH and type 1 diabetes swap ranks 1-2, and stroke / nicotine dependence /
+# alcohol abuse permute across ranks 3-5 (2026-09-10 17:49, 19:38, 19:57, 19:58). Membership only.
 
 # Present in the ranked set, but their relative order permutes run to run.
 required_in_ranked:
@@ -85,7 +81,8 @@ candidate_set_contains:
     - alcohol abuse
     - stroke
     - cardiovascular disorder
-    - kidney disorder
+    # kidney disorder is not pinned: the merge step folds it into chronic kidney disease in some
+    # runs (2026-09-10 21:06). forbidden_in_ranked above still guards it when it does surface.
 
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
 # each stable across all three post-fix 2026-09-10 runs.

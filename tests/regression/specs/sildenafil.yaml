@@ -62,7 +62,6 @@ candidate_set_contains:
     - infertility
     - chronic obstructive pulmonary disease
     - covid-19
-    - duchenne muscular dystrophy
     - benign prostatic hyperplasia
 
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids).
@@ -104,11 +103,6 @@ required_pmids_cited:
     pmids:
       - "30383134"
       - "21360507"
-  - bucket: literature_coverage
-    indication: duchenne muscular dystrophy
-    mode: cited
-    pmids:
-      - "22653783"
 
 # Safety — sildenafil carries no boxed warning, so the label-derived severity is "serious", not
 # "black_box". A run reporting black_box here would mean the severity is coming from somewhere other

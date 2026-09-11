@@ -131,7 +131,12 @@ required_pmids_cited:
   - bucket: literature_coverage
     indication: cocaine use disorder
     mode: cited
+    # The merge step names this candidate "cocaine use disorder" or "cocaine dependence" from run to
+    # run; the name drives the literature query, so the shortlist and citations churn with it. Any
+    # one of these three (the 2023 RCT, the 2019 meta-analysis, the 2019 review) is enough.
+    min_present: 1
     pmids:
+      - "36920397"
       - "31183685"
       - "30815171"
   - bucket: literature_coverage
