@@ -330,6 +330,11 @@ async def test_get_completed_trials_returns_total_and_trials(tmp_path):
             "_paginated_search",
             new=AsyncMock(return_value=([fake_trial], False)),
         ) as mock_fetch,
+        patch.object(
+            client,
+            "_augment_references_via_pubmed",
+            new=AsyncMock(return_value=None),
+        ),
     ):
         result = await client.get_completed_trials(
             "semaglutide", "Diabetes Mellitus, Type 2"
@@ -379,6 +384,11 @@ async def test_get_terminated_trials_returns_total_and_trials(tmp_path):
             "_paginated_search",
             new=AsyncMock(return_value=([fake_trial], False)),
         ) as mock_fetch,
+        patch.object(
+            client,
+            "_augment_references_via_pubmed",
+            new=AsyncMock(return_value=None),
+        ),
     ):
         result = await client.get_terminated_trials("metformin", "Hypertension")
 
