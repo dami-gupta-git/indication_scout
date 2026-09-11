@@ -15,10 +15,14 @@ Rows are written as they complete.
 
 The leading `#` column is the 1-based runbook data-row index — the same number `--lines` takes.
 
-Score: 1 = target indication present in the merged list, 0 = absent, ERROR = run failed.
-The Notes column is emitted empty; prose in a committed table was added by hand.
+Score: 1 = one of the row's accepted names is in the merged list, 0 = none is, ERROR = run
+failed. The accepted names are the runbook's `indication` plus its `accepted` column (semicolon-
+separated), compared to the candidate names by exact equality after lowercasing and trimming.
+Nothing else is inferred: no LLM matching, no fuzzy or substring matching. When a target surfaces
+under a name that is not listed, the row reads 0 until the name is added to the runbook by hand.
 
-Args: <runbook.txt> [output.md] [--lines 3-7,12]. Runbook columns: drug,indication,date.
+Args: <runbook.txt> [output.md] [--lines 3-7,12]. Runbook columns: drug,indication,date,accepted
+(accepted = semicolon-separated candidate names that count as the target, may be empty).
 `--lines` selects 1-based data rows; default runs every row. With no output.md, writes to
 the next free results/holdout_validation/validation_results_N.md (never overwrites).
 
@@ -44,7 +48,6 @@ from indication_scout.config import get_settings
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.db.session import _make_engine
 from indication_scout.helpers.drug_helpers import normalize_drug_name
-from indication_scout.services.llm import query_small_llm
 from indication_scout.services.precision_metrics import (
     CandidatePrediction,
     stable_review_id,
@@ -106,27 +109,13 @@ async def _merged_for_drug(
         db.close()
 
 
-async def _match(target: str, names: list[str]) -> int | None:
-    """LLM-resolve the target indication to an index in `names`, or None."""
-    if not names:
-        return None
-    numbered = "\n".join(f"{i}. {c}" for i, c in enumerate(names))
-    prompt = (
-        "You map a target disease to a list of candidate disease names.\n"
-        f'Target: "{target}"\n\n'
-        "Candidates:\n"
-        f"{numbered}\n\n"
-        "Return ONLY the integer index of the candidate that best refers to the target "
-        "indication — the SAME disease, an abbreviation, or a synonym. Do NOT match to a broader "
-        "parent that drops the target's specificity, nor to a sibling under a shared parent. If no "
-        "candidate fits, return -1. Return only the number."
-    )
-    resp = (await query_small_llm(prompt)).strip()
-    try:
-        idx = int(resp.split()[0])
-    except (ValueError, IndexError):
-        return None
-    return idx if 0 <= idx < len(names) else None
+def _match_accepted(accepted: list[str], names: list[str]) -> int | None:
+    """Index of the first candidate whose name equals one of the accepted names (lowercased, trimmed)."""
+    wanted = {a.strip().lower() for a in accepted if a.strip()}
+    for i, name in enumerate(names):
+        if name.strip().lower() in wanted:
+            return i
+    return None
 
 
 def _rows(path: str) -> list[dict[str, str]]:
@@ -170,7 +159,8 @@ def _ensure_header(cap: int) -> None:
         "Mechanism ranking uses the leak-free recomputed OT score (clinical_precedence excluded) in "
         f"holdout mode; `MECHANISM_ASSOCIATIONS_PER_TARGET={per_target}`; investigation cap={cap}.",
         "",
-        "`Score`: 1 = target indication is present in the merged candidate list, 0 = absent. "
+        "`Score`: 1 = one of the row's accepted names (runbook `indication` + `accepted` column) is "
+        "in the merged candidate list by exact name, 0 = none is. "
         "Holdout measures presence only (no ranking), so position does not affect the score. "
         "`List position`/`Source` = the target's 1-based spot in the merged list and its origin "
         "(competitor/mechanism/both), for context only.",
@@ -231,6 +221,7 @@ async def main() -> None:
     # --lines 3-7,12 or --lines=3-7,12; default = all.
     line_spec: str | None = None
     candidate_out: Path | None = None
+    candidates_only = False
     skip = set()
     for i, a in enumerate(argv):
         if a.startswith("--lines="):
@@ -245,6 +236,9 @@ async def main() -> None:
         elif a == "--candidate-out" and i + 1 < len(argv):
             candidate_out = Path(argv[i + 1])
             skip.update({i, i + 1})
+        elif a == "--candidates-only":
+            candidates_only = True
+            skip.add(i)
 
     paths = [a for i, a in enumerate(argv) if i not in skip and not a.startswith("-")]
     if not paths:
@@ -270,9 +264,9 @@ async def main() -> None:
         anthropic_api_key=settings.anthropic_api_key,
     )
     svc = RetrievalService(DEFAULT_CACHE_DIR)
-    session_factory = sessionmaker(autocommit=False, autoflush=False, bind=_make_engine())
-
-    _ensure_header(cap)
+    session_factory = sessionmaker(
+        autocommit=False, autoflush=False, bind=_make_engine()
+    )
 
     candidate_handle = None
     candidate_writer = None
@@ -285,11 +279,60 @@ async def main() -> None:
         )
         candidate_writer.writeheader()
 
+    if candidates_only:
+        if candidate_writer is None or candidate_handle is None:
+            raise ValueError("--candidates-only requires --candidate-out")
+        unique_runs = list(
+            dict.fromkeys((r["drug"].strip(), r["date"].strip()) for _, r in numbered)
+        )
+        semaphore = asyncio.Semaphore(settings.supervisor_investigation_concurrency)
+
+        async def export_one(
+            drug: str, cutoff: str
+        ) -> tuple[str, str, list[tuple[str, str]] | None, Exception | None]:
+            async with semaphore:
+                try:
+                    merged = await _merged_for_drug(
+                        llm,
+                        svc,
+                        session_factory,
+                        drug,
+                        date.fromisoformat(cutoff),
+                    )
+                except Exception as error:  # noqa: BLE001 - record failure and continue
+                    return drug, cutoff, None, error
+                return drug, cutoff, merged, None
+
+        try:
+            tasks = [export_one(drug, cutoff) for drug, cutoff in unique_runs]
+            for completed in asyncio.as_completed(tasks):
+                drug, cutoff, merged, error = await completed
+                if error is not None or merged is None:
+                    logger.error("%s / %s -> ERROR: %s", drug, cutoff, error)
+                    continue
+                _write_candidate_predictions(candidate_writer, drug, cutoff, merged)
+                candidate_handle.flush()
+                logger.error(
+                    "%s / %s -> exported %d candidates",
+                    drug,
+                    cutoff,
+                    min(len(merged), settings.supervisor_investigation_cap),
+                )
+        finally:
+            candidate_handle.close()
+        return
+
+    _ensure_header(cap)
+
     # One seed-phase run per distinct (drug, cutoff).
     cache: dict[tuple[str, str], list[tuple[str, str]]] = {}
     try:
         for n, r in numbered:
-            drug, indication, cutoff = r["drug"].strip(), r["indication"].strip(), r["date"].strip()
+            drug, indication, cutoff = (
+                r["drug"].strip(),
+                r["indication"].strip(),
+                r["date"].strip(),
+            )
             key = (drug, cutoff)
             try:
                 if key not in cache:
@@ -303,22 +346,50 @@ async def main() -> None:
                         candidate_handle.flush()
             except Exception as e:  # noqa: BLE001 - record ERROR, keep going
                 logger.error("%s / %s -> ERROR: %s", drug, indication, e)
-                _append_row({"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
-                             "present": "ERROR", "rank": "", "source": ""})
+                _append_row(
+                    {
+                        "n": n,
+                        "drug": drug,
+                        "indication": indication,
+                        "cutoff": cutoff,
+                        "present": "ERROR",
+                        "rank": "",
+                        "source": "",
+                    }
+                )
                 continue
             merged = cache[key]
             names = [n for n, _ in merged]
-            idx = await _match(indication, names)
+            accepted = [indication] + [
+                a for a in (r.get("accepted") or "").split(";") if a.strip()
+            ]
+            idx = _match_accepted(accepted, names)
             if idx is None:
-                row = {"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
-                       "present": "out", "rank": "", "source": ""}
+                row = {
+                    "n": n,
+                    "drug": drug,
+                    "indication": indication,
+                    "cutoff": cutoff,
+                    "present": "out",
+                    "rank": "",
+                    "source": "",
+                }
             else:
                 name, source = merged[idx]
-                row = {"n": n, "drug": drug, "indication": indication, "cutoff": cutoff,
-                       "present": "in", "rank": str(idx + 1), "source": source,
-                       "matched": name}
+                row = {
+                    "n": n,
+                    "drug": drug,
+                    "indication": indication,
+                    "cutoff": cutoff,
+                    "present": "in",
+                    "rank": str(idx + 1),
+                    "source": source,
+                    "matched": name,
+                }
             _append_row(row)  # write as we go
-            logger.error("%s / %s -> %s", drug, indication, row.get("rank") or row["present"])
+            logger.error(
+                "%s / %s -> %s", drug, indication, row.get("rank") or row["present"]
+            )
     finally:
         if candidate_handle is not None:
             candidate_handle.close()

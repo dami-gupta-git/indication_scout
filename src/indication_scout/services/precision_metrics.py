@@ -15,6 +15,10 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 ReviewDecision = Literal["valid", "invalid", "uncertain"]
 CandidateSource = Literal["competitor", "mechanism", "both"]
 
+_REVIEW_CONTEXT_FIELDS = {"drug", "cutoff", "position", "source", "disease"}
+_REVIEW_FIELDS = {"review_id", "decision", "reason_category", "rationale", "evidence"}
+_REVIEW_TEMPLATE_FIELDS = _REVIEW_CONTEXT_FIELDS | _REVIEW_FIELDS
+
 
 class CandidatePrediction(BaseModel):
     """One candidate that was eligible to enter the investigation fan-out."""
@@ -133,8 +137,22 @@ def load_predictions(path: Path) -> list[CandidatePrediction]:
 def load_reviews(path: Path) -> list[CandidateReview]:
     """Load and validate completed expert reviews from CSV."""
     with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        actual_fields = set(reader.fieldnames or [])
+        if actual_fields != _REVIEW_TEMPLATE_FIELDS:
+            missing = sorted(_REVIEW_TEMPLATE_FIELDS - actual_fields)
+            unexpected = sorted(actual_fields - _REVIEW_TEMPLATE_FIELDS)
+            parts: list[str] = []
+            if missing:
+                parts.append(f"missing review columns: {', '.join(missing)}")
+            if unexpected:
+                parts.append(f"unknown review columns: {', '.join(unexpected)}")
+            raise ValueError("; ".join(parts))
         reviews = [
-            CandidateReview.model_validate(row) for row in csv.DictReader(handle)
+            CandidateReview.model_validate(
+                {field_name: row[field_name] for field_name in _REVIEW_FIELDS}
+            )
+            for row in reader
         ]
     _reject_duplicate_ids([review.review_id for review in reviews], "review")
     return reviews

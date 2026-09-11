@@ -6,6 +6,7 @@ import pytest
 from indication_scout.services.precision_metrics import (
     CandidatePrediction,
     CandidateReview,
+    load_reviews,
     score_reviews,
     stable_review_id,
     write_review_template,
@@ -119,3 +120,21 @@ def test_write_review_template_preserves_all_candidate_context(tmp_path) -> None
             "evidence": "",
         }
     ]
+
+
+def test_load_reviews_accepts_completed_generated_template(tmp_path) -> None:
+    prediction = _prediction("drug-a", "disease-1", 1)
+    path = tmp_path / "reviews.csv"
+    write_review_template([prediction], path)
+    text = path.read_text(encoding="utf-8")
+    path.write_text(
+        text.replace(
+            ",,,,\n",
+            ",valid,reviewed,Reviewed against the precision rubric.,PMID:1\n",
+        ),
+        encoding="utf-8",
+    )
+
+    reviews = load_reviews(path)
+
+    assert reviews == [_review(prediction, "valid")]
