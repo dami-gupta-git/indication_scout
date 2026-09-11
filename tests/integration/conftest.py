@@ -96,6 +96,30 @@ def db_session_truncating():
 
 
 @pytest.fixture()
+def run_db_session():
+    """Provide an isolated session for durable analysis-run integration tests."""
+    settings = get_settings()
+    if settings.test_database_url is None:
+        pytest.skip("TEST_DATABASE_URL not set — skipping DB integration test")
+
+    engine = create_engine(settings.test_database_url)
+    SessionLocal = sessionmaker(bind=engine)
+    table_names = "analysis_events, analysis_attempts, analysis_runs"
+    with engine.begin() as connection:
+        connection.execute(
+            text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE")
+        )
+    session = SessionLocal()
+    yield session
+    session.close()
+    with engine.begin() as connection:
+        connection.execute(
+            text(f"TRUNCATE TABLE {table_names} RESTART IDENTITY CASCADE")
+        )
+    engine.dispose()
+
+
+@pytest.fixture()
 def test_cache_dir():
     """Return TEST_CACHE_DIR for use in integration tests.
 

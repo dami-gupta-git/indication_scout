@@ -7,7 +7,7 @@ apremilast,behcet's disease oral ulcers,2019-01-19,behcet disease
 baricitinib,rheumatoid arthritis,2017-11-30,
 baricitinib,alopecia areata,2021-12-13,
 baricitinib,severe covid-19 hospitalization,2021-11-10,covid-19
-bimatoprost,open-angle glaucoma,2000-09-16,
+bimatoprost,open-angle glaucoma,2000-09-16,glaucoma
 bimatoprost,eyelash hypotrichosis,2008-06-24,hypotrichosis
 botox,cervical dystonia,2000-06-21,
 botox,glabellar lines,2001-10-12,facial wrinkling
