@@ -37,12 +37,16 @@ class RequiredNCTs(BaseModel):
     - "terminated" — terminated.trials
     - "search"     — search.trials
     - "any"        — union of completed + terminated + search
+
+    `min_present` relaxes the check to "at least this many of `ncts` appear";
+    None (the default) requires every listed NCT.
     """
 
     bucket: Bucket = Bucket.LITERATURE_COVERAGE
     indication: str
     ncts: list[str] = Field(default_factory=list)
     section: str = "relevant"
+    min_present: int | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -60,12 +64,16 @@ class RequiredPMIDs(BaseModel):
     - "pool"  — literature.pmids (the full retrieval pool, ~100+ PMIDs). A
                 weak check — a PMID being present here does not mean the report
                 surfaced it.
+
+    `min_present` relaxes the check to "at least this many of `pmids` appear";
+    None (the default) requires every listed PMID.
     """
 
     bucket: Bucket = Bucket.LITERATURE_COVERAGE
     indication: str
     pmids: list[str] = Field(default_factory=list)
     mode: str = "cited"
+    min_present: int | None = None
 
     @model_validator(mode="before")
     @classmethod

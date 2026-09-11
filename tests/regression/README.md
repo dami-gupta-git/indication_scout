@@ -66,7 +66,8 @@ The named NCT ids appear in a clinical-trials pool for that indication. The
 - `completed` / `terminated` / `search` — the corresponding raw trial list.
 - `any` — the union of completed + terminated + search.
 
-Bucket: `literature_coverage`.
+`min_present: N` relaxes the check to "at least N of the listed NCTs appear";
+omit it to require all of them. Bucket: `literature_coverage`.
 
 ### `required_pmids_cited`
 The named PMIDs appear in a literature pool for that indication. The `mode`
@@ -77,7 +78,8 @@ selects the pool:
 - `pool` — the raw `literature.pmids` retrieval pool (~100+ PMIDs). A weak
   check: presence here says nothing about whether the report used the PMID.
 
-Bucket: `literature_coverage`.
+`min_present: N` relaxes the check to "at least N of the listed PMIDs are
+cited"; omit it to require all of them. Bucket: `literature_coverage`.
 
 ### `forbidden_phrases`
 A phrase does **not** appear in the rendered report (case-insensitive). `scope`

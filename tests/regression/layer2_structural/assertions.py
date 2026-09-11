@@ -104,17 +104,28 @@ def check_required_ncts(
         ]
     found = _ncts_in_section(finding, a.section)
     missing = [n for n in a.ncts if n not in found]
-    if not missing:
+    if _enough_present(len(a.ncts), len(missing), a.min_present):
         return []
     return [
         BucketedDiff(
             bucket=a.bucket,
             path=f"disease_findings[{a.indication!r}].clinical_trials.{a.section}",
             severity="error",
-            detail=f"missing NCTs: {missing}",
+            detail=f"missing NCTs: {missing}" + _min_present_note(a.min_present),
             spec_ref="required_ncts_surfaced",
         )
     ]
+
+
+def _enough_present(total: int, n_missing: int, min_present: int | None) -> bool:
+    """True when the assertion is satisfied: nothing missing, or at least `min_present` found."""
+    if min_present is None:
+        return n_missing == 0
+    return total - n_missing >= min_present
+
+
+def _min_present_note(min_present: int | None) -> str:
+    return "" if min_present is None else f" (need at least {min_present} present)"
 
 
 def _cited_pmids(finding: CandidateFindings) -> set[str]:
@@ -149,14 +160,15 @@ def check_required_pmids(
         found = set(finding.literature.pmids or [])
         path = f"disease_findings[{a.indication!r}].literature.pmids"
     missing = [p for p in a.pmids if p not in found]
-    if not missing:
+    if _enough_present(len(a.pmids), len(missing), a.min_present):
         return []
     return [
         BucketedDiff(
             bucket=a.bucket,
             path=path,
             severity="error",
-            detail=f"missing PMIDs ({a.mode}): {missing}",
+            detail=f"missing PMIDs ({a.mode}): {missing}"
+            + _min_present_note(a.min_present),
             spec_ref="required_pmids_cited",
         )
     ]

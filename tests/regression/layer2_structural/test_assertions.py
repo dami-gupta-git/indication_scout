@@ -180,6 +180,28 @@ class TestRequiredNCTs:
         a = RequiredNCTs(indication="adhd", ncts=["NCT00048360"])
         assert check_required_ncts(r, a) == []
 
+    def test_min_present_passes_when_enough_ncts_found(self):
+        f = _finding(disease="adhd", relevant=["NCT00048360"])
+        r = _report(findings=[f])
+        a = RequiredNCTs(
+            indication="adhd", ncts=["NCT00048360", "NCT99999999"], min_present=1
+        )
+        assert check_required_ncts(r, a) == []
+
+    def test_min_present_fails_when_too_few_ncts_found(self):
+        f = _finding(disease="adhd", relevant=["NCT00048360"])
+        r = _report(findings=[f])
+        a = RequiredNCTs(
+            indication="adhd",
+            ncts=["NCT00048360", "NCT99999999", "NCT88888888"],
+            min_present=2,
+        )
+        diffs = check_required_ncts(r, a)
+        assert len(diffs) == 1
+        assert diffs[0].detail == (
+            "missing NCTs: ['NCT99999999', 'NCT88888888'] (need at least 2 present)"
+        )
+
     def test_section_any_searches_both_lists(self):
         f = _finding(
             disease="cocaine",
@@ -221,6 +243,28 @@ class TestRequiredPMIDs:
         r = _report(findings=[f])
         a = RequiredPMIDs(indication="schizophrenia", mode="pool", pmids=["24201231"])
         assert check_required_pmids(r, a) == []
+
+    def test_min_present_passes_when_enough_pmids_cited(self):
+        f = _finding(disease="cocaine", supporting_pmids=["16461866"])
+        r = _report(findings=[f])
+        a = RequiredPMIDs(
+            indication="cocaine", pmids=["16461866", "31183685"], min_present=1
+        )
+        assert check_required_pmids(r, a) == []
+
+    def test_min_present_fails_when_too_few_pmids_cited(self):
+        f = _finding(disease="cocaine", supporting_pmids=["16461866"])
+        r = _report(findings=[f])
+        a = RequiredPMIDs(
+            indication="cocaine",
+            pmids=["16461866", "31183685", "30815171"],
+            min_present=2,
+        )
+        diffs = check_required_pmids(r, a)
+        assert len(diffs) == 1
+        assert diffs[0].detail == (
+            "missing PMIDs (cited): ['31183685', '30815171'] (need at least 2 present)"
+        )
 
     def test_fails_when_pmid_missing(self):
         f = _finding(disease="schizophrenia", supporting_pmids=["999"])
