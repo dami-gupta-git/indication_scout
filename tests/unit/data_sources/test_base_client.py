@@ -10,6 +10,7 @@ from indication_scout.data_sources.base_client import (
     DataSourceError,
     _build_context_string,
     redact_sensitive_log_value,
+    summarize_error_body,
     summarize_http_exception,
 )
 
@@ -164,6 +165,91 @@ async def test_rest_get_xml_raises_datasource_error_on_4xx():
 
     assert exc_info.value.status_code == 404
     assert exc_info.value.source == "test_client"
+
+
+NCBI_400_BODY = (
+    '<?xml version="1.0" encoding="UTF-8" ?>\n'
+    '<!DOCTYPE eEfetchResult PUBLIC "-//NLM//DTD efetch 20131226//EN" '
+    '"https://eutils.ncbi.nlm.nih.gov/eutils/dtd/20131226/efetch.dtd">\n'
+    "<eFetchResult>\n\t<ERROR> Error occurred: cannot get document summary</ERROR>\n</eFetchResult>"
+)
+
+
+@pytest.mark.parametrize(
+    "body, expected",
+    [
+        (NCBI_400_BODY, "Error occurred: cannot get document summary"),
+        ("Not Found", "Not Found"),
+        ("x" * 250, "x" * 200),
+    ],
+)
+def test_summarize_error_body(body, expected):
+    assert summarize_error_body(body) == expected
+
+
+class TransientBodyClient(ConcreteTestClient):
+    """Treats any 400 whose body carries an <ERROR> element as transient."""
+
+    def _is_transient_error_body(self, status: int, body: str) -> bool:
+        return status == 400 and "<ERROR>" in body
+
+
+async def test_transient_4xx_body_is_retried_then_succeeds():
+    error_resp = AsyncMock()
+    error_resp.status = 400
+    error_resp.text = AsyncMock(return_value=NCBI_400_BODY)
+
+    ok_resp = AsyncMock()
+    ok_resp.status = 200
+    ok_resp.text = AsyncMock(return_value="<root>OK</root>")
+
+    mock_session = AsyncMock()
+    mock_session.get = AsyncMock(side_effect=[error_resp, ok_resp])
+
+    with patch("indication_scout.data_sources.base_client._settings") as mock_settings:
+        mock_settings.default_timeout = 30.0
+        mock_settings.default_max_retries = 1
+        client = TransientBodyClient()
+    with patch.object(
+        client, "_get_session", new_callable=AsyncMock, return_value=mock_session
+    ):
+        with patch(
+            "indication_scout.data_sources.base_client.asyncio.sleep",
+            new_callable=AsyncMock,
+        ):
+            result = await client._rest_get_xml("https://example.com/xml", params={})
+
+    assert result == "<root>OK</root>"
+    assert mock_session.get.call_count == 2
+
+
+async def test_transient_4xx_body_error_message_carries_xml_error_text():
+    error_resp = AsyncMock()
+    error_resp.status = 400
+    error_resp.text = AsyncMock(return_value=NCBI_400_BODY)
+
+    mock_session = AsyncMock()
+    mock_session.get = AsyncMock(return_value=error_resp)
+
+    with patch("indication_scout.data_sources.base_client._settings") as mock_settings:
+        mock_settings.default_timeout = 30.0
+        mock_settings.default_max_retries = 1
+        client = TransientBodyClient()
+    with patch.object(
+        client, "_get_session", new_callable=AsyncMock, return_value=mock_session
+    ):
+        with patch(
+            "indication_scout.data_sources.base_client.asyncio.sleep",
+            new_callable=AsyncMock,
+        ):
+            with pytest.raises(DataSourceError) as exc_info:
+                await client._rest_get_xml("https://example.com/xml", params={})
+
+    assert str(exc_info.value) == (
+        "[test_client] HTTP 400: Error occurred: cannot get document summary"
+    )
+    assert exc_info.value.status_code == 400
+    assert mock_session.get.call_count == 2
 
 
 async def test_rest_get_xml_retries_on_5xx_then_succeeds():

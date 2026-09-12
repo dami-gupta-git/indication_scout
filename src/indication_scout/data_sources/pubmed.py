@@ -23,6 +23,7 @@ from typing import Any
 from indication_scout.config import get_settings
 from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
+    NCBI_TRANSIENT_ERROR_PREFIX,
     PUBMED_EFETCH_PARSE_BACKOFF_SCHEDULE,
     PUBMED_EFETCH_PARSE_RETRIES,
     PUBMED_ESEARCH_MAX_RESULTS,
@@ -33,7 +34,11 @@ from indication_scout.constants import (
     PUBMED_SEARCH_URL,
     PUBMED_SUMMARY_URL,
 )
-from indication_scout.data_sources.base_client import BaseClient, DataSourceError
+from indication_scout.data_sources.base_client import (
+    BaseClient,
+    DataSourceError,
+    summarize_error_body,
+)
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
 from indication_scout.utils.cache import cache_get, cache_set
 
@@ -80,6 +85,12 @@ class PubMedClient(BaseClient):
             cls._request_semaphore = asyncio.Semaphore(PUBMED_MAX_CONCURRENT_REQUESTS)
             cls._semaphore_loop = loop
         return cls._request_semaphore
+
+    def _is_transient_error_body(self, status: int, body: str) -> bool:
+        """NCBI reports transient backend failures as HTTP 400 with an ``<ERROR>Error occurred: ...``."""
+        return status == 400 and summarize_error_body(body).startswith(
+            NCBI_TRANSIENT_ERROR_PREFIX
+        )
 
     def _inject_api_key(self, params: dict[str, Any]) -> dict[str, Any]:
         """Add the NCBI api_key to request params if configured."""

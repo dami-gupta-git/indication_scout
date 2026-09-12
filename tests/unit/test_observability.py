@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 
 import pytest
 
+from indication_scout.constants import NOISY_THIRD_PARTY_LOGGERS
 from indication_scout.observability import (
     JsonLogFormatter,
     bind_log_context,
@@ -65,3 +66,25 @@ async def test_log_context_is_isolated_between_async_tasks():
 def test_configure_logging_rejects_unknown_level():
     with pytest.raises(ValueError, match="Unknown logging level: LOUD"):
         configure_logging("LOUD")
+
+
+def test_configure_logging_suppresses_successful_third_party_requests():
+    root = logging.getLogger()
+    original_handlers = list(root.handlers)
+    original_root_level = root.level
+    original_levels = {
+        name: logging.getLogger(name).level for name in NOISY_THIRD_PARTY_LOGGERS
+    }
+    try:
+        configure_logging(logging.INFO)
+
+        assert {
+            name: logging.getLogger(name).getEffectiveLevel()
+            for name in NOISY_THIRD_PARTY_LOGGERS
+        } == dict.fromkeys(NOISY_THIRD_PARTY_LOGGERS, logging.WARNING)
+    finally:
+        root.handlers.clear()
+        root.handlers.extend(original_handlers)
+        root.setLevel(original_root_level)
+        for name, level in original_levels.items():
+            logging.getLogger(name).setLevel(level)

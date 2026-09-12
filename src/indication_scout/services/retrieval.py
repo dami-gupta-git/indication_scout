@@ -178,7 +178,7 @@ async def _judge_pmid_drug_identity(
         if not _mentions_exact_drug(names, result):
             # Logged because this branch excludes a paper WITHOUT an LLM call: a name the corpus
             # uses but ChEMBL does not carry would otherwise drop real evidence with no trace.
-            logger.info(
+            logger.debug(
                 "pmid_drug_identity: no accepted name for %s in PMID %s; excluding paper",
                 chembl_id,
                 result.pmid,

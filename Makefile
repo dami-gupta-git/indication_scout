@@ -66,22 +66,23 @@ prefetch-model:
 # The structural specs assert against the newest test_reports/<drug>_*.json, so
 # this must run before them.
 #
-# The drugs run concurrently, REGRESSION_PARALLEL at a time. A run's output is
-# buffered to its own log file and replayed in one go when that run finishes, so
-# the concurrent runs stay readable instead of interleaving line by line. xargs
-# exits non-zero if any run failed.
+# Runs REGRESSION_PARALLEL drugs at a time. Each run's output streams to the
+# console as it happens, prefixed with the drug name so the concurrent runs can
+# be told apart, and is also written to its own log file. The exit status is
+# captured through a side file because the pipeline would otherwise report tee's.
+# xargs exits non-zero if any run failed.
 REGRESSION_LOG_DIR = results/regression-logs
 REGRESSION_PARALLEL = 2
 
 regression-reports:
 	$(START) "regenerate reports ($(REGRESSION_DRUGS))"
 	@mkdir -p $(REGRESSION_LOG_DIR)
-	@printf '%s\n' $(REGRESSION_DRUGS) | xargs -P $(REGRESSION_PARALLEL) -n1 \
+	@printf '%s\n' $(REGRESSION_DRUGS) | PYTHONUNBUFFERED=1 xargs -P $(REGRESSION_PARALLEL) -n1 \
 		sh -c 'drug=$$1; log=$(REGRESSION_LOG_DIR)/$$drug.log; \
-		{ echo "=== scout find -d $$drug ==="; scout find -d "$$drug"; } > "$$log" 2>&1; \
-		status=$$?; \
-		echo "=== scout find -d $$drug finished (exit $$status) ===" >> "$$log"; \
-		cat "$$log"; \
+		{ echo "=== scout find -d $$drug ==="; scout find -d "$$drug"; echo $$? > "$$log.status"; } 2>&1 \
+			| while IFS= read -r line; do printf "[%s] %s\n" "$$drug" "$$line"; done | tee "$$log"; \
+		status=$$(cat "$$log.status"); rm -f "$$log.status"; \
+		echo "=== scout find -d $$drug finished (exit $$status) ===" | tee -a "$$log"; \
 		exit $$status' sh
 	$(OK) "regenerate reports"
 

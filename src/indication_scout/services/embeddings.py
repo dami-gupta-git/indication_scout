@@ -240,7 +240,7 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
         vectors.extend(chunk_vectors)
         n_chunks += 1
 
-    logger.info(
+    logger.debug(
         "[EMBED] %d texts in %d chunk(s): lock_wait=%.2fs encode=%.2fs",
         len(texts),
         n_chunks,

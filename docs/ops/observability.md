@@ -69,6 +69,29 @@ Raw IP addresses and inferred locations are retained in logs by requirement. Acc
 backend and its retention period must be configured before production traffic is accepted. These
 fields are not exported as metric labels or trace attributes.
 
+## Telemetry destinations
+
+Each telemetry destination has a separate operational role.
+
+| Signal | Destination | Scope |
+|---|---|---|
+| Structured logs | Process standard output, viewed through Docker or Railway | HTTP requests, application lifecycle, run and attempt events, progress stages, retries, exceptions, raw IP addresses, and inferred locations. |
+| OpenTelemetry traces | Langfuse | LangChain and LLM execution, including model calls, latency, token usage, cost when available, and trace relationships. |
+| Prometheus metrics | Prometheus | Aggregate request, analysis, dependency, latency, and integrity measurements with bounded labels. |
+| Dashboards | Grafana | Queries and displays the Prometheus time series. |
+| LangSmith | None | The project does not explicitly configure a LangSmith destination. |
+
+Langfuse tracing is opt-in. Traces are exported only when `TRACING_ENABLED=true` and the Langfuse
+public key, secret key, and base URL are configured. JSON log records and Prometheus metrics are not
+sent to Langfuse. Raw IP addresses, inferred locations, health traffic, database logs, and container
+logs remain outside Langfuse.
+
+When an OpenTelemetry span is active, its trace identifier is added to the JSON log record. This
+allows a Railway or Docker log to be matched to the corresponding Langfuse trace. Durable run and
+attempt identifiers are present in analysis logs and PostgreSQL records, but they are not currently
+attached as Langfuse trace attributes. Adding those identifiers would complete direct run-to-trace
+correlation without sending client IP or location data to Langfuse.
+
 ## Metrics
 
 Prometheus scrapes the API's `/metrics/` endpoint every 15 seconds and stores the resulting time
@@ -111,7 +134,7 @@ These limitations do not change report generation or persisted run results.
 ## Production deployment
 
 The repository provisions the local stack through Docker Compose. Railway builds the application
-Dockerfile and does not start the additional Compose services. A production Prometheus-compatible backend must be
-configured to scrape or receive the Railway service metrics, and Grafana must be connected to that
-backend. Production retention, authentication, alert destinations, and dashboard access are
-deployment settings and are not supplied by the local Compose stack.
+Dockerfile and does not start the additional Compose services. A production Prometheus-compatible
+backend must be configured to scrape or receive the Railway service metrics, and Grafana must be
+connected to that backend. Production retention, authentication, alert destinations, and dashboard
+access are deployment settings and are not supplied by the local Compose stack.

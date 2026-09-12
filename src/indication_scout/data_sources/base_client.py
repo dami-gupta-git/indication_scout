@@ -19,7 +19,11 @@ from typing import Any, Self
 import aiohttp
 
 from indication_scout.config import get_settings
-from indication_scout.constants import DEFAULT_CACHE_DIR, RETRY_BACKOFF_SCHEDULE
+from indication_scout.constants import (
+    DEFAULT_CACHE_DIR,
+    HTTP_ERROR_BODY_MAX_CHARS,
+    RETRY_BACKOFF_SCHEDULE,
+)
 from indication_scout.metrics import record_dependency_request
 from indication_scout.observability import bind_log_context, reset_log_context
 
@@ -172,6 +176,21 @@ def _build_context_string(
     return fallback
 
 
+_XML_ERROR_RE = re.compile(r"<ERROR>(.*?)</ERROR>", re.DOTALL)
+
+
+def summarize_error_body(body: str) -> str:
+    """Return the text of an XML ``<ERROR>`` element if present, else the truncated body.
+
+    NCBI eutils error bodies open with an XML declaration and DOCTYPE that alone exceed the
+    truncation cap, so a plain prefix never reaches the ``<ERROR>`` text that says what went wrong.
+    """
+    match = _XML_ERROR_RE.search(body)
+    if match:
+        return match.group(1).strip()
+    return body[:HTTP_ERROR_BODY_MAX_CHARS]
+
+
 class DataSourceError(Exception):
     """Exception for data source failures."""
 
@@ -232,6 +251,14 @@ class BaseClient(ABC):
 
     # -- HTTP requests with retry --------------------------------------------
 
+    def _is_transient_error_body(self, status: int, body: str) -> bool:
+        """Whether a non-retryable error status should be retried because of what the body says.
+
+        Base behaviour: never. Subclasses override for sources that report transient failures under
+        a client-error status.
+        """
+        return False
+
     @_bind_dependency_context
     async def _request(
         self,
@@ -267,8 +294,15 @@ class BaseClient(ABC):
                 acc[0] += 1
                 acc[1] += _elapsed
 
-                # Retry on 429/5xx
-                if resp.status in {429, 500, 502, 503, 504}:
+                # Retry on 429/5xx, and on any other error status a subclass recognises as a
+                # transient upstream failure from the response body.
+                retryable = resp.status in {429, 500, 502, 503, 504}
+                detail = ""
+                if not retryable and resp.status >= 400:
+                    body = await resp.text()
+                    detail = summarize_error_body(body)
+                    retryable = self._is_transient_error_body(resp.status, body)
+                if retryable:
                     record_dependency_request(
                         self._source_name, method, "retryable_status", _elapsed
                     )
@@ -299,7 +333,13 @@ class BaseClient(ABC):
                         await asyncio.sleep(delay)
                         continue
                     err = DataSourceError(
-                        self._source_name, f"HTTP {resp.status}", resp.status
+                        self._source_name,
+                        (
+                            f"HTTP {resp.status}: {detail}"
+                            if detail
+                            else f"HTTP {resp.status}"
+                        ),
+                        resp.status,
                     )
                     if self.exit_on_retry_exhausted:
                         log_data_source_failure(
@@ -319,10 +359,9 @@ class BaseClient(ABC):
                     record_dependency_request(
                         self._source_name, method, "error_status", _elapsed
                     )
-                    body = await resp.text()
                     raise DataSourceError(
                         self._source_name,
-                        f"HTTP {resp.status}: {body[:200]}",
+                        f"HTTP {resp.status}: {detail}",
                         resp.status,
                     )
 

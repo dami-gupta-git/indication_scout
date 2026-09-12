@@ -11,6 +11,8 @@ from contextvars import ContextVar, Token
 from datetime import UTC, datetime
 from typing import Any
 
+from indication_scout.constants import NOISY_THIRD_PARTY_LOGGERS
+
 _SERVICE_NAME = "indication-scout"
 _context: ContextVar[dict[str, Any] | None] = ContextVar("log_context", default=None)
 _EXTRA_FIELDS = (
@@ -122,3 +124,5 @@ def configure_logging(level: str | int) -> None:
         uvicorn_logger = logging.getLogger(name)
         uvicorn_logger.handlers.clear()
         uvicorn_logger.propagate = True
+    for name in NOISY_THIRD_PARTY_LOGGERS:
+        logging.getLogger(name).setLevel(logging.WARNING)

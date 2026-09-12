@@ -289,10 +289,6 @@ def cli(verbose: bool) -> None:
     from indication_scout.observability import configure_logging
 
     configure_logging(logging.DEBUG if verbose else get_settings().log_level)
-    # Quiet third-party per-request chatter that drowns out our own banners.
-    # Keep WARNING+ so genuine failures still surface.
-    for noisy in ("httpx", "httpcore", "urllib3", "openai", "anthropic"):
-        logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
 @cli.command()

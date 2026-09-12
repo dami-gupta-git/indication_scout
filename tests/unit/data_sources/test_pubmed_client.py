@@ -376,3 +376,25 @@ async def test_fetch_abstracts_raises_after_exhausting_retries(tmp_path):
     # PUBMED_EFETCH_PARSE_RETRIES=3 → 1 initial + 3 retries = 4 fetch attempts.
     assert mock_get.await_count == 4
     assert "Failed to parse XML" in str(exc_info.value)
+
+
+@pytest.mark.parametrize(
+    "status, body, expected",
+    [
+        (
+            400,
+            "<eFetchResult><ERROR> Error occurred: cannot get document summary</ERROR></eFetchResult>",
+            True,
+        ),
+        (
+            400,
+            "<eFetchResult><ERROR>ID list is empty! Possibly it has no correct IDs.</ERROR></eFetchResult>",
+            False,
+        ),
+        (200, "<eFetchResult><ERROR>Error occurred: x</ERROR></eFetchResult>", False),
+        (400, "Bad Request", False),
+    ],
+)
+def test_is_transient_error_body(tmp_path, status, body, expected):
+    client = PubMedClient(tmp_path)
+    assert client._is_transient_error_body(status, body) is expected

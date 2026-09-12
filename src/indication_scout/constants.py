@@ -14,6 +14,17 @@ from pathlib import Path
 # -- LLM defaults -----------------------------------------------------------
 DEFAULT_LLM_MODEL: str = "claude-sonnet-4-6"
 
+# Third-party clients emit one INFO record for every successful HTTP request. Keep warnings and
+# failures while omitting successful request chatter from application logs.
+NOISY_THIRD_PARTY_LOGGERS: tuple[str, ...] = (
+    "httpx",
+    "httpx2",
+    "httpcore",
+    "urllib3",
+    "openai",
+    "anthropic",
+)
+
 # -- Embedding --------------------------------------------------------------
 # Chunk size for embed_async's lock-release loop. A large bulk embed (hundreds
 # of abstracts) is encoded in chunks of this size, releasing the shared model
@@ -160,6 +171,11 @@ PUBMED_SEARCH_SLEEP_SECONDS: float = 1.0
 # parsing. Re-fetch the batch a few times with backoff before surfacing the error.
 PUBMED_EFETCH_PARSE_RETRIES: int = 3
 PUBMED_EFETCH_PARSE_BACKOFF_SCHEDULE: list[float] = [1.0, 2.0, 4.0]
+
+# NCBI eutils reports transient backend failures as HTTP 400 with an <ERROR> body that starts with
+# this prefix (e.g. "Error occurred: cannot get document summary"). Such responses are retried like
+# a 429; every other 400 stays fatal.
+NCBI_TRANSIENT_ERROR_PREFIX: str = "Error occurred"
 
 # -- MeSH resolver ----------------------------------------------------------
 NCBI_ESEARCH_URL: str = f"{NCBI_BASE_URL}/esearch.fcgi"
@@ -708,5 +724,7 @@ GEO_API_FIELDS: str = "status,city,regionName,country,proxy,hosting"
 # Per-attempt backoff (seconds) for timeout / connection-error retries in BaseClient.
 # Attempts beyond the list reuse the last (largest) value.
 RETRY_BACKOFF_SCHEDULE: list[int] = [1, 2, 4]
+# Characters of a non-XML error body kept in a DataSourceError message.
+HTTP_ERROR_BODY_MAX_CHARS: int = 200
 # ChEMBL (EBI) is slower and times out more often, so it backs off harder.
 CHEMBL_RETRY_BACKOFF_SCHEDULE: list[int] = [2, 8, 16]
