@@ -41,13 +41,18 @@ docker run -d --name "$DB_CONTAINER" --network "$NETWORK" \
   -e POSTGRES_DB="$DB_NAME" \
   pgvector/pgvector:pg16 >/dev/null
 
+# Probe over TCP, not the Unix socket: the image's entrypoint first runs a temporary server on the
+# socket only, and a socket probe reports ready while that server is about to shut down.
+db_ready() {
+  docker exec "$DB_CONTAINER" pg_isready -h 127.0.0.1 -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1
+}
 for _ in $(seq "$DB_READY_TIMEOUT"); do
-  if docker exec "$DB_CONTAINER" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+  if db_ready; then
     break
   fi
   sleep 1
 done
-if ! docker exec "$DB_CONTAINER" pg_isready -U "$DB_USER" -d "$DB_NAME" >/dev/null 2>&1; then
+if ! db_ready; then
   echo "smoke: Postgres did not become ready within ${DB_READY_TIMEOUT}s" >&2
   docker logs "$DB_CONTAINER" >&2
   exit 1
