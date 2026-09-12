@@ -36,10 +36,11 @@ logger = logging.getLogger(__name__)
 
 
 class _PollingAccessLogFilter(logging.Filter):
-    """Suppress uvicorn access-log lines for the analysis polling endpoint."""
+    """Suppress Uvicorn access logs for high-frequency operational requests."""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        return "GET /api/analyses/" not in record.getMessage()
+        message = record.getMessage()
+        return not ("GET /api/analyses/" in message or "GET /metrics/" in message)
 
 
 logging.getLogger("uvicorn.access").addFilter(_PollingAccessLogFilter())

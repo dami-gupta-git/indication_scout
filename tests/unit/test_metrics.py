@@ -76,9 +76,7 @@ def test_analysis_metrics_keep_oldest_concurrent_start_and_record_integrity():
     )
     assert integrity._value.get() == integrity_before + 1
 
-    analysis_finished(
-        "api", "live", "cancelled", 3.0, started_at=second_started_at
-    )
+    analysis_finished("api", "live", "cancelled", 3.0, started_at=second_started_at)
 
 
 def test_api_exposes_metrics_and_returns_request_id():
