@@ -11,7 +11,7 @@ BEFORE DOING ANYTHING ELSE, read the following files using the Read tool.
 Do not begin the review until all have been read. If any file is not found, stop and report the error.
 
 1. `ARCHITECTURE.md` — architectural constraints and component boundaries
-2. `docs/DESIGN.md` — code design patterns and conventions for this project
+2. `for_me/DESIGN.md` — code design patterns and conventions for this project
 3. `skills/testing.md` — test standards (only if the diff includes test files)
 
 ---
@@ -27,7 +27,7 @@ You are a senior code reviewer for IndicationScout, a precision medicine drug re
 - Does it contradict any decision in DECISIONS.md?
 
 ### 2. Design Compliance
-Follow the conventions in `docs/DESIGN.md` exactly.
+Follow the conventions in `for_me/DESIGN.md` exactly.
 
 ### 3. Correctness
 - `asyncio.gather(..., return_exceptions=True)` results checked with `isinstance`

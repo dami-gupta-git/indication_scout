@@ -105,7 +105,7 @@ has a ceiling rather than growing with project history.
 - **Markers live in `/tmp`**, not the platform temp directory — on macOS `tempfile.gettempdir()` is `$TMPDIR` while shell hooks
   name `/tmp`, so the two would disagree and neither would error.
 - `skills/session.md` documents the append format and the promotion rule. `.claude/commands/remember.md` and
-  `.claude/agents/project-state-updater.md` are deleted, with their rows removed from `docs/claude_code_tooling.md`.
+  `.claude/agents/project-state-updater.md` are deleted, with their rows removed from `docs/ops/claude_code_tooling.md`.
 
 ## Relationship to other records
 

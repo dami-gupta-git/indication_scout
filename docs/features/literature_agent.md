@@ -130,7 +130,7 @@ every empty-result case:
 2. `expand_search_terms` — generate PubMed queries
 3. `fetch_and_cache` — run queries, embed abstracts, store in pgvector
 4. `semantic_search` — retrieve top-k abstracts by similarity
-5. `safety_search` — drug-level + disease-specific safety (REQUIRED; see "Drug Safety" in ARCHITECTURE.md)
+5. `safety_search` — drug-level + disease-specific safety (REQUIRED; see "Drug Safety" in ../ARCHITECTURE.md)
 6. `synthesize` — produce structured `EvidenceSummary` (merges in the safety fields)
 7. `finalize_analysis` — termination signal; carries the narrative summary as its artifact
 
@@ -239,7 +239,7 @@ The full return value of a run:
 **File:** `models/model_evidence_summary.py`
 
 The authoritative field list (with the PMID buckets and the safety fields) is the tree in
-ARCHITECTURE.md → "EvidenceSummary". Efficacy fields: `summary`, `study_count`, `strength`,
+`../reference/rag.md` → "EvidenceSummary". Efficacy fields: `summary`, `study_count`, `strength`,
 `direction`, `evidence_basis`, `is_observational`, `is_animal_only`, `key_findings`, and the PMID
 buckets. Safety fields (populated by `safety_search`, merged by `synthesize`):
 

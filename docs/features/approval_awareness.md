@@ -10,7 +10,7 @@ work — the labeling, the gates, the ranking, the rendering, and the tests.
 > downstream stage (trials, literature, dev-stage, ranking, rendering) consumes that label so the
 > approved part is excluded and only the genuine repurposing signal is surfaced and ranked.
 
-### Summary — Approval Awareness (docs/APPROVAL_AWARENESS.md)
+### Summary — Approval Awareness (docs/features/approval_awareness.md)
 
 Documents how the system avoids presenting a drug's already-approved use as if it were a new repurposing discovery.
 
@@ -230,7 +230,7 @@ phrase-matching guards, which could not attribute a benefit to the right drug-ar
 × hepatic steatosis, where a *comparator's* benefit ("ipragliflozin significantly improved …
 metformin showed minimal change") or a side metabolic-marker improvement read as "supporting" for
 metformin. Direction is a semantic judgment; the narrow framing handles attribution that regex
-cannot. (See `docs/future.md` history — the regex guard was retired in favor of this.)
+cannot. (See `docs/ROADMAP.md` history — the regex guard was retired in favor of this.)
 
 **The strength cap (the one clinical-safety invariant kept in deterministic code):**
 `evidence_basis != "drug_specific" → strength = none, direction = none`. This prevents the

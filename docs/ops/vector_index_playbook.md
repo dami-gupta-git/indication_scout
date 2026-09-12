@@ -41,7 +41,7 @@ If any of those is false, skip the index.
 | Rebuild need as data grows | Yes, periodically | Rarely |
 
 Default recommendation for this project if/when needed: **HNSW**. The
-dataset is modest (~10k–50k abstracts per `docs/rag.md`), memory isn't a
+dataset is modest (~10k–50k abstracts per `docs/reference/rag.md`), memory isn't a
 constraint, and HNSW avoids the "must rebuild as the table grows" trap that
 IVFFlat has. Only prefer IVFFlat if build time or memory becomes a real
 constraint at much larger scale.

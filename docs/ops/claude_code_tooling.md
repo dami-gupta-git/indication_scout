@@ -21,7 +21,7 @@ Agent file locations:
 | Agent | Description |
 |---|---|
 | **docs-engineer** | Project-local override of the global docs-engineer (same role, project-scoped). |
-| **code-reviewer** | Reviews code for correctness, style, architectural conformance, and consistency with project conventions. Triggered by `/review` or phrases like "review this" / "check this code". Reads `ARCHITECTURE.md`, `docs/DESIGN.md`, and `skills/testing.md` before reviewing. Runs on `claude-sonnet`. |
+| **code-reviewer** | Reviews code for correctness, style, architectural conformance, and consistency with project conventions. Triggered by `/review` or phrases like "review this" / "check this code". Reads `ARCHITECTURE.md`, `for_me/DESIGN.md`, and `skills/testing.md` before reviewing. Runs on `claude-sonnet`. |
 
 ---
 

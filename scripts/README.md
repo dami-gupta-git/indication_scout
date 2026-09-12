@@ -31,6 +31,8 @@ tracing/eval utilities. None are part of the installed package; run them directl
 - **seed_examples_from_reports.py** — Populates `seed_examples/` from the latest
   saved `test_reports/{drug}_{ts}.json` payloads, validating each as
   `SupervisorOutput` and recording capture times.
+  Refresh flow: `scout find -d metformin` regenerates the `test_reports/` payload, then
+  `.venv/bin/python scripts/seed_examples_from_reports.py` copies the latest into `seed_examples/`.
 - **prefetch_embedding_model.py** — Downloads and caches the BioLORD-2023 embedding
   model into the HF cache so the app's first request is instant.
 
@@ -60,7 +62,7 @@ tracing/eval utilities. None are part of the installed package; run them directl
   phase per runbook row for the drugs named in
   `tests/regression/labels/seed_recall.yaml` and fails when a row's expectation is
   not met. Writes `results/ci/seed_recall.json`. See
-  `docs/SEED_RECALL_CHECK.md`; run with `make seed-recall`.
+  `docs/features/seed_recall_check.md`; run with `make seed-recall`.
 
 ## validation/
 

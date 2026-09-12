@@ -66,7 +66,7 @@ A **Supervisor** agent orchestrates three specialist sub-agents:
 
 - **Prompt caching.** The ReAct agent loops use Anthropic ephemeral prompt caching (system-prompt
   and growing-history breakpoints), cutting warm-run cost ~10–20% at a ~44–49% cache hit rate. See
-  [docs/anthropic_caching.md](docs/anthropic_caching.md).
+  [docs/features/anthropic_caching.md](docs/features/anthropic_caching.md).
 
 - **Full stack.** CLI, FastAPI backend, and React web UI; shared disk cache; snapshot regression
   harness; async job API.
@@ -164,7 +164,7 @@ Required environment variables:
 ¹ `ANTHROPIC_API_KEY` is required at runtime, not at startup: the app boots with an empty key
 and fails on the first Claude call. Set it before running any analysis.
 
-The project requires a PostgreSQL database with the `pgvector` extension for storing PubMed abstract embeddings. See `docs/rag.md` for the Docker setup.
+The project requires a PostgreSQL database with the `pgvector` extension for storing PubMed abstract embeddings. See `docs/reference/rag.md` for the Docker setup.
 
 ### Database Setup
 

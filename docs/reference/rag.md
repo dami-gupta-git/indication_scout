@@ -157,20 +157,38 @@ top abstracts into a Claude (`settings.llm_model`, currently `claude-sonnet-4-6`
 the actual retrieved papers — not training data. Output is a structured `EvidenceSummary` with PMIDs
 attached to every claim.
 
-```python
-EvidenceSummary(
-    summary: str = "",
-    study_count: int = 0,
-    # strength = evidence quantity/quality only; direction = which way it points
-    strength: Literal["strong", "moderate", "weak", "none"] = "none",
-    direction: Literal["supports", "contradicts", "mixed", "none"] = "none",
-    # whether strength/direction grade THIS drug or only its class
-    evidence_basis: Literal["drug_specific", "class_level", "none"] = "none",
-    is_observational: bool | None = None,   # None = undetermined (no-data)
-    key_findings: list[str] = [],
-    supporting_pmids: list[str] = [],
-    contradicting_pmids: list[str] = [],
-)
+The synthesized literature output produced by `RetrievalService.synthesize` (in
+`models/model_evidence_summary.py`). `strength` grades evidence quantity/quality;
+`direction` grades which way it points — the two are independent. The PMID buckets are built
+**in code** (`retrieval.py`) from the per-PMID verdict map the synthesize call emits, not by the
+LLM directly.
+
+```
+EvidenceSummary
+ |-- summary: str = ""
+ |-- study_count: int = 0
+ |-- strength: "strong" | "moderate" | "weak" | "none" = "none"
+ |-- direction: "supports" | "contradicts" | "mixed" | "none" = "none"
+ |-- evidence_basis: "drug_specific" | "approved" | "class_level" | "none" = "none"
+ |        # "class_level" → relevant RCTs are sibling-drug only (strength forced off "strong")
+ |        # "approved"    → only this-drug evidence studies an APPROVED sub-indication (strength forced none)
+ |-- is_observational: bool | None = None   # True if ≥1 RCT; False if purely observational; None = undetermined
+ |-- key_findings: list[str] = []
+ |-- supporting_pmids: list[str] = []        # supporting + mixed
+ |-- contradicting_pmids: list[str] = []     # contradicting + mixed
+ |-- relevant_pmids: list[str] = []          # graded this-drug-this-disease evidence
+ |-- contaminated_pmids: list[str] = []      # excluded (wrong drug/disease or approved sub-indication)
+ |-- neutral_pmids: list[str] = []           # relevant but no efficacy result (PK/safety/mechanism)
+ |   # --- Safety (populated by the safety_search tool; see "Drug Safety" in `../ARCHITECTURE.md`) ---
+ |-- safety_summary: str = ""                # combined rendering of source-separated drug-wide facts
+ |-- regulatory_safety_summary: str = ""     # exact label text + separately labeled OT metadata
+ |-- pharmacovigilance_summary: str = ""     # FAERS associations, not causality
+ |-- literature_safety_summary: str = ""     # holdout-eligible literature only
+ |-- safety_pmids: list[str] = []            # PMIDs cited in safety_summary
+ |-- safety_severity: "withdrawn" | "black_box" | "serious" | "moderate" | "none" | None
+ |-- indication_harm: bool | None = None      # confirmed harm, reviewed negative, or unavailable
+ |-- indication_harm_summary: str = ""
+ +-- indication_harm_pmids: list[str] = []
 ```
 
 ---

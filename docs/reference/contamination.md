@@ -48,23 +48,11 @@ incomplete/unknown verdict sets (`clinical_trials_tools.py:597-633`).
 
 ## 2. FDA approval-relationship contamination (candidate-level)
 
-**Definition**: a candidate disease is labeled `"contaminated"` when it is a broader clinical
-category containing at least one indication from the run's approved-indication list. Distinct
-siblings, related diseases, shared mechanisms, and shared treatment classes are `"none"`. A small
-curated table covers verified production-query collisions that are not clinical parent-child
-relationships, such as sildenafil systemic hypertension queries retrieving approved pulmonary
-hypertension trials.
-
-**Computed by**: `get_fda_approved_disease_mapping()` in
-`src/indication_scout/services/approval_check.py`. The curated exact-match lists are checked first.
-Remaining candidates are classified against the FDA labels and the approved-indication list. The
-model returns a structured decision, and a contaminated decision is accepted only when it names an
-approved indication from that list exactly. Invalid decisions are not cached.
-
-**Downstream use**: the accepted label is stored on
-`CandidateFindings.approval_relationship`. The report identifies the FDA-label overlap and supplies
-it to the interpretive judge. Individual trial and literature records are classified separately;
-the candidate-level label does not determine their relevance verdicts.
+A candidate disease is labeled `"contaminated"` when it is a broader clinical category containing at
+least one indication from the run's approved-indication list. Computed once upstream by
+`get_fda_approved_disease_mapping()` in `services/approval_check.py` and stored on
+`CandidateFindings.approval_relationship`. Labels, the directional-exclusion rule, and the classifier
+contract are in `../features/approval_awareness.md`.
 
 ## 3. Literature/PubMed evidence contamination (per-PMID)
 

@@ -338,7 +338,7 @@ The internal word "contaminated" is never shown in report prose — it is always
 language like the phrase above.
 
 > **Full reference:** the design, the exact prompt tests (TEST 1/2/3), the per-PMID literature gate, and
-> where each invariant is enforced in code live in [`docs/APPROVAL_AWARENESS.md`](docs/APPROVAL_AWARENESS.md).
+> where each invariant is enforced in code live in [`docs/features/approval_awareness.md`](docs/features/approval_awareness.md).
 
 ---
 

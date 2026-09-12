@@ -81,7 +81,7 @@ is actually about the wrong drug, a different disease, an already-approved indic
 being used for a comorbidity rather than the disease being investigated. It's judged independently at
 three levels (per-trial, per-candidate-disease vs. FDA approvals, per-abstract), and excluded items
 are dropped from downstream signals/counts with a "N hidden/excluded" note in the report. See
-`docs/contamination.md` for details.
+`docs/reference/contamination.md` for details.
 
 Each of the three levels is its own LLM judgment call, not a shared classifier:
 
@@ -122,7 +122,7 @@ candidate, but its trial/paper counts are polluted by the approved sibling/subty
 unreliable), `none` (genuinely distinct, kept and ranked normally). That label then flows through every
 downstream stage — trial relevance, literature relevance, dev-stage tiering, ranking — so the report
 can't contradict itself (e.g. summary text and evidence tables disagreeing about whether something is
-already approved). Full design doc: `docs/APPROVAL_AWARENESS.md`.
+already approved). Full design doc: `docs/features/approval_awareness.md`.
 
 # pgvector
 

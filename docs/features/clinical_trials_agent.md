@@ -356,7 +356,7 @@ sorting. `_normalize_phase()` converts the v2 API's phase list (e.g.
 
 ## Known Limitations & Future Work
 
-See [future.md](../future.md) for the full list. Most relevant:
+See [ROADMAP.md](../ROADMAP.md) for the full list. Most relevant:
 
 1. **Drug synonym expansion** — `query.intr` is free-text; a trial registered under
    "metformin hydrochloride" or a brand name may miss a query for "metformin".
