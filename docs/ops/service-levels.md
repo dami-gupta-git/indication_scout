@@ -49,9 +49,10 @@ separate production telemetry source and a representative baseline.
 ## Cost baseline
 
 Cost is measured without a budget objective. The service-level dashboard reports total measured
-LLM cost, average cost per terminal attempt, average cost per candidate, and the shared overhead for
-each attempt. These measurements include terminal API and CLI attempts in the selected dashboard
-window. A cost objective can be defined after enough representative live runs have been collected.
+LLM cost, average cost per complete successful analysis, average cost per candidate, and the shared
+overhead for each attempt. The completed-analysis average includes API and CLI attempts with `done`
+status in the selected dashboard window. A cost objective can be defined after enough representative
+live runs have been collected.
 
 ## Measurement limits
 

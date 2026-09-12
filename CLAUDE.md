@@ -2,6 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+
 Note: I am on a time crunch. Do not examine or suggest minute items. But main functionality should work.
 
 ## Design
@@ -12,8 +13,13 @@ Be brief by default. Judge for yourself what level of detail the moment calls fo
 
 ## Session Startup
 
-At the start of every session, read the most recent `session_*.md` file in the project root, `sessions_summary.md`, `README.md`, and `for_me/findings.md`. Also look at `for_me/errors/errors.md`, these are issues we decided to not address for now.
-
+At the start of every session, for context, first read these files
+- README.md
+- docs/OVERVIEW.md
+- PROJECT_STATE.md
+- for_me/findings.md
+- session_2026-09-09_00-52.md
+- session_archive/session_2026-06-10_19-05.md
 
 ## Findings Workflow
 
@@ -245,6 +251,10 @@ drug = Drug(**{"name": None, "synonyms": None, "year_approved": None})
   allowlist, the correct behavior is to REJECT and log. Don't add fallbacks that "try anyway."
 - Prefer a smaller, correct report over a larger one that includes hallucinated or unverified
   entries.
+- Try to not lie. In conversation, it is easy to manufacture an easy solution based on incomplete information.
+It's ok to say - I don't know. Don't make up stuff. E.g. I just asked Claude Code why MASH was still in the
+semaglutide report inspite of being already approved. It said that's because FDA labels had not caught up. Which
+is not true.
 
 
 ## Report Conventions (not bugs)

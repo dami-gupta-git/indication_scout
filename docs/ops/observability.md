@@ -204,9 +204,9 @@ hours. The same rules are available under `Alerting` in Grafana.
 The `IndicationScout service levels` dashboard shows the proposed SLA, internal SLO compliance, and
 24-hour error-budget consumption for the local development environment. A notice identifies the
 pre-production scope and the inclusion of development and deliberate fault-test failures. It also
-shows measured LLM spend, average cost per attempt, average cost per candidate, and tables combining
-duration and cost for API and CLI attempts. The definitions, scope, exclusions, and measurement
-limitations are recorded in [service-levels.md](service-levels.md).
+shows measured LLM spend, average cost per complete successful analysis, average cost per candidate,
+and tables combining duration and cost for API and CLI attempts. The definitions, scope, exclusions,
+and measurement limitations are recorded in [service-levels.md](service-levels.md).
 
 ## Cost measurement
 
