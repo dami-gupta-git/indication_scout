@@ -411,6 +411,12 @@ GOF_ACTION_TYPES: frozenset[str] = frozenset(
 # from top_diseases and from the blurbs list.
 SUPERVISOR_MIN_PMIDS_NO_TRIALS: int = 5
 
+# Random per-candidate delay before a fanned-out investigation starts (before the semaphore is
+# acquired), so N candidates do not all begin their heavy embedding/LLM calls in the same instant.
+# Spreads CPU/memory load within one run and across concurrently running drug processes (e.g. two
+# regression drugs sharing a runner); does not change per-candidate analysis logic.
+SUPERVISOR_CANDIDATE_JITTER_MAX_SECONDS: float = 3.0
+
 # -- openFDA ----------------------------------------------------------------
 OPENFDA_BASE_URL: str = "https://api.fda.gov/drug/label.json"
 OPENFDA_LABEL_LIMIT: int = 5

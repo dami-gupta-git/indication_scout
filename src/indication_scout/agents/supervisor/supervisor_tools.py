@@ -8,6 +8,7 @@ find_candidates tool that hits Open Targets directly to surface disease candidat
 import asyncio
 import json
 import logging
+import random
 import re
 import time
 from collections.abc import Callable
@@ -54,7 +55,10 @@ from indication_scout.agents.supervisor.candidate_dedup import (
     merge_mechanism_entries,
 )
 from indication_scout.config import get_settings
-from indication_scout.constants import SUPERVISOR_MIN_PMIDS_NO_TRIALS
+from indication_scout.constants import (
+    SUPERVISOR_CANDIDATE_JITTER_MAX_SECONDS,
+    SUPERVISOR_MIN_PMIDS_NO_TRIALS,
+)
 from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.helpers.drug_helpers import (
     DrugIntake,
@@ -1508,6 +1512,12 @@ def build_supervisor_tools(
 
         async def _invest_tracked(disease: str) -> tuple[str, dict]:
             nonlocal _done_count
+            # Jitter before acquiring the semaphore so concurrently-started candidates (and, in
+            # regression, concurrently-running drug processes) don't all hit their heavy calls at
+            # the same instant. See SUPERVISOR_CANDIDATE_JITTER_MAX_SECONDS.
+            await asyncio.sleep(
+                random.uniform(0, SUPERVISOR_CANDIDATE_JITTER_MAX_SECONDS)
+            )
             async with candidate_semaphore:
                 result = await _invest(disease)
             _done_count += 1

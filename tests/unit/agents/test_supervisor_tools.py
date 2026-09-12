@@ -213,7 +213,13 @@ def test_briefing_handles_unknown_drug_gracefully():
 
 
 async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order():
-    """The candidate cap controls coverage while the concurrency setting bounds active work."""
+    """The candidate cap controls coverage while the concurrency setting bounds active work.
+
+    The per-candidate startup jitter is patched to zero: it deliberately randomizes which
+    candidates begin first, so a deterministic start order is only meaningful with it disabled.
+    The concurrency bound and the final result order (which `asyncio.gather` guarantees regardless
+    of start order) are unaffected by the jitter and are what this test actually covers.
+    """
     settings = get_settings().model_copy(
         update={
             "supervisor_fanout": True,
@@ -286,7 +292,13 @@ async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order
             return await run_literature(tool_call)
         return await run_trials(tool_call)
 
-    with patch.object(type(literature_tool), "ainvoke", new=run_tool):
+    with (
+        patch.object(type(literature_tool), "ainvoke", new=run_tool),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.random.uniform",
+            return_value=0.0,
+        ),
+    ):
         task = asyncio.create_task(investigate.coroutine("metformin"))
         await asyncio.wait_for(first_batch_started.wait(), timeout=1)
         assert active == 2

@@ -229,8 +229,8 @@
       "gridPos": {"h": 5, "w": 8, "x": 8, "y": 24},
       "id": 12,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(AVG(llm_cost_usd), 0) AS average_cost_usd FROM analysis_attempts WHERE $__timeFilter(finished_at) AND llm_pricing_complete = TRUE", "refId": "A"}],
-      "title": "Average cost per terminal attempt",
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(AVG(llm_cost_usd), 0) AS average_cost_usd FROM analysis_attempts WHERE $__timeFilter(finished_at) AND status = 'done' AND llm_pricing_complete = TRUE", "refId": "A"}],
+      "title": "Average cost per complete successful analysis",
       "type": "stat"
     },
     {
