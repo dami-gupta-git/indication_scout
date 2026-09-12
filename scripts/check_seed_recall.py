@@ -120,9 +120,21 @@ async def main() -> int:
         default=DEFAULT_OUT,
         help=f"JSON result file (default: {DEFAULT_OUT.relative_to(PROJECT_ROOT)})",
     )
+    parser.add_argument(
+        "--drugs",
+        nargs="+",
+        help="Check only these drugs (default: every drug in the spec)",
+    )
     args = parser.parse_args()
 
     drugs, known_missing = _load_spec()
+    if args.drugs:
+        requested = [d.strip().lower() for d in args.drugs]
+        unknown = sorted(set(requested) - set(drugs))
+        if unknown:
+            logger.error("Drugs not in %s: %s", SPEC.name, unknown)
+            return 1
+        drugs = [d for d in drugs if d in requested]
     rows = _rows_for(drugs)
     if not rows:
         logger.error("No runbook rows for %s", drugs)

@@ -9,6 +9,8 @@ from indication_scout.metrics import (
     ANALYSIS_RUNS,
     DEPENDENCY_REQUESTS,
     HTTP_REQUESTS,
+    INTEGRITY_REJECTIONS,
+    OLDEST_ACTIVE_ANALYSIS_START_TIME,
     analysis_finished,
     analysis_started,
     record_dependency_request,
@@ -40,13 +42,43 @@ def test_analysis_metrics_track_active_and_terminal_attempts():
     active_before = active._value.get()
     completed_before = completed._value.get()
 
-    analysis_started("api", "live")
+    started_at = analysis_started("api", "live")
     assert active._value.get() == active_before + 1
+    assert (
+        OLDEST_ACTIVE_ANALYSIS_START_TIME.labels("api", "live")._value.get()
+        == started_at
+    )
 
-    analysis_finished("api", "live", "done", 2.0)
+    analysis_finished("api", "live", "done", 2.0, started_at=started_at)
 
     assert active._value.get() == active_before
     assert completed._value.get() == completed_before + 1
+
+
+def test_analysis_metrics_keep_oldest_concurrent_start_and_record_integrity():
+    integrity = INTEGRITY_REJECTIONS.labels("api", "live")
+    integrity_before = integrity._value.get()
+
+    first_started_at = analysis_started("api", "live")
+    second_started_at = analysis_started("api", "live")
+    analysis_finished(
+        "api",
+        "live",
+        "error",
+        2.0,
+        started_at=first_started_at,
+        integrity_failed=True,
+    )
+
+    assert (
+        OLDEST_ACTIVE_ANALYSIS_START_TIME.labels("api", "live")._value.get()
+        == second_started_at
+    )
+    assert integrity._value.get() == integrity_before + 1
+
+    analysis_finished(
+        "api", "live", "cancelled", 3.0, started_at=second_started_at
+    )
 
 
 def test_api_exposes_metrics_and_returns_request_id():

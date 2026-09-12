@@ -558,6 +558,24 @@ def _normalize_label(value: str) -> str:
     return " ".join(value.lower().split())
 
 
+def filter_spec_to_drugs(
+    spec: CandidatePrecisionSpec, drugs: list[str]
+) -> CandidatePrecisionSpec:
+    """Keep only the labels for ``drugs``; a requested drug with no labels is an error."""
+    wanted = {_normalize_label(drug) for drug in drugs}
+    labelled = {_normalize_label(label.drug) for label in spec.labels}
+    missing = sorted(wanted - labelled)
+    if missing:
+        raise ValueError(f"no candidate labels for {missing}")
+    return spec.model_copy(
+        update={
+            "labels": [
+                label for label in spec.labels if _normalize_label(label.drug) in wanted
+            ]
+        }
+    )
+
+
 def _format_percent(value: float | None) -> str:
     return "unavailable" if value is None else f"{value:.1%}"
 

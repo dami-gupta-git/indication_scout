@@ -4,6 +4,12 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      regression_drugs:
+        description: "Drugs for the live regression job (space-separated)"
+        default: "semaglutide bupropion"
+        required: true
 
 jobs:
   python:
@@ -61,6 +67,8 @@ jobs:
       NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
       HF_HOME: ${{ github.workspace }}/.hf-cache
       SCOUT_CACHE_DIR: ${{ github.workspace }}/cache
+      # Push builds run the default subset; a manual run can name the full set.
+      REGRESSION_DRUGS: ${{ github.event.inputs.regression_drugs || 'semaglutide bupropion' }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

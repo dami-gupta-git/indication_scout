@@ -25,6 +25,7 @@ same taxonomy. Run:
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 import pytest
@@ -52,6 +53,12 @@ def _latest_payload(drug: str) -> Path | None:
     return candidates[0] if candidates else None
 
 
+def _selected_drugs() -> set[str] | None:
+    """Drugs named in REGRESSION_DRUGS, or None when unset (every spec runs)."""
+    raw = os.environ.get("REGRESSION_DRUGS", "").split()
+    return {d.lower() for d in raw} or None
+
+
 def _spec_paths() -> list[Path]:
     if not SPECS_DIR.exists():
         return []
@@ -66,6 +73,9 @@ def _spec_paths() -> list[Path]:
 )
 def test_spec(spec_path: Path) -> None:
     spec = load_spec(spec_path)
+    selected = _selected_drugs()
+    if selected is not None and spec.drug.lower() not in selected:
+        pytest.skip(f"{spec.drug} is not in REGRESSION_DRUGS")
     payload_path = _latest_payload(spec.drug)
     if payload_path is None:
         pytest.skip(

@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import time
+from threading import Lock
+
 from prometheus_client import Counter, Gauge, Histogram
 
 HTTP_REQUESTS = Counter(
@@ -27,6 +30,11 @@ ANALYSIS_DURATION = Histogram(
 ACTIVE_ANALYSES = Gauge(
     "indication_scout_active_analyses",
     "Analysis attempts currently executing.",
+    ("submission_source", "execution_mode"),
+)
+OLDEST_ACTIVE_ANALYSIS_START_TIME = Gauge(
+    "indication_scout_analysis_oldest_active_start_time_seconds",
+    "Unix timestamp when the oldest currently active analysis attempt started.",
     ("submission_source", "execution_mode"),
 )
 INTEGRITY_REJECTIONS = Counter(
@@ -66,6 +74,8 @@ _DEPENDENCY_OUTCOMES = {
     "connection_error",
     "other",
 }
+_ACTIVE_ANALYSIS_START_TIMES: dict[tuple[str, str], list[float]] = {}
+_ACTIVE_ANALYSIS_LOCK = Lock()
 
 
 def _method(value: str) -> str:
@@ -92,12 +102,19 @@ def record_http_request(
     HTTP_DURATION.labels(bounded_method, bounded_route).observe(duration_seconds)
 
 
-def analysis_started(submission_source: str, execution_mode: str) -> None:
-    """Increment the active-attempt gauge."""
-    ACTIVE_ANALYSES.labels(
+def analysis_started(submission_source: str, execution_mode: str) -> float:
+    """Record an active attempt and return its metric start-time token."""
+    labels = (
         _bounded(submission_source, _SUBMISSION_SOURCES),
         _bounded(execution_mode, _EXECUTION_MODES),
-    ).inc()
+    )
+    started_at = time.time()
+    with _ACTIVE_ANALYSIS_LOCK:
+        start_times = _ACTIVE_ANALYSIS_START_TIMES.setdefault(labels, [])
+        start_times.append(started_at)
+        ACTIVE_ANALYSES.labels(*labels).inc()
+        OLDEST_ACTIVE_ANALYSIS_START_TIME.labels(*labels).set(min(start_times))
+    return started_at
 
 
 def analysis_finished(
@@ -106,13 +123,23 @@ def analysis_finished(
     outcome: str,
     duration_seconds: float,
     *,
+    started_at: float,
     integrity_failed: bool = False,
 ) -> None:
     """Record one terminal attempt and decrement its active gauge."""
     source_label = _bounded(submission_source, _SUBMISSION_SOURCES)
     mode_label = _bounded(execution_mode, _EXECUTION_MODES)
     outcome_label = _bounded(outcome, _ANALYSIS_OUTCOMES)
-    ACTIVE_ANALYSES.labels(source_label, mode_label).dec()
+    labels = (source_label, mode_label)
+    with _ACTIVE_ANALYSIS_LOCK:
+        start_times = _ACTIVE_ANALYSIS_START_TIMES[labels]
+        start_times.remove(started_at)
+        ACTIVE_ANALYSES.labels(*labels).dec()
+        if start_times:
+            OLDEST_ACTIVE_ANALYSIS_START_TIME.labels(*labels).set(min(start_times))
+        else:
+            del _ACTIVE_ANALYSIS_START_TIMES[labels]
+            OLDEST_ACTIVE_ANALYSIS_START_TIME.remove(*labels)
     ANALYSIS_RUNS.labels(source_label, mode_label, outcome_label).inc()
     ANALYSIS_DURATION.labels(source_label, mode_label, outcome_label).observe(
         duration_seconds

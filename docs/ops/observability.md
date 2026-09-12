@@ -113,8 +113,13 @@ or API analysis when demonstrating the Grafana panels.
 Grafana reads Prometheus through a provisioned data source. Its service dashboard shows HTTP
 request rate, HTTP latency at the 95th percentile, analysis outcomes, analysis duration at the 95th
 percentile, active analyses, dependency outcomes, dependency latency, and report-integrity
-rejections. The dashboard refreshes every 15 seconds and initially displays the preceding six
-hours.
+rejections. The dashboard also lists the state of two provisioned Grafana alerts: an individual API
+analysis active for more than ten minutes, and any report-integrity rejection observed in the last
+five minutes. The dashboard refreshes every 15 seconds and initially displays the preceding six
+hours. The same rules are available under `Alerting` in Grafana.
+
+The alert rules are evaluated and displayed without an email destination. Email delivery requires
+an explicit recipient and Grafana SMTP configuration; neither is stored in this repository.
 
 ## Accepted limitations
 
@@ -124,9 +129,8 @@ The current implementation retains the following behavior:
   contain the request ID, raw IP address, and inferred location.
 - Geolocation runs before the health, metrics, and polling exclusions are applied. The first request
   from an uncached IP can therefore wait for the geolocation lookup.
-- The integrity-rejection metric exists, but current analysis failures are not classified as
-  integrity failures. Its Grafana panel will have no rejection series until that classification is
-  connected.
+- The integrity-rejection metric and alert exist, but current analysis failures are not classified
+  as integrity failures. They remain empty until that classification is connected.
 - The report-download route is not covered by the current polling-log suppression rule.
 
 These limitations do not change report generation or persisted run results.

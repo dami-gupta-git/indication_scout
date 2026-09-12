@@ -142,7 +142,7 @@ async def _execute(job: Job) -> None:
     job.status = "running"
     started = time.monotonic()
     outcome = "error"
-    analysis_started(run.submission_source, run.execution_mode)
+    metric_started_at = analysis_started(run.submission_source, run.execution_mode)
     log_token = bind_log_context(
         run_id=job.job_id,
         attempt_id=attempt.attempt_id,
@@ -212,6 +212,7 @@ async def _execute(job: Job) -> None:
             run.execution_mode,
             outcome,
             duration,
+            started_at=metric_started_at,
         )
         logger.info(
             "Analysis attempt finished",

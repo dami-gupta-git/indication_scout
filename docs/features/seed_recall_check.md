@@ -52,9 +52,13 @@ to the expectations file instead of passing unnoticed.
 ## Running
 
 ```
-make seed-recall                          # uses tests/regression/labels/seed_recall.yaml
-python scripts/check_seed_recall.py --out /tmp/recall.json
+make seed-recall                          # the REGRESSION_DRUGS subset of seed_recall.yaml
+python scripts/check_seed_recall.py --out /tmp/recall.json          # every drug in the spec
+python scripts/check_seed_recall.py --drugs semaglutide bupropion
 ```
+
+`REGRESSION_DRUGS` defaults to semaglutide and bupropion in the Makefile and CI; a manual CI run or
+`make seed-recall REGRESSION_DRUGS="..."` can name more.
 
 Needs an Anthropic key and a reachable database. In CI it is a step in the regression job, after
 the structural specs, reusing that job's key, weekly data cache and Postgres service.

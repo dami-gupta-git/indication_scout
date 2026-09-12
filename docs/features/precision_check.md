@@ -6,12 +6,13 @@ correctness of report prose, evidence interpretation, or candidate cards.
 
 ## Scope
 
-The check covers semaglutide, metformin, sildenafil, and bupropion. For each drug, it reads the five
+Labels exist for semaglutide, metformin, sildenafil, and bupropion; a run scores the drugs it is
+given (`--drugs`), which the Makefile sets from `REGRESSION_DRUGS`. For each drug, it reads the five
 highest-ranked diseases from the newest generated JSON report and compares them with the reviewed
 label set.
 
 The score is micro-averaged precision at five: the number of valid pairs divided by all scored pairs
-across the four drugs. CI passes at 90% or higher.
+across the scored drugs. CI passes at 90% or higher.
 
 ## Labels
 
@@ -67,8 +68,8 @@ limit and it is not FDA-approval precision.
 make candidate-precision
 ```
 
-This command expects current JSON reports for all four drugs in `test_reports/`. To generate the
-reports and run all live regression checks, use:
+This command expects a current JSON report in `test_reports/` for every drug in `REGRESSION_DRUGS`
+(default: semaglutide and bupropion). To generate the reports and run all live regression checks, use:
 
 ```text
 make regression

@@ -85,6 +85,22 @@
       "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[24h]))", "refId": "A"}],
       "title": "Report integrity rejections, last 24 hours",
       "type": "stat"
+    },
+    {
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 30},
+      "id": 9,
+      "options": {
+        "alertName": "",
+        "dashboardAlerts": false,
+        "dashboardTitle": "",
+        "folder": {"id": null, "title": "IndicationScout"},
+        "groupBy": ["alertname"],
+        "maxItems": 20,
+        "sortOrder": 1,
+        "stateFilter": {"error": true, "firing": true, "noData": true, "normal": true, "pending": true}
+      },
+      "title": "Alert status",
+      "type": "alertlist"
     }
   ],
   "refresh": "15s",

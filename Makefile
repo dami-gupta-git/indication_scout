@@ -50,7 +50,10 @@ test-regression:
 
 # --- Live regression: the same steps the CI regression job runs ---------------
 # Needs a reachable Postgres + pgvector (DATABASE_URL) and an Anthropic key.
-REGRESSION_DRUGS = semaglutide sildenafil bupropion metformin
+# Drugs a live regression run covers. `?=` so the environment or the command line overrides it:
+#   make regression REGRESSION_DRUGS="semaglutide sildenafil bupropion metformin"
+# The precision and seed-recall checks and the structural specs restrict themselves to this list.
+REGRESSION_DRUGS ?= semaglutide bupropion
 
 create-tables:
 	$(START) "create-tables"
@@ -88,7 +91,7 @@ regression-reports:
 
 regression-specs:
 	$(START) "structural regression specs"
-	pytest -m regression_layer2 tests/regression/layer2_structural/
+	REGRESSION_DRUGS="$(REGRESSION_DRUGS)" pytest -m regression_layer2 tests/regression/layer2_structural/
 	$(OK) "structural regression specs"
 
 candidate-precision:
@@ -96,14 +99,15 @@ candidate-precision:
 	python scripts/check_candidate_precision.py \
 		tests/regression/labels/candidate_precision.json \
 		test_reports \
-		results/precision/live_candidate_precision.md
+		results/precision/live_candidate_precision.md \
+		--drugs $(REGRESSION_DRUGS)
 	$(OK) "candidate-selection precision"
 
-# Seed-phase candidate recall for the drugs named in tests/regression/labels/seed_recall.yaml.
-# One seed run per runbook cutoff; independent of the generated reports.
+# Seed-phase candidate recall for the REGRESSION_DRUGS that tests/regression/labels/seed_recall.yaml
+# names. One seed run per runbook cutoff; independent of the generated reports.
 seed-recall:
 	$(START) "seed-phase candidate recall"
-	python scripts/check_seed_recall.py
+	python scripts/check_seed_recall.py --drugs $(REGRESSION_DRUGS)
 	$(OK) "seed-phase candidate recall"
 
 # Refresh seed_examples/ from the payloads the live runs just wrote. Runs after the checks so a

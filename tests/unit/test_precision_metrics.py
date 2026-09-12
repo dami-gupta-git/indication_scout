@@ -9,6 +9,7 @@ from indication_scout.services.precision_metrics import (
     CandidatePrediction,
     CandidateReview,
     CandidateValidityLabel,
+    filter_spec_to_drugs,
     load_reviews,
     score_ranked_candidate_precision,
     score_reviews,
@@ -236,3 +237,28 @@ def test_ranked_precision_requires_review_for_unknown_candidate() -> None:
         ),
     ):
         score_ranked_candidate_precision([report], spec)
+
+
+def test_filter_spec_to_drugs_keeps_only_requested_labels() -> None:
+    spec = CandidatePrecisionSpec(
+        top_k=1,
+        minimum_precision=0.5,
+        labels=[
+            CandidateValidityLabel(
+                drug="Drug-A", disease="d1", aliases=[], decision="valid", rationale="r"
+            ),
+            CandidateValidityLabel(
+                drug="drug-b",
+                disease="d2",
+                aliases=[],
+                decision="invalid",
+                rationale="r",
+            ),
+        ],
+    )
+    filtered = filter_spec_to_drugs(spec, ["drug-a"])
+    assert filtered.top_k == 1
+    assert filtered.minimum_precision == 0.5
+    assert [label.drug for label in filtered.labels] == ["Drug-A"]
+    with pytest.raises(ValueError, match="no candidate labels for \\['drug-c'\\]"):
+        filter_spec_to_drugs(spec, ["drug-a", "drug-c"])

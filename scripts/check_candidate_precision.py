@@ -9,6 +9,7 @@ from pathlib import Path
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
 from indication_scout.services.precision_metrics import (
     CandidatePrecisionSpec,
+    filter_spec_to_drugs,
     load_candidate_precision_spec,
     score_ranked_candidate_precision,
     write_candidate_precision_report,
@@ -22,6 +23,11 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("labels", type=Path)
     parser.add_argument("reports_dir", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument(
+        "--drugs",
+        nargs="+",
+        help="Score only these drugs (default: every drug in the label file)",
+    )
     return parser
 
 
@@ -55,6 +61,8 @@ def main() -> None:
     args = _parser().parse_args()
     spec = load_candidate_precision_spec(args.labels)
     try:
+        if args.drugs:
+            spec = filter_spec_to_drugs(spec, args.drugs)
         reports, report_paths = _latest_reports(args.reports_dir, spec)
         result = score_ranked_candidate_precision(reports, spec)
     except ValueError as error:
