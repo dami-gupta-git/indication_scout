@@ -25,7 +25,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 3},
+      "gridPos": {"h": 5, "w": 8, "x": 0, "y": 3},
       "id": 1,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
@@ -46,7 +46,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 3},
+      "gridPos": {"h": 5, "w": 8, "x": 8, "y": 3},
       "id": 2,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
@@ -67,7 +67,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 3},
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 3},
       "id": 3,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
@@ -88,7 +88,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 9},
+      "gridPos": {"h": 5, "w": 8, "x": 0, "y": 8},
       "id": 4,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
@@ -109,7 +109,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 9},
+      "gridPos": {"h": 5, "w": 8, "x": 8, "y": 8},
       "id": 5,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
@@ -130,7 +130,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 9},
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 8},
       "id": 6,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
@@ -151,7 +151,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 15},
+      "gridPos": {"h": 5, "w": 8, "x": 0, "y": 13},
       "id": 7,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
@@ -172,7 +172,7 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 15},
+      "gridPos": {"h": 5, "w": 8, "x": 8, "y": 13},
       "id": 8,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
@@ -190,7 +190,7 @@
         "defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}, "unit": "short"},
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 15},
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 13},
       "id": 9,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[24h]))", "refId": "A"}],
@@ -198,7 +198,7 @@
       "type": "stat"
     },
     {
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 21},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 18},
       "id": 10,
       "options": {
         "alertName": "",
@@ -216,7 +216,7 @@
     {
       "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
       "fieldConfig": {"defaults": {"unit": "currencyUSD"}, "overrides": []},
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 29},
+      "gridPos": {"h": 5, "w": 8, "x": 0, "y": 24},
       "id": 11,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(SUM(llm_cost_usd), 0) AS cost_usd FROM analysis_attempts WHERE $__timeFilter(finished_at) AND llm_pricing_complete = TRUE", "refId": "A"}],
@@ -226,7 +226,7 @@
     {
       "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
       "fieldConfig": {"defaults": {"unit": "currencyUSD"}, "overrides": []},
-      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 29},
+      "gridPos": {"h": 5, "w": 8, "x": 8, "y": 24},
       "id": 12,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(AVG(llm_cost_usd), 0) AS average_cost_usd FROM analysis_attempts WHERE $__timeFilter(finished_at) AND llm_pricing_complete = TRUE", "refId": "A"}],
@@ -236,7 +236,7 @@
     {
       "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
       "fieldConfig": {"defaults": {"unit": "currencyUSD"}, "overrides": []},
-      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 29},
+      "gridPos": {"h": 5, "w": 8, "x": 16, "y": 24},
       "id": 13,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(AVG(cost_usd), 0) AS average_candidate_cost_usd FROM analysis_candidate_costs c JOIN analysis_attempts a USING (attempt_id) WHERE $__timeFilter(a.finished_at) AND c.pricing_complete = TRUE", "refId": "A"}],
@@ -246,7 +246,7 @@
     {
       "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
       "fieldConfig": {"defaults": {}, "overrides": []},
-      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 35},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 29},
       "id": 14,
       "options": {"showHeader": true},
       "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT r.drug_name AS drug, r.submission_source AS source, a.status, ROUND(a.duration_ms / 1000.0, 1) AS duration_seconds, a.llm_cost_usd AS total_cost_usd, a.llm_overhead_cost_usd AS overhead_cost_usd, a.llm_input_tokens AS input_tokens, a.llm_output_tokens AS output_tokens, a.finished_at FROM analysis_attempts a JOIN analysis_runs r USING (run_id) WHERE $__timeFilter(a.finished_at) ORDER BY a.finished_at DESC LIMIT 50", "refId": "A"}],
@@ -256,7 +256,7 @@
     {
       "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
       "fieldConfig": {"defaults": {}, "overrides": []},
-      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 44},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 38},
       "id": 15,
       "options": {"showHeader": true},
       "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT r.drug_name AS drug, c.candidate_name AS candidate, r.submission_source AS source, c.cost_usd, c.input_tokens, c.output_tokens, c.cache_read_tokens, c.cache_write_tokens, a.finished_at FROM analysis_candidate_costs c JOIN analysis_attempts a USING (attempt_id) JOIN analysis_runs r USING (run_id) WHERE $__timeFilter(a.finished_at) ORDER BY a.finished_at DESC, c.cost_usd DESC NULLS LAST LIMIT 100", "refId": "A"}],

@@ -115,13 +115,17 @@ async def _run_for_drug(
         except asyncio.CancelledError:
             with session_factory() as db:
                 repository = AnalysisRunRepository(db)
-                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.record_attempt_cost(
+                    run_id, attempt_id, cost_tracker.snapshot()
+                )
                 repository.cancel_attempt(run_id, attempt_id)
             raise
         except Exception as exc:
             with session_factory() as db:
                 repository = AnalysisRunRepository(db)
-                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.record_attempt_cost(
+                    run_id, attempt_id, cost_tracker.snapshot()
+                )
                 repository.fail_attempt(
                     run_id,
                     attempt_id,
@@ -134,10 +138,10 @@ async def _run_for_drug(
         else:
             with session_factory() as db:
                 repository = AnalysisRunRepository(db)
-                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
-                repository.complete_validated_attempt(
-                    run_id, attempt_id, output
+                repository.record_attempt_cost(
+                    run_id, attempt_id, cost_tracker.snapshot()
                 )
+                repository.complete_validated_attempt(run_id, attempt_id, output)
         finally:
             reset_emitter(token)
 
@@ -255,13 +259,17 @@ async def _run_for_pair(
         except asyncio.CancelledError:
             with session_factory() as db:
                 repository = AnalysisRunRepository(db)
-                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.record_attempt_cost(
+                    run_id, attempt_id, cost_tracker.snapshot()
+                )
                 repository.cancel_attempt(run_id, attempt_id)
             raise
         except Exception as exc:
             with session_factory() as db:
                 repository = AnalysisRunRepository(db)
-                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.record_attempt_cost(
+                    run_id, attempt_id, cost_tracker.snapshot()
+                )
                 repository.fail_attempt(
                     run_id,
                     attempt_id,
@@ -274,10 +282,10 @@ async def _run_for_pair(
         else:
             with session_factory() as db:
                 repository = AnalysisRunRepository(db)
-                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
-                repository.complete_validated_attempt(
-                    run_id, attempt_id, output
+                repository.record_attempt_cost(
+                    run_id, attempt_id, cost_tracker.snapshot()
                 )
+                repository.complete_validated_attempt(run_id, attempt_id, output)
         finally:
             reset_emitter(token)
 

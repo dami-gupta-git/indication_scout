@@ -9,7 +9,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 0},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 0},
       "id": 1,
       "options": {"legend": {"displayMode": "table", "placement": "bottom"}},
       "targets": [{"expr": "sum by (status_class) (rate(indication_scout_http_requests_total[5m]))", "legendFormat": "{{status_class}}", "refId": "A"}],
@@ -19,7 +19,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 0},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 0},
       "id": 2,
       "options": {"legend": {"displayMode": "table", "placement": "bottom"}},
       "targets": [{"expr": "histogram_quantile(0.95, sum by (le, route) (rate(indication_scout_http_request_duration_seconds_bucket[5m])))", "legendFormat": "{{route}}", "refId": "A"}],
@@ -29,7 +29,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 8},
+      "gridPos": {"h": 7, "w": 8, "x": 0, "y": 7},
       "id": 3,
       "options": {"legend": {"displayMode": "table", "placement": "bottom"}},
       "targets": [{"expr": "sum by (outcome, execution_mode) (increase(indication_scout_analysis_runs_total[1h]))", "legendFormat": "{{execution_mode}} {{outcome}}", "refId": "A"}],
@@ -39,7 +39,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 8},
+      "gridPos": {"h": 7, "w": 8, "x": 8, "y": 7},
       "id": 4,
       "options": {"legend": {"displayMode": "table", "placement": "bottom"}},
       "targets": [{"expr": "histogram_quantile(0.95, sum by (le, execution_mode) (rate(indication_scout_analysis_duration_seconds_bucket[1h])))", "legendFormat": "{{execution_mode}}", "refId": "A"}],
@@ -49,7 +49,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 8},
+      "gridPos": {"h": 7, "w": 8, "x": 16, "y": 7},
       "id": 5,
       "options": {"legend": {"displayMode": "table", "placement": "bottom"}},
       "targets": [{"expr": "sum by (submission_source, execution_mode) (indication_scout_active_analyses)", "legendFormat": "{{submission_source}} {{execution_mode}}", "refId": "A"}],
@@ -59,7 +59,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {"defaults": {"unit": "reqps"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 0, "y": 16},
+      "gridPos": {"h": 7, "w": 12, "x": 0, "y": 14},
       "id": 6,
       "options": {"legend": {"displayMode": "table", "placement": "bottom"}},
       "targets": [{"expr": "sum by (dependency, outcome) (rate(indication_scout_dependency_requests_total[5m]))", "legendFormat": "{{dependency}} {{outcome}}", "refId": "A"}],
@@ -69,7 +69,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {"defaults": {"unit": "s"}, "overrides": []},
-      "gridPos": {"h": 8, "w": 12, "x": 12, "y": 16},
+      "gridPos": {"h": 7, "w": 12, "x": 12, "y": 14},
       "id": 7,
       "options": {"legend": {"displayMode": "table", "placement": "bottom"}},
       "targets": [{"expr": "histogram_quantile(0.95, sum by (le, dependency) (rate(indication_scout_dependency_request_duration_seconds_bucket[5m])))", "legendFormat": "{{dependency}}", "refId": "A"}],
@@ -79,7 +79,7 @@
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {"defaults": {"unit": "short"}, "overrides": []},
-      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 24},
+      "gridPos": {"h": 4, "w": 24, "x": 0, "y": 21},
       "id": 8,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[24h]))", "refId": "A"}],
@@ -87,7 +87,7 @@
       "type": "stat"
     },
     {
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 30},
+      "gridPos": {"h": 6, "w": 24, "x": 0, "y": 25},
       "id": 9,
       "options": {
         "alertName": "",
