@@ -194,7 +194,7 @@ all three. The parser builds `"YYYY"`, `"YYYY-MM"`, or `"YYYY-MM-DD"` accordingl
 
 ## Client: `PubMedClient`
 
-Located at [src/indication_scout/data_sources/pubmed.py](../src/indication_scout/data_sources/pubmed.py).
+Located at [src/indication_scout/data_sources/pubmed.py](../../src/indication_scout/data_sources/pubmed.py).
 
 Extends `BaseClient` — use as an async context manager:
 
@@ -225,7 +225,7 @@ from pgvector for known PMIDs and only calls esummary for unknowns. The standalo
 
 ## Service Layer
 
-`fetch_new_abstracts` in [src/indication_scout/services/retrieval.py](../src/indication_scout/services/retrieval.py)
+`fetch_new_abstracts` in [src/indication_scout/services/retrieval.py](../../src/indication_scout/services/retrieval.py)
 wraps `fetch_abstracts` with a deduplication step: it accepts the full PMID list from a
 search result plus the set of PMIDs already stored in the database, and only fetches the
 difference.

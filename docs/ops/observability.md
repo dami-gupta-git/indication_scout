@@ -1,34 +1,65 @@
 # Production observability
 
-IndicationScout emits correlated JSON logs and Prometheus metrics from the API process. A local
-Prometheus and Grafana stack is provisioned from files in the repository. This setup establishes
-the measurements needed to choose service objectives after representative production data has
-been collected.
+IndicationScout emits correlated JSON logs and Prometheus metrics from the API process. Prometheus
+collects and stores the metrics, while Grafana displays the provisioned service dashboard. The
+current measurements provide operational visibility but do not define an SLA.
 
 ## Start the stack
 
-The observability compose overlay starts the application, PostgreSQL, Prometheus, and Grafana.
-Set a Grafana administrator password before starting it.
+The observability Compose overlay starts PostgreSQL, the application, Prometheus, and Grafana. Set
+a Grafana administrator password before starting it.
 
 ```text
 export GRAFANA_ADMIN_PASSWORD=<local-password>
 make observability-up
 ```
 
-The application is available on port 8000, Prometheus on port 9090, and Grafana on port 3000.
-Grafana loads the `IndicationScout service overview` dashboard and its Prometheus data source at
-startup. Stop the stack with `make observability-down`.
+The services are then available at:
+
+| Service | Address | Purpose |
+|---|---|---|
+| IndicationScout | `http://localhost:8000` | Runs analyses and serves the production frontend bundle. |
+| Prometheus | `http://localhost:9090` | Shows scrape status and permits direct metric queries. |
+| Grafana | `http://localhost:3000` | Displays the provisioned dashboard. |
+
+Grafana uses the username `admin` and the password supplied through
+`GRAFANA_ADMIN_PASSWORD`. It loads the `IndicationScout service overview` dashboard and the
+Prometheus data source at startup.
+
+Port 3000 must be free before the stack starts. Stop the Vite development frontend if it is already
+using that port. Use the frontend served at `http://localhost:8000` while inspecting Grafana.
+
+Run an analysis from the web interface or submit one through the API to populate the analysis
+panels. Open `http://localhost:8000/metrics/` to inspect the raw Prometheus exposition, or open the
+Prometheus targets page to confirm that the `indication-scout` target is being scraped. Stop the
+stack with:
+
+```text
+make observability-down
+```
+
+The named Prometheus and Grafana volumes remain after this command, so local metric history and
+Grafana state survive a normal stop and restart.
 
 ## Logs
 
-Application and Uvicorn logs are written as one JSON object per line. Every record contains a UTC
-timestamp, severity, logger, service, and message. Railway environment, release, deployment,
-replica, and OpenTelemetry trace identifiers are included when available.
+Application and Uvicorn logs are written to standard output as one JSON object per line. Railway
+can parse these records without a separate log collector. Every record contains a UTC timestamp,
+severity, logger, service, and message. Railway environment, release, deployment, replica, and
+OpenTelemetry trace identifiers are included when available.
 
 Request logs contain a request identifier, raw client IP, inferred location when the geolocation
 lookup succeeds, automation classification, route template, status, and duration. Analysis logs
-add the durable run and attempt identifiers, submission source, and execution mode. Request IDs
-are returned in the `X-Request-ID` response header.
+add the durable run and attempt identifiers, submission source, execution mode, and progress stage
+when available. Request IDs are returned in the `X-Request-ID` response header. An incoming
+`X-Request-ID` is retained; otherwise, the application generates one.
+
+Asynchronous context variables carry request, run, attempt, stage, and dependency fields into
+existing logger calls. API and CLI analyses therefore use the same JSON format without passing
+these identifiers through every function. External biomedical requests add a bounded dependency
+name. Retried requests emit warning events with the retry number and outcome. The CLI `--verbose`
+option changes its logging threshold to debug, while noisy third-party HTTP libraries remain at
+warning level.
 
 Raw IP addresses and inferred locations are retained in logs by requirement. Access to the log
 backend and its retention period must be configured before production traffic is accepted. These
@@ -36,14 +67,42 @@ fields are not exported as metric labels or trace attributes.
 
 ## Metrics
 
-Prometheus scrapes the API's `/metrics/` endpoint every 15 seconds. Metric labels contain bounded
-operational categories and route templates. Drug names, disease names, raw paths, run identifiers,
-IP addresses, locations, URLs, and exception messages are excluded.
+Prometheus scrapes the API's `/metrics/` endpoint every 15 seconds and stores the resulting time
+series in its named volume. Metric labels use bounded operational categories and route templates.
+Drug names, disease names, raw paths, run identifiers, IP addresses, locations, URLs, and exception
+messages are excluded.
 
-The dashboard shows HTTP request rate and latency, analysis outcomes and duration, active analyses,
-dependency outcomes and latency, and report-integrity rejections. The current values are
-measurements rather than SLAs. Numerical availability, completion, and latency objectives will be
-set after a representative baseline is collected.
+| Metric group | Measurement |
+|---|---|
+| HTTP | Request count and duration by method, route template, and status class. |
+| Analysis | Terminal outcome, duration, and currently active attempts by submission source and execution mode. |
+| Dependency | Request outcome and duration by biomedical dependency and HTTP method. |
+| Integrity | Reports classified as rejected before publication. |
+
+The Prometheus values come from the running API process. CLI commands emit structured logs and
+persist their run records, but their process-local metrics are not scraped by this stack. Use a web
+or API analysis when demonstrating the Grafana panels.
+
+Grafana reads Prometheus through a provisioned data source. Its service dashboard shows HTTP
+request rate, HTTP latency at the 95th percentile, analysis outcomes, analysis duration at the 95th
+percentile, active analyses, dependency outcomes, dependency latency, and report-integrity
+rejections. The dashboard refreshes every 15 seconds and initially displays the preceding six
+hours.
+
+## Accepted limitations
+
+The current implementation retains the following behavior:
+
+- An API background analysis inherits its submission request context, so its logs can continue to
+  contain the request ID, raw IP address, and inferred location.
+- Geolocation runs before the health, metrics, and polling exclusions are applied. The first request
+  from an uncached IP can therefore wait for the geolocation lookup.
+- The integrity-rejection metric exists, but current analysis failures are not classified as
+  integrity failures. Its Grafana panel will have no rejection series until that classification is
+  connected.
+- The report-download route is not covered by the current polling-log suppression rule.
+
+These limitations do not change report generation or persisted run results.
 
 ## Production deployment
 

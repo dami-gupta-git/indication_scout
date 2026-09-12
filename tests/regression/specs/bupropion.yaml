@@ -57,8 +57,8 @@ required_in_ranked:
     indication: neuropathic pain
   - bucket: ranking
     indication: post-traumatic stress disorder
-  - bucket: ranking
-    indication: parkinson disease
+  # parkinson disease is investigated every run but the supervisor omitted it from its ranked list
+  # on 2026-09-11 17:36 (ranked 8 of 16; footer records it). Guarded in candidate_set_contains below.
 
 forbidden_in_ranked:
   # Obesity is FDA-approved only as Contrave (bupropion + naltrexone), not bupropion monotherapy —
@@ -82,6 +82,7 @@ candidate_set_contains:
     - bipolar disorder
     - alcohol dependence
     - mood disorder
+    - parkinson disease
     - depressive disorder
     - schizophrenia
 

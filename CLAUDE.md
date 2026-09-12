@@ -22,6 +22,11 @@ At the start of every session, read the most recent `session_*.md` file in the p
 - Write only what is settled. A hypothesis that survived one test is not a finding — it needs verification across many cases, not one.
 - `for_me/findings.md` is the single source of truth for findings, decisions, and patterns — not `MEMORY.md`.
 
+## Project State Workflow
+
+- `PROJECT_STATE.md` is a chronological list of features. When a major new feature is implemented (a new agent, service, data source, gate, CI check, persistence or observability layer — not tweaks or bug fixes), append a bullet to the current dated entry, or start a new `## Update (YYYY-MM-DD)` entry if the last one is from an earlier day.
+- One bullet per feature, in the order added, with status and key files. Each entry also has `### New Patterns / Decisions` and `### Known Issues / Caveats` sections; keep them short and point to `for_me/findings.md` / `for_me/errors/errors.md` for detail.
+
 ## Session File Workflow
 
 - Session files are named `session_{datetime}.md` (e.g. `session_2026-02-28_14-31.md`) and live in the project root, one per rotation rather than one per session.

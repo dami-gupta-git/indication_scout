@@ -7,11 +7,12 @@ progress, errors, and validated results for the polling and report routes.
 import asyncio
 import logging
 import os
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from functools import lru_cache
 
-from fastapi import APIRouter, HTTPException, Request, Response, status
+from fastapi import APIRouter, HTTPException, Response, status
 from fastapi.responses import PlainTextResponse
 from sqlalchemy.orm import sessionmaker
 
@@ -27,6 +28,12 @@ from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import resolve_drug_name
 from indication_scout.db.session import make_session_factory
 from indication_scout.helpers.drug_helpers import normalize_drug_name
+from indication_scout.metrics import analysis_finished, analysis_started
+from indication_scout.observability import (
+    bind_log_context,
+    log_context,
+    reset_log_context,
+)
 from indication_scout.report.format_report import format_report
 from indication_scout.services.analysis_runner import run_analysis
 from indication_scout.services.job_store import Job, job_store
@@ -85,6 +92,11 @@ def _persist_progress(job: Job, attempt_id: str, phase: str, message: str) -> No
             stage=phase,
             attributes={"message": message},
         )
+    with log_context(stage=phase):
+        logger.info(
+            "Analysis progress",
+            extra={"event_name": "analysis.progress"},
+        )
 
 
 def _progress_from_events(events: list[AnalysisEvent]) -> list[ProgressEvent]:
@@ -113,6 +125,7 @@ async def _execute(job: Job) -> None:
                 deployment_id=deployment_id,
                 release=release,
             )
+            run = repository.get_run(job.job_id)
     except RunStateError:
         with _repository_scope() as repository:
             run = repository.get_run(job.job_id)
@@ -121,10 +134,25 @@ async def _execute(job: Job) -> None:
             return
         raise
 
+    if run is None:
+        raise RuntimeError(
+            f"Analysis run disappeared after attempt start: {job.job_id}"
+        )
+
     job.status = "running"
+    started = time.monotonic()
+    outcome = "error"
+    analysis_started(run.submission_source, run.execution_mode)
+    log_token = bind_log_context(
+        run_id=job.job_id,
+        attempt_id=attempt.attempt_id,
+        execution_mode=run.execution_mode,
+        submission_source=run.submission_source,
+    )
+    logger.info("Analysis started", extra={"event_name": "analysis.started"})
     # Bind this attempt's durable progress feed for the duration of the run. Reset in finally
     # so the context variable does not leak into other analyses.
-    token = set_emitter(
+    emitter_token = set_emitter(
         lambda phase, message: _persist_progress(
             job, attempt.attempt_id, phase, message
         )
@@ -143,6 +171,7 @@ async def _execute(job: Job) -> None:
                 )
             job.result = seed
             job.status = "done"
+            outcome = "done"
             return
         output, _ = await run_analysis(job.drug_name)
         with _repository_scope() as repository:
@@ -151,11 +180,13 @@ async def _execute(job: Job) -> None:
             )
         job.result = output
         job.status = "done"
+        outcome = "done"
     except asyncio.CancelledError:
         with _repository_scope() as repository:
             repository.cancel_attempt(job.job_id, attempt.attempt_id)
         job.status = "cancelled"
-        logger.info("Job %s cancelled", job.job_id)
+        outcome = "cancelled"
+        logger.info("Analysis cancelled", extra={"event_name": "analysis.cancelled"})
         raise
     except Exception as exc:  # noqa: BLE001 — surface any runner failure to the client
         persisted_error = f"{type(exc).__name__}: {exc}"
@@ -170,28 +201,34 @@ async def _execute(job: Job) -> None:
             )
         job.error = str(exc)
         job.status = "error"
-        logger.exception("Job %s failed", job.job_id)
+        logger.exception(
+            "Analysis failed",
+            extra={"event_name": "analysis.failed", "outcome": "error"},
+        )
     finally:
-        reset_emitter(token)
+        duration = time.monotonic() - started
+        analysis_finished(
+            run.submission_source,
+            run.execution_mode,
+            outcome,
+            duration,
+        )
+        logger.info(
+            "Analysis attempt finished",
+            extra={
+                "event_name": "analysis.finished",
+                "duration_seconds": duration,
+                "outcome": outcome,
+            },
+        )
+        reset_emitter(emitter_token)
+        reset_log_context(log_token)
 
 
 @router.post("", status_code=status.HTTP_202_ACCEPTED)
-async def create_analysis(
-    req: AnalysisRequest, request: Request
-) -> AnalysisCreatedResponse:
+async def create_analysis(req: AnalysisRequest) -> AnalysisCreatedResponse:
     """Launch a background analysis; return its job id immediately."""
     drug = normalize_drug_name(req.drug_name)
-    forwarded = request.headers.get("x-forwarded-for")
-    client_ip = (
-        forwarded.split(",")[0].strip()
-        if forwarded
-        else (request.client.host if request.client else "unknown")
-    )
-    logger.warning(
-        "[VISITOR-LOCATION] ******ANALYSIS REQUESTED FOR DRUG=%s FROM %s******",
-        drug,
-        client_ip,
-    )
     # Fail fast: one quick Open Targets search confirms the drug exists before we spin up
     # a job. Seed-report drugs skip the check (they don't need OT resolution).
     seed = load_fresh_seed_report(drug)

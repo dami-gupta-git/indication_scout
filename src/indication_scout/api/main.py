@@ -1,24 +1,36 @@
 """FastAPI application."""
 
 import logging
+import time
+import uuid
 from collections.abc import Awaitable, Callable
 
 import httpx
 from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from prometheus_client import make_asgi_app
 
 from indication_scout import __version__
 from indication_scout.api.routes.analyses import router as analyses_router
 from indication_scout.api.routes.drilldown import router as drilldown_router
 from indication_scout.api.routes.examples import router as examples_router
 from indication_scout.api.routes.examples import seed_example_cache
+from indication_scout.config import get_settings
 from indication_scout.constants import (
     BOT_USER_AGENT_MARKERS,
     CORS_ALLOW_ORIGINS,
     FRONTEND_DIST_DIR,
     GEO_API_FIELDS,
 )
+from indication_scout.metrics import record_http_request
+from indication_scout.observability import (
+    bind_log_context,
+    configure_logging,
+    reset_log_context,
+)
+
+configure_logging(get_settings().log_level)
 
 logger = logging.getLogger(__name__)
 
@@ -88,36 +100,59 @@ def _is_bot_user_agent(user_agent: str) -> bool:
 async def _log_client_ip(
     request: Request, call_next: Callable[[Request], Awaitable[Response]]
 ) -> Response:
-    # Skip the high-frequency analysis polling endpoint to avoid log spam.
-    if not request.url.path.startswith("/api/analyses/"):
-        # Behind Railway's proxy the real client IP is the first entry of X-Forwarded-For;
-        # fall back to the direct peer when the header is absent (e.g. local dev).
-        forwarded = request.headers.get("x-forwarded-for")
-        client_ip = (
-            forwarded.split(",")[0].strip()
-            if forwarded
-            else (request.client.host if request.client else "unknown")
-        )
-        location, is_datacenter = await _geolocate(client_ip)
-        user_agent = request.headers.get("user-agent", "")
-        # A request is automated if its UA self-identifies as a crawler OR it originates
-        # from a hosting/proxy IP (data-center traffic is never a human browser).
-        is_bot = _is_bot_user_agent(user_agent) or is_datacenter
-        logger.warning(
-            "[%s] request from %s (%s): %s %s — UA: %s",
-            "BOT" if is_bot else "VISITOR-LOCATION",
-            client_ip,
-            location or "unknown location",
-            request.method,
-            request.url.path,
-            user_agent or "none",
-        )
-    return await call_next(request)
+    started = time.perf_counter()
+    request_id = request.headers.get("x-request-id") or uuid.uuid4().hex
+    forwarded = request.headers.get("x-forwarded-for")
+    client_ip = (
+        forwarded.split(",")[0].strip()
+        if forwarded
+        else (request.client.host if request.client else "unknown")
+    )
+    location, is_datacenter = await _geolocate(client_ip)
+    user_agent = request.headers.get("user-agent", "")
+    is_bot = _is_bot_user_agent(user_agent) or is_datacenter
+    token = bind_log_context(
+        request_id=request_id,
+        client_ip=client_ip,
+        client_location=location or None,
+        client_is_automated=is_bot,
+    )
+    response: Response | None = None
+    status_code = 500
+    try:
+        response = await call_next(request)
+        status_code = response.status_code
+        response.headers["x-request-id"] = request_id
+        return response
+    finally:
+        route_object = request.scope.get("route")
+        route = getattr(route_object, "path", "unmatched")
+        duration = time.perf_counter() - started
+        if route not in {"/health", "/metrics"}:
+            record_http_request(request.method, route, status_code, duration)
+        # Polling is measured but omitted from logs because the UI requests it frequently.
+        if route not in {"/health", "/metrics"} and not (
+            request.method == "GET"
+            and route in {"/api/analyses/{job_id}", "/api/analyses/{job_id}/report"}
+        ):
+            logger.info(
+                "HTTP request completed",
+                extra={
+                    "event_name": "http.request.completed",
+                    "duration_seconds": duration,
+                    "http_method": request.method,
+                    "http_route": route,
+                    "http_status_code": status_code,
+                    "outcome": "success" if status_code < 500 else "error",
+                },
+            )
+        reset_log_context(token)
 
 
 app.include_router(analyses_router)
 app.include_router(drilldown_router)
 app.include_router(examples_router)
+app.mount("/metrics", make_asgi_app(), name="metrics")
 
 
 @app.on_event("startup")

@@ -1,0 +1,67 @@
+"""Tests for bounded Prometheus application metrics."""
+
+from unittest.mock import AsyncMock, patch
+
+from fastapi.testclient import TestClient
+
+from indication_scout.metrics import (
+    ACTIVE_ANALYSES,
+    ANALYSIS_RUNS,
+    DEPENDENCY_REQUESTS,
+    HTTP_REQUESTS,
+    analysis_finished,
+    analysis_started,
+    record_dependency_request,
+    record_http_request,
+)
+
+
+def test_http_metric_records_route_template_and_status_class():
+    counter = HTTP_REQUESTS.labels("GET", "/api/analyses/{job_id}", "2xx")
+    before = counter._value.get()
+
+    record_http_request("GET", "/api/analyses/{job_id}", 200, 0.25)
+
+    assert counter._value.get() == before + 1
+
+
+def test_dependency_metric_bounds_unknown_labels():
+    counter = DEPENDENCY_REQUESTS.labels("other", "OTHER", "other")
+    before = counter._value.get()
+
+    record_dependency_request("user-value", "CONNECT", "new-outcome", 0.5)
+
+    assert counter._value.get() == before + 1
+
+
+def test_analysis_metrics_track_active_and_terminal_attempts():
+    active = ACTIVE_ANALYSES.labels("api", "live")
+    completed = ANALYSIS_RUNS.labels("api", "live", "done")
+    active_before = active._value.get()
+    completed_before = completed._value.get()
+
+    analysis_started("api", "live")
+    assert active._value.get() == active_before + 1
+
+    analysis_finished("api", "live", "done", 2.0)
+
+    assert active._value.get() == active_before
+    assert completed._value.get() == completed_before + 1
+
+
+def test_api_exposes_metrics_and_returns_request_id():
+    from indication_scout.api.main import app
+
+    with patch(
+        "indication_scout.api.main._geolocate",
+        new=AsyncMock(return_value=("New York, New York, United States", False)),
+    ):
+        with TestClient(app) as client:
+            health = client.get("/health", headers={"x-request-id": "request-1"})
+            metrics = client.get("/metrics/")
+
+    assert health.status_code == 200
+    assert health.json() == {"status": "healthy", "version": "0.1.0"}
+    assert health.headers["x-request-id"] == "request-1"
+    assert metrics.status_code == 200
+    assert "indication_scout_http_requests_total" in metrics.text

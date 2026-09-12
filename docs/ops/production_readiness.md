@@ -10,7 +10,7 @@ monitoring.
 |---|---|---|
 | Core workflow | The application provides live biomedical retrieval, specialist agents, typed data contracts, source identifiers, caching, retries, a CLI, an API, and a React interface. | The workflow is sufficient for a controlled demonstration. |
 | Deployment | The repository contains a Docker build, Railway configuration, database migrations, static frontend serving, and a health endpoint. | The health check confirms that the web process responds but does not check the database, model, cache, credentials, or upstream services. |
-| Scientific reliability | Deterministic evidence gates, source-derived identifiers, structural regression tests, snapshots, and pipeline replay reduce unsupported output. | Overall correctness, judge accuracy, and run-to-run stability do not yet have completed quantitative baselines. Several scientific errors remain documented in [the error register](../for_me/errors/errors.md). |
+| Scientific reliability | Deterministic evidence gates, source-derived identifiers, structural regression tests, snapshots, and pipeline replay reduce unsupported output. | Overall correctness, judge accuracy, and run-to-run stability do not yet have completed quantitative baselines. Several scientific errors remain documented in [the error register](../../for_me/errors/errors.md). |
 | Testing | CI runs unit, frontend, deterministic regression, live end-to-end regression, structural, precision, and seed-recall checks. | Integration tests are not part of the default CI gate, and the live suite depends on external services and an LLM. |
 | Job execution | API and CLI lifecycle state, attempts, progress events, and validated results are persisted in PostgreSQL. | Execution remains in the API or CLI process. There is no durable queue, restart recovery, expiration, or multi-instance coordination. |
 | Security and cost control | Secrets are environment-driven, and production frontend requests use the same origin as the API. | No repository-level authentication, authorization, user isolation, request throttling, quotas, or protection against paid-analysis abuse is present. |
@@ -21,7 +21,7 @@ monitoring.
 | Clinical use | The interface and reports state that the output is for research purposes and not for clinical use. | Clinical use would require validated performance, reproducible evidence snapshots, auditability, security review, change control, and regulatory assessment. |
 
 The repository classifies the package as alpha in
-[`pyproject.toml`](../pyproject.toml), which matches its current state.
+[`pyproject.toml`](../../pyproject.toml), which matches its current state.
 
 ## Classification by use
 

@@ -10,7 +10,9 @@ import re
 import sys
 import time
 from abc import ABC, abstractmethod
+from collections.abc import Awaitable, Callable
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
 from typing import Any, Self
 
@@ -18,6 +20,8 @@ import aiohttp
 
 from indication_scout.config import get_settings
 from indication_scout.constants import DEFAULT_CACHE_DIR, RETRY_BACKOFF_SCHEDULE
+from indication_scout.metrics import record_dependency_request
+from indication_scout.observability import bind_log_context, reset_log_context
 
 logger = logging.getLogger("indication_scout.data_sources")
 
@@ -103,6 +107,22 @@ _CONTEXT_PRIORITY_KEYS: tuple[str, ...] = (
     "expr",
 )
 _CONTEXT_MAX_LEN: int = 200
+
+
+def _bind_dependency_context(
+    function: Callable[..., Awaitable[Any]],
+) -> Callable[..., Awaitable[Any]]:
+    """Bind a client's dependency name around one asynchronous request."""
+
+    @wraps(function)
+    async def wrapped(client: Any, *args: Any, **kwargs: Any) -> Any:
+        token = bind_log_context(dependency=client._source_name)
+        try:
+            return await function(client, *args, **kwargs)
+        finally:
+            reset_log_context(token)
+
+    return wrapped
 
 
 def _build_context_string(
@@ -212,6 +232,7 @@ class BaseClient(ABC):
 
     # -- HTTP requests with retry --------------------------------------------
 
+    @_bind_dependency_context
     async def _request(
         self,
         method: str,
@@ -231,10 +252,10 @@ class BaseClient(ABC):
         safe_url = redact_sensitive_log_value(url)
 
         for attempt in range(self.max_retries + 1):
+            _api_t0 = time.perf_counter()
             try:
                 session = await self._get_session()
 
-                _api_t0 = time.perf_counter()
                 if method.upper() == "GET":
                     resp = await session.get(url, params=params, headers=headers)
                 else:
@@ -248,6 +269,9 @@ class BaseClient(ABC):
 
                 # Retry on 429/5xx
                 if resp.status in {429, 500, 502, 503, 504}:
+                    record_dependency_request(
+                        self._source_name, method, "retryable_status", _elapsed
+                    )
                     if attempt < self.max_retries:
                         # Short exponential backoff starting at 2s (2s/4s/8s). These are
                         # per-second rate limits (e.g. NCBI 10 req/s), so a 429 clears within
@@ -265,6 +289,12 @@ class BaseClient(ABC):
                             delay,
                             attempt + 1,
                             self.max_retries,
+                            extra={
+                                "event_name": "dependency.retry",
+                                "dependency": self._source_name,
+                                "retry_count": attempt + 1,
+                                "outcome": "retryable_status",
+                            },
                         )
                         await asyncio.sleep(delay)
                         continue
@@ -286,6 +316,9 @@ class BaseClient(ABC):
                     raise err
 
                 if resp.status >= 400:
+                    record_dependency_request(
+                        self._source_name, method, "error_status", _elapsed
+                    )
                     body = await resp.text()
                     raise DataSourceError(
                         self._source_name,
@@ -293,15 +326,28 @@ class BaseClient(ABC):
                         resp.status,
                     )
 
+                record_dependency_request(
+                    self._source_name, method, "success", _elapsed
+                )
                 return await resp.text() if as_text else await resp.json()
 
             except TimeoutError:
+                _elapsed = time.perf_counter() - _api_t0
+                record_dependency_request(
+                    self._source_name, method, "timeout", _elapsed
+                )
                 last_error = DataSourceError(self._source_name, "Request timeout")
+                retry_outcome = "timeout"
             except aiohttp.ClientError as e:
+                _elapsed = time.perf_counter() - _api_t0
+                record_dependency_request(
+                    self._source_name, method, "connection_error", _elapsed
+                )
                 last_error = DataSourceError(
                     self._source_name,
                     f"Connection error: {summarize_http_exception(e)}",
                 )
+                retry_outcome = "connection_error"
 
             if attempt < self.max_retries:
                 delay = self.retry_backoff_schedule[
@@ -319,6 +365,12 @@ class BaseClient(ABC):
                     delay,
                     attempt + 1,
                     self.max_retries,
+                    extra={
+                        "event_name": "dependency.retry",
+                        "dependency": self._source_name,
+                        "retry_count": attempt + 1,
+                        "outcome": retry_outcome,
+                    },
                 )
                 await asyncio.sleep(delay)
 

@@ -115,6 +115,19 @@ jobs:
       - name: Seed-phase candidate recall
         run: make seed-recall
 
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      # Builds the production image, runs it against a fresh pgvector Postgres so the
+      # entrypoint applies the migrations, then checks /health and that the migrated
+      # schema matches the ORM models.
+      - name: Production container smoke check
+        run: make container-smoke
+
   frontend:
     runs-on: ubuntu-latest
     timeout-minutes: 15

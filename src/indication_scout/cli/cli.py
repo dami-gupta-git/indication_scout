@@ -49,12 +49,14 @@ async def _run_for_drug(
     # base_client.py calls get_settings() at import time.
     from indication_scout.db.session import make_session_factory
     from indication_scout.helpers.drug_helpers import normalize_drug_name
+    from indication_scout.observability import bind_log_context, reset_log_context
     from indication_scout.services.analysis_runner import run_analysis
     from indication_scout.services.progress import reset_emitter, set_emitter
     from indication_scout.services.run_repository import AnalysisRunRepository
     from indication_scout.tracing import setup_tracing, shutdown_tracing
 
     session_factory = make_session_factory()
+    log_token = None
     setup_tracing()
     try:
         # Normalize at the entry point so filenames/logs below see the same lowercased form
@@ -80,6 +82,12 @@ async def _run_for_drug(
                 release=os.environ.get("RAILWAY_GIT_COMMIT_SHA"),
             )
             attempt_id = attempt.attempt_id
+        log_token = bind_log_context(
+            run_id=run_id,
+            attempt_id=attempt_id,
+            execution_mode="live",
+            submission_source="cli",
+        )
         logger.info("Created durable CLI run %s", run_id)
 
         def persist_progress(phase: str, message: str) -> None:
@@ -147,6 +155,8 @@ async def _run_for_drug(
         click.echo(f"Report:    {md_path}")
 
     finally:
+        if log_token is not None:
+            reset_log_context(log_token)
         session_factory.kw["bind"].dispose()
         shutdown_tracing()
 
@@ -161,12 +171,14 @@ async def _run_for_pair(
     # Imports deferred until after _load_env() runs in main() (base_client.py reads settings at import time).
     from indication_scout.db.session import make_session_factory
     from indication_scout.helpers.drug_helpers import normalize_drug_name
+    from indication_scout.observability import bind_log_context, reset_log_context
     from indication_scout.services.analysis_runner import run_pair_analysis
     from indication_scout.services.progress import reset_emitter, set_emitter
     from indication_scout.services.run_repository import AnalysisRunRepository
     from indication_scout.tracing import setup_tracing, shutdown_tracing
 
     session_factory = make_session_factory()
+    log_token = None
     setup_tracing()
     try:
         drug = normalize_drug_name(drug)
@@ -192,6 +204,12 @@ async def _run_for_pair(
                 release=os.environ.get("RAILWAY_GIT_COMMIT_SHA"),
             )
             attempt_id = attempt.attempt_id
+        log_token = bind_log_context(
+            run_id=run_id,
+            attempt_id=attempt_id,
+            execution_mode="live",
+            submission_source="cli",
+        )
         logger.info("Created durable CLI run %s", run_id)
 
         def persist_progress(phase: str, message: str) -> None:
@@ -257,6 +275,8 @@ async def _run_for_pair(
         logger.info("Finished pair %s x %s -> %s", drug, disease, md_path)
         click.echo(f"Report:    {md_path}")
     finally:
+        if log_token is not None:
+            reset_log_context(log_token)
         session_factory.kw["bind"].dispose()
         shutdown_tracing()
 
@@ -265,10 +285,10 @@ async def _run_for_pair(
 @click.option("-v", "--verbose", is_flag=True, help="Enable debug logging.")
 def cli(verbose: bool) -> None:
     """IndicationScout — agentic drug repurposing."""
-    logging.basicConfig(
-        level=logging.DEBUG if verbose else logging.INFO,
-        format="%(asctime)s %(name)s %(levelname)s %(message)s",
-    )
+    from indication_scout.config import get_settings
+    from indication_scout.observability import configure_logging
+
+    configure_logging(logging.DEBUG if verbose else get_settings().log_level)
     # Quiet third-party per-request chatter that drowns out our own banners.
     # Keep WARNING+ so genuine failures still surface.
     for noisy in ("httpx", "httpcore", "urllib3", "openai", "anthropic"):
