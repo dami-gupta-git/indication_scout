@@ -103,7 +103,8 @@ required_ncts_surfaced:
     indication: type 1 diabetes mellitus
     section: relevant
     ncts:
-      - NCT05205928
+      # NCT05205928 (semaglutide vs placebo, both arms on closed-loop insulin) flips between relevant and
+      # contaminated: the prompt has no rule for add-on designs with a shared background. Not pinned.
       - NCT06057077
   - bucket: literature_coverage
     indication: stroke

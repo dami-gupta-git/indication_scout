@@ -4,10 +4,11 @@ import uuid
 from datetime import UTC, date, datetime
 from typing import Any, Literal
 
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+from indication_scout.services.cost_tracking import CostSnapshot
 from indication_scout.sqlalchemy.analysis_runs import (
     ANALYSIS_KINDS,
     ATTEMPT_STATUSES,
@@ -15,6 +16,7 @@ from indication_scout.sqlalchemy.analysis_runs import (
     EXECUTION_MODES,
     SUBMISSION_SOURCES,
     AnalysisAttempt,
+    AnalysisCandidateCost,
     AnalysisEvent,
     AnalysisRun,
 )
@@ -274,6 +276,60 @@ class AnalysisRunRepository:
             raise
         self._db.refresh(run)
         return run
+
+    def record_attempt_cost(
+        self, run_id: str, attempt_id: str, snapshot: CostSnapshot
+    ) -> AnalysisAttempt:
+        """Persist the latest measured LLM usage for a running attempt."""
+        try:
+            self._require_run(run_id)
+            attempt = self._require_attempt(run_id, attempt_id, for_update=True)
+            self._require_attempt_status(attempt, {"running"})
+            total = snapshot.total
+            overhead = snapshot.overhead
+            attempt.llm_input_tokens = total.input_tokens
+            attempt.llm_output_tokens = total.output_tokens
+            attempt.llm_cache_read_tokens = total.cache_read_tokens
+            attempt.llm_cache_write_tokens = (
+                total.cache_write_5m_tokens + total.cache_write_1h_tokens
+            )
+            attempt.llm_pricing_complete = not total.unpriced_models
+            attempt.llm_cost_usd = total.cost_usd if not total.unpriced_models else None
+            attempt.llm_overhead_cost_usd = (
+                overhead.cost_usd if not overhead.unpriced_models else None
+            )
+            self._db.execute(
+                delete(AnalysisCandidateCost).where(
+                    AnalysisCandidateCost.attempt_id == attempt_id
+                )
+            )
+            for candidate_name, candidate in snapshot.candidates.items():
+                self._db.add(
+                    AnalysisCandidateCost(
+                        run_id=run_id,
+                        attempt_id=attempt_id,
+                        candidate_name=candidate_name,
+                        input_tokens=candidate.input_tokens,
+                        output_tokens=candidate.output_tokens,
+                        cache_read_tokens=candidate.cache_read_tokens,
+                        cache_write_tokens=(
+                            candidate.cache_write_5m_tokens
+                            + candidate.cache_write_1h_tokens
+                        ),
+                        cost_usd=(
+                            candidate.cost_usd
+                            if not candidate.unpriced_models
+                            else None
+                        ),
+                        pricing_complete=not candidate.unpriced_models,
+                    )
+                )
+            self._db.commit()
+        except Exception:
+            self._db.rollback()
+            raise
+        self._db.refresh(attempt)
+        return attempt
 
     def cancel_pending_run(self, run_id: str) -> AnalysisRun:
         """Atomically cancel a pending run before an attempt starts."""

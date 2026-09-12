@@ -1,12 +1,12 @@
 # Service levels
 
-This service-level commitment applies to the monitored IndicationScout API and browser interface
-from September 11, 2026. It has no financial remedy. Compliance is measured over a rolling 30-day
-window from Prometheus metrics collected from the API process.
+This document defines provisional service levels for the local development environment. They
+demonstrate measurement and error-budget behavior but are not production commitments. Compliance
+is displayed over a rolling 24-hour window from Prometheus metrics collected from the API process.
 
-## Service-level agreement
+## Proposed service-level agreement
 
-The active external commitment is intentionally lower than the internal operating targets.
+The proposed external commitments are lower than the internal operating targets.
 
 | Commitment | Target | Measurement |
 |---|---:|---|
@@ -22,7 +22,7 @@ observations is reported as no data, not as a pass.
 
 The internal objectives provide earlier warning before the external commitment is breached.
 
-| Indicator | Objective | Error budget over 30 days |
+| Indicator | Objective | Error budget over 24 hours |
 |---|---:|---:|
 | API availability | 99.5% | The API may be unreachable for 0.5% of scheduled scrapes. |
 | Analysis success | 95% | 5% of eligible live API analyses may end in error or interruption. |
@@ -34,13 +34,24 @@ failures are included when they cause an eligible API analysis to fail.
 
 ## Alerts
 
-The service-level dashboard displays 30-day compliance and error-budget consumption. Error-budget
-alerts use shorter windows so a fast regression appears before the 30-day objective is exhausted.
+The service-level dashboard displays 24-hour compliance and error-budget consumption. Error-budget
+alerts use shorter windows so a fast regression appears before the 24-hour objective is exhausted.
 The API availability budget uses a one-hour burn rate; analysis success and latency use six-hour
 burn rates. Each alert enters firing state after the observed burn rate remains above twice the
 sustainable rate for five minutes.
 
 Notifications are muted. Alert evaluation and alert state remain visible in Grafana.
+
+Development failures and deliberate fault tests are included in the local measurements. The
+dashboard identifies this scope at the top of the page. Production service levels require a
+separate production telemetry source and a representative baseline.
+
+## Cost baseline
+
+Cost is measured without a budget objective. The service-level dashboard reports total measured
+LLM cost, average cost per terminal attempt, average cost per candidate, and the shared overhead for
+each attempt. These measurements include terminal API and CLI attempts in the selected dashboard
+window. A cost objective can be defined after enough representative live runs have been collected.
 
 ## Measurement limits
 

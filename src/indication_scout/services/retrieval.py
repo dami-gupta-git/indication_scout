@@ -1092,17 +1092,12 @@ class RetrievalService:
         self.insert_abstracts(pairs, db)
         _dt_insert = time.perf_counter() - _t_insert
 
-        # logger.warning(
-        #     "[TIMING] fetch_and_cache breakdown: search=%.1fs fetch_abstracts=%.1fs "
-        #     "embed=%.1fs(%d new) insert=%.1fs | %d total pmids, %d stored",
-        #     _dt_search,
-        #     _dt_fetch,
-        #     _dt_embed,
-        #     len(abstracts_with_text),
-        #     _dt_insert,
-        #     len(all_pmids),
-        #     len(stored),
-        # )
+        logger.info(
+            "[LIT] fetch_and_cache: %d pmids, %d already stored, %d new abstracts embedded",
+            len(all_pmids),
+            len(stored),
+            len(abstracts_with_text),
+        )
 
         return all_pmids
 

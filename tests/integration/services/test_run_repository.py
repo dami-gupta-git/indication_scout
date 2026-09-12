@@ -1,15 +1,85 @@
 """Database integration tests for durable analysis-run persistence."""
 
 from datetime import UTC, date, datetime, timedelta
+from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+from sqlalchemy import select
 
 from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+from indication_scout.services.cost_tracking import CostTracker, calculate_usage
 from indication_scout.services.run_repository import (
     AnalysisRunRepository,
     RunStateError,
 )
+from indication_scout.sqlalchemy.analysis_runs import AnalysisCandidateCost
+
+
+def test_attempt_cost_persists_run_and_candidate_totals(run_db_session):
+    repository = AnalysisRunRepository(run_db_session)
+    run = repository.create_run(
+        "semaglutide",
+        "live",
+        submission_source="cli",
+        analysis_kind="find",
+        disease_name=None,
+        date_before=None,
+        run_id="c" * 32,
+    )
+    attempt = repository.start_attempt(
+        run.run_id,
+        worker_id=None,
+        deployment_id=None,
+        release=None,
+        attempt_id="d" * 32,
+    )
+    tracker = CostTracker()
+    tracker.record(
+        calculate_usage(
+            model="claude-sonnet-4-6",
+            input_tokens=100,
+            output_tokens=20,
+            cache_read_tokens=30,
+            cache_write_5m_tokens=10,
+            cache_write_1h_tokens=0,
+        ),
+        None,
+    )
+    tracker.record(
+        calculate_usage(
+            model="claude-opus-4-6",
+            input_tokens=200,
+            output_tokens=40,
+            cache_read_tokens=60,
+            cache_write_5m_tokens=20,
+            cache_write_1h_tokens=0,
+        ),
+        "heart failure",
+    )
+
+    persisted = repository.record_attempt_cost(
+        run.run_id, attempt.attempt_id, tracker.snapshot()
+    )
+    candidate = run_db_session.scalars(select(AnalysisCandidateCost)).one()
+
+    assert persisted.llm_input_tokens == 300
+    assert persisted.llm_output_tokens == 60
+    assert persisted.llm_cache_read_tokens == 90
+    assert persisted.llm_cache_write_tokens == 30
+    assert persisted.llm_cost_usd == Decimal("0.00280150")
+    assert persisted.llm_overhead_cost_usd == Decimal("0.00064650")
+    assert persisted.llm_pricing_complete is True
+    assert candidate.candidate_cost_id == 1
+    assert candidate.run_id == run.run_id
+    assert candidate.attempt_id == attempt.attempt_id
+    assert candidate.candidate_name == "heart failure"
+    assert candidate.input_tokens == 200
+    assert candidate.output_tokens == 40
+    assert candidate.cache_read_tokens == 60
+    assert candidate.cache_write_tokens == 20
+    assert candidate.cost_usd == Decimal("0.00215500")
+    assert candidate.pricing_complete is True
 
 
 def test_create_run_persists_initial_state_and_event(run_db_session):

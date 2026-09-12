@@ -331,9 +331,9 @@ groups:
                 uid: indication-scout-prometheus
               editorMode: code
               expr: >-
-                ((sum(increase(indication_scout_analysis_duration_seconds_count{submission_source="api",execution_mode="live",outcome="done"}[6h]))
-                - sum(increase(indication_scout_analysis_duration_seconds_bucket{submission_source="api",execution_mode="live",outcome="done",le="600.0"}[6h])))
-                / sum(increase(indication_scout_analysis_duration_seconds_count{submission_source="api",execution_mode="live",outcome="done"}[6h])))
+                ((sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source="api",execution_mode="live",outcome="done"}[6h]))
+                - sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source="api",execution_mode="live",outcome="done",le="600.0"}[6h])))
+                / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source="api",execution_mode="live",outcome="done"}[6h])))
                 / 0.05
               instant: true
               intervalMs: 10000

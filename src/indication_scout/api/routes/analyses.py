@@ -35,6 +35,11 @@ from indication_scout.observability import (
 )
 from indication_scout.report.format_report import format_report
 from indication_scout.services.analysis_runner import run_analysis
+from indication_scout.services.cost_tracking import (
+    CostTracker,
+    bind_cost_tracker,
+    reset_cost_tracker,
+)
 from indication_scout.services.job_store import Job, job_store
 from indication_scout.services.progress import reset_emitter, set_emitter
 from indication_scout.services.run_repository import (
@@ -144,6 +149,8 @@ async def _execute(job: Job) -> None:
         submission_source=run.submission_source,
     )
     logger.info("Analysis started", extra={"event_name": "analysis.started"})
+    cost_tracker = CostTracker()
+    cost_token = bind_cost_tracker(cost_tracker)
     # Bind this attempt's durable progress feed for the duration of the run. Reset in finally
     # so the context variable does not leak into other analyses.
     emitter_token = set_emitter(
@@ -160,6 +167,9 @@ async def _execute(job: Job) -> None:
             )
             await asyncio.sleep(SEED_REPORT_SPINNER_SECONDS)
             with _repository_scope() as repository:
+                repository.record_attempt_cost(
+                    job.job_id, attempt.attempt_id, cost_tracker.snapshot()
+                )
                 repository.complete_validated_attempt(
                     job.job_id, attempt.attempt_id, seed
                 )
@@ -169,6 +179,9 @@ async def _execute(job: Job) -> None:
             return
         output, _ = await run_analysis(job.drug_name)
         with _repository_scope() as repository:
+            repository.record_attempt_cost(
+                job.job_id, attempt.attempt_id, cost_tracker.snapshot()
+            )
             repository.complete_validated_attempt(
                 job.job_id, attempt.attempt_id, output
             )
@@ -177,6 +190,9 @@ async def _execute(job: Job) -> None:
         outcome = "done"
     except asyncio.CancelledError:
         with _repository_scope() as repository:
+            repository.record_attempt_cost(
+                job.job_id, attempt.attempt_id, cost_tracker.snapshot()
+            )
             repository.cancel_attempt(job.job_id, attempt.attempt_id)
         job.status = "cancelled"
         outcome = "cancelled"
@@ -185,6 +201,9 @@ async def _execute(job: Job) -> None:
     except Exception as exc:  # noqa: BLE001 — surface any runner failure to the client
         persisted_error = f"{type(exc).__name__}: {exc}"
         with _repository_scope() as repository:
+            repository.record_attempt_cost(
+                job.job_id, attempt.attempt_id, cost_tracker.snapshot()
+            )
             repository.fail_attempt(
                 job.job_id,
                 attempt.attempt_id,
@@ -217,6 +236,7 @@ async def _execute(job: Job) -> None:
             },
         )
         reset_emitter(emitter_token)
+        reset_cost_tracker(cost_token)
         reset_log_context(log_token)
 
 

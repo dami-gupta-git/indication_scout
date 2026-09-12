@@ -1,6 +1,7 @@
 """SQLAlchemy models for durable analysis-run lifecycle records."""
 
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
@@ -12,6 +13,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -125,6 +127,17 @@ class AnalysisAttempt(Base):
         DateTime(timezone=True), nullable=False
     )
     duration_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    llm_input_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    llm_output_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    llm_cache_read_tokens: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    llm_cache_write_tokens: Mapped[int | None] = mapped_column(
+        BigInteger, nullable=True
+    )
+    llm_cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(16, 8), nullable=True)
+    llm_overhead_cost_usd: Mapped[Decimal | None] = mapped_column(
+        Numeric(16, 8), nullable=True
+    )
+    llm_pricing_complete: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     error_code: Mapped[str | None] = mapped_column(String(100), nullable=True)
     error_message: Mapped[str | None] = mapped_column(Text, nullable=True)
     retryable: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
@@ -165,3 +178,36 @@ class AnalysisEvent(Base):
     duration_ms: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     dependency: Mapped[str | None] = mapped_column(String(100), nullable=True)
     attributes: Mapped[dict[str, Any] | None] = mapped_column(JSONB, nullable=True)
+
+
+class AnalysisCandidateCost(Base):
+    """LLM usage attributed to one candidate within an analysis attempt."""
+
+    __tablename__ = "analysis_candidate_costs"
+    __table_args__ = (
+        UniqueConstraint(
+            "attempt_id", "candidate_name", name="uq_candidate_cost_attempt_name"
+        ),
+        Index("ix_candidate_costs_run_id", "run_id"),
+    )
+
+    candidate_cost_id: Mapped[int] = mapped_column(
+        BigInteger, primary_key=True, autoincrement=True
+    )
+    run_id: Mapped[str] = mapped_column(
+        String(32),
+        ForeignKey("analysis_runs.run_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    attempt_id: Mapped[str] = mapped_column(
+        String(32),
+        ForeignKey("analysis_attempts.attempt_id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    candidate_name: Mapped[str] = mapped_column(Text, nullable=False)
+    input_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    output_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    cache_read_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    cache_write_tokens: Mapped[int] = mapped_column(BigInteger, nullable=False)
+    cost_usd: Mapped[Decimal | None] = mapped_column(Numeric(16, 8), nullable=True)
+    pricing_complete: Mapped[bool] = mapped_column(Boolean, nullable=False)

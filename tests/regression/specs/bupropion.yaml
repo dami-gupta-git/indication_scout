@@ -39,16 +39,19 @@ aliases:
   attention deficit-hyperactivity disorder:
     - attention deficit hyperactivity disorder
 
-# The stable top of the ranking.
+# The stable top of the ranking. Cocaine use disorder and alcohol dependence used to follow ADHD here;
+# the 2026-09-12 CI run ranked cocaine sixth, so only the top slot is pinned.
 ranked_order:
   bucket: ranking
   indications:
     - attention deficit-hyperactivity disorder
-    - cocaine use disorder
-    - alcohol dependence
 
 # Present in the ranked set; exact rank not pinned.
 required_in_ranked:
+  - bucket: ranking
+    indication: cocaine use disorder
+  - bucket: ranking
+    indication: alcohol dependence
   - bucket: ranking
     indication: bipolar disorder
   - bucket: ranking

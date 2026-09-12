@@ -22,3 +22,5 @@ def test_build_agent_uses_temperature_zero():
     assert kwargs["temperature"] == 0
     assert kwargs["max_tokens"] == settings.llm_max_tokens
     assert kwargs["anthropic_api_key"] == settings.anthropic_api_key
+    assert len(kwargs["callbacks"]) == 1
+    assert kwargs["callbacks"][0]._requested_model == settings.llm_model

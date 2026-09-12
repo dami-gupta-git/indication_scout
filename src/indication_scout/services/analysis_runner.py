@@ -30,6 +30,10 @@ from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.db.session import make_session_factory
 from indication_scout.helpers.drug_helpers import normalize_drug_name
 from indication_scout.report.format_report import format_report
+from indication_scout.services.cost_tracking import (
+    CostTrackingCallback,
+    candidate_cost_scope,
+)
 from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -47,6 +51,7 @@ def build_agent(
         temperature=0,
         max_tokens=settings.llm_max_tokens,
         anthropic_api_key=settings.anthropic_api_key,
+        callbacks=[CostTrackingCallback(settings.llm_model)],
     )
     svc = RetrievalService(cache_dir)
     return build_supervisor_agent(
@@ -109,6 +114,7 @@ async def run_pair_analysis(
         temperature=0,
         max_tokens=settings.llm_max_tokens,
         anthropic_api_key=settings.anthropic_api_key,
+        callbacks=[CostTrackingCallback(settings.llm_model)],
     )
     svc = RetrievalService(DEFAULT_CACHE_DIR)
     # One shared sessionmaker (single engine/pool). Only the literature agent uses a DB session, and it must get its own
@@ -126,7 +132,7 @@ async def run_pair_analysis(
 
     async def _run_literature() -> LiteratureOutput:
         # Own session for this coroutine — never shared with the concurrent trials/mechanism work.
-        with session_factory() as call_db:
+        with candidate_cost_scope(disease_name), session_factory() as call_db:
             lit_agent = build_literature_agent(
                 llm=llm,
                 svc=svc,
@@ -145,13 +151,14 @@ async def run_pair_analysis(
             target_drug=registry_drug,
             cache_dir=svc.cache_dir,
         )
-        return await run_clinical_trials_agent(
-            ct_agent,
-            registry_drug,
-            disease_name,
-            first_approval=intake.first_approval,
-            approved_indications=list(intake.approved_indications),
-        )
+        with candidate_cost_scope(disease_name):
+            return await run_clinical_trials_agent(
+                ct_agent,
+                registry_drug,
+                disease_name,
+                first_approval=intake.first_approval,
+                approved_indications=list(intake.approved_indications),
+            )
 
     async def _run_mechanism() -> MechanismOutput:
         mech_agent = build_mechanism_agent(llm=llm, date_before=date_before)
@@ -236,19 +243,20 @@ async def run_pair_analysis(
             trial_evidence = _trial_evidence_text(
                 clinical_trials.search_coverage if clinical_trials else None
             )
-            judgment = await judge_interpretive(
-                stage=stage_phrase,
-                active_programs=active_programs,
-                literature=lit_oneliner,
-                relationship=approval_relationship,
-                approved_indication=approved_ind,
-                trial_evidence=trial_evidence,
-                closure=_closure_text(clinical_trials, es),
-                terminations=_terminations_text(sig),
-                cache_dir=DEFAULT_CACHE_DIR,
-                drug=drug,
-                indication=disease_name,
-            )
+            with candidate_cost_scope(disease_name):
+                judgment = await judge_interpretive(
+                    stage=stage_phrase,
+                    active_programs=active_programs,
+                    literature=lit_oneliner,
+                    relationship=approval_relationship,
+                    approved_indication=approved_ind,
+                    trial_evidence=trial_evidence,
+                    closure=_closure_text(clinical_trials, es),
+                    terminations=_terminations_text(sig),
+                    cache_dir=DEFAULT_CACHE_DIR,
+                    drug=drug,
+                    indication=disease_name,
+                )
             blurb = CandidateBlurb(
                 stage=stage_phrase,
                 literature=lit_oneliner,

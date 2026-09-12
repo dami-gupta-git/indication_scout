@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 from indication_scout.config import get_settings
 from indication_scout.data_sources.base_client import DataSourceError
+from indication_scout.services.cost_tracking import record_anthropic_response
 
 load_dotenv()
 
@@ -122,6 +123,7 @@ async def query_llm(prompt: str, system: str = "") -> str:
         # The 1.x SDK dropped temperature from the create signature; the API still accepts it in the body.
         extra_body={"temperature": 0},
     )
+    record_anthropic_response(response)
     if not response.content:
         raise DataSourceError(
             "llm", f"Empty content in LLM response (stop_reason={response.stop_reason})"
@@ -142,6 +144,7 @@ async def query_big_llm(prompt: str, system: str = "") -> str:
         # The 1.x SDK dropped temperature from the create signature; the API still accepts it in the body.
         extra_body={"temperature": 0},
     )
+    record_anthropic_response(response)
     if not response.content:
         raise DataSourceError(
             "llm", f"Empty content in LLM response (stop_reason={response.stop_reason})"
@@ -161,6 +164,7 @@ async def query_small_llm(
         # The 1.x SDK dropped temperature from the create signature; the API still accepts it in the body.
         extra_body={"temperature": 0},
     )
+    record_anthropic_response(response)
     if not response.content:
         raise DataSourceError(
             "llm", f"Empty content in LLM response (stop_reason={response.stop_reason})"

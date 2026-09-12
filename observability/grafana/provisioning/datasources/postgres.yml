@@ -1,0 +1,17 @@
+apiVersion: 1
+
+datasources:
+  - name: IndicationScout Postgres
+    uid: indication-scout-postgres
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: db:5432
+    user: scout
+    secureJsonData:
+      password: ${DB_PASSWORD}
+    jsonData:
+      database: scout
+      sslmode: disable
+      postgresVersion: 1600
+      timescaledb: false
+    editable: false

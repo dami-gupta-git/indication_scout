@@ -66,6 +66,7 @@ from indication_scout.services.approval_check import (
     get_approved_indications,
     get_fda_approved_disease_mapping,
 )
+from indication_scout.services.cost_tracking import candidate_cost_scope
 from indication_scout.services.dev_stage import DEV_STAGE_PHRASE, dev_stage_phrase
 from indication_scout.services.judge_interpretive import judge_interpretive
 from indication_scout.services.llm import parse_last_json_object, query_llm
@@ -892,7 +893,8 @@ def build_supervisor_tools(
                 approved_indications=approved_indications,
                 drug_profile=drug_profile,
             )
-            output = await run_literature_agent(lit_agent, drug_name, disease_name)
+            with candidate_cost_scope(disease_name):
+                output = await run_literature_agent(lit_agent, drug_name, disease_name)
         # logger.warning(
         #     "[TIMING] literature %s: %.1fs", disease_name, time.perf_counter() - _t0
         # )
@@ -997,13 +999,14 @@ def build_supervisor_tools(
         # PLAN_approval_aware_relevance.md §A). Threaded into the task so the relevance gate's TEST 1 treats an approved
         # sub-indication's trial as contamination, not roll-up evidence.
         ct_approved = list(_ensure_drug_entry(drug_name)["approved_indications"])
-        output = await run_clinical_trials_agent(
-            ct_agent,
-            registry_drug,
-            disease_name,
-            first_approval=first_approval,
-            approved_indications=ct_approved,
-        )
+        with candidate_cost_scope(disease_name):
+            output = await run_clinical_trials_agent(
+                ct_agent,
+                registry_drug,
+                disease_name,
+                first_approval=first_approval,
+                approved_indications=ct_approved,
+            )
         logger.debug(
             "[TIMING] clinical_trials %s: %.1fs",
             disease_name,

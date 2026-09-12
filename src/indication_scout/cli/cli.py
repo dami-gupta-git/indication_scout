@@ -51,12 +51,18 @@ async def _run_for_drug(
     from indication_scout.helpers.drug_helpers import normalize_drug_name
     from indication_scout.observability import bind_log_context, reset_log_context
     from indication_scout.services.analysis_runner import run_analysis
+    from indication_scout.services.cost_tracking import (
+        CostTracker,
+        bind_cost_tracker,
+        reset_cost_tracker,
+    )
     from indication_scout.services.progress import reset_emitter, set_emitter
     from indication_scout.services.run_repository import AnalysisRunRepository
     from indication_scout.tracing import setup_tracing, shutdown_tracing
 
     session_factory = make_session_factory()
     log_token = None
+    cost_token = None
     setup_tracing()
     try:
         # Normalize at the entry point so filenames/logs below see the same lowercased form
@@ -89,6 +95,8 @@ async def _run_for_drug(
             submission_source="cli",
         )
         logger.info("Created durable CLI run %s", run_id)
+        cost_tracker = CostTracker()
+        cost_token = bind_cost_tracker(cost_tracker)
 
         def persist_progress(phase: str, message: str) -> None:
             with session_factory() as db:
@@ -106,11 +114,15 @@ async def _run_for_drug(
             output, report_md = await run_analysis(drug, date_before=date_before)
         except asyncio.CancelledError:
             with session_factory() as db:
-                AnalysisRunRepository(db).cancel_attempt(run_id, attempt_id)
+                repository = AnalysisRunRepository(db)
+                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.cancel_attempt(run_id, attempt_id)
             raise
         except Exception as exc:
             with session_factory() as db:
-                AnalysisRunRepository(db).fail_attempt(
+                repository = AnalysisRunRepository(db)
+                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.fail_attempt(
                     run_id,
                     attempt_id,
                     error_code=type(exc).__name__,
@@ -121,7 +133,9 @@ async def _run_for_drug(
             raise
         else:
             with session_factory() as db:
-                AnalysisRunRepository(db).complete_validated_attempt(
+                repository = AnalysisRunRepository(db)
+                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.complete_validated_attempt(
                     run_id, attempt_id, output
                 )
         finally:
@@ -155,6 +169,8 @@ async def _run_for_drug(
         click.echo(f"Report:    {md_path}")
 
     finally:
+        if cost_token is not None:
+            reset_cost_tracker(cost_token)
         if log_token is not None:
             reset_log_context(log_token)
         session_factory.kw["bind"].dispose()
@@ -173,12 +189,18 @@ async def _run_for_pair(
     from indication_scout.helpers.drug_helpers import normalize_drug_name
     from indication_scout.observability import bind_log_context, reset_log_context
     from indication_scout.services.analysis_runner import run_pair_analysis
+    from indication_scout.services.cost_tracking import (
+        CostTracker,
+        bind_cost_tracker,
+        reset_cost_tracker,
+    )
     from indication_scout.services.progress import reset_emitter, set_emitter
     from indication_scout.services.run_repository import AnalysisRunRepository
     from indication_scout.tracing import setup_tracing, shutdown_tracing
 
     session_factory = make_session_factory()
     log_token = None
+    cost_token = None
     setup_tracing()
     try:
         drug = normalize_drug_name(drug)
@@ -211,6 +233,8 @@ async def _run_for_pair(
             submission_source="cli",
         )
         logger.info("Created durable CLI run %s", run_id)
+        cost_tracker = CostTracker()
+        cost_token = bind_cost_tracker(cost_tracker)
 
         def persist_progress(phase: str, message: str) -> None:
             with session_factory() as db:
@@ -230,11 +254,15 @@ async def _run_for_pair(
             )
         except asyncio.CancelledError:
             with session_factory() as db:
-                AnalysisRunRepository(db).cancel_attempt(run_id, attempt_id)
+                repository = AnalysisRunRepository(db)
+                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.cancel_attempt(run_id, attempt_id)
             raise
         except Exception as exc:
             with session_factory() as db:
-                AnalysisRunRepository(db).fail_attempt(
+                repository = AnalysisRunRepository(db)
+                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.fail_attempt(
                     run_id,
                     attempt_id,
                     error_code=type(exc).__name__,
@@ -245,7 +273,9 @@ async def _run_for_pair(
             raise
         else:
             with session_factory() as db:
-                AnalysisRunRepository(db).complete_validated_attempt(
+                repository = AnalysisRunRepository(db)
+                repository.record_attempt_cost(run_id, attempt_id, cost_tracker.snapshot())
+                repository.complete_validated_attempt(
                     run_id, attempt_id, output
                 )
         finally:
@@ -275,6 +305,8 @@ async def _run_for_pair(
         logger.info("Finished pair %s x %s -> %s", drug, disease, md_path)
         click.echo(f"Report:    {md_path}")
     finally:
+        if cost_token is not None:
+            reset_cost_tracker(cost_token)
         if log_token is not None:
             reset_log_context(log_token)
         session_factory.kw["bind"].dispose()

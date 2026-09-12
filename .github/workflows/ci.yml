@@ -109,25 +109,26 @@ jobs:
       - name: Current week
         id: week
         run: echo "stamp=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
-      # Data-source responses. One entry per week: within a week runs reuse it and
-      # skip the upstream API calls; each new week starts from the previous week's
-      # entry and refetches whatever the cache no longer covers.
+      # Data-source responses. Cache entries are immutable, so each run saves its
+      # own entry (key ends in the run id) and the next run restores the newest
+      # one for this week, or failing that the newest from any week. A weekly
+      # prefix keeps the restore order fresh-first without ever blocking a save.
       - name: Restore data-source responses
-        id: scout-cache
         uses: actions/cache/restore@v4
         with:
           path: ${{ env.SCOUT_CACHE_DIR }}
-          key: scout-cache-${{ runner.os }}-${{ steps.week.outputs.stamp }}
+          key: scout-cache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ github.run_id }}
           restore-keys: |
+            scout-cache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-
             scout-cache-${{ runner.os }}-
       - name: Generate reports
         run: make regression-reports
       - name: Save data-source responses
-        if: always() && steps.scout-cache.outputs.cache-hit != 'true'
+        if: always()
         uses: actions/cache/save@v4
         with:
           path: ${{ env.SCOUT_CACHE_DIR }}
-          key: scout-cache-${{ runner.os }}-${{ steps.week.outputs.stamp }}
+          key: scout-cache-${{ runner.os }}-${{ steps.week.outputs.stamp }}-${{ github.run_id }}
       - name: Structural regression specs
         run: make regression-specs
       - name: Candidate-selection precision

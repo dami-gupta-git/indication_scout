@@ -115,12 +115,7 @@ def build_literature_tools(
             direct_query=store["direct_query"],
         )
         store["pmids"] = pmids
-        logger.info(
-            "[LIT] fetch_and_cache %s: %d pmids in %.1fs",
-            drug_name,
-            len(pmids),
-            time.perf_counter() - _t0,
-        )
+        logger.info("[LIT] fetch_and_cache %s: %d pmids", drug_name, len(pmids))
         return f"Fetched {len(pmids)} PMIDs", pmids
 
     @tool(response_format="content_and_artifact")
@@ -137,11 +132,9 @@ def build_literature_tools(
             disease_name, chembl_id, pmids, db, date_before=date_before
         )
         store["abstracts"] = results
-        # logger.warning(
-        #     "[TIMING] semantic_search %s: %.1fs",
-        #     disease_name,
-        #     time.perf_counter() - _t0,
-        # )
+        logger.info(
+            "[LIT] semantic_search %s: %d abstracts", disease_name, len(results)
+        )
         top = results[0].similarity if results else 0.0
         return f"Found {len(results)} abstracts (top sim: {top:.2f})", results
 
@@ -240,11 +233,10 @@ def build_literature_tools(
             evidence.indication_harm_summary = store["indication_harm_summary"]
             evidence.indication_harm_pmids = store["indication_harm_pmids"]
         logger.info(
-            "[LIT] synthesize %s: strength=%s direction=%s in %.1fs",
+            "[LIT] synthesize %s: strength=%s direction=%s",
             disease_name,
             evidence.strength,
             evidence.direction,
-            time.perf_counter() - _t0,
         )
         # logger.warning(
         #     f"literature agent evidence: {evidence}")

@@ -28,6 +28,11 @@ ANALYSIS_DURATION = Histogram(
     "indication_scout_analysis_duration_seconds",
     "Analysis attempt duration in seconds.",
     ("submission_source", "execution_mode", "outcome"),
+)
+ANALYSIS_SLO_DURATION = Histogram(
+    "indication_scout_analysis_slo_duration_seconds",
+    "Analysis attempt duration in seconds using service-level objective buckets.",
+    ("submission_source", "execution_mode", "outcome"),
     buckets=ANALYSIS_DURATION_BUCKETS_SECONDS,
 )
 ACTIVE_ANALYSES = Gauge(
@@ -145,6 +150,9 @@ def analysis_finished(
             OLDEST_ACTIVE_ANALYSIS_START_TIME.remove(*labels)
     ANALYSIS_RUNS.labels(source_label, mode_label, outcome_label).inc()
     ANALYSIS_DURATION.labels(source_label, mode_label, outcome_label).observe(
+        duration_seconds
+    )
+    ANALYSIS_SLO_DURATION.labels(source_label, mode_label, outcome_label).observe(
         duration_seconds
     )
     if integrity_failed:

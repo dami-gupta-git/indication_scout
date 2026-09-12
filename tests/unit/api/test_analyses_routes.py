@@ -105,6 +105,10 @@ class FakeRunRepository:
         run.integrity_status = "passed"
         return run
 
+    def record_attempt_cost(self, run_id, attempt_id, snapshot):
+        self.attempts[run_id][-1].cost_snapshot = snapshot
+        return self.attempts[run_id][-1]
+
     def fail_attempt(self, run_id, attempt_id, **failure):
         run = self.runs[run_id]
         run.status = "error"

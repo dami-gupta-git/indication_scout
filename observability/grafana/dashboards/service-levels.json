@@ -7,6 +7,16 @@
   "links": [],
   "panels": [
     {
+      "gridPos": {"h": 3, "w": 24, "x": 0, "y": 0},
+      "id": 16,
+      "options": {
+        "content": "## Pre-production measurement\nThis dashboard is running against a local development environment. The objectives and proposed SLA demonstrate the measurement and error-budget design; failures include development work and deliberate fault testing.",
+        "mode": "markdown"
+      },
+      "title": "Development measurement notice",
+      "type": "text"
+    },
+    {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
@@ -15,12 +25,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 3},
       "id": 1,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[30d])",
+          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[24h])",
           "refId": "A"
         }
       ],
@@ -36,12 +46,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 0},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 3},
       "id": 2,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[30d]))",
+          "expr": "100 * sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[24h]))",
           "refId": "A"
         }
       ],
@@ -57,12 +67,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 0},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 3},
       "id": 3,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * sum(increase(indication_scout_analysis_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"600.0\"}[30d])) / sum(increase(indication_scout_analysis_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d]))",
+          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"600.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h]))",
           "refId": "A"
         }
       ],
@@ -78,12 +88,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 6},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 9},
       "id": 4,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * (1 - avg_over_time(up{job=\"indication-scout\"}[30d])) / 0.005",
+          "expr": "100 * (1 - avg_over_time(up{job=\"indication-scout\"}[24h])) / 0.005",
           "refId": "A"
         }
       ],
@@ -99,12 +109,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 6},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 9},
       "id": 5,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[30d])))) / 0.05",
+          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[24h])))) / 0.05",
           "refId": "A"
         }
       ],
@@ -120,12 +130,12 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 6},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 9},
       "id": 6,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"600.0\"}[30d])) / sum(increase(indication_scout_analysis_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d])))) / 0.05",
+          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"600.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h])))) / 0.05",
           "refId": "A"
         }
       ],
@@ -141,16 +151,16 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 12},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 15},
       "id": 7,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[30d])",
+          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[24h])",
           "refId": "A"
         }
       ],
-      "title": "SLA: API availability (commitment 99%)",
+      "title": "Proposed SLA: API availability (99%)",
       "type": "stat"
     },
     {
@@ -162,16 +172,16 @@
         },
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 12},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 15},
       "id": 8,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * sum(increase(indication_scout_analysis_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"900.0\"}[30d])) / sum(increase(indication_scout_analysis_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d]))",
+          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"900.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h]))",
           "refId": "A"
         }
       ],
-      "title": "SLA: Analyses within 15m (commitment 90%)",
+      "title": "Proposed SLA: Analyses within 15m (90%)",
       "type": "stat"
     },
     {
@@ -180,15 +190,15 @@
         "defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}, "unit": "short"},
         "overrides": []
       },
-      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 12},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 15},
       "id": 9,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-      "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[30d]))", "refId": "A"}],
-      "title": "Integrity rejections, 30d",
+      "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[24h]))", "refId": "A"}],
+      "title": "Integrity rejections, 24h",
       "type": "stat"
     },
     {
-      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 18},
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 21},
       "id": 10,
       "options": {
         "alertName": "",
@@ -202,13 +212,63 @@
       },
       "title": "Service-level alert status",
       "type": "alertlist"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 29},
+      "id": 11,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(SUM(llm_cost_usd), 0) AS cost_usd FROM analysis_attempts WHERE $__timeFilter(finished_at) AND llm_pricing_complete = TRUE", "refId": "A"}],
+      "title": "Measured LLM cost",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 29},
+      "id": 12,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(AVG(llm_cost_usd), 0) AS average_cost_usd FROM analysis_attempts WHERE $__timeFilter(finished_at) AND llm_pricing_complete = TRUE", "refId": "A"}],
+      "title": "Average cost per terminal attempt",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
+      "fieldConfig": {"defaults": {"unit": "currencyUSD"}, "overrides": []},
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 29},
+      "id": 13,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT COALESCE(AVG(cost_usd), 0) AS average_candidate_cost_usd FROM analysis_candidate_costs c JOIN analysis_attempts a USING (attempt_id) WHERE $__timeFilter(a.finished_at) AND c.pricing_complete = TRUE", "refId": "A"}],
+      "title": "Average cost per candidate",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 9, "w": 24, "x": 0, "y": 35},
+      "id": 14,
+      "options": {"showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT r.drug_name AS drug, r.submission_source AS source, a.status, ROUND(a.duration_ms / 1000.0, 1) AS duration_seconds, a.llm_cost_usd AS total_cost_usd, a.llm_overhead_cost_usd AS overhead_cost_usd, a.llm_input_tokens AS input_tokens, a.llm_output_tokens AS output_tokens, a.finished_at FROM analysis_attempts a JOIN analysis_runs r USING (run_id) WHERE $__timeFilter(a.finished_at) ORDER BY a.finished_at DESC LIMIT 50", "refId": "A"}],
+      "title": "Run timing and cost",
+      "type": "table"
+    },
+    {
+      "datasource": {"type": "grafana-postgresql-datasource", "uid": "indication-scout-postgres"},
+      "fieldConfig": {"defaults": {}, "overrides": []},
+      "gridPos": {"h": 10, "w": 24, "x": 0, "y": 44},
+      "id": 15,
+      "options": {"showHeader": true},
+      "targets": [{"editorMode": "code", "format": "table", "rawQuery": true, "rawSql": "SELECT r.drug_name AS drug, c.candidate_name AS candidate, r.submission_source AS source, c.cost_usd, c.input_tokens, c.output_tokens, c.cache_read_tokens, c.cache_write_tokens, a.finished_at FROM analysis_candidate_costs c JOIN analysis_attempts a USING (attempt_id) JOIN analysis_runs r USING (run_id) WHERE $__timeFilter(a.finished_at) ORDER BY a.finished_at DESC, c.cost_usd DESC NULLS LAST LIMIT 100", "refId": "A"}],
+      "title": "Per-candidate LLM cost",
+      "type": "table"
     }
   ],
   "refresh": "30s",
   "schemaVersion": 42,
   "tags": ["indication-scout", "slo", "sla"],
   "templating": {"list": []},
-  "time": {"from": "now-30d", "to": "now"},
+  "time": {"from": "now-24h", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
   "title": "IndicationScout service levels",

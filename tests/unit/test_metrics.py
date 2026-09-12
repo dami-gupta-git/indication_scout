@@ -6,8 +6,8 @@ from fastapi.testclient import TestClient
 
 from indication_scout.metrics import (
     ACTIVE_ANALYSES,
-    ANALYSIS_DURATION,
     ANALYSIS_RUNS,
+    ANALYSIS_SLO_DURATION,
     DEPENDENCY_REQUESTS,
     HTTP_REQUESTS,
     INTEGRITY_REJECTIONS,
@@ -20,12 +20,12 @@ from indication_scout.metrics import (
 
 
 def test_analysis_duration_has_service_level_buckets():
-    ANALYSIS_DURATION.labels("api", "live", "done").observe(601.0)
+    ANALYSIS_SLO_DURATION.labels("api", "live", "done").observe(601.0)
 
     bucket_bounds = [
         sample.labels["le"]
-        for sample in ANALYSIS_DURATION.collect()[0].samples
-        if sample.name == "indication_scout_analysis_duration_seconds_bucket"
+        for sample in ANALYSIS_SLO_DURATION.collect()[0].samples
+        if sample.name == "indication_scout_analysis_slo_duration_seconds_bucket"
         and sample.labels["submission_source"] == "api"
         and sample.labels["execution_mode"] == "live"
         and sample.labels["outcome"] == "done"
@@ -67,6 +67,14 @@ def test_analysis_metrics_track_active_and_terminal_attempts():
     completed = ANALYSIS_RUNS.labels("api", "live", "done")
     active_before = active._value.get()
     completed_before = completed._value.get()
+    duration_count_before = next(
+        sample.value
+        for sample in ANALYSIS_SLO_DURATION.collect()[0].samples
+        if sample.name == "indication_scout_analysis_slo_duration_seconds_count"
+        and sample.labels["submission_source"] == "api"
+        and sample.labels["execution_mode"] == "live"
+        and sample.labels["outcome"] == "done"
+    )
 
     started_at = analysis_started("api", "live")
     assert active._value.get() == active_before + 1
@@ -79,6 +87,15 @@ def test_analysis_metrics_track_active_and_terminal_attempts():
 
     assert active._value.get() == active_before
     assert completed._value.get() == completed_before + 1
+    duration_count_after = next(
+        sample.value
+        for sample in ANALYSIS_SLO_DURATION.collect()[0].samples
+        if sample.name == "indication_scout_analysis_slo_duration_seconds_count"
+        and sample.labels["submission_source"] == "api"
+        and sample.labels["execution_mode"] == "live"
+        and sample.labels["outcome"] == "done"
+    )
+    assert duration_count_after == duration_count_before + 1
 
 
 def test_analysis_metrics_keep_oldest_concurrent_start_and_record_integrity():
