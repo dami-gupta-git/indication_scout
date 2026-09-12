@@ -7,7 +7,7 @@ groups:
     interval: 10s
     rules:
       - uid: scout-analysis-over-ten-minutes
-        title: Analysis active longer than 10 minutes
+        title: Analysis active longer than 2 minutes
         condition: C
         data:
           - refId: A
@@ -70,7 +70,7 @@ groups:
               datasource:
                 type: __expr__
                 uid: __expr__
-              expression: $B > 600
+              expression: $B > 120
               intervalMs: 1000
               maxDataPoints: 43200
               refId: C
@@ -81,7 +81,7 @@ groups:
         execErrState: Error
         for: 0s
         annotations:
-          summary: An API analysis has remained active for more than ten minutes.
+          summary: An API analysis has remained active for more than two minutes.
         labels:
           service: indication-scout
           severity: warning

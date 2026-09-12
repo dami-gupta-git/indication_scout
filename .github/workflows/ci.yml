@@ -69,6 +69,8 @@ jobs:
       SCOUT_CACHE_DIR: ${{ github.workspace }}/cache
       # Push builds run the default subset; a manual run can name the full set.
       REGRESSION_DRUGS: ${{ github.event.inputs.regression_drugs || 'semaglutide bupropion' }}
+      # Temporary: turned-down supervisor dials while the CI plumbing is being proven.
+      CONSTANTS_FILE: .env.constants.ci
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7

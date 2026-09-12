@@ -114,12 +114,13 @@ Grafana reads Prometheus through a provisioned data source. Its service dashboar
 request rate, HTTP latency at the 95th percentile, analysis outcomes, analysis duration at the 95th
 percentile, active analyses, dependency outcomes, dependency latency, and report-integrity
 rejections. The dashboard also lists the state of two provisioned Grafana alerts: an individual API
-analysis active for more than ten minutes, and any report-integrity rejection observed in the last
+analysis active for more than two minutes, and any report-integrity rejection observed in the last
 five minutes. The dashboard refreshes every 15 seconds and initially displays the preceding six
 hours. The same rules are available under `Alerting` in Grafana.
 
-The alert rules are evaluated and displayed without an email destination. Email delivery requires
-an explicit recipient and Grafana SMTP configuration; neither is stored in this repository.
+The local Grafana container sends alert email through Gmail to `dami.gupta@gmail.com`. Set
+`GRAFANA_SMTP_PASSWORD` in `.env` to a Google App Password before starting Grafana. The credential
+is passed to Grafana at runtime and is not stored in the repository.
 
 ## Accepted limitations
 

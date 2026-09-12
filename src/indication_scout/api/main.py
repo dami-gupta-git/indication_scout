@@ -35,15 +35,14 @@ configure_logging(get_settings().log_level)
 logger = logging.getLogger(__name__)
 
 
-class _PollingAccessLogFilter(logging.Filter):
-    """Suppress Uvicorn access logs for high-frequency operational requests."""
+class _UvicornAccessLogFilter(logging.Filter):
+    """Suppress Uvicorn access logs; structured request events replace them."""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        message = record.getMessage()
-        return not ("GET /api/analyses/" in message or "GET /metrics/" in message)
+        return False
 
 
-logging.getLogger("uvicorn.access").addFilter(_PollingAccessLogFilter())
+logging.getLogger("uvicorn.access").addFilter(_UvicornAccessLogFilter())
 
 app = FastAPI(
     title="IndicationScout API",
