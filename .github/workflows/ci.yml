@@ -58,6 +58,7 @@ jobs:
       DATABASE_URL: postgresql+psycopg2://ci:ci@localhost:5432/ci
       DB_PASSWORD: ci
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      NCBI_API_KEY: ${{ secrets.NCBI_API_KEY }}
       HF_HOME: ${{ github.workspace }}/.hf-cache
       SCOUT_CACHE_DIR: ${{ github.workspace }}/cache
     steps:

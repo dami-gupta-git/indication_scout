@@ -171,7 +171,7 @@ The project requires a PostgreSQL database with the `pgvector` extension for sto
 Start the database container:
 
 ```bash
-docker compose up -d
+docker compose up -d db
 ```
 
 Then apply migrations to both the main and test databases:

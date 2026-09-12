@@ -113,8 +113,11 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml --profile test ru
 ## Prod image (only to verify the bundled build)
 
 ```bash
+export GRAFANA_ADMIN_PASSWORD=<local-password>
 docker compose up --build
 ```
 
-Serves the baked frontend bundle at http://localhost:8000. Use only to sanity-check
-what Railway will deploy — day-to-day work happens on :5173.
+This starts PostgreSQL, the production application, Prometheus, and Grafana. The baked frontend
+bundle is served at http://localhost:8000, Prometheus at http://localhost:9090, and Grafana at
+http://localhost:3000. Use this stack to check the production image and observability integration.
+Day-to-day frontend development remains on port 5173.

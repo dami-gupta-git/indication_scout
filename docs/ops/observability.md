@@ -6,12 +6,12 @@ current measurements provide operational visibility but do not define an SLA.
 
 ## Start the stack
 
-The observability Compose overlay starts PostgreSQL, the application, Prometheus, and Grafana. Set
-a Grafana administrator password before starting it.
+The default Compose stack starts PostgreSQL, the application, Prometheus, and Grafana. Set a
+Grafana administrator password before starting it.
 
 ```text
 export GRAFANA_ADMIN_PASSWORD=<local-password>
-make observability-up
+docker compose up --build
 ```
 
 The services are then available at:
@@ -26,8 +26,9 @@ Grafana uses the username `admin` and the password supplied through
 `GRAFANA_ADMIN_PASSWORD`. It loads the `IndicationScout service overview` dashboard and the
 Prometheus data source at startup.
 
-Port 3000 must be free before the stack starts. Stop the Vite development frontend if it is already
-using that port. Use the frontend served at `http://localhost:8000` while inspecting Grafana.
+Port 3000 must be free before the stack starts. The Vite development server uses port 5173 and can
+run at the same time. Use the production frontend served at `http://localhost:8000` when testing the
+default Compose stack.
 
 Run an analysis from the web interface or submit one through the API to populate the analysis
 panels. Open `http://localhost:8000/metrics/` to inspect the raw Prometheus exposition, or open the
@@ -37,6 +38,9 @@ stack with:
 ```text
 make observability-down
 ```
+
+`make observability-up` and `make observability-down` are shortcuts for the same default Compose
+startup and shutdown operations.
 
 The named Prometheus and Grafana volumes remain after this command, so local metric history and
 Grafana state survive a normal stop and restart.
@@ -106,7 +110,8 @@ These limitations do not change report generation or persisted run results.
 
 ## Production deployment
 
-The repository provisions the local stack. A production Prometheus-compatible backend must be
+The repository provisions the local stack through Docker Compose. Railway builds the application
+Dockerfile and does not start the additional Compose services. A production Prometheus-compatible backend must be
 configured to scrape or receive the Railway service metrics, and Grafana must be connected to that
 backend. Production retention, authentication, alert destinations, and dashboard access are
-deployment settings and are not supplied by the local compose overlay.
+deployment settings and are not supplied by the local Compose stack.

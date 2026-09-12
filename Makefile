@@ -124,10 +124,10 @@ container-smoke:
 	$(OK) "container smoke"
 
 observability-up:
-	docker compose -f docker-compose.yml -f docker-compose.observability.yml up -d --build
+	docker compose up -d --build
 
 observability-down:
-	docker compose -f docker-compose.yml -f docker-compose.observability.yml down
+	docker compose down
 
 frontend-check:
 	$(START) "frontend check"

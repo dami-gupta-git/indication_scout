@@ -25,7 +25,7 @@ At the start of every session, read the most recent `session_*.md` file in the p
 ## Project State Workflow
 
 - `PROJECT_STATE.md` is a chronological list of features. When a major new feature is implemented (a new agent, service, data source, gate, CI check, persistence or observability layer — not tweaks or bug fixes), append a bullet to the current dated entry, or start a new `## Update (YYYY-MM-DD)` entry if the last one is from an earlier day.
-- One bullet per feature, in the order added, with status and key files. Each entry also has `### New Patterns / Decisions` and `### Known Issues / Caveats` sections; keep them short and point to `for_me/findings.md` / `for_me/errors/errors.md` for detail.
+- One bullet per feature, in the order added, with key files (Partial / Not started marked, Complete implied). Each entry also has `### New Patterns / Decisions` and `### Known Issues / Caveats` sections; keep them short and point to `for_me/findings.md` / `for_me/errors/errors.md` for detail.
 
 ## Session File Workflow
 
