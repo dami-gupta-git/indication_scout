@@ -118,9 +118,8 @@ analysis active for more than two minutes, and any report-integrity rejection ob
 five minutes. The dashboard refreshes every 15 seconds and initially displays the preceding six
 hours. The same rules are available under `Alerting` in Grafana.
 
-The local Grafana container sends alert email through Gmail to `dami.gupta@gmail.com`. Set
-`GRAFANA_SMTP_PASSWORD` in `.env` to a Google App Password before starting Grafana. The credential
-is passed to Grafana at runtime and is not stored in the repository.
+The IndicationScout notification route is permanently muted. Alerts continue to be evaluated and
+displayed in Grafana, but Grafana does not attempt to send email or other external notifications.
 
 ## Accepted limitations
 

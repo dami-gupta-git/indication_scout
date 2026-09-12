@@ -69,8 +69,6 @@ jobs:
       SCOUT_CACHE_DIR: ${{ github.workspace }}/cache
       # Push builds run the default subset; a manual run can name the full set.
       REGRESSION_DRUGS: ${{ github.event.inputs.regression_drugs || 'semaglutide bupropion' }}
-      # Temporary: turned-down supervisor dials while the CI plumbing is being proven.
-      CONSTANTS_FILE: .env.constants.ci
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -90,21 +88,33 @@ jobs:
         id: embedding-model
         run: |
           python -c "from indication_scout.config import get_settings; print(f'name={get_settings().embedding_model}')" >> "$GITHUB_OUTPUT"
-      - name: Cache embedding model
-        uses: actions/cache@v4
+      # Restore/save are split so the caches are saved as soon as their contents
+      # exist, not in the job's cleanup phase, which only runs when every later
+      # step passed. A failed spec or precision gate would otherwise leave the
+      # next run cold.
+      - name: Restore embedding model
+        id: hf-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.HF_HOME }}
           key: hf-${{ runner.os }}-${{ steps.embedding-model.outputs.name }}
       - name: Prefetch embedding model
         run: make prefetch-model
+      - name: Save embedding model
+        if: always() && steps.hf-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.HF_HOME }}
+          key: hf-${{ runner.os }}-${{ steps.embedding-model.outputs.name }}
       - name: Current week
         id: week
         run: echo "stamp=$(date -u +%G-W%V)" >> "$GITHUB_OUTPUT"
       # Data-source responses. One entry per week: within a week runs reuse it and
       # skip the upstream API calls; each new week starts from the previous week's
       # entry and refetches whatever the cache no longer covers.
-      - name: Cache data-source responses
-        uses: actions/cache@v4
+      - name: Restore data-source responses
+        id: scout-cache
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.SCOUT_CACHE_DIR }}
           key: scout-cache-${{ runner.os }}-${{ steps.week.outputs.stamp }}
@@ -112,6 +122,12 @@ jobs:
             scout-cache-${{ runner.os }}-
       - name: Generate reports
         run: make regression-reports
+      - name: Save data-source responses
+        if: always() && steps.scout-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.SCOUT_CACHE_DIR }}
+          key: scout-cache-${{ runner.os }}-${{ steps.week.outputs.stamp }}
       - name: Structural regression specs
         run: make regression-specs
       - name: Candidate-selection precision

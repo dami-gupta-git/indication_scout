@@ -67,13 +67,6 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: "false"
-      GF_SMTP_ENABLED: "true"
-      GF_SMTP_HOST: smtp.gmail.com:587
-      GF_SMTP_USER: dami.gupta@gmail.com
-      GF_SMTP_PASSWORD: ${GRAFANA_SMTP_PASSWORD}
-      GF_SMTP_FROM_ADDRESS: dami.gupta@gmail.com
-      GF_SMTP_FROM_NAME: IndicationScout
-      GF_SMTP_STARTTLS_POLICY: MandatoryStartTLS
     ports:
       - "3000:3000"
     volumes:
