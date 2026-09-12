@@ -2,7 +2,10 @@
 
 How web-submitted analyses are executed outside the API process. The API records a run; a
 separate worker process claims it from Postgres, executes it, and writes the result back.
-Implementation: `src/indication_scout/services/worker.py`, the claim and sweep methods in
+
+Status: implemented on branch `worktree-worker-process`, not merged. On `main` the API still
+executes each analysis as a background task in its own process. Implementation on the branch:
+`src/indication_scout/services/worker.py`, the claim and sweep methods in
 `services/run_repository.py`, and the `scout worker` command in `cli/cli.py`.
 
 ## Roles
