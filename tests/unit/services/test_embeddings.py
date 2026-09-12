@@ -182,7 +182,9 @@ def test_embed_passes_texts_to_encode():
     ):
         embed(texts)
 
-    mock_model.encode.assert_called_once_with(texts, convert_to_numpy=True)
+    mock_model.encode.assert_called_once_with(
+        texts, convert_to_numpy=True, show_progress_bar=False
+    )
 
 
 def test_embed_returns_one_vector_per_text():

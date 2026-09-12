@@ -87,7 +87,7 @@ class PubMedClient(BaseClient):
         return cls._request_semaphore
 
     def _is_transient_error_body(self, status: int, body: str) -> bool:
-        """NCBI reports transient backend failures as HTTP 400 with an ``<ERROR>Error occurred: ...``."""
+        """NCBI reports transient backend failures as HTTP 400 with an ``<ERROR>`` body starting "Error"."""
         return status == 400 and summarize_error_body(body).startswith(
             NCBI_TRANSIENT_ERROR_PREFIX
         )

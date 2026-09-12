@@ -647,7 +647,7 @@ async def get_fda_approved_disease_mapping(
         drug_aliases = await get_all_drug_names(chembl_id, cache_dir)
         if drug_name not in drug_aliases:
             drug_aliases = [drug_name, *drug_aliases]
-        logger.info(
+        logger.debug(
             "get_fda_approved_disease_mapping: %r → chembl_id=%s, %d aliases",
             drug_name,
             chembl_id,
@@ -665,7 +665,7 @@ async def get_fda_approved_disease_mapping(
     async with FDAClient(cache_dir=cache_dir) as client:
         label_texts = await client.get_all_label_indications(drug_aliases)
 
-    logger.info(
+    logger.debug(
         "get_fda_approved_disease_mapping: %r → fetched %d label texts from %d aliases",
         drug_name,
         len(label_texts),

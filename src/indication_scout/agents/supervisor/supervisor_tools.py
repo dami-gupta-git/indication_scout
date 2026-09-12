@@ -871,10 +871,6 @@ def build_supervisor_tools(
 
         # logger.warning("[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name)
 
-        logger.warning(
-            "[TOOL] analyze_literature(drug=%r, disease=%r)", drug_name, disease_name
-        )
-
         # Per-call DB session from the shared pool. investigate_top_candidates fans candidates out concurrently
         # (asyncio.gather), and a SQLAlchemy Session is not safe for concurrent use — sharing one across the fan-out parks a
         # connection in an open transaction nothing advances (flat CPU / idle Postgres hang). Each call checks out its own
@@ -1008,7 +1004,7 @@ def build_supervisor_tools(
             first_approval=first_approval,
             approved_indications=ct_approved,
         )
-        logger.warning(
+        logger.debug(
             "[TIMING] clinical_trials %s: %.1fs",
             disease_name,
             time.perf_counter() - _t0,
@@ -1176,8 +1172,8 @@ def build_supervisor_tools(
             approved_indications=list(intake.approved_indications),
             date_before=date_before,
         )
-        logger.warning("[TOOL] analyze_mechanism(drug=%r)", drug_name)
-        logger.warning("[TIMING] analyze_mechanism: %.1fs", time.perf_counter() - _t0)
+        logger.debug("[TOOL] analyze_mechanism(drug=%r)", drug_name)
+        logger.debug("[TIMING] analyze_mechanism: %.1fs", time.perf_counter() - _t0)
 
         # Buffer raw mechanism candidates for find_candidates to consume in merge_and_dedup() after both seed tools finish.
         # Centralizing the merge lets the full competitor + mechanism union pass through a single hierarchical-dedup pass.
@@ -1369,7 +1365,6 @@ def build_supervisor_tools(
         # string and loses the typed artifact.
         async def _invest(disease: str) -> tuple[str, dict]:
             disease_slug = disease.lower().replace(" ", "_")
-            logger.warning("[INVEST] starting %s", disease)
             _t0 = time.perf_counter()
 
             async def _timed_lit() -> Any:
@@ -1522,7 +1517,7 @@ def build_supervisor_tools(
         results = await asyncio.gather(
             *(_invest_tracked(d) for d in canonical_diseases)
         )
-        logger.warning(
+        logger.debug(
             "[TIMING] investigate_top_candidates: %d candidates in parallel took %.1fs",
             len(canonical_diseases),
             time.perf_counter() - _fan_t0,
@@ -1656,9 +1651,7 @@ def build_supervisor_tools(
         )
         _t0 = time.perf_counter()
         critique = await query_llm(prompt, system=_RANKING_CRITIC_SYSTEM)
-        logger.warning(
-            "[TIMING] fact_critic LLM call: %.1fs", time.perf_counter() - _t0
-        )
+        logger.debug("[TIMING] fact_critic LLM call: %.1fs", time.perf_counter() - _t0)
         logger.info(
             "[TOOL] fact_critic IN (%d candidates):\n%s", len(items), "\n".join(lines)
         )

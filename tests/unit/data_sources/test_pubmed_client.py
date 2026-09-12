@@ -388,6 +388,11 @@ async def test_fetch_abstracts_raises_after_exhausting_retries(tmp_path):
         ),
         (
             400,
+            "<eFetchResult><ERROR>Error: External viewer error: Empty Response. Bytes read: 0 Status: Timeout</ERROR></eFetchResult>",
+            True,
+        ),
+        (
+            400,
             "<eFetchResult><ERROR>ID list is empty! Possibly it has no correct IDs.</ERROR></eFetchResult>",
             False,
         ),

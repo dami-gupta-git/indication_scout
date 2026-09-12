@@ -181,7 +181,7 @@ async def run_supervisor_agent(
         ) or _details.get("cache_creation", 0)
         _total_out += _out_tok
         _called = ", ".join(tc["name"] for tc in _msg.tool_calls) or "(final)"
-        logger.info(
+        logger.debug(
             "[LLMTURN] supervisor turn %d/%d: in=%d out=%d cache_read=%d "
             "cache_write=%d -> %s",
             _i + 1,
@@ -192,7 +192,7 @@ async def run_supervisor_agent(
             _cache_write,
             _called,
         )
-    logger.info(
+    logger.debug(
         "[LLMTURN] supervisor: %d turns, %d total output tokens, agent loop %.1fs",
         len(_ai_turns),
         _total_out,

@@ -1559,7 +1559,7 @@ class RetrievalService:
         )
         for p, pmid_judgment in pmid_judgments.items():
             if verdict_of.get(p) != pmid_judgment.verdict:
-                logger.info(
+                logger.debug(
                     "synthesize: pmid_direction set PMID %s %s->%s for %s / %s",
                     p,
                     verdict_of.get(p),

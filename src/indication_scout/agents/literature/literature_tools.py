@@ -64,7 +64,7 @@ def build_literature_tools(
             store["drug_profile"] = profile
         else:
             chembl_id = profile.chembl_id
-        logger.info(
+        logger.debug(
             "[TIMING] build_drug_profile %s: %.1fs",
             drug_name,
             time.perf_counter() - _t0,

@@ -214,14 +214,6 @@ async def run_clinical_trials_agent(
         ):
             artifacts[field_map[msg.name]] = msg.artifact
 
-    tools_called = [k for k, v in artifacts.items() if v is not None]
-    logger.warning(
-        "clinical_trials_agent: %s × %s — tools called: %s",
-        drug_name,
-        disease_name,
-        tools_called,
-    )
-
     if artifacts["approval"] is None:
         logger.warning(
             "clinical_trials_agent: %s × %s — check_fda_approval was not called "

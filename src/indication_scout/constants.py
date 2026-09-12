@@ -173,9 +173,10 @@ PUBMED_EFETCH_PARSE_RETRIES: int = 3
 PUBMED_EFETCH_PARSE_BACKOFF_SCHEDULE: list[float] = [1.0, 2.0, 4.0]
 
 # NCBI eutils reports transient backend failures as HTTP 400 with an <ERROR> body that starts with
-# this prefix (e.g. "Error occurred: cannot get document summary"). Such responses are retried like
-# a 429; every other 400 stays fatal.
-NCBI_TRANSIENT_ERROR_PREFIX: str = "Error occurred"
+# "Error" ("Error occurred: cannot get document summary", "Error: External viewer error: Empty
+# Response ... Status: Timeout"). Request errors do not ("ID list is empty!", "Invalid uid ...",
+# "API key invalid"). Bodies with this prefix are retried like a 429; every other 400 stays fatal.
+NCBI_TRANSIENT_ERROR_PREFIX: str = "Error"
 
 # -- MeSH resolver ----------------------------------------------------------
 NCBI_ESEARCH_URL: str = f"{NCBI_BASE_URL}/esearch.fcgi"

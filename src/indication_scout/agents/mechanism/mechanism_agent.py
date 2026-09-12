@@ -186,7 +186,7 @@ async def run_mechanism_agent(
         approved_indications=approved_indications,
         date_before=date_before,
     )
-    logger.warning(
+    logger.debug(
         "[TIMING] mechanism %s: _assemble_candidates (%d of %d targets) took %.1fs",
         drug_name,
         len(assemble_targets),

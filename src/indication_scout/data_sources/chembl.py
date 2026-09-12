@@ -384,7 +384,7 @@ async def get_all_drug_names(
     filtered = [name for name in all_names if name and "component of" not in name]
     result = [pref_name] + [n for n in list(dict.fromkeys(filtered)) if n != pref_name]
 
-    logger.info("ChEMBL drug names for %s: %d found", chembl_id, len(result))
+    logger.debug("ChEMBL drug names for %s: %d found", chembl_id, len(result))
 
     # Single per-ChEMBL-ID file. Forward lookup (chembl_id → names) is a
     # direct read; reverse lookup (name → chembl_id) is a scan over all

@@ -179,7 +179,7 @@ def embed(texts: list[str]) -> list[list[float]]:
     # convert_to_numpy=True returns an ndarray; we convert to plain Python
     # floats so the vectors can be stored directly via SQLAlchemy/pgvector.
     _t0 = time.perf_counter()
-    vectors = model.encode(texts, convert_to_numpy=True)
+    vectors = model.encode(texts, convert_to_numpy=True, show_progress_bar=False)
     _EMBED_TIMING[0] += 1
     _EMBED_TIMING[1] += time.perf_counter() - _t0
     return [v.tolist() for v in vectors]

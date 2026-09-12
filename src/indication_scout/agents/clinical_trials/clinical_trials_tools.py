@@ -149,7 +149,7 @@ def build_clinical_trials_tools(
         kept = [t for t in trials if not is_non_therapeutic_study(t)]
         dropped = [t.nct_id for t in trials if is_non_therapeutic_study(t)]
         if dropped:
-            logger.info(
+            logger.debug(
                 "%s: dropped %d non-therapeutic trial(s) for %s x %s (all interventions are "
                 "diagnostic/device/tracer/procedure): %s",
                 scope,
@@ -789,7 +789,7 @@ def build_clinical_trials_tools(
             # admitted ungated — the same fail-closed rule the gate itself uses.
             demoted = [n for n in relevant_ncts if not treats.get(n, False)]
             if demoted:
-                logger.info(
+                logger.debug(
                     "clinical_trials: therapeutic-target gate demoted %d trial(s) for %s x %s: %s",
                     len(demoted),
                     _target_drug or "this drug",

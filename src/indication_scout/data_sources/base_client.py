@@ -312,9 +312,7 @@ class BaseClient(ABC):
                         # ~1s — no long floor needed.
                         delay = min(2 ** (attempt + 1), 90)
                         ctx_suffix = f" ({context})" if context else ""
-                        # WARNING, not debug: surfacing the retry makes
-                        # rate-limiting visible instead of looking like a hang.
-                        logger.warning(
+                        logger.debug(
                             "%s: HTTP %d on %s%s; sleeping %ds and retrying (attempt %d/%d)",
                             self._source_name,
                             resp.status,
@@ -332,6 +330,20 @@ class BaseClient(ABC):
                         )
                         await asyncio.sleep(delay)
                         continue
+                    logger.warning(
+                        "%s: HTTP %d on %s%s after %d attempts; retries exhausted",
+                        self._source_name,
+                        resp.status,
+                        safe_url,
+                        f" ({context})" if context else "",
+                        self.max_retries + 1,
+                        extra={
+                            "event_name": "dependency.retry_exhausted",
+                            "dependency": self._source_name,
+                            "retry_count": self.max_retries + 1,
+                            "outcome": "retryable_status",
+                        },
+                    )
                     err = DataSourceError(
                         self._source_name,
                         (
@@ -393,9 +405,7 @@ class BaseClient(ABC):
                     min(attempt, len(self.retry_backoff_schedule) - 1)
                 ]
                 ctx_suffix = f" ({context})" if context else ""
-                # WARNING, not debug — a swallowed timeout/connection error that
-                # silently sleeps and retries otherwise reads as an unexplained stall.
-                logger.warning(
+                logger.debug(
                     "%s: %s on %s%s; sleeping %ds and retrying (attempt %d/%d)",
                     self._source_name,
                     last_error,
@@ -414,6 +424,20 @@ class BaseClient(ABC):
                 await asyncio.sleep(delay)
 
         final_error = last_error or DataSourceError(self._source_name, "Unknown error")
+        logger.warning(
+            "%s: %s on %s%s after %d attempts; retries exhausted",
+            self._source_name,
+            final_error,
+            safe_url,
+            f" ({context})" if context else "",
+            self.max_retries + 1,
+            extra={
+                "event_name": "dependency.retry_exhausted",
+                "dependency": self._source_name,
+                "retry_count": self.max_retries + 1,
+                "outcome": retry_outcome,
+            },
+        )
         if self.exit_on_retry_exhausted:
             log_data_source_failure(
                 source=self._source_name,

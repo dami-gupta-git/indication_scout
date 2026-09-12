@@ -1,5 +1,6 @@
 """Unit tests for base_client module."""
 
+import logging
 from unittest.mock import AsyncMock, patch
 
 import aiohttp
@@ -223,7 +224,7 @@ async def test_transient_4xx_body_is_retried_then_succeeds():
     assert mock_session.get.call_count == 2
 
 
-async def test_transient_4xx_body_error_message_carries_xml_error_text():
+async def test_transient_4xx_body_error_message_carries_xml_error_text(caplog):
     error_resp = AsyncMock()
     error_resp.status = 400
     error_resp.text = AsyncMock(return_value=NCBI_400_BODY)
@@ -235,6 +236,7 @@ async def test_transient_4xx_body_error_message_carries_xml_error_text():
         mock_settings.default_timeout = 30.0
         mock_settings.default_max_retries = 1
         client = TransientBodyClient()
+    caplog.set_level(logging.DEBUG, logger="indication_scout.data_sources")
     with patch.object(
         client, "_get_session", new_callable=AsyncMock, return_value=mock_session
     ):
@@ -250,6 +252,18 @@ async def test_transient_4xx_body_error_message_carries_xml_error_text():
     )
     assert exc_info.value.status_code == 400
     assert mock_session.get.call_count == 2
+    retry_records = [
+        record
+        for record in caplog.records
+        if getattr(record, "event_name", "").startswith("dependency.retry")
+    ]
+    assert [
+        (record.levelname, record.event_name, record.retry_count, record.outcome)
+        for record in retry_records
+    ] == [
+        ("DEBUG", "dependency.retry", 1, "retryable_status"),
+        ("WARNING", "dependency.retry_exhausted", 2, "retryable_status"),
+    ]
 
 
 async def test_rest_get_xml_retries_on_5xx_then_succeeds():

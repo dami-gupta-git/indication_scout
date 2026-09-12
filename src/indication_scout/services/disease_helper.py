@@ -313,7 +313,7 @@ async def normalize_for_pubmed(raw_term: str, drug_name: str | None = None) -> s
     # Reject if LLM collapsed to a blocklisted over-generic term
     normalized_terms = {t.strip().lower() for t in normalized.split("OR")}
     if normalized_terms <= BROADENING_BLOCKLIST:
-        logger.info(
+        logger.debug(
             f"Rejected over-broad normalization '{normalized}' for '{raw_term}', keeping raw term"
         )
         normalized = raw_term
@@ -329,7 +329,7 @@ async def normalize_for_pubmed(raw_term: str, drug_name: str | None = None) -> s
             )
             broader_terms = {t.strip().lower() for t in broader.split("OR")}
             if broader_terms & BROADENING_BLOCKLIST:
-                logger.info(
+                logger.debug(
                     f"Rejected over-broad fallback '{broader}' for '{normalized}'"
                 )
             else:
@@ -337,7 +337,7 @@ async def normalize_for_pubmed(raw_term: str, drug_name: str | None = None) -> s
                 if broader_count >= MIN_RESULTS:
                     normalized = broader
 
-    logger.info(f"Normalized '{raw_term}' → '{normalized}'")
+    logger.debug("Normalized %r → %r", raw_term, normalized)
 
     return normalized
 
@@ -485,7 +485,7 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
     if canonical is None or canonical.strip().lower() == indication.strip().lower():
         return None
 
-    logger.info(
+    logger.debug(
         "MeSH resolver: '%s' unresolved; retrying as canonical synonym '%s'",
         indication,
         canonical,
@@ -595,7 +595,7 @@ async def _resolve_mesh_id_direct(indication: str) -> tuple[str, str] | None:
         )
         return None
 
-    logger.info(
+    logger.debug(
         "MeSH resolver: '%s' → descriptor=%s pref=%r",
         indication,
         descriptor_id,

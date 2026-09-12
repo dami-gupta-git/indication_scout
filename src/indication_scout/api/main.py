@@ -129,10 +129,15 @@ async def _log_client_ip(
         route_object = request.scope.get("route")
         route = getattr(route_object, "path", "unmatched")
         duration = time.perf_counter() - started
-        if route not in {"/health", "/metrics"}:
+        is_operational_request = request.url.path in {
+            "/health",
+            "/metrics",
+            "/metrics/",
+        }
+        if not is_operational_request:
             record_http_request(request.method, route, status_code, duration)
         # Polling is measured but omitted from logs because the UI requests it frequently.
-        if route not in {"/health", "/metrics"} and not (
+        if not is_operational_request and not (
             request.method == "GET"
             and route in {"/api/analyses/{job_id}", "/api/analyses/{job_id}/report"}
         ):

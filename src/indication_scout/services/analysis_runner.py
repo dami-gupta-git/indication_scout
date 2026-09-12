@@ -391,20 +391,20 @@ async def run_analysis(
         # agent-loop/serialization overhead. These three buckets are sequential enough that
         # the remainder is a useful proxy for "time spent waiting on the LLM".
         other = total - api_total - embed_total
-        logger.warning("[TIMING] run_analysis(%s) total: %.1fs", drug, total)
-        logger.warning(
+        logger.debug("[TIMING] run_analysis(%s) total: %.1fs", drug, total)
+        logger.debug(
             "[TIMING] external API total: %.1fs (%.0f%% of run) — %s",
             api_total,
             100 * api_total / total if total else 0,
             per_source or "no calls",
         )
-        logger.warning(
+        logger.debug(
             "[TIMING] embedding (BioLORD) total: %.1fs (%.0f%% of run) — %d encode calls",
             embed_total,
             100 * embed_total / total if total else 0,
             embed_calls,
         )
-        logger.warning(
+        logger.debug(
             "[TIMING] LLM + overhead (remainder): %.1fs (%.0f%% of run)",
             other,
             100 * other / total if total else 0,

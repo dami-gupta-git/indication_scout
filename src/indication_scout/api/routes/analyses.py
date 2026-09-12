@@ -31,7 +31,6 @@ from indication_scout.helpers.drug_helpers import normalize_drug_name
 from indication_scout.metrics import analysis_finished, analysis_started
 from indication_scout.observability import (
     bind_log_context,
-    log_context,
     reset_log_context,
 )
 from indication_scout.report.format_report import format_report
@@ -91,11 +90,6 @@ def _persist_progress(job: Job, attempt_id: str, phase: str, message: str) -> No
             attempt_id=attempt_id,
             stage=phase,
             attributes={"message": message},
-        )
-    with log_context(stage=phase):
-        logger.info(
-            "Analysis progress",
-            extra={"event_name": "analysis.progress"},
         )
 
 

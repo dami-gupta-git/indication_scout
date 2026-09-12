@@ -82,6 +82,8 @@ def test_analysis_metrics_keep_oldest_concurrent_start_and_record_integrity():
 def test_api_exposes_metrics_and_returns_request_id():
     from indication_scout.api.main import app
 
+    unmatched = HTTP_REQUESTS.labels("GET", "unmatched", "2xx")
+    unmatched_before = unmatched._value.get()
     with patch(
         "indication_scout.api.main._geolocate",
         new=AsyncMock(return_value=("New York, New York, United States", False)),
@@ -95,3 +97,4 @@ def test_api_exposes_metrics_and_returns_request_id():
     assert health.headers["x-request-id"] == "request-1"
     assert metrics.status_code == 200
     assert "indication_scout_http_requests_total" in metrics.text
+    assert unmatched._value.get() == unmatched_before
