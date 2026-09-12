@@ -115,9 +115,12 @@ def build_literature_tools(
             direct_query=store["direct_query"],
         )
         store["pmids"] = pmids
-        # logger.warning(
-        #     "[TIMING] fetch_and_cache %s: %.1fs", drug_name, time.perf_counter() - _t0
-        # )
+        logger.info(
+            "[LIT] fetch_and_cache %s: %d pmids in %.1fs",
+            drug_name,
+            len(pmids),
+            time.perf_counter() - _t0,
+        )
         return f"Fetched {len(pmids)} PMIDs", pmids
 
     @tool(response_format="content_and_artifact")
@@ -236,9 +239,13 @@ def build_literature_tools(
             evidence.indication_harm = store["indication_harm"]
             evidence.indication_harm_summary = store["indication_harm_summary"]
             evidence.indication_harm_pmids = store["indication_harm_pmids"]
-        # logger.warning(
-        #     "[TIMING] synthesize %s: %.1fs", disease_name, time.perf_counter() - _t0
-        # )
+        logger.info(
+            "[LIT] synthesize %s: strength=%s direction=%s in %.1fs",
+            disease_name,
+            evidence.strength,
+            evidence.direction,
+            time.perf_counter() - _t0,
+        )
         # logger.warning(
         #     f"literature agent evidence: {evidence}")
         return (

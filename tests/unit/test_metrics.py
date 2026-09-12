@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from indication_scout.metrics import (
     ACTIVE_ANALYSES,
+    ANALYSIS_DURATION,
     ANALYSIS_RUNS,
     DEPENDENCY_REQUESTS,
     HTTP_REQUESTS,
@@ -16,6 +17,31 @@ from indication_scout.metrics import (
     record_dependency_request,
     record_http_request,
 )
+
+
+def test_analysis_duration_has_service_level_buckets():
+    ANALYSIS_DURATION.labels("api", "live", "done").observe(601.0)
+
+    bucket_bounds = [
+        sample.labels["le"]
+        for sample in ANALYSIS_DURATION.collect()[0].samples
+        if sample.name == "indication_scout_analysis_duration_seconds_bucket"
+        and sample.labels["submission_source"] == "api"
+        and sample.labels["execution_mode"] == "live"
+        and sample.labels["outcome"] == "done"
+    ]
+
+    assert bucket_bounds == [
+        "30.0",
+        "60.0",
+        "120.0",
+        "300.0",
+        "600.0",
+        "900.0",
+        "1800.0",
+        "3600.0",
+        "+Inf",
+    ]
 
 
 def test_http_metric_records_route_template_and_status_class():

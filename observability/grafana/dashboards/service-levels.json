@@ -1,0 +1,217 @@
+{
+  "annotations": {"list": []},
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 99.5}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 0},
+      "id": 1,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {
+          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[30d])",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: API availability (target 99.5%)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 95}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 0},
+      "id": 2,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {
+          "expr": "100 * sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[30d]))",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: Analysis success (target 95%)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 95}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 0},
+      "id": 3,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {
+          "expr": "100 * sum(increase(indication_scout_analysis_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"600.0\"}[30d])) / sum(increase(indication_scout_analysis_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d]))",
+          "refId": "A"
+        }
+      ],
+      "title": "SLO: Analyses within 10m (target 95%)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 50}, {"color": "red", "value": 100}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 6},
+      "id": 4,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {
+          "expr": "100 * (1 - avg_over_time(up{job=\"indication-scout\"}[30d])) / 0.005",
+          "refId": "A"
+        }
+      ],
+      "title": "API availability error budget used",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 50}, {"color": "red", "value": 100}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 6},
+      "id": 5,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {
+          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[30d])))) / 0.05",
+          "refId": "A"
+        }
+      ],
+      "title": "Analysis success error budget used",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 50}, {"color": "red", "value": 100}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 6},
+      "id": 6,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {
+          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"600.0\"}[30d])) / sum(increase(indication_scout_analysis_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d])))) / 0.05",
+          "refId": "A"
+        }
+      ],
+      "title": "Analysis latency error budget used",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 99}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 0, "y": 12},
+      "id": 7,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {
+          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[30d])",
+          "refId": "A"
+        }
+      ],
+      "title": "SLA: API availability (commitment 99%)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {
+          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 90}]},
+          "unit": "percent"
+        },
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 8, "y": 12},
+      "id": 8,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [
+        {
+          "expr": "100 * sum(increase(indication_scout_analysis_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"900.0\"}[30d])) / sum(increase(indication_scout_analysis_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[30d]))",
+          "refId": "A"
+        }
+      ],
+      "title": "SLA: Analyses within 15m (commitment 90%)",
+      "type": "stat"
+    },
+    {
+      "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
+      "fieldConfig": {
+        "defaults": {"thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "red", "value": 1}]}, "unit": "short"},
+        "overrides": []
+      },
+      "gridPos": {"h": 6, "w": 8, "x": 16, "y": 12},
+      "id": 9,
+      "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
+      "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[30d]))", "refId": "A"}],
+      "title": "Integrity rejections, 30d",
+      "type": "stat"
+    },
+    {
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 18},
+      "id": 10,
+      "options": {
+        "alertName": "",
+        "dashboardAlerts": false,
+        "dashboardTitle": "",
+        "folder": {"id": null, "title": "IndicationScout"},
+        "groupBy": ["alertname"],
+        "maxItems": 20,
+        "sortOrder": 1,
+        "stateFilter": {"error": true, "firing": true, "noData": true, "normal": true, "pending": true}
+      },
+      "title": "Service-level alert status",
+      "type": "alertlist"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 42,
+  "tags": ["indication-scout", "slo", "sla"],
+  "templating": {"list": []},
+  "time": {"from": "now-30d", "to": "now"},
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "IndicationScout service levels",
+  "uid": "indication-scout-service-levels",
+  "version": 1
+}

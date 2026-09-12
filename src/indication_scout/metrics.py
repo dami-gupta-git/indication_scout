@@ -7,6 +7,8 @@ from threading import Lock
 
 from prometheus_client import Counter, Gauge, Histogram
 
+from indication_scout.constants import ANALYSIS_DURATION_BUCKETS_SECONDS
+
 HTTP_REQUESTS = Counter(
     "indication_scout_http_requests_total",
     "HTTP requests completed by the API.",
@@ -26,6 +28,7 @@ ANALYSIS_DURATION = Histogram(
     "indication_scout_analysis_duration_seconds",
     "Analysis attempt duration in seconds.",
     ("submission_source", "execution_mode", "outcome"),
+    buckets=ANALYSIS_DURATION_BUCKETS_SECONDS,
 )
 ACTIVE_ANALYSES = Gauge(
     "indication_scout_active_analyses",

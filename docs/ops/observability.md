@@ -118,6 +118,10 @@ analysis active for more than two minutes, and any report-integrity rejection ob
 five minutes. The dashboard refreshes every 15 seconds and initially displays the preceding six
 hours. The same rules are available under `Alerting` in Grafana.
 
+The `IndicationScout service levels` dashboard shows the active SLA, internal SLO compliance, and
+30-day error-budget consumption. The definitions, scope, exclusions, and measurement limitations
+are recorded in [service-levels.md](service-levels.md).
+
 The IndicationScout notification route is permanently muted. Alerts continue to be evaluated and
 displayed in Grafana, but Grafana does not attempt to send email or other external notifications.
 

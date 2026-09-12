@@ -1433,6 +1433,9 @@ class RetrievalService:
             )
             return summary
 
+        logger.info(
+            "[LIT] synthesizing %s: %d abstracts", disease, len(synthesis_abstracts)
+        )
         formatted = "\n\n".join(
             f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
             for r in synthesis_abstracts
@@ -1554,6 +1557,11 @@ class RetrievalService:
         relevant_for_direction = [
             r for r in synthesis_abstracts if verdict_of[r.pmid] in _RELEVANT_VERDICTS
         ]
+        logger.info(
+            "[LIT] judging %s: %d relevant abstracts",
+            disease,
+            len(relevant_for_direction),
+        )
         pmid_judgments = await _judge_pmid_directions(
             pref_name, disease, relevant_for_direction
         )

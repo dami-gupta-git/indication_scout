@@ -25,6 +25,19 @@ NOISY_THIRD_PARTY_LOGGERS: tuple[str, ...] = (
     "anthropic",
 )
 
+# Analysis-duration histogram boundaries used by the 10-minute internal SLO and
+# 15-minute external SLA. The final finite bucket preserves visibility for slow runs.
+ANALYSIS_DURATION_BUCKETS_SECONDS: tuple[float, ...] = (
+    30.0,
+    60.0,
+    120.0,
+    300.0,
+    600.0,
+    900.0,
+    1800.0,
+    3600.0,
+)
+
 # -- Embedding --------------------------------------------------------------
 # Chunk size for embed_async's lock-release loop. A large bulk embed (hundreds
 # of abstracts) is encoded in chunks of this size, releasing the shared model

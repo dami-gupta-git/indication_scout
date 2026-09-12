@@ -187,3 +187,197 @@ groups:
         labels:
           service: indication-scout
           severity: critical
+
+      - uid: scout-api-availability-budget-burn
+        title: API availability error budget burning quickly
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 3600
+              to: 0
+            datasourceUid: indication-scout-prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: indication-scout-prometheus
+              editorMode: code
+              expr: >-
+                (1 - avg_over_time(up{job="indication-scout"}[1h])) / 0.005
+              instant: true
+              intervalMs: 10000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              hide: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: $B > 2
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: math
+        dashboardUid: indication-scout-service-levels
+        panelId: 4
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: API errors are consuming the 30-day availability budget at more than twice its sustainable rate.
+        labels:
+          service: indication-scout
+          severity: warning
+
+      - uid: scout-analysis-success-budget-burn
+        title: Analysis success error budget burning quickly
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 21600
+              to: 0
+            datasourceUid: indication-scout-prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: indication-scout-prometheus
+              editorMode: code
+              expr: >-
+                (sum(increase(indication_scout_analysis_runs_total{submission_source="api",execution_mode="live",outcome=~"error|interrupted"}[6h]))
+                / sum(increase(indication_scout_analysis_runs_total{submission_source="api",execution_mode="live",outcome=~"done|error|interrupted"}[6h])))
+                / 0.05
+              instant: true
+              intervalMs: 10000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              hide: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: $B > 2
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: math
+        dashboardUid: indication-scout-service-levels
+        panelId: 5
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: Failed analyses are consuming the 30-day success budget at more than twice its sustainable rate.
+        labels:
+          service: indication-scout
+          severity: warning
+
+      - uid: scout-analysis-latency-budget-burn
+        title: Analysis latency error budget burning quickly
+        condition: C
+        data:
+          - refId: A
+            relativeTimeRange:
+              from: 21600
+              to: 0
+            datasourceUid: indication-scout-prometheus
+            model:
+              datasource:
+                type: prometheus
+                uid: indication-scout-prometheus
+              editorMode: code
+              expr: >-
+                ((sum(increase(indication_scout_analysis_duration_seconds_count{submission_source="api",execution_mode="live",outcome="done"}[6h]))
+                - sum(increase(indication_scout_analysis_duration_seconds_bucket{submission_source="api",execution_mode="live",outcome="done",le="600.0"}[6h])))
+                / sum(increase(indication_scout_analysis_duration_seconds_count{submission_source="api",execution_mode="live",outcome="done"}[6h])))
+                / 0.05
+              instant: true
+              intervalMs: 10000
+              legendFormat: __auto
+              maxDataPoints: 43200
+              range: false
+              refId: A
+          - refId: B
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: A
+              hide: false
+              intervalMs: 1000
+              maxDataPoints: 43200
+              reducer: last
+              refId: B
+              type: reduce
+          - refId: C
+            relativeTimeRange:
+              from: 0
+              to: 0
+            datasourceUid: __expr__
+            model:
+              datasource:
+                type: __expr__
+                uid: __expr__
+              expression: $B > 2
+              intervalMs: 1000
+              maxDataPoints: 43200
+              refId: C
+              type: math
+        dashboardUid: indication-scout-service-levels
+        panelId: 6
+        noDataState: OK
+        execErrState: Error
+        for: 5m
+        annotations:
+          summary: Slow analyses are consuming the 30-day latency budget at more than twice its sustainable rate.
+        labels:
+          service: indication-scout
+          severity: warning
