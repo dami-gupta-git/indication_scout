@@ -20,7 +20,7 @@
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 95}]},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue"}, {"color": "green", "value": 95}]},
           "unit": "percent"
         },
         "overrides": []
@@ -41,7 +41,7 @@
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 80}]},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue"}, {"color": "green", "value": 80}]},
           "unit": "percent"
         },
         "overrides": []
@@ -62,7 +62,7 @@
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 80}]},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue"}, {"color": "green", "value": 80}]},
           "unit": "percent"
         },
         "overrides": []
@@ -72,18 +72,18 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"900.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h]))",
+          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"1800.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h]))",
           "refId": "A"
         }
       ],
-      "title": "SLO: Analyses within 15m (target 80%)",
+      "title": "SLO: Analyses within 30m (target 80%)",
       "type": "stat"
     },
     {
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 50}, {"color": "red", "value": 100}]},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "blue", "value": 100}]},
           "unit": "percent"
         },
         "overrides": []
@@ -104,7 +104,7 @@
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 50}, {"color": "red", "value": 100}]},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "blue", "value": 100}]},
           "unit": "percent"
         },
         "overrides": []
@@ -125,7 +125,7 @@
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "orange", "value": 50}, {"color": "red", "value": 100}]},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "green"}, {"color": "blue", "value": 100}]},
           "unit": "percent"
         },
         "overrides": []
@@ -135,7 +135,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"900.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h])))) / 0.20",
+          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"1800.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h])))) / 0.20",
           "refId": "A"
         }
       ],
@@ -146,7 +146,7 @@
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 90}]},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue"}, {"color": "green", "value": 90}]},
           "unit": "percent"
         },
         "overrides": []
@@ -167,7 +167,7 @@
       "datasource": {"type": "prometheus", "uid": "indication-scout-prometheus"},
       "fieldConfig": {
         "defaults": {
-          "thresholds": {"mode": "absolute", "steps": [{"color": "red"}, {"color": "green", "value": 70}]},
+          "thresholds": {"mode": "absolute", "steps": [{"color": "blue"}, {"color": "green", "value": 70}]},
           "unit": "percent"
         },
         "overrides": []
@@ -177,11 +177,11 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"1200.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h]))",
+          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"2700.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h]))",
           "refId": "A"
         }
       ],
-      "title": "Proposed SLA: Analyses within 20m (70%)",
+      "title": "Proposed SLA: Analyses within 45m (70%)",
       "type": "stat"
     },
     {

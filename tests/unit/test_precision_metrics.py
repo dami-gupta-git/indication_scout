@@ -9,6 +9,7 @@ from indication_scout.services.precision_metrics import (
     CandidatePrediction,
     CandidateReview,
     CandidateValidityLabel,
+    DrugCandidatePrecision,
     filter_spec_to_drugs,
     load_reviews,
     score_ranked_candidate_precision,
@@ -202,12 +203,14 @@ def test_score_ranked_candidate_precision_uses_candidate_labels_and_aliases() ->
             "drug": "drug-a",
             "valid": 1,
             "invalid": 1,
+            "unstable": 0,
             "precision": 0.5,
         },
         {
             "drug": "drug-b",
             "valid": 2,
             "invalid": 0,
+            "unstable": 0,
             "precision": 1.0,
         },
     ]
@@ -237,6 +240,44 @@ def test_ranked_precision_requires_review_for_unknown_candidate() -> None:
         ),
     ):
         score_ranked_candidate_precision([report], spec)
+
+
+def test_score_ranked_candidate_precision_excludes_unstable_from_the_count() -> None:
+    spec = CandidatePrecisionSpec(
+        top_k=2,
+        minimum_precision=0.75,
+        labels=[
+            CandidateValidityLabel(
+                drug="drug-a",
+                disease="disease one",
+                aliases=[],
+                decision="valid",
+                rationale="Reviewed as a valid candidate.",
+            ),
+            CandidateValidityLabel(
+                drug="drug-a",
+                disease="flip-prone disease",
+                aliases=[],
+                decision="unstable",
+                rationale="Ranking-position instability, not a validated repurposing candidate.",
+            ),
+        ],
+    )
+    report = SupervisorOutput(
+        drug_name="drug-a", top_diseases=["disease one", "flip-prone disease"]
+    )
+
+    result = score_ranked_candidate_precision([report], spec)
+
+    assert result.valid == 1
+    assert result.invalid == 0
+    assert result.unstable == 1
+    assert result.precision == 1.0
+    assert result.per_drug == [
+        DrugCandidatePrecision(
+            drug="drug-a", valid=1, invalid=0, unstable=1, precision=1.0
+        )
+    ]
 
 
 def test_filter_spec_to_drugs_keeps_only_requested_labels() -> None:

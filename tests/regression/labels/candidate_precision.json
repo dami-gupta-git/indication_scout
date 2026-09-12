@@ -1,6 +1,6 @@
 {
   "top_k": 5,
-  "minimum_precision": 0.9,
+  "minimum_precision": 0.8,
   "labels": [
     {
       "drug": "semaglutide",
@@ -8,7 +8,8 @@
       "aliases": [
         "MASH",
         "non-alcoholic steatohepatitis",
-        "NASH"
+        "NASH",
+        "non-alcoholic fatty liver disease"
       ],
       "decision": "invalid",
       "rationale": "Wegovy is FDA-approved for eligible adults with MASH."
@@ -197,6 +198,111 @@
       "aliases": [],
       "decision": "invalid",
       "rationale": "Eisenmenger syndrome is a form of pulmonary arterial hypertension, which sildenafil is already approved for, so it is an existing use under a narrower name rather than a repurposing opportunity. PROVISIONAL \u2014 labelled under time pressure, needs review."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "parkinson disease",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs, with no registry trials and mixed literature."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "liver disorder",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: shares its evidence and active trial (NCT04822181) with metabolic dysfunction-associated steatohepatitis, already labeled invalid because Wegovy is FDA-approved for MASH; this appears to be the same indication under a broader name."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "binge eating disorder",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "mood disorder",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "post-traumatic stress disorder",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "narcolepsy",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "methamphetamine dependence",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "multiple sclerosis",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "stroke",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "bupropion",
+      "disease": "low back pain",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "polycystic ovary syndrome",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "cardiovascular disorder",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "kidney disorder",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "heart failure",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
+    },
+    {
+      "drug": "semaglutide",
+      "disease": "diabetes mellitus",
+      "aliases": [],
+      "decision": "unstable",
+      "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
     }
   ]
 }

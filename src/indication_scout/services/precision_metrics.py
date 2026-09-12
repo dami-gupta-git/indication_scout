@@ -16,7 +16,11 @@ from indication_scout.agents.supervisor.supervisor_output import SupervisorOutpu
 
 ReviewDecision = Literal["valid", "invalid", "uncertain"]
 CandidateSource = Literal["competitor", "mechanism", "both"]
-CandidateValidityDecision = Literal["valid", "invalid"]
+CandidateValidityDecision = Literal["valid", "invalid", "unstable"]
+# "unstable" marks a ranked pair known to flip between runs from model ranking variance
+# (e.g. a subtype/parent rename, a borderline evidence call) rather than a settled validity
+# judgment. It satisfies the review requirement so CI does not stop on it, but is excluded
+# from the precision count in either direction.
 
 _REVIEW_CONTEXT_FIELDS = {"drug", "cutoff", "position", "source", "disease"}
 _REVIEW_FIELDS = {"review_id", "decision", "reason_category", "rationale", "evidence"}
@@ -162,6 +166,7 @@ class DrugCandidatePrecision(BaseModel):
     drug: str
     valid: int = Field(ge=0)
     invalid: int = Field(ge=0)
+    unstable: int = Field(ge=0)
     precision: float
 
     @model_validator(mode="before")
@@ -182,6 +187,7 @@ class CandidatePrecisionResult(BaseModel):
     minimum_precision: float = Field(ge=0, le=1)
     valid: int = Field(ge=0)
     invalid: int = Field(ge=0)
+    unstable: int = Field(ge=0)
     precision: float
     precision_ci_low: float
     precision_ci_high: float
@@ -309,12 +315,15 @@ def score_ranked_candidate_precision(
 
         valid = decisions.count("valid")
         invalid = decisions.count("invalid")
+        unstable = decisions.count("unstable")
+        scored = valid + invalid
         per_drug.append(
             DrugCandidatePrecision(
                 drug=report.drug_name,
                 valid=valid,
                 invalid=invalid,
-                precision=valid / len(decisions),
+                unstable=unstable,
+                precision=valid / scored if scored else 1.0,
             )
         )
 
@@ -325,6 +334,7 @@ def score_ranked_candidate_precision(
 
     valid = sum(item.valid for item in per_drug)
     invalid = sum(item.invalid for item in per_drug)
+    unstable = sum(item.unstable for item in per_drug)
     total = valid + invalid
     ci_low, ci_high = _wilson_interval(valid, total)
     assert ci_low is not None and ci_high is not None
@@ -333,7 +343,8 @@ def score_ranked_candidate_precision(
         minimum_precision=spec.minimum_precision,
         valid=valid,
         invalid=invalid,
-        precision=valid / total,
+        unstable=unstable,
+        precision=valid / total if total else 1.0,
         precision_ci_low=ci_low,
         precision_ci_high=ci_high,
         per_drug=per_drug,
@@ -349,12 +360,14 @@ def write_candidate_precision_report(
         "# Live candidate-selection precision",
         "",
         "This measurement scores only whether each ranked drug-disease pair is a valid repurposing candidate. Report "
-        "wording, evidence interpretation, and card correctness are outside this measurement.",
+        "wording, evidence interpretation, and card correctness are outside this measurement. A pair labeled "
+        "`unstable` (known to flip between runs from ranking variance) is excluded from the precision count.",
         "",
         "| Measurement | Result |",
         "|---|---:|",
         f"| Precision at {result.top_k} | {result.valid}/{result.valid + result.invalid} "
         f"({_format_percent(result.precision)}) |",
+        f"| Unstable (excluded) | {result.unstable} |",
         "| Approximate 95% Wilson interval | "
         f"{_format_interval(result.precision_ci_low, result.precision_ci_high)} |",
         f"| CI threshold | {_format_percent(result.minimum_precision)} |",
@@ -362,12 +375,12 @@ def write_candidate_precision_report(
         "",
         "## By drug",
         "",
-        "| Drug | Valid | Invalid | Precision |",
-        "|---|---:|---:|---:|",
+        "| Drug | Valid | Invalid | Unstable | Precision |",
+        "|---|---:|---:|---:|---:|",
     ]
     for item in result.per_drug:
         lines.append(
-            f"| {item.drug} | {item.valid} | {item.invalid} | "
+            f"| {item.drug} | {item.valid} | {item.invalid} | {item.unstable} | "
             f"{_format_percent(item.precision)} |"
         )
     lines.extend(

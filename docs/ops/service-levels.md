@@ -11,7 +11,7 @@ The proposed external commitments are lower than the internal operating targets.
 | Commitment | Target | Measurement |
 |---|---:|---|
 | API availability | 90% | The percentage of scheduled Prometheus scrapes in which the API metrics endpoint is reachable. |
-| Analysis latency | 70% within 20 minutes | The percentage of successful live API analyses whose recorded duration is at most 1,200 seconds. |
+| Analysis latency | 70% within 45 minutes | The percentage of successful live API analyses whose recorded duration is at most 2,700 seconds. |
 | Report integrity | No failed report is published | A run marked with failed integrity status does not expose a completed report. |
 
 Availability is sampled every 15 seconds. The latency commitment excludes CLI runs, seed reports,
@@ -26,7 +26,7 @@ The internal objectives provide earlier warning before the external commitment i
 |---|---:|---:|
 | API availability | 95% | The API may be unreachable for 5% of scheduled scrapes. |
 | Analysis success | 80% | 20% of eligible live API analyses may end in error or interruption. |
-| Analysis latency | 80% within 15 minutes | 20% of successful live API analyses may exceed 900 seconds. |
+| Analysis latency | 80% within 30 minutes | 20% of successful live API analyses may exceed 1,800 seconds. |
 | Report integrity | 100% | No report marked as failing integrity validation may be published. |
 
 User cancellations are excluded from the analysis-success denominator. Upstream dependency

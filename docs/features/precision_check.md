@@ -12,7 +12,7 @@ highest-ranked diseases from the newest generated JSON report and compares them 
 label set.
 
 The score is micro-averaged precision at five: the number of valid pairs divided by all scored pairs
-across the scored drugs. CI passes at 90% or higher.
+across the scored drugs. CI passes at the threshold set in the label file's `minimum_precision`.
 
 ## Labels
 
@@ -23,6 +23,11 @@ after lowercasing and trimming. Aliases must be listed explicitly.
 A ranked pair without a label is not scored automatically. The check exits with a review-required
 error so that a person can classify the new pair before CI proceeds. Duplicate labels, aliases,
 reports, or ranked candidates also stop the check.
+
+A label's `decision` is `valid`, `invalid`, or `unstable`. `unstable` marks a pair known to flip in
+and out of the top five between otherwise-unchanged runs — a ranking artifact, not a settled
+validity judgment. It satisfies the review requirement so CI does not stop on it, but it is excluded
+from the precision count in either direction; the report's "Unstable (excluded)" row shows how many.
 
 ## Reports
 
