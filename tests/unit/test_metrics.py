@@ -38,6 +38,7 @@ def test_analysis_duration_has_service_level_buckets():
         "300.0",
         "600.0",
         "900.0",
+        "1200.0",
         "1800.0",
         "3600.0",
         "+Inf",

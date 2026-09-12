@@ -25,8 +25,8 @@ NOISY_THIRD_PARTY_LOGGERS: tuple[str, ...] = (
     "anthropic",
 )
 
-# Analysis-duration histogram boundaries used by the 10-minute internal SLO and
-# 15-minute external SLA. The final finite bucket preserves visibility for slow runs.
+# Analysis-duration histogram boundaries used by the 15-minute internal SLO and
+# 20-minute proposed SLA. The final finite bucket preserves visibility for slow runs.
 ANALYSIS_DURATION_BUCKETS_SECONDS: tuple[float, ...] = (
     30.0,
     60.0,
@@ -34,6 +34,7 @@ ANALYSIS_DURATION_BUCKETS_SECONDS: tuple[float, ...] = (
     300.0,
     600.0,
     900.0,
+    1200.0,
     1800.0,
     3600.0,
 )

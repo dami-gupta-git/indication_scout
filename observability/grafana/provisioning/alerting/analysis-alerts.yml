@@ -203,7 +203,7 @@ groups:
                 uid: indication-scout-prometheus
               editorMode: code
               expr: >-
-                (1 - avg_over_time(up{job="indication-scout"}[1h])) / 0.005
+                (1 - avg_over_time(up{job="indication-scout"}[1h])) / 0.05
               instant: true
               intervalMs: 10000
               legendFormat: __auto
@@ -246,7 +246,7 @@ groups:
         execErrState: Error
         for: 5m
         annotations:
-          summary: API errors are consuming the 30-day availability budget at more than twice its sustainable rate.
+          summary: API errors are consuming the 24-hour availability budget at more than twice its sustainable rate.
         labels:
           service: indication-scout
           severity: warning
@@ -268,7 +268,7 @@ groups:
               expr: >-
                 (sum(increase(indication_scout_analysis_runs_total{submission_source="api",execution_mode="live",outcome=~"error|interrupted"}[6h]))
                 / sum(increase(indication_scout_analysis_runs_total{submission_source="api",execution_mode="live",outcome=~"done|error|interrupted"}[6h])))
-                / 0.05
+                / 0.20
               instant: true
               intervalMs: 10000
               legendFormat: __auto
@@ -311,7 +311,7 @@ groups:
         execErrState: Error
         for: 5m
         annotations:
-          summary: Failed analyses are consuming the 30-day success budget at more than twice its sustainable rate.
+          summary: Failed analyses are consuming the 24-hour success budget at more than twice its sustainable rate.
         labels:
           service: indication-scout
           severity: warning
@@ -332,9 +332,9 @@ groups:
               editorMode: code
               expr: >-
                 ((sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source="api",execution_mode="live",outcome="done"}[6h]))
-                - sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source="api",execution_mode="live",outcome="done",le="600.0"}[6h])))
+                - sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source="api",execution_mode="live",outcome="done",le="900.0"}[6h])))
                 / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source="api",execution_mode="live",outcome="done"}[6h])))
-                / 0.05
+                / 0.20
               instant: true
               intervalMs: 10000
               legendFormat: __auto
@@ -377,7 +377,7 @@ groups:
         execErrState: Error
         for: 5m
         annotations:
-          summary: Slow analyses are consuming the 30-day latency budget at more than twice its sustainable rate.
+          summary: Slow analyses are consuming the 24-hour latency budget at more than twice its sustainable rate.
         labels:
           service: indication-scout
           severity: warning
