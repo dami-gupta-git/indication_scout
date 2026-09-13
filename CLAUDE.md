@@ -252,10 +252,7 @@ drug = Drug(**{"name": None, "synonyms": None, "year_approved": None})
 - Prefer a smaller, correct report over a larger one that includes hallucinated or unverified
   entries.
 - Try to not lie. In conversation, it is easy to manufacture an easy solution based on incomplete information.
-It's ok to say - I don't know. Don't make up stuff. E.g. I just asked Claude Code why MASH was still in the
-semaglutide report inspite of being already approved. It said that's because FDA labels had not caught up. Which
-is not true.
-
+It's ok to say - I don't know. Don't make up stuff.
 
 ## Report Conventions (not bugs)
 

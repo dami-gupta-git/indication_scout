@@ -44,9 +44,17 @@ TEST_REPORTS_DIR = Path(__file__).parent.parent.parent.parent / "test_reports"
 
 
 def _latest_payload(drug: str) -> Path | None:
-    """Most recent test_reports/<drug>_*.json by mtime, or None if missing."""
+    """Most recent non-holdout test_reports/<drug>_*.json by mtime, or None if missing.
+
+    Holdout payloads (`<drug>_holdout_...json`, `<drug>_ALIASUNION_holdout_...json`) run against a
+    truncated data cutoff and are not comparable to a gold standard authored from a production run.
+    """
     candidates = sorted(
-        TEST_REPORTS_DIR.glob(f"{drug}_*.json"),
+        (
+            p
+            for p in TEST_REPORTS_DIR.glob(f"{drug}_*.json")
+            if "_holdout_" not in p.stem
+        ),
         key=lambda p: p.stat().st_mtime,
         reverse=True,
     )

@@ -35,6 +35,10 @@ services:
       # 5432 (not the host-published 5438).
       DATABASE_URL: postgresql+psycopg2://scout:${DB_PASSWORD}@db:5432/scout
       TEST_DATABASE_URL: postgresql+psycopg2://scout:${DB_PASSWORD}@db:5432/scout_test
+      # Selects which tunable-limits file config.py loads (see .env.constants*).
+      # Defaults to production limits; override on the host to run cheaper, e.g.
+      # CONSTANTS_FILE=.env.constants.test docker compose up -d api
+      CONSTANTS_FILE: ${CONSTANTS_FILE:-.env.constants}
     ports:
       - "8000:8000"
     volumes:
@@ -50,6 +54,7 @@ services:
 
   prometheus:
     image: prom/prometheus:v3.8.1
+    restart: unless-stopped
     command:
       - --config.file=/etc/prometheus/prometheus.yml
       - --storage.tsdb.path=/prometheus
@@ -63,6 +68,7 @@ services:
 
   grafana:
     image: grafana/grafana:12.3.1
+    restart: unless-stopped
     environment:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}

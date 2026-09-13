@@ -66,7 +66,9 @@ RUN --mount=type=cache,id=s/cfc0929f-fbf5-47fb-8ffe-eed4eefb2ebd-/root/.cache/pi
 
 # Tunable numeric limits (not secrets) — config.py loads these from the project
 # root at startup, and the fields have no defaults, so the file must be present.
-COPY .env.constants ./
+# Copy every variant (.test, .integration, ...) so CONSTANTS_FILE can select
+# any of them at container runtime without a rebuild.
+COPY .env.constants* ./
 
 # Committed example snapshots, copied into the volume cache on startup when the
 # cache is empty (fresh deploy) so example chips serve instantly.

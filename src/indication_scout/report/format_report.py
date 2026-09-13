@@ -568,21 +568,6 @@ def format_report(output: SupervisorOutput) -> str:
             lines.append(f"\n**Safety PMIDs:** {pmid_links}")
         lines += ["", "---", ""]
 
-    # Candidate diseases
-    lines += ["## Diseases Considered", ""]
-    if output.candidate_diseases:
-        lines.append(
-            "_Note: not every disease listed here is investigated in depth. "
-            "Only diseases with a section under **Findings by Disease** below have "
-            "literature and clinical-trial evidence pulled for this run._"
-        )
-        lines.append("")
-        for c in output.candidate_diseases:
-            lines.append(f"- {_title_case_disease(c)}")
-    else:
-        lines.append("_No candidates surfaced._")
-    lines += ["", "---", ""]
-
     # Per-disease findings
     lines += ["## Findings by Disease", ""]
     if output.disease_findings:
@@ -619,6 +604,25 @@ def format_report(output: SupervisorOutput) -> str:
             lines.append("")
     else:
         lines.append("_No candidate findings produced._")
+
+    lines += ["", "---", ""]
+
+    # Candidate diseases — investigated status matches disease_findings
+    investigated_diseases = {
+        finding.disease.lower().strip() for finding in output.disease_findings
+    }
+    lines += ["## Diseases Considered", ""]
+    if output.candidate_diseases:
+        for c in output.candidate_diseases:
+            marker = (
+                "✓ investigated"
+                if c.lower().strip() in investigated_diseases
+                else "not investigated"
+            )
+            lines.append(f"- **{_title_case_disease(c)}** {marker}")
+    else:
+        lines.append("_No candidates surfaced._")
+    lines += ["", "---", ""]
 
     if regulatory_full_labels:
         lines += [

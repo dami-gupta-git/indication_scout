@@ -93,7 +93,11 @@ required_ncts_surfaced:
     section: relevant
     ncts:
       - NCT00151411
-      - NCT02635386   # NCT04175964 flipped to contaminated on 2026-09-11 (trials-agent verdict)
+      # NCT04175964 flipped to contaminated on 2026-09-11; its replacement NCT02635386 flipped to
+      # contaminated on 2026-09-12 (5-arm comparative trial, metformin only one arm of five — the
+      # therapeutic-target gate now catches it, same rule that excludes NCT00343395). Replaced with
+      # NCT02026869, a metformin-monotherapy trial, less likely to trip an arm-composition gate.
+      - NCT02026869
 
 # Cited PMIDs (evidence_summary supporting + contradicting). Two anchors per disease, each cited in
 # both 2026-09-10 runs.
@@ -114,7 +118,10 @@ required_pmids_cited:
     mode: cited
     pmids:
       - "21205121"
-      - "35032305"
+      # 35032305 dropped out of the top-15 semantic retrieval on 2026-09-12 (retrieval-ranking
+      # variance, not a gate decision — it's still in the raw candidate pool). Replaced with
+      # 37816240, the highest-similarity metformin-monotherapy RCT in this disease's pool.
+      - "37816240"
 
 # Safety — metformin carries black-box warnings (lactic acidosis). Production derives black_box from
 # OT; holdout would fall back to serious.

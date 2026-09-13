@@ -535,8 +535,8 @@ def test_format_report_full_assembly():
     assert "Phase 3" in rendered
     assert "NASH is the lead repurposing target." in rendered
     assert "## Diseases Considered" in rendered
-    assert "- NASH" in rendered
-    assert "- Alzheimer's Disease" in rendered
+    assert "- **NASH** ✓ investigated" in rendered
+    assert "- **Alzheimer's Disease** not investigated" in rendered
     assert "## Findings by Disease" in rendered
     # Per-disease nests under the H2 "Findings by Disease" → H3, subsections → H4.
     assert "### NASH" in rendered

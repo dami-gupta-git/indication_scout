@@ -565,7 +565,16 @@ EUROPE_PMC_SORT_RECENT: str = "P_PDATE_D desc"
 CURATED_FDA_APPROVED_CANDIDATES: dict[str, list[str]] = {
     # Semaglutide — morbid obesity is a clinical subset of approved obesity;
     # CKD lives in the FLOW indication, which the LLM reads ambiguously.
-    "semaglutide": ["morbid obesity", "chronic kidney disease"],
+    # MASH (Wegovy, approved 2025-08-15) is on the current manufacturer label
+    # (DailyMed set id ee06186f-2aa3-4990-a760-757579d8f77b), but that
+    # document's `openfda` block is empty, so the brand/generic name search
+    # in data_sources/fda.py never returns it and falls back to a 2024
+    # repackager copy with no MASH text. See for_me/errors/errors.md.
+    "semaglutide": [
+        "morbid obesity",
+        "chronic kidney disease",
+        "metabolic dysfunction-associated steatohepatitis",
+    ],
     # Atorvastatin — CHD/CAD appear on the label as risk-reduction qualifier
     # populations; the prompt's risk-reduction rule rejects them.
     "atorvastatin": ["coronary heart disease", "coronary artery disease"],
