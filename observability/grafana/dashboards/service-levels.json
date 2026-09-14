@@ -30,7 +30,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[24h])",
+          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[7d])",
           "refId": "A"
         }
       ],
@@ -51,7 +51,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[24h]))",
+          "expr": "100 * sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[7d])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[7d]))",
           "refId": "A"
         }
       ],
@@ -72,7 +72,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"1800.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h]))",
+          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"1800.0\"}[7d])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[7d]))",
           "refId": "A"
         }
       ],
@@ -93,7 +93,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * (1 - avg_over_time(up{job=\"indication-scout\"}[24h])) / 0.05",
+          "expr": "100 * (1 - avg_over_time(up{job=\"indication-scout\"}[7d])) / 0.05",
           "refId": "A"
         }
       ],
@@ -114,7 +114,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[24h])))) / 0.20",
+          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[7d])) / sum(increase(indication_scout_analysis_runs_total{submission_source=\"api\",execution_mode=\"live\",outcome=~\"done|error|interrupted\"}[7d])))) / 0.20",
           "refId": "A"
         }
       ],
@@ -135,7 +135,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"1800.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h])))) / 0.20",
+          "expr": "100 * (1 - (sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"1800.0\"}[7d])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[7d])))) / 0.20",
           "refId": "A"
         }
       ],
@@ -156,7 +156,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[24h])",
+          "expr": "100 * avg_over_time(up{job=\"indication-scout\"}[7d])",
           "refId": "A"
         }
       ],
@@ -177,7 +177,7 @@
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
       "targets": [
         {
-          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"2700.0\"}[24h])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[24h]))",
+          "expr": "100 * sum(increase(indication_scout_analysis_slo_duration_seconds_bucket{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\",le=\"2700.0\"}[7d])) / sum(increase(indication_scout_analysis_slo_duration_seconds_count{submission_source=\"api\",execution_mode=\"live\",outcome=\"done\"}[7d]))",
           "refId": "A"
         }
       ],
@@ -193,8 +193,8 @@
       "gridPos": {"h": 5, "w": 8, "x": 16, "y": 13},
       "id": 9,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-      "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[24h]))", "refId": "A"}],
-      "title": "Integrity rejections, 24h",
+      "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[7d]))", "refId": "A"}],
+      "title": "Integrity rejections, 7d",
       "type": "stat"
     },
     {
@@ -268,7 +268,7 @@
   "schemaVersion": 42,
   "tags": ["indication-scout", "slo", "sla"],
   "templating": {"list": []},
-  "time": {"from": "now-24h", "to": "now"},
+  "time": {"from": "now-7d", "to": "now"},
   "timepicker": {},
   "timezone": "browser",
   "title": "IndicationScout service levels",

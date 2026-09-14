@@ -1,4 +1,4 @@
-// Completed-trials table with sortable headers (title/phase/status) and phase +
+// Relevant-trials table with sortable headers (title/phase/status) and phase +
 // status filter chips. Filter first, then sort, then cap the rows shown.
 
 import { useMemo, useState } from "react";
@@ -29,7 +29,7 @@ function distinct(values: string[]): string[] {
   return [...new Set(values.filter((v) => v))];
 }
 
-export function CompletedTrialsTable({
+export function TrialsTable({
   trials,
   phase: phaseProp,
   onPhaseChange,
@@ -93,6 +93,7 @@ export function CompletedTrialsTable({
                 sort={sort}
                 onToggle={toggle}
               />
+              <th>Why stopped</th>
             </tr>
           </thead>
           <tbody>
@@ -104,6 +105,7 @@ export function CompletedTrialsTable({
                 <td>{t.title}</td>
                 <td>{t.phase || "Unknown"}</td>
                 <td>{t.overall_status}</td>
+                <td>{t.why_stopped ?? ""}</td>
               </tr>
             ))}
           </tbody>

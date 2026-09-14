@@ -82,8 +82,8 @@
       "gridPos": {"h": 4, "w": 24, "x": 0, "y": 21},
       "id": 8,
       "options": {"colorMode": "value", "graphMode": "area", "justifyMode": "auto", "reduceOptions": {"calcs": ["lastNotNull"], "fields": "", "values": false}, "textMode": "auto"},
-      "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[24h]))", "refId": "A"}],
-      "title": "Report integrity rejections, last 24 hours",
+      "targets": [{"expr": "sum(increase(indication_scout_report_integrity_rejections_total[7d]))", "refId": "A"}],
+      "title": "Report integrity rejections, last 7 days",
       "type": "stat"
     },
     {

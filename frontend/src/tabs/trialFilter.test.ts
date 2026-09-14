@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { partitionTrials } from "./trialFilter";
+import { mergeTrials, partitionTrials } from "./trialFilter";
 import type { Trial } from "../types";
 
 function trial(nctId: string): Trial {
@@ -52,5 +52,20 @@ describe("partitionTrials", () => {
     const { shown, excluded } = partitionTrials(trials, ["NCT1"], []);
     expect(shown.map((t) => t.nct_id)).toEqual(["NCT1"]);
     expect(excluded).toEqual([]);
+  });
+});
+
+describe("mergeTrials", () => {
+  it("dedupes by NCT id across lists, keeping first occurrence order", () => {
+    const merged = mergeTrials(
+      [trial("NCT1"), trial("NCT2")],
+      [trial("NCT2"), trial("NCT3")],
+      [trial("NCT1"), trial("NCT4")],
+    );
+    expect(merged.map((t) => t.nct_id)).toEqual(["NCT1", "NCT2", "NCT3", "NCT4"]);
+  });
+
+  it("returns empty when all lists are empty", () => {
+    expect(mergeTrials([], [], [])).toEqual([]);
   });
 });

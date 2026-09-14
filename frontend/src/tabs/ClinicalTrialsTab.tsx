@@ -1,31 +1,19 @@
 // Clinical Trials tab. Focus-disease driven: KPIs, status donut, clickable
-// phase funnel that filters the completed-trials table, terminated cards, and
-// the competitor table.
+// phase funnel that filters the relevant-trials table, and the competitor table.
 
 import { useState } from "react";
 import type {
   CandidateFindings,
   SupervisorOutput,
-  TrialRelevanceCoverage,
 } from "../types";
 import { NctLink } from "../components/links";
-import { CompletedTrialsTable } from "../tables/CompletedTrialsTable";
+import { TrialsTable } from "../tables/TrialsTable";
 import { CompetitorsTable } from "../tables/CompetitorsTable";
 import { StatusDonut } from "../charts/StatusDonut";
 import { PhaseFunnel } from "../charts/PhaseFunnel";
 import { Markdown } from "../components/Markdown";
 import { phaseSlices, statusSlices } from "../charts/chartData";
-import { partitionTrials } from "./trialFilter";
-
-const TERMINATED_LIMIT = 15;
-
-function coverageLabel(coverage: TrialRelevanceCoverage | null): string {
-  if (coverage === null) return "relevance coverage unavailable";
-  if (coverage.coverage_complete) {
-    return `${coverage.relevant_records} relevant; ${coverage.contaminated_records} excluded`;
-  }
-  return `at least ${coverage.relevant_records} relevant among ${coverage.classified_records} reviewed; ${coverage.registry_query_matches} query matches, ${coverage.unreviewed_records} not reviewed`;
-}
+import { mergeTrials, partitionTrials } from "./trialFilter";
 
 export function ClinicalTrialsTab({
   result,
@@ -50,7 +38,7 @@ export function ClinicalTrialsTab({
 }
 
 function TrialsBody({ finding }: { finding: CandidateFindings }) {
-  // Phase filter shared between the phase funnel and the completed-trials table.
+  // Phase filter shared between the phase funnel and the relevant-trials table.
   const [phaseFilter, setPhaseFilter] = useState<string | null>(null);
 
   const ct = finding.clinical_trials;
@@ -58,9 +46,14 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
   // Only relevance-reviewed trials are evidence and appear in the tables.
   const contaminated = ct?.contaminated_nct_ids ?? [];
   const relevant = ct?.relevant_nct_ids ?? [];
-  const completedSplit = partitionTrials(ct?.completed?.trials ?? [], relevant, contaminated);
-  const terminatedSplit = partitionTrials(ct?.terminated?.trials ?? [], relevant, contaminated);
-  const excludedCount = completedSplit.excluded.length + terminatedSplit.excluded.length;
+  // Search holds recruiting/active/unknown-status trials; completed and terminated
+  // hold the rest. One table shows every relevant trial across all three.
+  const allTrials = mergeTrials(
+    ct?.search?.trials ?? [],
+    ct?.completed?.trials ?? [],
+    ct?.terminated?.trials ?? [],
+  );
+  const split = partitionTrials(allTrials, relevant, contaminated);
 
   return (
     <div className="trials">
@@ -98,38 +91,19 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
             </>
           )}
 
-          {ct.completed && completedSplit.shown.length > 0 && (
+          {split.shown.length > 0 && (
             <>
-              <h4>Completed trials ({coverageLabel(ct.completed_coverage)})</h4>
+              <h4>Relevant trials ({split.shown.length})</h4>
               <PhaseFunnel
-                slices={phaseSlices(completedSplit.shown)}
+                slices={phaseSlices(split.shown)}
                 active={phaseFilter}
                 onSelect={setPhaseFilter}
               />
-              <CompletedTrialsTable
-                trials={completedSplit.shown}
+              <TrialsTable
+                trials={split.shown}
                 phase={phaseFilter}
                 onPhaseChange={setPhaseFilter}
               />
-            </>
-          )}
-
-          {ct.terminated && terminatedSplit.shown.length > 0 && (
-            <>
-              <h4>Terminated trials ({coverageLabel(ct.terminated_coverage)})</h4>
-              <div className="terminated-list">
-                {terminatedSplit.shown.slice(0, TERMINATED_LIMIT).map((t) => (
-                  <div className="card" key={t.nct_id}>
-                    <div>
-                      <NctLink nctId={t.nct_id} /> — {t.title || "no title"}
-                    </div>
-                    <p className="caption">
-                      {t.phase || "Unknown phase"}
-                      {t.why_stopped && <> · {t.why_stopped}</>}
-                    </p>
-                  </div>
-                ))}
-              </div>
             </>
           )}
 
@@ -140,13 +114,13 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
             </>
           )}
 
-          {excludedCount > 0 && (
+          {split.excluded.length > 0 && (
             <details className="excluded-trials">
               <summary>
-                {excludedCount} trial(s) excluded as a different indication
+                {split.excluded.length} trial(s) excluded as a different indication
               </summary>
               <ul>
-                {[...completedSplit.excluded, ...terminatedSplit.excluded].map((t) => (
+                {split.excluded.map((t) => (
                   <li key={t.nct_id}>
                     <NctLink nctId={t.nct_id} /> — {t.title || "no title"}
                   </li>

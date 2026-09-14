@@ -21,3 +21,19 @@ export function partitionTrials(
   }
   return { shown, excluded };
 }
+
+// Merge the search, completed and terminated lists into one, keeping the first
+// record seen for each NCT id. The same trial can appear in more than one list.
+export function mergeTrials(...lists: Trial[][]): Trial[] {
+  const seen = new Set<string>();
+  const merged: Trial[] = [];
+  for (const list of lists) {
+    for (const t of list) {
+      if (!seen.has(t.nct_id)) {
+        seen.add(t.nct_id);
+        merged.push(t);
+      }
+    }
+  }
+  return merged;
+}
