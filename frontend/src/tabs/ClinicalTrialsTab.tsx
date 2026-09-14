@@ -93,7 +93,7 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
 
           {split.shown.length > 0 && (
             <>
-              <h4>Relevant trials ({split.shown.length})</h4>
+              <h4 className="section-divider">Relevant trials ({split.shown.length})</h4>
               <PhaseFunnel
                 slices={phaseSlices(split.shown)}
                 active={phaseFilter}
@@ -109,13 +109,13 @@ function TrialsBody({ finding }: { finding: CandidateFindings }) {
 
           {ct.landscape && ct.landscape.competitors.length > 0 && (
             <>
-              <h4>Competitive landscape ({ct.landscape.competitors.length})</h4>
+              <h4 className="section-divider">Competitive landscape ({ct.landscape.competitors.length})</h4>
               <CompetitorsTable competitors={ct.landscape.competitors} />
             </>
           )}
 
           {split.excluded.length > 0 && (
-            <details className="excluded-trials">
+            <details className="excluded-trials section-divider">
               <summary>
                 {split.excluded.length} trial(s) excluded as a different indication
               </summary>

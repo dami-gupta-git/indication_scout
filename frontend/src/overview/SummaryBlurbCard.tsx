@@ -5,6 +5,7 @@
 
 import type { CandidateBlurb, EvidenceStrength } from "../types";
 import { VerdictTag, StrengthBadge } from "../components/Badge";
+import { LinkifiedText } from "../components/links";
 
 // (field on CandidateBlurb, display label) — order matches the report formatter.
 const FIELDS: [keyof CandidateBlurb, string][] = [
@@ -58,16 +59,22 @@ export function SummaryBlurbCard({
         {rows.map(([label, value]) => (
           <div className="blurb-row" key={label}>
             <dt>{label}</dt>
-            <dd>{value}</dd>
+            <dd>
+              <LinkifiedText text={value} />
+            </dd>
           </div>
         ))}
       </dl>
       {watch && (
         <p className="blurb-watch">
-          <strong>Watch:</strong> {watch}
+          <strong>Watch:</strong> <LinkifiedText text={watch} />
         </p>
       )}
-      {prose && <p className="blurb-prose">{prose}</p>}
+      {prose && (
+        <p className="blurb-prose">
+          <LinkifiedText text={prose} />
+        </p>
+      )}
     </div>
   );
 }
