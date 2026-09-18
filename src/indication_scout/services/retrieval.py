@@ -1272,7 +1272,15 @@ class RetrievalService:
             scored.append((result, boost, final_score))
 
         scored.sort(key=lambda x: x[2], reverse=True)
-        baseline_scored = [item for item in scored if item[0].pmid in baseline_pmids]
+        # The identity gate deterministically rejects papers that contain none of the accepted
+        # names for this drug. Apply that prerequisite before the top-k slice so an ineligible
+        # high-ranked paper cannot consume a shortlist slot that a lower-ranked paper can fill.
+        baseline_scored = [
+            item
+            for item in scored
+            if item[0].pmid in baseline_pmids
+            and _mentions_exact_drug(drug_names, item[0])
+        ]
 
         if linked_pmids:
             trial_reference_set = set(linked_pmids)
