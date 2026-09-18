@@ -1,0 +1,122 @@
+# Baricitinib regression spec.
+#
+# Authored against gold_standard/baricitinib_2026-09-11_20-49-17.json. Each assertion encodes a
+# domain-meaningful invariant a regression must NOT flip.
+#
+# Anchors are pinned only where they held across ALL SEVEN production runs from 2026-09-07 14:52
+# through 2026-09-11 20:49 — i.e. across the per-trial therapeutic-target gate (2026-09-09), so an
+# anchor here survived that change rather than being an artefact of one side of it. The
+# 2026-09-12 23:31 run is excluded: it terminated with 6 candidates and 3 findings against 45-59
+# and 16 for every other run, so it is a truncated run, not a pipeline signal.
+#
+# Baricitinib is a thin drug for this pipeline. Sixteen candidates are investigated every run, but
+# only psoriasis and systemic lupus erythematosus come back with any curated trial or citation at
+# all; the other fourteen (mostly myeloid and lymphoid malignancies) retrieve a large literature
+# pool and return strength "none" with zero relevant NCTs and zero cited PMIDs. Only the two
+# evidence-bearing indications carry NCT/PMID anchors below. The rest are guarded at the candidate
+# level only — their job is to not silently disappear from the candidate set.
+#
+# Top-of-ranking behaviour: psoriasis leads in six of the seven runs (2026-09-07 14:52 put systemic
+# lupus erythematosus first), so no ranked_order is pinned. Hidradenitis suppurativa, lichen
+# planopilaris and myelodysplastic syndrome each enter and leave the ranked list across those runs
+# and are not pinned in the ranking either.
+#
+# Bucket values must match `tests/regression/common/failure_buckets.Bucket`.
+
+drug: baricitinib
+
+aliases:
+  systemic lupus erythematosus:
+    - lupus erythematosus
+    - sle
+  acquired polycythemia vera:
+    - polycythemia vera
+  crohn disease:
+    - crohn's disease
+
+# Both are present in top_diseases in every run; their relative order swaps, so membership only.
+required_in_ranked:
+  - bucket: ranking
+    indication: psoriasis
+  - bucket: ranking
+    indication: systemic lupus erythematosus
+
+forbidden_in_ranked:
+  # Baricitinib's FDA-approved uses (rheumatoid arthritis 2018-05-31, severe COVID-19
+  # hospitalization 2022-05-10, alopecia areata 2022-06-13). None of them reaches the candidate set
+  # in any run — the approval gate removes them upstream. Pinned so that a regression which lets an
+  # on-label use back through is caught at the ranking, which is where it would do damage.
+  - bucket: demotion_logic
+    indication: rheumatoid arthritis
+  - bucket: demotion_logic
+    indication: alopecia areata
+  - bucket: demotion_logic
+    indication: covid-19
+
+candidate_set_contains:
+  bucket: structural_integrity
+  indications:
+    - psoriasis
+    - systemic lupus erythematosus
+    - myelofibrosis
+    - acquired polycythemia vera
+    - essential thrombocythemia
+    - myelodysplastic syndrome
+    - ulcerative colitis
+    - crohn disease
+    - hidradenitis suppurativa
+    - lichen planopilaris
+    - psoriatic arthritis
+    # atopic eczema is surfaced in all seven runs and is deliberately NOT in forbidden_in_ranked:
+    # baricitinib is approved for atopic dermatitis in the EU and Japan but not by the FDA, and the
+    # approval gate reads the FDA label.
+    - atopic eczema
+
+# Curated trials the report surfaces (clinical_trials.relevant_nct_ids).
+required_ncts_surfaced:
+  - bucket: literature_coverage
+    indication: psoriasis
+    section: relevant
+    ncts:
+      - NCT01490632   # the only psoriasis trial surfaced; it is the whole psoriasis trial signal
+  - bucket: literature_coverage
+    indication: systemic lupus erythematosus
+    section: relevant
+    ncts:
+      # NCT03843125 and NCT05686746 were surfaced through 2026-09-08 and are gone in the 2026-09-11
+      # run, so they are not pinned. These three are the SLE trials that survive the gate.
+      - NCT02708095
+      - NCT03616912
+      - NCT03616964
+
+# Cited PMIDs (evidence_summary supporting + contradicting).
+required_pmids_cited:
+  - bucket: literature_coverage
+    indication: psoriasis
+    mode: cited
+    pmids:
+      - "26800231"
+  - bucket: literature_coverage
+    indication: systemic lupus erythematosus
+    mode: cited
+    pmids:
+      - "30043749"
+      - "36848918"
+      - "36848919"
+
+# Safety — baricitinib carries a boxed warning (serious infections, mortality, malignancy, MACE,
+# thrombosis). black_box in every run of both indications; holdout (no label data) would fall back
+# to serious.
+safety_severity:
+  - indication: psoriasis
+    allowed: [black_box, serious]
+  - indication: systemic lupus erythematosus
+    allowed: [black_box, serious]
+
+# indication_harm is not pinned. Psoriasis is False in every run, but that is the absence of a
+# signal rather than a fact worth guarding, and the SLE flag flips from True to null between
+# 2026-09-08 and 2026-09-11.
+
+# Drug-level collapsed safety signal must surface (empty = collapse regression).
+drug_safety:
+  summary_present: true
