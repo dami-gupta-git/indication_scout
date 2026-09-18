@@ -38,6 +38,8 @@ jobs:
         run: make typecheck
       - name: Unit tests
         run: make test
+      - name: Contract tests
+        run: make test-contract
       - name: Offline regression tests
         run: make test-regression
 

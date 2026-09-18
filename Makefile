@@ -1,4 +1,4 @@
-.PHONY: install lint lint-fix format format-check typecheck test test-regression \
+.PHONY: install lint lint-fix format format-check typecheck test test-contract test-regression \
 	create-tables prefetch-model regression-reports regression-specs candidate-precision \
 	seed-recall seed-examples regression container-smoke observability-up observability-down \
 	frontend-check check ci fix
@@ -40,13 +40,17 @@ test:
 	pytest tests/unit/
 	$(OK) "unit tests"
 
-# Offline half of the regression suite: the data-source contract tests, the
-# deterministic evidence-gate tests and the report-diff unit tests. No network,
-# no LLM, no DB. The structural specs are not here — they need freshly generated
-# reports (see regression-reports).
+# Data-source client contracts, replayed from committed cassettes. No network.
+test-contract:
+	$(START) "contract tests"
+	pytest -m contract tests/regression/layer0_contracts/
+	$(OK) "contract tests"
+
+# Offline half of the regression suite: the deterministic evidence-gate tests and
+# the report-diff unit tests. No network, no LLM, no DB. The structural specs are
+# not here — they need freshly generated reports (see regression-reports).
 test-regression:
 	$(START) "offline regression tests"
-	pytest -m contract tests/regression/layer0_contracts/
 	pytest tests/regression/layer1_deterministic/ tests/regression/pipeline_replay/test_compare_reports.py
 	$(OK) "offline regression tests"
 
@@ -142,7 +146,7 @@ frontend-check:
 	$(OK) "frontend check"
 
 # Fast gate: everything that runs offline.
-check: lint format-check typecheck test test-regression frontend-check
+check: lint format-check typecheck test test-contract test-regression frontend-check
 	@printf '\n==> check: ALL STAGES PASSED\n'
 
 # Everything CI runs on a push, including the live regression job. Slow, and it

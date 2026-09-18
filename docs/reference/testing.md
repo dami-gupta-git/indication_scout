@@ -14,8 +14,8 @@ visible before it reaches a report.
 | Full-pipeline replay | `tests/regression/pipeline_replay/` | none (replayed), needs Postgres | `pytest -m regression` |
 
 A plain `pytest` run excludes the two regression markers (`regression`, `regression_layer2`); the
-contract tests are not excluded and run with everything else. In CI they run on every push as
-part of `make test-regression`, alongside the evidence-gate and report-diff tests.
+contract tests are not excluded and run with everything else. In CI they are their own step,
+`make test-contract`, run on every push.
 
 Tests mirror the source tree: a test for a module under `services/` belongs in
 `tests/<unit|integration>/services/`, and so on. Conventions for writing them — assertions on
