@@ -1112,8 +1112,8 @@ def mock_trial_lane_discovery():
 async def test_semantic_search_returns_ranked_dicts(svc, mock_pubtypes_empty):
     """Returns list of dicts with pmid, title, abstract, similarity for each DB row."""
     db_rows = [
-        ("111", "Title A", "Metformin abstract A", 0.92),
-        ("222", "Title B", "Metformin abstract B", 0.85),
+        ("111", "Title A", "Abstract A", 0.92),
+        ("222", "Title B", "Abstract B", 0.85),
     ]
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
@@ -1135,11 +1135,11 @@ async def test_semantic_search_returns_ranked_dicts(svc, mock_pubtypes_empty):
     assert len(result) == 2
     assert result[0].pmid == "111"
     assert result[0].title == "Title A"
-    assert result[0].abstract == "Metformin abstract A"
+    assert result[0].abstract == "Abstract A"
     assert result[0].similarity == 0.92
     assert result[1].pmid == "222"
     assert result[1].title == "Title B"
-    assert result[1].abstract == "Metformin abstract B"
+    assert result[1].abstract == "Abstract B"
     assert result[1].similarity == 0.85
 
 
@@ -1231,7 +1231,7 @@ async def test_semantic_search_respects_top_k_from_settings(svc, mock_pubtypes_e
     assert top_k == 15
     # Build more rows than top_k so the slice has work to do.
     db_rows = [
-        (f"{i}", f"Title {i}", f"Metformin abstract {i}", 0.9 - 0.01 * i)
+        (f"{i}", f"Title {i}", f"Abstract {i}", 0.9 - 0.01 * i)
         for i in range(top_k + 3)
     ]
     mock_db = _make_db_with_rows(db_rows)
@@ -1252,57 +1252,6 @@ async def test_semantic_search_respects_top_k_from_settings(svc, mock_pubtypes_e
     assert len(result) == top_k
 
 
-async def test_semantic_search_backfills_after_exact_drug_rejections(
-    svc, mock_pubtypes_empty
-):
-    """Higher-ranked papers without the exact drug do not occupy shortlist slots."""
-    from indication_scout.config import get_settings
-
-    top_k = get_settings().semantic_search_top_k
-    irrelevant = [
-        ("1", "Class review", "A review of other therapies.", 0.99),
-        ("2", "Disease overview", "No named intervention is studied.", 0.98),
-    ]
-    eligible = [
-        (
-            str(index),
-            f"Metformin study {index}",
-            f"Metformin was evaluated in study {index}.",
-            0.97 - index / 100,
-        )
-        for index in range(3, top_k + 3)
-    ]
-    mock_db = _make_db_with_rows(irrelevant + eligible)
-
-    with (
-        patch(
-            "indication_scout.services.retrieval.get_all_drug_names",
-            new=AsyncMock(return_value=["metformin", "glucophage"]),
-        ),
-        patch(
-            "indication_scout.services.retrieval.embed_async",
-            return_value=[[0.1] * 768],
-        ),
-    ):
-        result = await svc.semantic_search(
-            "diabetes",
-            "CHEMBL1431",
-            [str(index) for index in range(1, top_k + 3)],
-            mock_db,
-        )
-
-    assert result == [
-        AbstractResult(
-            pmid=str(index),
-            title=f"Metformin study {index}",
-            abstract=f"Metformin was evaluated in study {index}.",
-            similarity=0.97 - index / 100,
-            pubtype=[],
-        )
-        for index in range(3, top_k + 3)
-    ]
-
-
 @pytest.mark.parametrize(
     "passes_disease_gate, expected_first, expected_last",
     [(True, "1", "16"), (False, "1", "15")],
@@ -1314,12 +1263,7 @@ async def test_semantic_search_trial_lane_requires_both_relevance_gates(
 
     top_k = get_settings().semantic_search_top_k
     db_rows = [
-        (
-            str(index),
-            f"Title {index}",
-            f"Bupropion abstract {index}",
-            1.0 - index / 100,
-        )
+        (str(index), f"Title {index}", f"Abstract {index}", 1.0 - index / 100)
         for index in range(1, top_k + 3)
     ]
     mock_db = _make_db_with_rows(db_rows)
@@ -1380,7 +1324,7 @@ async def test_semantic_search_similarity_is_float(svc, mock_pubtypes_empty):
     """similarity values in returned dicts are plain Python floats."""
     from decimal import Decimal
 
-    db_rows = [("111", "Title", "Metformin abstract", Decimal("0.8765"))]
+    db_rows = [("111", "Title", "Abstract", Decimal("0.8765"))]
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
@@ -1402,7 +1346,7 @@ async def test_semantic_search_similarity_is_float(svc, mock_pubtypes_empty):
 
 async def test_semantic_search_releases_db_before_fetching_pubtypes(svc):
     """The pgvector read transaction ends before the PubMed request starts."""
-    db_rows = [("111", "Title", "Metformin abstract", 0.9)]
+    db_rows = [("111", "Title", "Abstract", 0.9)]
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
@@ -1436,7 +1380,7 @@ async def test_semantic_search_releases_db_before_fetching_pubtypes(svc):
         AbstractResult(
             pmid="111",
             title="Title",
-            abstract="Metformin abstract",
+            abstract="Abstract",
             similarity=0.9,
             pubtype=[],
         )
