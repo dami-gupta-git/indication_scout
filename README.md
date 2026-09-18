@@ -293,7 +293,13 @@ pytest tests/integration/
 
 # Unit tests only
 pytest tests/unit/
+
+# Data-source contract tests (replayed from committed cassettes, no network)
+pytest -m contract
 ```
+
+See [docs/reference/testing.md](docs/reference/testing.md) for the layout of the suite, the
+regression layers, and how to record or refresh a contract cassette.
 
 ### Code Formatting & Linting
 

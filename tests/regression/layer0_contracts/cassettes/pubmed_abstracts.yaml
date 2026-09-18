@@ -1,0 +1,480 @@
+interactions:
+- request:
+    body: null
+    headers: {}
+    method: GET
+    uri: https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=39215927&retmode=xml&rettype=abstract
+  response:
+    body:
+      string: '<?xml version="1.0" ?>
+
+        <!DOCTYPE PubmedArticleSet PUBLIC "-//NLM//DTD PubMedArticle, 1st January
+        2025//EN" "https://dtd.nlm.nih.gov/ncbi/pubmed/out/pubmed_250101.dtd">
+
+        <PubmedArticleSet>
+
+        <PubmedArticle><MedlineCitation Status="MEDLINE" Owner="NLM" IndexingMethod="Automated"><PMID
+        Version="1">39215927</PMID><DateCompleted><Year>2024</Year><Month>11</Month><Day>16</Day></DateCompleted><DateRevised><Year>2024</Year><Month>11</Month><Day>16</Day></DateRevised><Article
+        PubModel="Print-Electronic"><Journal><ISSN IssnType="Electronic">1567-2387</ISSN><JournalIssue
+        CitedMedium="Internet"><Volume>55</Volume><Issue>6</Issue><PubDate><Year>2024</Year><Month>Dec</Month></PubDate></JournalIssue><Title>Journal
+        of molecular histology</Title><ISOAbbreviation>J Mol Histol</ISOAbbreviation></Journal><ArticleTitle>Metformin
+        protects against small intestine damage induced by diabetes and dunning''s
+        prostate cancer: A biochemical and histological study.</ArticleTitle><Pagination><StartPage>1093</StartPage><EndPage>1105</EndPage><MedlinePgn>1093-1105</MedlinePgn></Pagination><ELocationID
+        EIdType="doi" ValidYN="Y">10.1007/s10735-024-10252-y</ELocationID><Abstract><AbstractText>The
+        oral biguanide metformin is used to treat type 2 diabetic mellitus (T2DM).
+        Anti-cancer effects have been proven by metformin in different hormone-sensitive
+        tumors, including breast, pancreatic, colon, and prostate cancer. Therefore,
+        we investigated whether metformin could defend against small intestine damage
+        in Dunning''s prostate cancer. The study divided the six groups of male Copenhagen
+        rats into the following categories: control, diabetic (D), cancer (C), diabetic&#x2009;+&#x2009;cancer
+        (DC), cancer&#x2009;+&#x2009;metformin (CM), and diabetic&#x2009;+&#x2009;cancer&#x2009;+&#x2009;metformin
+        (DCM). After sacrifice, the small intestines were removed to assess biochemical
+        markers and histopathological evaluation. Biochemical evaluations showed that
+        glutathione (reduced) levels and other enzyme activities related antioxidant
+        systems, paraoxonase, sodium potassium ATPase, acetylcholinesterase activities
+        were decreased. In contrast, lipid peroxidation, total oxidant status, reactive
+        oxygen species, interleukin-1&#x3b2;, interleukin-6, tumor necrosis factor-&#x3b1;,
+        sucrase, maltase, trypsin, myeloperoxidase, xanthine oxidase activities, protein
+        carbonyl contents and sialic acid levels were raised in the damaged groups.
+        Treatment with metformin restored all of this. The histological assessment
+        revealed moderate to severe damage in the small intestine following processes
+        D and C. According to the study''s findings, metformin treatment led to a
+        notable decline in histopathological damage in the C and DC. A slight lowering
+        in inflammatory cells and an improvement in the damaged gland integrity in
+        the small intestine were noted with metformin treatment.&#x200b; Metformin
+        use protected the small intestinal tissue damage and decreased oxidative stress.</AbstractText><CopyrightInformation>&#xa9;
+        2024. The Author(s), under exclusive licence to Springer Nature B.V.</CopyrightInformation></Abstract><AuthorList
+        CompleteYN="Y"><Author ValidYN="Y"><LastName>Dagsuyu</LastName><ForeName>Eda</ForeName><Initials>E</Initials><Identifier
+        Source="ORCID">0000-0003-0395-1058</Identifier><AffiliationInfo><Affiliation>Department
+        of Chemistry, Faculty of Engineering, Istanbul University-Cerrahpa&#x15f;a,
+        Istanbul, T&#xfc;rkiye. eda.dagsuyu@iuc.edu.tr.</Affiliation></AffiliationInfo></Author><Author
+        ValidYN="Y"><LastName>Koroglu</LastName><ForeName>Pinar</ForeName><Initials>P</Initials><Identifier
+        Source="ORCID">0000-0002-3408-7867</Identifier><AffiliationInfo><Affiliation>Department
+        of Histology and Embryology, Faculty of Medicine, Halic University, Istanbul,
+        T&#xfc;rkiye.</Affiliation></AffiliationInfo></Author><Author ValidYN="Y"><LastName>Bulan</LastName><ForeName>Omur
+        Karabulut</ForeName><Initials>OK</Initials><Identifier Source="ORCID">0000-0002-6591-7317</Identifier><AffiliationInfo><Affiliation>Department
+        of Biology, Faculty of Science, Istanbul University, Istanbul, T&#xfc;rkiye.</Affiliation></AffiliationInfo></Author><Author
+        ValidYN="Y"><LastName>Gul</LastName><ForeName>Ilknur Bugan</ForeName><Initials>IB</Initials><Identifier
+        Source="ORCID">0000-0003-2838-0941</Identifier><AffiliationInfo><Affiliation>Department
+        of Biology, Faculty of Science, Istanbul University, Istanbul, T&#xfc;rkiye.</Affiliation></AffiliationInfo></Author><Author
+        ValidYN="Y"><LastName>Yanardag</LastName><ForeName>Refiye</ForeName><Initials>R</Initials><Identifier
+        Source="ORCID">0000-0003-4185-4363</Identifier><AffiliationInfo><Affiliation>Department
+        of Chemistry, Faculty of Engineering, Istanbul University-Cerrahpa&#x15f;a,
+        Istanbul, T&#xfc;rkiye.</Affiliation></AffiliationInfo></Author></AuthorList><Language>eng</Language><PublicationTypeList><PublicationType
+        UI="D016428">Journal Article</PublicationType></PublicationTypeList><ArticleDate
+        DateType="Electronic"><Year>2024</Year><Month>08</Month><Day>31</Day></ArticleDate></Article><MedlineJournalInfo><Country>Netherlands</Country><MedlineTA>J
+        Mol Histol</MedlineTA><NlmUniqueID>101193653</NlmUniqueID><ISSNLinking>1567-2379</ISSNLinking></MedlineJournalInfo><ChemicalList><Chemical><RegistryNumber>9100L32L2N</RegistryNumber><NameOfSubstance
+        UI="D008687">Metformin</NameOfSubstance></Chemical><Chemical><RegistryNumber>0</RegistryNumber><NameOfSubstance
+        UI="D000975">Antioxidants</NameOfSubstance></Chemical><Chemical><RegistryNumber>0</RegistryNumber><NameOfSubstance
+        UI="D007004">Hypoglycemic Agents</NameOfSubstance></Chemical><Chemical><RegistryNumber>GAN16C9B8O</RegistryNumber><NameOfSubstance
+        UI="D005978">Glutathione</NameOfSubstance></Chemical><Chemical><RegistryNumber>0</RegistryNumber><NameOfSubstance
+        UI="D017382">Reactive Oxygen Species</NameOfSubstance></Chemical></ChemicalList><CitationSubset>IM</CitationSubset><MeshHeadingList><MeshHeading><DescriptorName
+        UI="D008687" MajorTopicYN="Y">Metformin</DescriptorName><QualifierName UI="Q000494"
+        MajorTopicYN="N">pharmacology</QualifierName><QualifierName UI="Q000627" MajorTopicYN="N">therapeutic
+        use</QualifierName></MeshHeading><MeshHeading><DescriptorName UI="D000818"
+        MajorTopicYN="N">Animals</DescriptorName></MeshHeading><MeshHeading><DescriptorName
+        UI="D008297" MajorTopicYN="N">Male</DescriptorName></MeshHeading><MeshHeading><DescriptorName
+        UI="D007421" MajorTopicYN="Y">Intestine, Small</DescriptorName><QualifierName
+        UI="Q000473" MajorTopicYN="N">pathology</QualifierName><QualifierName UI="Q000187"
+        MajorTopicYN="N">drug effects</QualifierName><QualifierName UI="Q000378" MajorTopicYN="N">metabolism</QualifierName></MeshHeading><MeshHeading><DescriptorName
+        UI="D011471" MajorTopicYN="Y">Prostatic Neoplasms</DescriptorName><QualifierName
+        UI="Q000473" MajorTopicYN="N">pathology</QualifierName><QualifierName UI="Q000188"
+        MajorTopicYN="N">drug therapy</QualifierName><QualifierName UI="Q000378" MajorTopicYN="N">metabolism</QualifierName></MeshHeading><MeshHeading><DescriptorName
+        UI="D051381" MajorTopicYN="N">Rats</DescriptorName></MeshHeading><MeshHeading><DescriptorName
+        UI="D003921" MajorTopicYN="Y">Diabetes Mellitus, Experimental</DescriptorName><QualifierName
+        UI="Q000188" MajorTopicYN="N">drug therapy</QualifierName></MeshHeading><MeshHeading><DescriptorName
+        UI="D018384" MajorTopicYN="Y">Oxidative Stress</DescriptorName><QualifierName
+        UI="Q000187" MajorTopicYN="N">drug effects</QualifierName></MeshHeading><MeshHeading><DescriptorName
+        UI="D015227" MajorTopicYN="N">Lipid Peroxidation</DescriptorName><QualifierName
+        UI="Q000187" MajorTopicYN="N">drug effects</QualifierName></MeshHeading><MeshHeading><DescriptorName
+        UI="D000975" MajorTopicYN="N">Antioxidants</DescriptorName><QualifierName
+        UI="Q000494" MajorTopicYN="N">pharmacology</QualifierName></MeshHeading><MeshHeading><DescriptorName
+        UI="D007004" MajorTopicYN="N">Hypoglycemic Agents</DescriptorName><QualifierName
+        UI="Q000494" MajorTopicYN="N">pharmacology</QualifierName></MeshHeading><MeshHeading><DescriptorName
+        UI="D005978" MajorTopicYN="N">Glutathione</DescriptorName><QualifierName UI="Q000378"
+        MajorTopicYN="N">metabolism</QualifierName></MeshHeading><MeshHeading><DescriptorName
+        UI="D017382" MajorTopicYN="N">Reactive Oxygen Species</DescriptorName><QualifierName
+        UI="Q000378" MajorTopicYN="N">metabolism</QualifierName></MeshHeading></MeshHeadingList><KeywordList
+        Owner="NOTNLM"><Keyword MajorTopicYN="N">Cancer</Keyword><Keyword MajorTopicYN="N">Diabetes</Keyword><Keyword
+        MajorTopicYN="N">Metformin</Keyword><Keyword MajorTopicYN="N">Rat</Keyword><Keyword
+        MajorTopicYN="N">Small intestine</Keyword></KeywordList><CoiStatement><b>Declarations</b>
+        <b>Ethical approval</b> All experimental protocols were approved by the Animal
+        Care and Use Committee of the Istanbul University, Istanbul, Turkey (ethics
+        committee decision number 2014/28) and carried out in compliance with the
+        ARRIVE guidelines. All animal experiments were conducted following the national
+        guidelines and the relevant national laws on the protection of animals. <b>Competing
+        interests</b> The authors declare no competing interests.</CoiStatement></MedlineCitation><PubmedData><History><PubMedPubDate
+        PubStatus="received"><Year>2024</Year><Month>7</Month><Day>21</Day></PubMedPubDate><PubMedPubDate
+        PubStatus="accepted"><Year>2024</Year><Month>8</Month><Day>20</Day></PubMedPubDate><PubMedPubDate
+        PubStatus="medline"><Year>2024</Year><Month>11</Month><Day>16</Day><Hour>22</Hour><Minute>25</Minute></PubMedPubDate><PubMedPubDate
+        PubStatus="pubmed"><Year>2024</Year><Month>9</Month><Day>1</Day><Hour>16</Hour><Minute>18</Minute></PubMedPubDate><PubMedPubDate
+        PubStatus="entrez"><Year>2024</Year><Month>8</Month><Day>31</Day><Hour>11</Hour><Minute>17</Minute></PubMedPubDate></History><PublicationStatus>ppublish</PublicationStatus><ArticleIdList><ArticleId
+        IdType="pubmed">39215927</ArticleId><ArticleId IdType="doi">10.1007/s10735-024-10252-y</ArticleId><ArticleId
+        IdType="pii">10.1007/s10735-024-10252-y</ArticleId></ArticleIdList><ReferenceList><Reference><Citation>Aebi
+        H (1984) Catalase in vitro. Methods Enzymol 105:121&#x2013;126. https://doi.org/10.1016/S0076-6879(84)05016-3</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/S0076-6879(84)05016-3</ArticleId><ArticleId IdType="pubmed">6727660</ArticleId></ArticleIdList></Reference><Reference><Citation>Ahmed
+        N, Tarannum S (2009) Acetylcholinesterase activity in the brain of alloxan
+        diabetic albino rats: Presence of an inhibitor of this enzyme activity in
+        the cerebral extract. Int J Diabetes Dev Ctries 29:174. https://doi.org/10.4103/0973-3930.57350</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.4103/0973-3930.57350</ArticleId><ArticleId IdType="pubmed">20336201</ArticleId><ArticleId
+        IdType="pmc">2839133</ArticleId></ArticleIdList></Reference><Reference><Citation>Ahmed
+        Mobasher M, Galal El-Tantawi H, Samy El-Said K (2020) Metformin ameliorates
+        oxidative stress induced by diabetes mellitus and hepatocellular carcinoma
+        in rats. Rep Biochem Mol Biol 9:115&#x2013;128. https://doi.org/10.29252/rbmb.9.1.115</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.29252/rbmb.9.1.115</ArticleId><ArticleId IdType="pubmed">32821759</ArticleId><ArticleId
+        IdType="pmc">7424420</ArticleId></ArticleIdList></Reference><Reference><Citation>Al-Faqeeh
+        LAS, Naser R, SR K, Khan SW, Al-Qadsy I, Haidyrah AS, Al-Owais AA, Christy
+        M, Saeed WS (2023) In vitro exploration of Hypsizygus Ulmarius (Bull.) Mushroom
+        fruiting bodies: potential antidiabetic and anti-inflammatory agent. Open
+        Chem J 21(1). https://doi.org/10.1515/chem-2023-0154</Citation></Reference><Reference><Citation>Ayd&#x131;n
+        PK, Turky&#x131;lmaz IB, Gul IB, Bulan OK, Yanardag R (2023) Drug repurposing:
+        Metformin&#x2019;s effect against liver tissue damage in diabetes and prostate
+        cancer model. J Diabetes Metab Dis 22:225&#x2013;236. https://doi.org/10.1007/s40200-022-01109-w</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1007/s40200-022-01109-w</ArticleId></ArticleIdList></Reference><Reference><Citation>Balamash
+        KS, Alkreathy HM, Al Gahdali EH, Khoja SO, Ahmad A (2018) Comparative biochemical
+        and histopathological studies on the efficacy of metformin and virgin olive
+        oil against Streptozotocin-induced diabetes in Sprague-Dawley rats. J Diabetes
+        Res 2018:4692197. https://doi.org/10.1155/2018/4692197</Citation></Reference><Reference><Citation>Bayrak
+        B, Koroglu P, Karabulut Bulan O, Yanardag R (2021) Metformin protects against
+        diabetes-induced heart injury and dunning prostate cancer model. Hum Exp Toxicol
+        40:297&#x2013;309. https://doi.org/10.1177/0960327120947452</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1177/0960327120947452</ArticleId><ArticleId IdType="pubmed">32812462</ArticleId></ArticleIdList></Reference><Reference><Citation>Beutler
+        E (1971) Red cell metabolism. A Manuel of Biochemical Methods. In Academic
+        Press. (12th ed.)</Citation></Reference><Reference><Citation>Beutler E (1975)
+        Reduced Glutathione (GSH). In In: Bergmeyen, H.V., Ed., Red Blood Cell Metabolism:
+        A Manual of Biochemical Methods, 2nd Edition, Grune and Stratton, New York
+        (pp. 112&#x2013;114)</Citation></Reference><Reference><Citation>Bravard A,
+        G&#xe9;rard C, Defois C, Benoit B, Makki K, Meugnier E, Rainteau D, Rieusset
+        J, Godet M, Vidal H (2021) Metformin treatment for 8 days impacts multiple
+        intestinal parameters in high-fat high-sucrose fed mice. Sci Rep 11:16684.
+        https://doi.org/10.1038/s41598-021-95117-0</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1038/s41598-021-95117-0</ArticleId><ArticleId IdType="pubmed">34404817</ArticleId><ArticleId
+        IdType="pmc">8371110</ArticleId></ArticleIdList></Reference><Reference><Citation>Bugan
+        I, Karagoz Z, Altun S, Djamgoz MBA (2016) Gabapentin, an analgesic used against
+        cancer-associated neuropathic pain: effects on prostate cancer progression
+        in an in vivo rat model. Basic Clin Pharmacol Toxicol 118:200&#x2013;207.
+        https://doi.org/10.1111/bcpt.12484</Citation><ArticleIdList><ArticleId IdType="doi">10.1111/bcpt.12484</ArticleId><ArticleId
+        IdType="pubmed">26335695</ArticleId></ArticleIdList></Reference><Reference><Citation>&#xc7;ak&#x131;na
+        S, &#xd6;zt&#xfc;rk &#x15e; (2020) Oxidative stress markers in liver in streptozocin-induced
+        diabetic rats: effects of metformin and sitagliptin. Cukurova Med J 45:1733&#x2013;1741.
+        https://doi.org/10.17826/cumj.791369</Citation><ArticleIdList><ArticleId IdType="doi">10.17826/cumj.791369</ArticleId></ArticleIdList></Reference><Reference><Citation>Caspary
+        WF, Rhein AM, Creutzfeldt W (1972) Increase of intestinal brush border hydrolases
+        in mucosa of streptozotocin-diabetic rats. Diabetologia 8:412&#x2013;414.
+        https://doi.org/10.1007/BF01212169</Citation><ArticleIdList><ArticleId IdType="doi">10.1007/BF01212169</ArticleId><ArticleId
+        IdType="pubmed">4265108</ArticleId></ArticleIdList></Reference><Reference><Citation>Corte
+        ED, Stirpe F (1968) Regulation of xanthine oxidase in rat liver: modifications
+        of the enzyme activity of rat liver supernatant on storage at 20 degrees.
+        Biochem J 108:349&#x2013;351. https://doi.org/10.1042/bj1080349</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1042/bj1080349</ArticleId><ArticleId IdType="pubmed">5665897</ArticleId><ArticleId
+        IdType="pmc">1198815</ArticleId></ArticleIdList></Reference><Reference><Citation>Dahlqvist
+        A (1968) Assay of intestinal disaccharidases. Anal Biochem 22:99&#x2013;107.
+        https://doi.org/10.1016/0003-2697(68)90263-7</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/0003-2697(68)90263-7</ArticleId><ArticleId IdType="pubmed">5636962</ArticleId></ArticleIdList></Reference><Reference><Citation>Del
+        Rio D, Stewart AJ, Pellegrini N (2005) A review of recent studies on malondialdehyde
+        as toxic molecule and biological marker of oxidative stress. Nutr Metab Cardiovasc
+        Dis 15:316&#x2013;328. https://doi.org/10.1016/j.numecd.2005.05.003</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/j.numecd.2005.05.003</ArticleId><ArticleId IdType="pubmed">16054557</ArticleId></ArticleIdList></Reference><Reference><Citation>Deng
+        J, Zeng L, Lai X, Li J, Liu L, Lin Q, Chen Y (2018) Metformin protects against
+        intestinal barrier dysfunction via AMPK&#x3b1;1-dependent inhibition of JNK
+        signalling activation. J Cell Mol Med 22:546&#x2013;557. https://doi.org/10.1111/jcmm.13342</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1111/jcmm.13342</ArticleId><ArticleId IdType="pubmed">29148173</ArticleId></ArticleIdList></Reference><Reference><Citation>Duan
+        R-D, Poensgen J, Wicker C, Westr&#xf6;m B, Erlanson-Albertsson C (1989) Increase
+        in pancreatic lipase and trypsin activity and their mRNA levels in streptozotocin-induced
+        diabetic rats. Dig Dis Sci 34:1243&#x2013;1248. https://doi.org/10.1007/BF01537273</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1007/BF01537273</ArticleId><ArticleId IdType="pubmed">2473868</ArticleId></ArticleIdList></Reference><Reference><Citation>Ellman
+        GL, Courtney KD, Andres V, Featherstone RM (1961) A new and rapid colorimetric
+        determination of acetylcholinesterase activity. Biochem Pharmacol 7:88&#x2013;95.
+        https://doi.org/10.1016/0006-2952(61)90145-9</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/0006-2952(61)90145-9</ArticleId><ArticleId IdType="pubmed">13726518</ArticleId></ArticleIdList></Reference><Reference><Citation>Erel
+        O (2004) A novel automated direct measurement method for total antioxidant
+        capacity using a new generation, more stable ABTS radical cation. Clin Biochem
+        37:277&#x2013;285. https://doi.org/10.1016/j.clinbiochem.2003.11.015</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/j.clinbiochem.2003.11.015</ArticleId><ArticleId IdType="pubmed">15003729</ArticleId></ArticleIdList></Reference><Reference><Citation>Erel
+        O (2005) A new automated colorimetric method for measuring total oxidant status.
+        Clin Biochem 38:1103&#x2013;1111. https://doi.org/10.1016/j.clinbiochem.2005.08.008</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/j.clinbiochem.2005.08.008</ArticleId><ArticleId IdType="pubmed">16214125</ArticleId></ArticleIdList></Reference><Reference><Citation>Farag
+        A, Mandour AS, Hendawy H, Elhaieg A, Elfadadny A, Tanaka R (2023) A review
+        on experimental surgical models and anesthetic protocols of heart failure
+        in rats. Front Vet Sci 10:1103229. https://doi.org/10.3389/fvets.2023.1103229</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.3389/fvets.2023.1103229</ArticleId><ArticleId IdType="pubmed">37051509</ArticleId><ArticleId
+        IdType="pmc">10083377</ArticleId></ArticleIdList></Reference><Reference><Citation>Felippe
+        Gon&#xe7;alves-de-Albuquerque C, Ribeiro Silva A, Ign&#xe1;cio da Silva C,
+        Caire Castro-Faria-Neto H, Burth P (2017) Na/K pump and beyond: Na/K-ATPase
+        as a modulator of apoptosis and autophagy. Molecules 22(4):578. https://doi.org/10.3390/molecules22040578</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.3390/molecules22040578</ArticleId><ArticleId IdType="pubmed">28430151</ArticleId><ArticleId
+        IdType="pmc">6154632</ArticleId></ArticleIdList></Reference><Reference><Citation>Figueiredo
+        ID, Lima TFO, In&#xe1;cio MD, Costa MC, Assis RP, Brunetti IL, Baviera AM
+        (2020) Lycopene improves the metformin effects on glycemic control and decreases
+        biomarkers of glycoxidative stress in diabetic rats. Diabetes Metab Syndr
+        Obes Targets Ther 13:3117&#x2013;3135. https://doi.org/10.2147/DMSO.S265944</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.2147/DMSO.S265944</ArticleId></ArticleIdList></Reference><Reference><Citation>Foretz
+        M, Guigas B, Viollet B (2023) Metformin: update on mechanisms of action and
+        repurposing potential. Nat Rev Endocrinol 19:460&#x2013;476. https://doi.org/10.1038/s41574-023-00833-4</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1038/s41574-023-00833-4</ArticleId><ArticleId IdType="pubmed">37130947</ArticleId></ArticleIdList></Reference><Reference><Citation>Freitas-J&#xfa;nior
+        ACV, Costa HMS, Icimoto MY, Hirata IY, Marcondes M, Carvalho LB, Oliveira
+        V, Bezerra RS (2012) Giant amazonian fish pirarucu (Arapaima gigas): its viscera
+        as a source of thermostable trypsin. Food Chem 133:1596&#x2013;1602. https://doi.org/10.1016/j.foodchem.2012.02.056</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/j.foodchem.2012.02.056</ArticleId></ArticleIdList></Reference><Reference><Citation>Fukai
+        T, Ushio-Fukai M (2011) Superoxide dismutases: role in redox signaling, vascular
+        function, and diseases. Antioxid Redox Signal 15:1583&#x2013;1606. https://doi.org/10.1089/ars.2011.3999</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1089/ars.2011.3999</ArticleId><ArticleId IdType="pubmed">21473702</ArticleId><ArticleId
+        IdType="pmc">3151424</ArticleId></ArticleIdList></Reference><Reference><Citation>Funk
+        CD (2001) Prostaglandins and leukotrienes: advances in eicosanoid biology.
+        Science 294:1871&#x2013;1875. https://doi.org/10.1126/science.294.5548.1871</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1126/science.294.5548.1871</ArticleId><ArticleId IdType="pubmed">11729303</ArticleId></ArticleIdList></Reference><Reference><Citation>Furlong
+        CE, Richter RJ, Seidel SL, Motulsky AG (1988) Role of genetic polymorphism
+        of human plasma paraoxonase/arylesterase in hydrolysis of the insecticide
+        metabolites chlorpyrifos oxon and paraoxon. Am J Hum Genet 43:230&#x2013;238</Citation><ArticleIdList><ArticleId
+        IdType="pubmed">2458038</ArticleId><ArticleId IdType="pmc">1715392</ArticleId></ArticleIdList></Reference><Reference><Citation>Gianazza
+        E, Brioschi M, Fernandez AM, Banfi C (2019) Lipoxidation in cardiovascular
+        diseases. Redox Biol 23:101119. https://doi.org/10.1016/j.redox.2019.101119</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/j.redox.2019.101119</ArticleId><ArticleId IdType="pubmed">30833142</ArticleId><ArticleId
+        IdType="pmc">6859589</ArticleId></ArticleIdList></Reference><Reference><Citation>Gotfried
+        J, Priest S, Schey R (2017) Diabetes and the small intestine. Curr Treat Options
+        Gastroenterol 15:490&#x2013;507. https://doi.org/10.1007/s11938-017-0155-x</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1007/s11938-017-0155-x</ArticleId><ArticleId IdType="pubmed">28913777</ArticleId></ArticleIdList></Reference><Reference><Citation>Gvazava
+        IG, Kosykh AV, Rogovaya OS, Popova OP, Sobyanin KA, Khrushchev AC, Timofeev
+        AV, Vorotelyak EA (2020) A simplified streptozotocin-induced diabetes model
+        in nude mice. Acta Naturae 12:98&#x2013;104. https://doi.org/10.32607/actanaturae.11202</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.32607/actanaturae.11202</ArticleId><ArticleId IdType="pubmed">33456981</ArticleId><ArticleId
+        IdType="pmc">7800597</ArticleId></ArticleIdList></Reference><Reference><Citation>Habig
+        WH, Jakoby WB (1981) Assays for differentiation of glutathione S-transferases.
+        Methods Enzymol 77:398&#x2013;405. https://doi.org/10.1016/S0076-6879(81)77053-8</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/S0076-6879(81)77053-8</ArticleId><ArticleId IdType="pubmed">7329316</ArticleId></ArticleIdList></Reference><Reference><Citation>Han
+        D (2021) Treatment with astragaloside IV reduced blood glucose, regulated
+        blood lipids, and protected liver function in diabetic rats. J Int Med Res
+        49:030006051984116. https://doi.org/10.1177/0300060519841165</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1177/0300060519841165</ArticleId></ArticleIdList></Reference><Reference><Citation>Hedstr&#xf6;m
+        J, Haglund C, Haapiainen R, Stenman UH (1996) Serum trypsinogen-2 and trypsin-2-&#x3b1;1-antitrypsin
+        complex in malignant and benign digestive-tract diseases. Preferential elevation
+        in patients with cholangiocarcinomas. Int J Cancer 66:326&#x2013;331. https://doi.org/10.1002/(SICI)1097-0215(19960503)66:3%3C326::AID-IJC10%3E3.0.CO;2-9</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1002/(SICI)1097-0215(19960503)66:3&lt;326::AID-IJC10&gt;3.0.CO;2-9</ArticleId><ArticleId
+        IdType="pubmed">8621252</ArticleId></ArticleIdList></Reference><Reference><Citation>Howarth
+        GS, Francis GL, Cool JC, Xu X, Byard RW, Read LC (1996) Milk growth factors
+        enriched from cheese whey ameliorate intestinal damage by methotrexate when
+        administered orally to rats. J Nutr 126:2519&#x2013;2530. https://doi.org/10.1093/jn/126.10.2519</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1093/jn/126.10.2519</ArticleId><ArticleId IdType="pubmed">8857513</ArticleId></ArticleIdList></Reference><Reference><Citation>Hua
+        Y, Zheng Y, Yao Y, Jia R, Ge S, Zhuang A (2023) Metformin and cancer hallmarks:
+        shedding new lights on therapeutic repurposing. J Transl Med 21:403. https://doi.org/10.1186/s12967-023-04263-8</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1186/s12967-023-04263-8</ArticleId><ArticleId IdType="pubmed">37344841</ArticleId><ArticleId
+        IdType="pmc">10286395</ArticleId></ArticleIdList></Reference><Reference><Citation>Hyun
+        B, Shin S, Lee A, Lee S, Song Y, Ha NJ, Cho KH, Kim K (2013) Metformin down-regulates
+        TNF-&#x3b1; secretion via suppression of scavenger receptors in macrophages.
+        Immune Netw 13:123. https://doi.org/10.4110/in.2013.13.4.123</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.4110/in.2013.13.4.123</ArticleId><ArticleId IdType="pubmed">24009539</ArticleId><ArticleId
+        IdType="pmc">3759709</ArticleId></ArticleIdList></Reference><Reference><Citation>Ichikawa
+        Y, Koshikawa N, Hasegawa S, Ishikawa T, Momiyama N, Kunizaki C, Takahashi
+        M, Moriwaki Y, Akiyama H, Yamaoka H, Yanoma S, Tsuburaya A, Nagashima Y, Shimada
+        H, Miyazaki K (2000) Marked increase of trypsin(ogen) in serum of linitis
+        plastica (gastric cancer, borrmann 4) patients. Clin Cancer Res 6:1385&#x2013;1388</Citation><ArticleIdList><ArticleId
+        IdType="pubmed">10778967</ArticleId></ArticleIdList></Reference><Reference><Citation>Karatug
+        A, Sacan O, Coskun ZM, Bolkent S, Yanardag R, Turk N, Bolkent S (2012) Regulation
+        of gene expression and biochemical changes in small intestine of newborn diabetic
+        rats by exogenous ghrelin. Peptides 33:101&#x2013;108. https://doi.org/10.1016/j.peptides.2011.11.003</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/j.peptides.2011.11.003</ArticleId><ArticleId IdType="pubmed">22138721</ArticleId></ArticleIdList></Reference><Reference><Citation>Kim
+        YD, Kim YH, Cho YM, Kim DK, Ahn SW, Lee JM, Chanda D, Shong M, Lee CH, Choi
+        HS (2012) Metformin ameliorates IL-6-induced hepatic insulin resistance via
+        induction of orphan nuclear receptor small heterodimer partner (SHP) in mouse
+        models. Diabetologia 55:1482&#x2013;1494. https://doi.org/10.1007/s00125-012-2494-4</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1007/s00125-012-2494-4</ArticleId><ArticleId IdType="pubmed">22349108</ArticleId></ArticleIdList></Reference><Reference><Citation>Kuraishy
+        A, Karin M, Grivennikov SI (2011) Tumor promotion via injury- and death-induced
+        inflammation. Immunity 35:467&#x2013;477. https://doi.org/10.1016/j.immuni.2011.09.006</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/j.immuni.2011.09.006</ArticleId><ArticleId IdType="pubmed">22035839</ArticleId><ArticleId
+        IdType="pmc">3587290</ArticleId></ArticleIdList></Reference><Reference><Citation>Ledwozyw
+        A, Michalak J, St&#x229;pie&#x144; A, Ka&#x327;dzio&#x142;ka A (1986) The
+        relationship between plasma triglycerides, cholesterol, total lipids and lipid
+        peroxidation products during human atherosclerosis. Clin Chim Acta 155:275&#x2013;283.
+        https://doi.org/10.1016/0009-8981(86)90247-0</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/0009-8981(86)90247-0</ArticleId><ArticleId IdType="pubmed">3708856</ArticleId></ArticleIdList></Reference><Reference><Citation>Lei
+        XG, Cheng WH, McClung JP (2007) Metabolic regulation and function of glutathione
+        peroxidase-1. Annu Rev Nutr 27:41&#x2013;61. https://doi.org/10.1146/annurev.nutr.27.061406.093716</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1146/annurev.nutr.27.061406.093716</ArticleId><ArticleId IdType="pubmed">17465855</ArticleId></ArticleIdList></Reference><Reference><Citation>Levine
+        RL, Garland D, Oliver CN, Amici A, Climent I, Lenz AG, Ahn BW, Shaltiel S,
+        Stadtman ER (1990) Determination of carbonyl content in oxidatively modified
+        proteins. Methods Enzymol 186:464&#x2013;478. https://doi.org/10.1016/0076-6879(90)86141-H</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/0076-6879(90)86141-H</ArticleId><ArticleId IdType="pubmed">1978225</ArticleId></ArticleIdList></Reference><Reference><Citation>Li
+        HL, Liu DP, Liang CC (2003) Paraoxonase gene polymorphisms, oxidative stress,
+        and diseases. J Mol Med 81:766&#x2013;779. https://doi.org/10.1007/s00109-003-0481-4</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1007/s00109-003-0481-4</ArticleId><ArticleId IdType="pubmed">14551701</ArticleId></ArticleIdList></Reference><Reference><Citation>Lin
+        W, Chen H, Chen X, Guo C (2024) The roles of neutrophil-derived myeloperoxidase
+        (MPO) in diseases: the new progress. Antioxidants 13:132. https://doi.org/10.3390/antiox13010132</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.3390/antiox13010132</ArticleId><ArticleId IdType="pubmed">38275657</ArticleId><ArticleId
+        IdType="pmc">10812636</ArticleId></ArticleIdList></Reference><Reference><Citation>Lionetto
+        MG, Caricato R, Calisi A, Giordano ME, Schettino T (2013) Acetylcholinesterase
+        as a biomarker in environmental and occupational medicine: new insights and
+        future perspectives. Biomed Res Int 1&#x2013;8. https://doi.org/10.1155/2013/321213</Citation></Reference><Reference><Citation>Lorentz
+        K, Weiss T, Kraas E (1986) Sialic acid in human serum and cerebrospinal fluid:
+        comparison of methods and reference values. Clin Chem Lab Med 24:189&#x2013;198.
+        https://doi.org/10.1515/cclm.1986.24.3.189</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1515/cclm.1986.24.3.189</ArticleId></ArticleIdList></Reference><Reference><Citation>Lowry
+        OH, Rosebrough NJ, Farr AL, Randall RJ (1951) Protein measurement with the
+        folin phenol reagent. J Biol Chem 193:265&#x2013;275</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/S0021-9258(19)52451-6</ArticleId><ArticleId IdType="pubmed">14907713</ArticleId></ArticleIdList></Reference><Reference><Citation>Lutchmansingh
+        FK, Hsu JW, Bennett FI, Badaloo AV, McFarlane-Anderson N, Gordon-Strachan
+        GM, Wright-Pascoe RA, Jahoor F, Boyne MS (2018) Glutathione metabolism in
+        type 2 diabetes and its relationship with microvascular complications and
+        glycemia. PLoS ONE 13:e0198626. https://doi.org/10.1371/journal.pone.0198626</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1371/journal.pone.0198626</ArticleId><ArticleId IdType="pubmed">29879181</ArticleId><ArticleId
+        IdType="pmc">5991679</ArticleId></ArticleIdList></Reference><Reference><Citation>Magliano
+        DJ, Boyko EJ (2021) IDF Diabetes Atlas (10th edition). Brussels: International
+        Diabetes Federation</Citation></Reference><Reference><Citation>Miyata S, Koshikawa
+        N, Higashi S, Miyagi Y, Nagashima Y, Yanoma S, Kato Y, Yasumitsu H, Miyazaki
+        K (1999) Expression of trypsin in human cancer cell lines and cancer tissues
+        and its tight binding to soluble form of Alzheimer amyloid precursor protein
+        in culture. J Biochem 125:1067&#x2013;1076. https://doi.org/10.1093/oxfordjournals.jbchem.a022388</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1093/oxfordjournals.jbchem.a022388</ArticleId><ArticleId IdType="pubmed">10348909</ArticleId></ArticleIdList></Reference><Reference><Citation>Mossine
+        VV, Chopra P, Mawhinney TP (2008) Interaction of tomato lycopene and ketosamine
+        against rat prostate tumorigenesis. Cancer Res 68:4384&#x2013;4391. https://doi.org/10.1158/0008-5472.CAN-08-0108</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1158/0008-5472.CAN-08-0108</ArticleId><ArticleId IdType="pubmed">18519700</ArticleId></ArticleIdList></Reference><Reference><Citation>Motor
+        S, Ozturk S, Ozcan O, Gurpinar AB, Can Y, Yuksel R, Yenin JZ, Seraslan G,
+        Ozturk OH (2014) Evaluation of total antioxidant status, total oxidant status
+        and oxidative stress index in patients with Alopecia Areata. Int J Clin Exp
+        Med 7:1089&#x2013;1093</Citation><ArticleIdList><ArticleId IdType="pubmed">24955187</ArticleId><ArticleId
+        IdType="pmc">4057866</ArticleId></ArticleIdList></Reference><Reference><Citation>Mylroie
+        AA, Collins H, Umbles C, Kyle J (1986) Erythrocyte superoxide dismutase activity
+        and other parameters of copper status in rats ingesting lead acetate. Toxicol
+        Appl Pharmacol 82:512&#x2013;520. https://doi.org/10.1016/0041-008X(86)90286-3</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/0041-008X(86)90286-3</ArticleId><ArticleId IdType="pubmed">3952734</ArticleId></ArticleIdList></Reference><Reference><Citation>Najafi
+        M, Cheki M, Hassanzadeh G, Amini P, Shabeeb D, Musa AE (2020) Protection from
+        radiation-induced damage in rat&#x2019;s ileum and colon by combined regimens
+        of melatonin and metformin: a histopathological study. Antiinflamm Antiallergy
+        Agents Med Chem 19:180&#x2013;189. https://doi.org/10.2174/1871523018666190718161928</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.2174/1871523018666190718161928</ArticleId><ArticleId IdType="pubmed">31438832</ArticleId><ArticleId
+        IdType="pmc">7475942</ArticleId></ArticleIdList></Reference><Reference><Citation>Nakabou
+        Y, Ishikawa Y, Misake A, Hagihira H (1980) Effect of food intake on intestinal
+        absorption and mucosal hydrolases in alloxan diabetic rats. Metabolism 29:181&#x2013;185.
+        https://doi.org/10.1016/0026-0495(80)90144-4</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/0026-0495(80)90144-4</ArticleId><ArticleId IdType="pubmed">6986535</ArticleId></ArticleIdList></Reference><Reference><Citation>Nandi
+        A, Yan LJ, Jana CK, Das N (2019) Role of catalase in oxidative stress- and
+        age-associated degenerative diseases. Oxid Med Cell Longev 2019, 1&#x2013;19.
+        https://doi.org/10.1155/2019/9613090</Citation></Reference><Reference><Citation>Olsen
+        WA, Rogers L (1971) Jejunal sucrase activity in diabetic rats. J Lab Clin
+        Med 77:838&#x2013;842</Citation><ArticleIdList><ArticleId IdType="pubmed">5557666</ArticleId></ArticleIdList></Reference><Reference><Citation>Ozel
+        AB, Dagsuyu E, Ayd&#x131;n PK, Bugan I, Bulan OK, Yanardag R, Yarat A (2022)
+        Brain boron level, DNA content, and myeloperoxidase activity of metformin-treated
+        rats in diabetes and prostate cancer model. Biol Trace Elem Res 200:1164&#x2013;1170.
+        https://doi.org/10.1007/s12011-021-02708-z</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1007/s12011-021-02708-z</ArticleId><ArticleId IdType="pubmed">33860456</ArticleId></ArticleIdList></Reference><Reference><Citation>Pal
+        PB, Sinha K, Sil PC (2014) Mangiferin attenuates diabetic nephropathy by inhibiting
+        oxidative stress mediated signaling cascade, TNF&#x3b1; related and mitochondrial
+        dependent apoptotic pathways in streptozotocin-induced diabetic rats. PLoS
+        ONE 9:e107220. https://doi.org/10.1371/journal.pone.0107220</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1371/journal.pone.0107220</ArticleId><ArticleId IdType="pubmed">25233093</ArticleId><ArticleId
+        IdType="pmc">4169432</ArticleId></ArticleIdList></Reference><Reference><Citation>Pradeep
+        AR, Ramchandraprasad MV, Bajaj P, Rao NS, Agarwal E (2013) Protein carbonyl:
+        an oxidative stress marker in gingival crevicular fluid in healthy, gingivitis,
+        and chronic periodontitis subjects. Contemp Clin Dent 4:27. https://doi.org/10.4103/0976-237X.111589</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.4103/0976-237X.111589</ArticleId><ArticleId IdType="pubmed">23853448</ArticleId><ArticleId
+        IdType="pmc">3703690</ArticleId></ArticleIdList></Reference><Reference><Citation>Ridderstap
+        A, Bonting S (1969) Na+- K+-activated ATPase anc exocrine pancreatic secretion
+        in vitro. Am J Physiol Content 217:1721&#x2013;1727. https://doi.org/10.1152/ajplegacy.1969.217.6.1721</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1152/ajplegacy.1969.217.6.1721</ArticleId></ArticleIdList></Reference><Reference><Citation>Roxo
+        DF, Arcaro CA, Gutierres VO, Costa MC, Oliveira JO, Lima TFO, Assis RP, Brunetti
+        IL, Baviera AM (2019) Curcumin combined with metformin decreases glycemia
+        and dyslipidemia, and increases paraoxonase activity in diabetic rats. Diabetol
+        Metab Syndr 11:33. https://doi.org/10.1186/s13098-019-0431-0</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1186/s13098-019-0431-0</ArticleId><ArticleId IdType="pubmed">31061679</ArticleId><ArticleId
+        IdType="pmc">6492331</ArticleId></ArticleIdList></Reference><Reference><Citation>Salama
+        RM, Schaalan MF, Elkoussi AA, Khalifa AE (2013) Potential utility of sodium
+        selenate as an adjunct to metformin in treating type II diabetes mellitus
+        in rats: a perspective on protein tyrosine phosphatase. Biomed Res Int 2013:1&#x2013;9.
+        https://doi.org/10.1155/2013/231378</Citation><ArticleIdList><ArticleId IdType="doi">10.1155/2013/231378</ArticleId></ArticleIdList></Reference><Reference><Citation>Schedl
+        HP, Al-Jurf AS, Wilson HD (1983) Elevated intestinal disaccharidase activity
+        in the streptozotocin-diabetic rat is independent of enteral feeding. Diabetes
+        32(3):265&#x2013;270. https://doi.org/10.2337/diab.32.3.265</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.2337/diab.32.3.265</ArticleId><ArticleId IdType="pubmed">6402407</ArticleId></ArticleIdList></Reference><Reference><Citation>Shafi
+        MA (2019) Gastrointestinal motility issues in cancer patients. Curr Gastroenterol
+        Rep 21:69. https://doi.org/10.1007/s11894-019-0738-x</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1007/s11894-019-0738-x</ArticleId><ArticleId IdType="pubmed">31823129</ArticleId></ArticleIdList></Reference><Reference><Citation>Singh
+        RR, Reindl KM (2021) Glutathione S-transferases in cancer. Antioxidants 10:701.
+        https://doi.org/10.3390/antiox10050701</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.3390/antiox10050701</ArticleId><ArticleId IdType="pubmed">33946704</ArticleId><ArticleId
+        IdType="pmc">8146591</ArticleId></ArticleIdList></Reference><Reference><Citation>Suhail
+        M (2010) Na+, K+-ATPase: ubiquitous multifunctional transmembrane protein
+        and its relevance to various pathophysiological conditions. J Clin Med Res.
+        https://doi.org/10.4021/jocmr2010.02.263w</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.4021/jocmr2010.02.263w</ArticleId><ArticleId IdType="pubmed">22043260</ArticleId><ArticleId
+        IdType="pmc">3194031</ArticleId></ArticleIdList></Reference><Reference><Citation>Sung
+        H, Ferlay J, Siegel RL, Laversanne M, Soerjomataram I, Jemal A, Bray F (2021)
+        Global cancer statistics 2020: GLOBOCAN estimates of incidence and mortality
+        worldwide for 36 cancers in 185 countries. CA Cancer J Clin 71:209&#x2013;249.
+        https://doi.org/10.3322/caac.21660</Citation><ArticleIdList><ArticleId IdType="doi">10.3322/caac.21660</ArticleId><ArticleId
+        IdType="pubmed">33538338</ArticleId></ArticleIdList></Reference><Reference><Citation>Tangvarasittichai
+        S (2015) Oxidative stress, insulin resistance, dyslipidemia and type 2 diabetes
+        mellitus. World J Diabetes 6:456. https://doi.org/10.4239/wjd.v6.i3.456</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.4239/wjd.v6.i3.456</ArticleId><ArticleId IdType="pubmed">25897356</ArticleId><ArticleId
+        IdType="pmc">4398902</ArticleId></ArticleIdList></Reference><Reference><Citation>Tunali
+        S, Gezginci-Oktayoglu S, Bolkent S, Coskun E, Bal-Demirci T, Ulkuseven B,
+        Yanardag R (2021) Protective effects of an oxovanadium(IV) complex with N<sub>2</sub>O<sub>2</sub>
+        chelating thiosemicarbazone on small intestine injury of STZ-diabetic rats.
+        Biol Trace Elem Res 199:1515&#x2013;1523. https://doi.org/10.1007/s12011-020-02269-7</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1007/s12011-020-02269-7</ArticleId><ArticleId IdType="pubmed">32648196</ArticleId></ArticleIdList></Reference><Reference><Citation>Varki
+        A, Gagneux P (2012) Multifarious roles of sialic acids in immunity. Ann N
+        Y Acad Sci 1253:16&#x2013;36. https://doi.org/10.1111/j.1749-6632.2012.06517.x</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1111/j.1749-6632.2012.06517.x</ArticleId><ArticleId IdType="pubmed">22524423</ArticleId><ArticleId
+        IdType="pmc">3357316</ArticleId></ArticleIdList></Reference><Reference><Citation>Va&#x161;kov&#xe1;
+        J, Ko&#x10d;an L, Va&#x161;ko L, Perj&#xe9;si P (2023) Glutathione-related
+        enzymes and proteins: a review. Molecules 28:1447. https://doi.org/10.3390/molecules28031447</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.3390/molecules28031447</ArticleId><ArticleId IdType="pubmed">36771108</ArticleId><ArticleId
+        IdType="pmc">9919958</ArticleId></ArticleIdList></Reference><Reference><Citation>Wei
+        H, Frenkel K (1991) In vivo formation of oxidized DNA bases in tumor promoter-treated
+        mouse skin. Cancer Res 51:4443&#x2013;4449</Citation><ArticleIdList><ArticleId
+        IdType="pubmed">1868465</ArticleId></ArticleIdList></Reference><Reference><Citation>Wendel
+        A (1981) Glutathione peroxidase. Methods Enzymol 77:325&#x2013;333. https://doi.org/10.1016/S0076-6879(81)77046-0</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1016/S0076-6879(81)77046-0</ArticleId><ArticleId IdType="pubmed">7329310</ArticleId></ArticleIdList></Reference><Reference><Citation>Yamada
+        K, Goda T, Sasaki M, Moriuchi S, Hosoya N (1980) Effect of food restriction
+        on intestinal disaccharidases in streptozotocin-induced diabetes of rat. J
+        Nutr Sci Vitaminol 26:599&#x2013;606. https://doi.org/10.3177/jnsv.26.599</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.3177/jnsv.26.599</ArticleId><ArticleId IdType="pubmed">7241240</ArticleId></ArticleIdList></Reference><Reference><Citation>Zhang
+        Y, Chen J, Ji H, Xiao ZG, Shen P, Xu LH (2018) Protective effects of Danshen
+        injection against erectile dysfunction via suppression of endoplasmic reticulum
+        stress activation in a streptozotocin-induced diabetic rat model. BMC Complement
+        Altern Med 18:343. https://doi.org/10.1186/s12906-018-2414-3</Citation><ArticleIdList><ArticleId
+        IdType="doi">10.1186/s12906-018-2414-3</ArticleId><ArticleId IdType="pubmed">30587186</ArticleId><ArticleId
+        IdType="pmc">6307115</ArticleId></ArticleIdList></Reference></ReferenceList></PubmedData></PubmedArticle></PubmedArticleSet>'
+    headers:
+      Access-Control-Allow-Origin:
+      - '*'
+      Access-Control-Expose-Headers:
+      - X-RateLimit-Limit,X-RateLimit-Remaining
+      Alt-Svc:
+      - clear
+      Cache-Control:
+      - private
+      Content-Security-Policy:
+      - upgrade-insecure-requests
+      Content-Type:
+      - text/xml; charset=UTF-8
+      Date:
+      - Fri, 18 Sep 2026 02:04:03 GMT
+      Ncbi-Phid:
+      - 1D332A4424E25E45000032035BF53DFA.1.1.m_4
+      Ncbi-Sid:
+      - E7D903E7BF1A69D8_23C9SID
+      Referrer-Policy:
+      - origin-when-cross-origin
+      Server:
+      - Finatra
+      Set-Cookie:
+      - ncbi_sid=E7D903E7BF1A69D8_23C9SID; domain=.nih.gov; path=/; expires=Sat, 18
+        Sep 2027 02:04:03 GMT
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      X-Ratelimit-Limit:
+      - '10'
+      X-Ratelimit-Remaining:
+      - '8'
+      X-Ua-Compatible:
+      - IE=Edge
+      X-Xss-Protection:
+      - 1; mode=block
+      content-length:
+      - '41883'
+    status:
+      code: 200
+      message: OK
+version: 1

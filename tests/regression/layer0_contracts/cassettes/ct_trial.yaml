@@ -1,0 +1,897 @@
+interactions:
+- request:
+    body: null
+    headers: {}
+    method: GET
+    uri: https://clinicaltrials.gov/api/v2/studies/NCT04971785?format=json
+  response:
+    body:
+      string: "{\"protocolSection\":{\"identificationModule\":{\"nctId\":\"NCT04971785\",\"orgStudyIdInfo\":{\"id\":\"GS-US-454-6075\"},\"secondaryIdInfos\":[{\"id\":\"2021-001445-12\",\"type\":\"EUDRACT_NUMBER\"},{\"id\":\"jRCT2071210112\",\"type\":\"REGISTRY\",\"domain\":\"Japan
+        Registry of Clinical Trials\"}],\"organization\":{\"fullName\":\"Gilead Sciences\",\"class\":\"INDUSTRY\"},\"briefTitle\":\"Study
+        of Semaglutide, and Cilofexor/Firsocostat, Alone and in Combination, in Adults
+        With Cirrhosis Due to Nonalcoholic Steatohepatitis (NASH)\",\"officialTitle\":\"A
+        Phase 2, Randomized, Double-Blind, Double-Dummy, Placebo-Controlled Study
+        Evaluating the Safety and Efficacy of Semaglutide, and the Fixed-Dose Combination
+        of Cilofexor and Firsocostat, Alone and in Combination, in Subjects With Compensated
+        Cirrhosis (F4) Due to Nonalcoholic Steatohepatitis (NASH)\",\"acronym\":\"WAYFIND\"},\"statusModule\":{\"statusVerifiedDate\":\"2025-11\",\"overallStatus\":\"COMPLETED\",\"expandedAccessInfo\":{\"hasExpandedAccess\":false},\"startDateStruct\":{\"date\":\"2021-08-09\",\"type\":\"ACTUAL\"},\"primaryCompletionDateStruct\":{\"date\":\"2024-11-12\",\"type\":\"ACTUAL\"},\"completionDateStruct\":{\"date\":\"2024-12-09\",\"type\":\"ACTUAL\"},\"studyFirstSubmitDate\":\"2021-07-20\",\"studyFirstSubmitQcDate\":\"2021-07-20\",\"studyFirstPostDateStruct\":{\"date\":\"2021-07-21\",\"type\":\"ACTUAL\"},\"resultsFirstSubmitDate\":\"2025-11-12\",\"resultsFirstSubmitQcDate\":\"2025-11-12\",\"resultsFirstPostDateStruct\":{\"date\":\"2025-11-26\",\"type\":\"ACTUAL\"},\"lastUpdateSubmitDate\":\"2025-11-12\",\"lastUpdatePostDateStruct\":{\"date\":\"2025-11-26\",\"type\":\"ACTUAL\"}},\"sponsorCollaboratorsModule\":{\"responsibleParty\":{\"type\":\"SPONSOR\"},\"leadSponsor\":{\"name\":\"Gilead
+        Sciences\",\"class\":\"INDUSTRY\"},\"collaborators\":[{\"name\":\"Novo Nordisk
+        A/S\",\"class\":\"INDUSTRY\"}]},\"oversightModule\":{\"oversightHasDmc\":true,\"isFdaRegulatedDrug\":true,\"isFdaRegulatedDevice\":false},\"descriptionModule\":{\"briefSummary\":\"The
+        goal of this clinical study is to understand whether the study drugs, semaglutide
+        (SEMA) with the fixed-dose combination (FDC) of cilofexor/firsocostat (CILO/FIR),
+        cause fibrosis improvement and Nonalcoholic Steatohepatitis (NASH) resolution
+        in participants with cirrhosis due to NASH.\"},\"conditionsModule\":{\"conditions\":[\"Nonalcoholic
+        Steatohepatitis\"]},\"designModule\":{\"studyType\":\"INTERVENTIONAL\",\"phases\":[\"PHASE2\"],\"designInfo\":{\"allocation\":\"RANDOMIZED\",\"interventionModel\":\"PARALLEL\",\"primaryPurpose\":\"TREATMENT\",\"maskingInfo\":{\"masking\":\"DOUBLE\",\"whoMasked\":[\"PARTICIPANT\",\"INVESTIGATOR\"]}},\"enrollmentInfo\":{\"count\":457,\"type\":\"ACTUAL\"}},\"armsInterventionsModule\":{\"armGroups\":[{\"label\":\"SEMA
+        + CILO/FIR FDC\",\"type\":\"EXPERIMENTAL\",\"description\":\"Participants
+        will receive semaglutide (SEMA) 3.0 mg/mL, once weekly and cilofexor and firsocostat
+        (CILO/FIR) 30 mg/20 mg fixed-dose combination (FDC) tablet, once daily up
+        to 72 weeks.\",\"interventionNames\":[\"Drug: Semaglutide (SEMA)\",\"Drug:
+        Cilofexor (CILO)/Firsocostat (FIR)\"]},{\"label\":\"SEMA + PTM CILO/FIR\",\"type\":\"EXPERIMENTAL\",\"description\":\"Participants
+        will receive SEMA 3.0 mg/mL, once weekly and Placebo-To-Match (PTM) CILO/FIR
+        FDC tablet, once daily up to 72 weeks.\",\"interventionNames\":[\"Drug: Semaglutide
+        (SEMA)\",\"Drug: PTM CILO/FIR\"]},{\"label\":\"PTM SEMA + CILO/FIR FDC\",\"type\":\"EXPERIMENTAL\",\"description\":\"Participants
+        will receive PTM SEMA, once weekly and CILO/FIR 30 mg/20 mg FDC tablet, once
+        daily up to 72 weeks.\",\"interventionNames\":[\"Drug: Cilofexor (CILO)/Firsocostat
+        (FIR)\",\"Drug: PTM SEMA\"]},{\"label\":\"PTM SEMA + PTM CILO/FIR\",\"type\":\"PLACEBO_COMPARATOR\",\"description\":\"Participants
+        will receive PTM SEMA, once weekly and PTM CILO/FIR FDC tablet, once daily
+        up to 72 weeks.\",\"interventionNames\":[\"Drug: PTM SEMA\",\"Drug: PTM CILO/FIR\"]}],\"interventions\":[{\"type\":\"DRUG\",\"name\":\"Semaglutide
+        (SEMA)\",\"description\":\"Administered as subcutaneous (SC) injection\",\"armGroupLabels\":[\"SEMA
+        + CILO/FIR FDC\",\"SEMA + PTM CILO/FIR\"]},{\"type\":\"DRUG\",\"name\":\"Cilofexor
+        (CILO)/Firsocostat (FIR)\",\"description\":\"Tablets administered orally\",\"armGroupLabels\":[\"PTM
+        SEMA + CILO/FIR FDC\",\"SEMA + CILO/FIR FDC\"],\"otherNames\":[\"GS-9674/GS-0976\"]},{\"type\":\"DRUG\",\"name\":\"PTM
+        SEMA\",\"description\":\"Administered as SC injection\",\"armGroupLabels\":[\"PTM
+        SEMA + CILO/FIR FDC\",\"PTM SEMA + PTM CILO/FIR\"]},{\"type\":\"DRUG\",\"name\":\"PTM
+        CILO/FIR\",\"description\":\"Tablets administered orally\",\"armGroupLabels\":[\"PTM
+        SEMA + PTM CILO/FIR\",\"SEMA + PTM CILO/FIR\"]}]},\"outcomesModule\":{\"primaryOutcomes\":[{\"measure\":\"Percentage
+        of Participants Who Achieved \u2265 1-Stage Improvement in Fibrosis Without
+        Worsening of Nonalcoholic Steatohepatitis (NASH) at Week 72 in Semaglutide
+        (SEMA) + Cilofexor/Firsocostat (CILO/FIR) Fixed Dose Combination (FDC) Versus
+        Placebo Groups\",\"description\":\"Fibrosis improvement was defined as \u2265
+        1-stage decrease from baseline in fibrosis according to the NASH clinical
+        research network (CRN) classification. Worsening of NASH was defined as \u2265
+        1-point increase from baseline in hepatocellular ballooning or lobular inflammation.\\n\\nClopper-Pearson
+        method was used in outcome measure analysis in each arm. Percentages were
+        rounded-off.\",\"timeFrame\":\"Week 72\"}],\"secondaryOutcomes\":[{\"measure\":\"Percentage
+        of Participants Who Achieved \u22651-Stage Improvement in Fibrosis Without
+        Worsening of NASH at Week 72 in SEMA + CILO/FIR FDC Versus SEMA Alone\",\"description\":\"Fibrosis
+        improvement was defined as \u2265 1-stage decrease from baseline in fibrosis
+        according to the NASH CRN classification. Worsening of NASH was defined as
+        \u2265 1-point increase from baseline in hepatocellular ballooning or lobular
+        inflammation.\\n\\nClopper-Pearson method was used in outcome measure analysis
+        in each arm. Percentages were rounded-off.\",\"timeFrame\":\"Week 72\"},{\"measure\":\"Percentage
+        of Participants With NASH Resolution Without Worsening in Fibrosis at Week
+        72 in SEMA + CILO/FIR FDC Versus Placebo Groups\",\"description\":\"NASH resolution
+        is defined as lobular inflammation of 0 or 1 and hepatocellular ballooning
+        of 0. Worsening in fibrosis was defined as a change in fibrosis worsening
+        stage as per NASH CRN criteria.\\n\\nClopper-Pearson method was used in outcome
+        measure analysis in each arm. Percentages were rounded-off.\",\"timeFrame\":\"Week
+        72\"},{\"measure\":\"Percentage of Participants With NASH Resolution Without
+        Worsening in Fibrosis In Participants Treated With SEMA + CILO/FIR FDC Versus
+        CILO/FIR Alone Groups\",\"description\":\"NASH resolution is defined as lobular
+        inflammation of 0 or 1 and hepatocellular ballooning of 0. Worsening in fibrosis
+        was defined as a change in fibrosis worsening stage as per NASH CRN criteria.\\n\\nClopper-Pearson
+        method was used in outcome measure analysis in each arm. Percentages were
+        rounded-off.\",\"timeFrame\":\"Week 72\"}]},\"eligibilityModule\":{\"eligibilityCriteria\":\"Key
+        Inclusion Criteria:\\n\\n* Liver biopsy consistent with cirrhosis (F4) due
+        to nonalcoholic steatohepatitis (NASH) in the opinion of the central reader.
+        In individuals who have never had a liver biopsy, a screening liver biopsy
+        may be performed.\\n* Screening laboratory parameters as determined by the
+        study central laboratory:\\n\\n  * Estimated glomerular filtration rate (eGFR)
+        \u2265 30 mL/min/1.73 m\\\\^2, as calculated by the Modification of Diet in
+        Renal Disease (MDRD) equation.\\n  * Hemoglobin A1c (HbA1c) \u2264 10%\\n
+        \ * International normalized ratio (INR) \u2264 1.4, unless due to therapeutic
+        anticoagulation\\n  * Platelet count \u2265 125,000/\xB5L\\n  * Alanine aminotransferase
+        (ALT) \\\\< 5 x upper limit of normal (ULN)\\n  * Serum albumin \u2265 3.5
+        g/dL\\n  * Serum alkaline phosphatase (ALP) \u2264 2 x ULN\\n* Body mass index
+        (BMI) \u2265 23 kg/m\\\\^2 at screening.\\n\\nKey Exclusion Criteria:\\n\\n*
+        Prior history of decompensated liver disease, including ascites, hepatic encephalopathy
+        (HE), or variceal bleeding.\\n* Child-Pugh (CP) score \\\\> 6 at screening,
+        unless due to an alternative etiology such as Gilbert's syndrome or therapeutic
+        anticoagulation.\\n* Model for End-stage Liver Disease (MELD) score \\\\>
+        12 at screening, unless due to an alternative etiology such as therapeutic
+        anticoagulation.\\n* Other causes of liver disease based on medical history
+        and/or central reader review of liver histology, including but not limited
+        to: alcoholic liver disease, autoimmune disorders (eg, primary biliary cholangitis,
+        primary sclerosing cholangitis, autoimmune hepatitis), drug-induced hepatotoxicity,
+        Wilson disease, clinically significant iron overload, or alpha-1-antitrypsin
+        deficiency.\\n* Chronic hepatitis B virus (HBV) infection (HBsAg positive),
+        or Chronic hepatitis C virus (HCV) infection (HCV antibody and HCV ribonucleic
+        acid (RNA) positive). Individuals cured of HCV infection less than 2 years
+        prior to the screening visit are not eligible.\\n* History of liver transplantation.\\n*
+        Current or prior history of hepatocellular carcinoma (HCC).\\n* Men who habitually
+        drink greater than 21 units/week of alcohol or women who habitually drink
+        greater than 14 units/week of alcohol (1 unit is equivalent to 12 ounce (oz)/360
+        mL of beer, a 4 oz/120 mL glass of wine, or 1 oz/30 mL of hard liquor).\\n\\n
+        \ * For individuals on vitamin E regimen \u2265 800 IU/day, or pioglitazone,
+        dose must be stable, in the opinion of the investigator for at least 180 days
+        prior to the historical or screening liver biopsy.\\n  * For individuals on
+        medications for diabetes, dose must be stable, in the opinion of the investigator,
+        for at least 90 days prior to the historical or screening liver biopsy.\\n*
+        History of type 1 diabetes.\\n* Treatment with a glucagon-like peptide-1 receptor
+        agonist (GLP-1 RA) in the period from 90 days prior to the screening visit
+        and for individuals with a qualifying historical liver biopsy, for 90 days
+        prior to the date of the historical liver biopsy.\\n* For individuals who
+        have not completed a series of an authorized coronavirus disease 2019 (COVID-19)
+        vaccination regimen prior to screening, a positive result for COVID-19 on
+        severe acute respiratory syndrome (SARS)-coronavirus 2 (CoV-2) reverse transcriptase-polymerase
+        chain reaction (RT-PCR) test.\\n\\nNote: Other protocol defined Inclusion/Exclusion
+        criteria may apply.\",\"healthyVolunteers\":false,\"sex\":\"ALL\",\"minimumAge\":\"18
+        Years\",\"maximumAge\":\"80 Years\",\"stdAges\":[\"ADULT\",\"OLDER_ADULT\"]},\"contactsLocationsModule\":{\"overallOfficials\":[{\"name\":\"Gilead
+        Study Director\",\"affiliation\":\"Gilead Sciences\",\"role\":\"STUDY_DIRECTOR\"}],\"locations\":[{\"facility\":\"University
+        of Alabama at Birmingham Hospital\",\"city\":\"Birmingham\",\"state\":\"Alabama\",\"zip\":\"35233\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.52066,\"lon\":-86.80249}},{\"facility\":\"Digestive
+        Health Specialists\",\"city\":\"Dothan\",\"state\":\"Alabama\",\"zip\":\"36305\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":31.22323,\"lon\":-85.39049}},{\"facility\":\"North
+        Alabama Health Research, LLC\",\"city\":\"Madison\",\"state\":\"Alabama\",\"zip\":\"35758\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.69926,\"lon\":-86.74833}},{\"facility\":\"The
+        Institution For Liver Health dba Arizona Liver Health\",\"city\":\"Chandler\",\"state\":\"Arizona\",\"zip\":\"85224\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.30616,\"lon\":-111.84125}},{\"facility\":\"Arizona
+        Health Research\",\"city\":\"Chandler\",\"state\":\"Arizona\",\"zip\":\"85225\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.30616,\"lon\":-111.84125}},{\"facility\":\"The
+        Institute for Liver Health DBA Arizona Liver Health\",\"city\":\"Peoria\",\"state\":\"Arizona\",\"zip\":\"85381\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.5806,\"lon\":-112.23738}},{\"facility\":\"Gastrointestinal
+        Alliance - Sun City\",\"city\":\"Sun City\",\"state\":\"Arizona\",\"zip\":\"85351\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.59754,\"lon\":-112.27182}},{\"facility\":\"Adobe
+        Clinical Research, LLC\",\"city\":\"Tucson\",\"state\":\"Arizona\",\"zip\":\"85712\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.22174,\"lon\":-110.92648}},{\"facility\":\"The
+        Institution For Liver Health dba Arizona Liver Health\",\"city\":\"Tucson\",\"state\":\"Arizona\",\"zip\":\"85712\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.22174,\"lon\":-110.92648}},{\"facility\":\"Arkansas
+        Diagnostic Center\",\"city\":\"Little Rock\",\"state\":\"Arkansas\",\"zip\":\"72204\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.74648,\"lon\":-92.28959}},{\"facility\":\"ARCare
+        Center for Clinical Research\",\"city\":\"Little Rock\",\"state\":\"Arkansas\",\"zip\":\"72205\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.74648,\"lon\":-92.28959}},{\"facility\":\"Arkansas
+        Gastroenterology\",\"city\":\"North Little Rock\",\"state\":\"Arkansas\",\"zip\":\"72117\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.76954,\"lon\":-92.26709}},{\"facility\":\"Southern
+        California Research Center\",\"city\":\"Coronado\",\"state\":\"California\",\"zip\":\"92118\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.68589,\"lon\":-117.18309}},{\"facility\":\"University
+        of California, San Francisco - Fresno\",\"city\":\"Fresno\",\"state\":\"California\",\"zip\":\"93701\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":36.74773,\"lon\":-119.77237}},{\"facility\":\"University
+        of California, San Diego - Altman Clinical and Translational Research Institute\",\"city\":\"La
+        Jolla\",\"state\":\"California\",\"zip\":\"92037\",\"country\":\"United States\",\"geoPoint\":{\"lat\":32.84727,\"lon\":-117.2742}},{\"facility\":\"Gastro
+        Care Institute (Fibroscan)\",\"city\":\"Lancaster\",\"state\":\"California\",\"zip\":\"93534\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.69804,\"lon\":-118.13674}},{\"facility\":\"Digestive
+        Health Research of Southern California\",\"city\":\"Long Beach\",\"state\":\"California\",\"zip\":\"90808\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.76696,\"lon\":-118.18923}},{\"facility\":\"Kaiser
+        Permanente Los Angeles Medical Center\",\"city\":\"Los Angeles\",\"state\":\"California\",\"zip\":\"90027\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.05223,\"lon\":-118.24368}},{\"facility\":\"Keck
+        Medical Center of USC Healthcare Consultation II\",\"city\":\"Los Angeles\",\"state\":\"California\",\"zip\":\"90033\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.05223,\"lon\":-118.24368}},{\"facility\":\"Biopharma
+        Informatic, LLC\",\"city\":\"Los Angeles\",\"state\":\"California\",\"zip\":\"90035\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.05223,\"lon\":-118.24368}},{\"facility\":\"United
+        Medical Doctors\",\"city\":\"Murrieta\",\"state\":\"California\",\"zip\":\"92563\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.55391,\"lon\":-117.21392}},{\"facility\":\"Knowledge
+        Research Center\",\"city\":\"Orange\",\"state\":\"California\",\"zip\":\"92868\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.78779,\"lon\":-117.85311}},{\"facility\":\"Palmtree
+        Clinical Research, Inc.\",\"city\":\"Palm Springs\",\"state\":\"California\",\"zip\":\"92262\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.8303,\"lon\":-116.54529}},{\"facility\":\"California
+        Liver Research Institute\",\"city\":\"Pasadena\",\"state\":\"California\",\"zip\":\"91105\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.14778,\"lon\":-118.14452}},{\"facility\":\"Cadena
+        Care Institute, LLC\",\"city\":\"Poway\",\"state\":\"California\",\"zip\":\"92064\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.96282,\"lon\":-117.03586}},{\"facility\":\"Stanford
+        Medicine Outpatient Center\",\"city\":\"Redwood City\",\"state\":\"California\",\"zip\":\"94063\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":37.48522,\"lon\":-122.23635}},{\"facility\":\"Inland
+        Empire Clinical Trials\",\"city\":\"Rialto\",\"state\":\"California\",\"zip\":\"92377\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.1064,\"lon\":-117.37032}},{\"facility\":\"University
+        of California, Davis Medical Center\",\"city\":\"Sacramento\",\"state\":\"California\",\"zip\":\"95817\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":38.58157,\"lon\":-121.4944}},{\"facility\":\"Research
+        and Education Inc.\",\"city\":\"San Diego\",\"state\":\"California\",\"zip\":\"92105\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.71571,\"lon\":-117.16472}},{\"facility\":\"TriWest
+        Research Associates, LLC\",\"city\":\"San Diego\",\"state\":\"California\",\"zip\":\"92108\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.71571,\"lon\":-117.16472}},{\"facility\":\"Precision
+        Research Institute\",\"city\":\"San Diego\",\"state\":\"California\",\"zip\":\"92114\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.71571,\"lon\":-117.16472}},{\"facility\":\"Medical
+        Associates Research Group\",\"city\":\"San Diego\",\"state\":\"California\",\"zip\":\"92123\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.71571,\"lon\":-117.16472}},{\"facility\":\"Quest
+        Clinical Research\",\"city\":\"San Francisco\",\"state\":\"California\",\"zip\":\"94115\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":37.77493,\"lon\":-122.41942}},{\"facility\":\"University
+        of California, San Francisco - Liver Clinic\",\"city\":\"San Francisco\",\"state\":\"California\",\"zip\":\"94143\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":37.77493,\"lon\":-122.41942}},{\"facility\":\"San
+        Jose Gastroenterology at One Health\",\"city\":\"San Jose\",\"state\":\"California\",\"zip\":\"95128\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":37.33939,\"lon\":-121.89496}},{\"facility\":\"University
+        of Colorado Anschutz Medical Campus\",\"city\":\"Aurora\",\"state\":\"Colorado\",\"zip\":\"80045\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.72943,\"lon\":-104.83192}},{\"facility\":\"South
+        Denver Gastroenterology\",\"city\":\"Englewood\",\"state\":\"Colorado\",\"zip\":\"80113\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.64777,\"lon\":-104.98776}},{\"facility\":\"Yale
+        Center for Clinical Investigation, Church Street Research Unit\",\"city\":\"New
+        Haven\",\"state\":\"Connecticut\",\"zip\":\"06519\",\"country\":\"United States\",\"geoPoint\":{\"lat\":41.30815,\"lon\":-72.92816}},{\"facility\":\"Excel
+        Medical Clinical Trials, LLC\",\"city\":\"Boca Raton\",\"state\":\"Florida\",\"zip\":\"33434\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":26.35869,\"lon\":-80.0831}},{\"facility\":\"Synergy
+        Healthcare\",\"city\":\"Bradenton\",\"state\":\"Florida\",\"zip\":\"34208\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":27.49893,\"lon\":-82.57482}},{\"facility\":\"Southwest
+        General Healthcare Center\",\"city\":\"Fort Myers\",\"state\":\"Florida\",\"zip\":\"33907\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":26.62168,\"lon\":-81.84059}},{\"facility\":\"University
+        of Florida Hepatology Research at the Clinical and Translational Research
+        Building\",\"city\":\"Gainesville\",\"state\":\"Florida\",\"zip\":\"32610\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.65163,\"lon\":-82.32483}},{\"facility\":\"Velocity
+        Clinical Research, Hallandale Beach\",\"city\":\"Hallandale\",\"state\":\"Florida\",\"zip\":\"33009\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.9812,\"lon\":-80.14838}},{\"facility\":\"Indago
+        Research and Health Center, Inc.\",\"city\":\"Hialeah\",\"state\":\"Florida\",\"zip\":\"33012\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.8576,\"lon\":-80.27811}},{\"facility\":\"Maya
+        Research Center\",\"city\":\"Hialeah\",\"state\":\"Florida\",\"zip\":\"33016\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.8576,\"lon\":-80.27811}},{\"facility\":\"New
+        Generation of Medical Research\",\"city\":\"Hialeah\",\"state\":\"Florida\",\"zip\":\"33016\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.8576,\"lon\":-80.27811}},{\"facility\":\"Evolution
+        Clinical Research, INC\",\"city\":\"Hialeah Gardens\",\"state\":\"Florida\",\"zip\":\"33016\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.8651,\"lon\":-80.3245}},{\"facility\":\"Sunbright
+        Health Medical Center\",\"city\":\"Homestead\",\"state\":\"Florida\",\"zip\":\"33032\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.46872,\"lon\":-80.47756}},{\"facility\":\"Nature
+        Coast Clinical Research\",\"city\":\"Inverness\",\"state\":\"Florida\",\"zip\":\"34452\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":28.83582,\"lon\":-82.33037}},{\"facility\":\"UF
+        Health Jacksonville-Gastroenterology Emerson\",\"city\":\"Jacksonville\",\"state\":\"Florida\",\"zip\":\"32224\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":30.33218,\"lon\":-81.65565}},{\"facility\":\"Encore
+        Borland-Groover Clinical Research\",\"city\":\"Jacksonville\",\"state\":\"Florida\",\"zip\":\"32256\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":30.33218,\"lon\":-81.65565}},{\"facility\":\"Florida
+        Research Institute\",\"city\":\"Lakewood Rch\",\"state\":\"Florida\",\"zip\":\"34211\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":27.3863,\"lon\":-82.4332}},{\"facility\":\"G+C
+        Research Group\",\"city\":\"Miami\",\"state\":\"Florida\",\"zip\":\"33126\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.77427,\"lon\":-80.19366}},{\"facility\":\"Schiff
+        Center for Liver Diseases/ University of Miami\",\"city\":\"Miami\",\"state\":\"Florida\",\"zip\":\"33136\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.77427,\"lon\":-80.19366}},{\"facility\":\"Advanced
+        Pharma CR, LLC\",\"city\":\"Miami\",\"state\":\"Florida\",\"zip\":\"33147\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.77427,\"lon\":-80.19366}},{\"facility\":\"Century
+        Research, LLC\",\"city\":\"Miami\",\"state\":\"Florida\",\"zip\":\"33173\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.77427,\"lon\":-80.19366}},{\"facility\":\"ProLive
+        Medical Research, Corp\",\"city\":\"Miami\",\"state\":\"Florida\",\"zip\":\"33175\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.77427,\"lon\":-80.19366}},{\"facility\":\"International
+        Medical Investigational Centers, Inc.\",\"city\":\"Miami\",\"state\":\"Florida\",\"zip\":\"33176\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.77427,\"lon\":-80.19366}},{\"facility\":\"Ocean
+        Blue Medical Research Center, Inc\",\"city\":\"Miami Springs\",\"state\":\"Florida\",\"zip\":\"33166\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.82232,\"lon\":-80.2895}},{\"facility\":\"Gastroenterology
+        Group of Naples\",\"city\":\"Naples\",\"state\":\"Florida\",\"zip\":\"34102\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":26.14234,\"lon\":-81.79596}},{\"facility\":\"Advanced
+        Research Institute, Inc.\",\"city\":\"New Port Richey\",\"state\":\"Florida\",\"zip\":\"34653\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":28.24418,\"lon\":-82.71927}},{\"facility\":\"Ocala
+        GI Research\",\"city\":\"Ocala\",\"state\":\"Florida\",\"zip\":\"34471\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.1872,\"lon\":-82.14009}},{\"facility\":\"Advanced
+        Medical Research Center\",\"city\":\"Port Orange\",\"state\":\"Florida\",\"zip\":\"32127\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.13832,\"lon\":-80.99561}},{\"facility\":\"Progressive
+        Medical Research\",\"city\":\"Port Orange\",\"state\":\"Florida\",\"zip\":\"32127\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.13832,\"lon\":-80.99561}},{\"facility\":\"Covenant
+        Metabolic Specialists, LLC\",\"city\":\"Sarasota\",\"state\":\"Florida\",\"zip\":\"34240\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":27.33643,\"lon\":-82.53065}},{\"facility\":\"Charter
+        Research\",\"city\":\"Winter Park\",\"state\":\"Florida\",\"zip\":\"32792\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":28.6,\"lon\":-81.33924}},{\"facility\":\"Florida
+        Medical Clinic, LLC\",\"city\":\"Zephyrhills\",\"state\":\"Florida\",\"zip\":\"33542\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":28.23362,\"lon\":-82.18119}},{\"facility\":\"Southeast
+        Clinical Research LLC\",\"city\":\"Dalton\",\"state\":\"Georgia\",\"zip\":\"30720\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.7698,\"lon\":-84.97022}},{\"facility\":\"Gastrointestinal
+        (GI) Specialists of Georgia\",\"city\":\"Marietta\",\"state\":\"Georgia\",\"zip\":\"30060\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.9526,\"lon\":-84.54993}},{\"facility\":\"Rush
+        University Medical Group - Department of Hepatology\",\"city\":\"Chicago\",\"state\":\"Illinois\",\"zip\":\"60612\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":41.85003,\"lon\":-87.65005}},{\"facility\":\"Indiana
+        University Health Enterprise Clinical Research Operations\",\"city\":\"Indianapolis\",\"state\":\"Indiana\",\"zip\":\"46202\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.76838,\"lon\":-86.15804}},{\"facility\":\"Gastroenterology
+        Health Partners, PLLC\",\"city\":\"New Albany\",\"state\":\"Indiana\",\"zip\":\"47150\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":38.28562,\"lon\":-85.82413}},{\"facility\":\"Digestive
+        Research Alliance of Michigan\",\"city\":\"South Bend\",\"state\":\"Indiana\",\"zip\":\"44635\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":41.68338,\"lon\":-86.25001}},{\"facility\":\"Iowa
+        Digestive Disease Center, PC\",\"city\":\"Clive\",\"state\":\"Iowa\",\"zip\":\"50325\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":41.60304,\"lon\":-93.72411}},{\"facility\":\"University
+        of Iowa Hospitals and Clinics\",\"city\":\"Iowa City\",\"state\":\"Iowa\",\"zip\":\"52242\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":41.66113,\"lon\":-91.53017}},{\"facility\":\"University
+        of Kansas Medical Center\",\"city\":\"Kansas City\",\"state\":\"Kansas\",\"zip\":\"66160\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.11417,\"lon\":-94.62746}},{\"facility\":\"Kansas
+        Medical Clinic PA\",\"city\":\"Topeka\",\"state\":\"Kansas\",\"zip\":\"66606\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.04833,\"lon\":-95.67804}},{\"facility\":\"GI
+        Alliance\",\"city\":\"Baton Rouge\",\"state\":\"Louisiana\",\"zip\":\"70809\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":30.44332,\"lon\":-91.18747}},{\"facility\":\"Combined
+        Gastro Research, LLC\",\"city\":\"Lafayette\",\"state\":\"Louisiana\",\"zip\":\"70503\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":30.22409,\"lon\":-92.01984}},{\"facility\":\"Tandem
+        Clinical Research GI, LLC\",\"city\":\"Marrero\",\"state\":\"Louisiana\",\"zip\":\"70072\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.89937,\"lon\":-90.10035}},{\"facility\":\"Delta
+        Research Partners\",\"city\":\"Monroe\",\"state\":\"Louisiana\",\"zip\":\"71201\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.50931,\"lon\":-92.1193}},{\"facility\":\"Tulane
+        University Health Sciences Center\",\"city\":\"New Orleans\",\"state\":\"Louisiana\",\"zip\":\"70112\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.95465,\"lon\":-90.07507}},{\"facility\":\"Oschner
+        Clinic Foundation\",\"city\":\"New Orleans\",\"state\":\"Louisiana\",\"zip\":\"70121\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.95465,\"lon\":-90.07507}},{\"facility\":\"Louisiana
+        Research Center, LLC\",\"city\":\"Shreveport\",\"state\":\"Louisiana\",\"zip\":\"71105\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.52515,\"lon\":-93.75018}},{\"facility\":\"Mercy
+        Medical Center\",\"city\":\"Baltimore\",\"state\":\"Maryland\",\"zip\":\"21202\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.29038,\"lon\":-76.61219}},{\"facility\":\"Walter
+        Reed National Military Medical Center\",\"city\":\"Bethesda\",\"state\":\"Maryland\",\"zip\":\"20889\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":38.98067,\"lon\":-77.10026}},{\"facility\":\"Woodholme
+        Gastroenterology Associates\",\"city\":\"Glen Burnie\",\"state\":\"Maryland\",\"zip\":\"21061\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.16261,\"lon\":-76.62469}},{\"facility\":\"Beth
+        Israel Deaconess Medical Center\",\"city\":\"Boston\",\"state\":\"Massachusetts\",\"zip\":\"02215\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":42.35843,\"lon\":-71.05977}},{\"facility\":\"Greater
+        Boston Gastroenterology\",\"city\":\"Framingham\",\"state\":\"Massachusetts\",\"zip\":\"01702\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":42.27926,\"lon\":-71.41617}},{\"facility\":\"Hawthorn
+        Medical Associates\",\"city\":\"South Dartmouth\",\"state\":\"Massachusetts\",\"zip\":\"02747\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":41.59177,\"lon\":-70.94115}},{\"facility\":\"Michigan
+        Medicine - University of Michigan\",\"city\":\"Ann Arbor\",\"state\":\"Michigan\",\"zip\":\"48109\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":42.27756,\"lon\":-83.74088}},{\"facility\":\"Clinical
+        Research Institute of Michigan, LLC\",\"city\":\"Chesterfield\",\"state\":\"Michigan\",\"zip\":\"48047\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":42.66281,\"lon\":-82.84242}},{\"facility\":\"Henry
+        Ford Health System\",\"city\":\"Detroit\",\"state\":\"Michigan\",\"zip\":\"48202\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":42.33143,\"lon\":-83.04575}},{\"facility\":\"Gastroenterology
+        Associates of Western Michigan, PLC d.b.a. West Michigan Clinical Research
+        Center\",\"city\":\"Wyoming\",\"state\":\"Michigan\",\"zip\":\"49519\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":42.91336,\"lon\":-85.70531}},{\"facility\":\"Huron
+        Gastroenterology Associates\",\"city\":\"Ypsilanti\",\"state\":\"Michigan\",\"zip\":\"48197\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":42.24115,\"lon\":-83.61299}},{\"facility\":\"Mayo
+        Clinic\",\"city\":\"Rochester\",\"state\":\"Minnesota\",\"zip\":\"55905\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":44.02163,\"lon\":-92.4699}},{\"facility\":\"GI
+        Alliance\",\"city\":\"Flowood\",\"state\":\"Mississippi\",\"zip\":\"39232\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.30959,\"lon\":-90.13898}},{\"facility\":\"Southern
+        Therapy and Advanced Research\",\"city\":\"Jackson\",\"state\":\"Mississippi\",\"zip\":\"39216\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.29876,\"lon\":-90.18481}},{\"facility\":\"Clinical
+        Research Professionals\",\"city\":\"Chesterfield\",\"state\":\"Missouri\",\"zip\":\"63005\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":38.66311,\"lon\":-90.57707}},{\"facility\":\"GI
+        Associates Research\",\"city\":\"Columbia\",\"state\":\"Missouri\",\"zip\":\"65201\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":38.95171,\"lon\":-92.33407}},{\"facility\":\"Kansas
+        City Research Institute\",\"city\":\"Kansas City\",\"state\":\"Missouri\",\"zip\":\"64131\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.09973,\"lon\":-94.57857}},{\"facility\":\"Sierra
+        Clinical Research\",\"city\":\"Las Vegas\",\"state\":\"Nevada\",\"zip\":\"89106\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":36.17497,\"lon\":-115.13722}},{\"facility\":\"Digestive
+        Disease Research\",\"city\":\"Florham Park\",\"state\":\"New Jersey\",\"zip\":\"07932\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.78788,\"lon\":-74.38821}},{\"facility\":\"Allied
+        Health Clinical Research Organization, LLC\",\"city\":\"Freehold\",\"state\":\"New
+        Jersey\",\"zip\":\"07728\",\"country\":\"United States\",\"geoPoint\":{\"lat\":40.26011,\"lon\":-74.27376}},{\"facility\":\"Rutgers
+        New Jersey Medical School\",\"city\":\"Newark\",\"state\":\"New Jersey\",\"zip\":\"07103\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.73566,\"lon\":-74.17237}},{\"facility\":\"Center
+        for Research at Southwest Gastroenterology Associates, PC\",\"city\":\"Albuquerque\",\"state\":\"New
+        Mexico\",\"zip\":\"87109\",\"country\":\"United States\",\"geoPoint\":{\"lat\":35.08449,\"lon\":-106.65114}},{\"facility\":\"Northwell
+        Health Center for Liver Diseases\",\"city\":\"Manhasset\",\"state\":\"New
+        York\",\"zip\":\"11030\",\"country\":\"United States\",\"geoPoint\":{\"lat\":40.79788,\"lon\":-73.69957}},{\"facility\":\"New
+        York University Langone Health\",\"city\":\"New York\",\"state\":\"New York\",\"zip\":\"10016\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.71427,\"lon\":-74.00597}},{\"facility\":\"Mount
+        Sinai Medical Center\",\"city\":\"New York\",\"state\":\"New York\",\"zip\":\"10029\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.71427,\"lon\":-74.00597}},{\"facility\":\"Liver
+        Clinic (study visits, Fibroscan): Columbia University Irving Medical Center
+        / NewYork Presbyterian Hospital\",\"city\":\"New York\",\"state\":\"New York\",\"zip\":\"10032\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.71427,\"lon\":-74.00597}},{\"facility\":\"The
+        New York - Presbyterian Hospital\",\"city\":\"New York\",\"state\":\"New York\",\"zip\":\"10065\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.71427,\"lon\":-74.00597}},{\"facility\":\"University
+        of Rochester Medical Center\",\"city\":\"Rochester\",\"state\":\"New York\",\"zip\":\"14642\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":43.15478,\"lon\":-77.61556}},{\"facility\":\"Asheville
+        Gastroenterology, a Division of Digestive Health Partners, PA\",\"city\":\"Asheville\",\"state\":\"North
+        Carolina\",\"zip\":\"28801\",\"country\":\"United States\",\"geoPoint\":{\"lat\":35.60095,\"lon\":-82.55402}},{\"facility\":\"Atrium
+        Health Transplant and Center for Liver Disease\",\"city\":\"Charlotte\",\"state\":\"North
+        Carolina\",\"zip\":\"28204\",\"country\":\"United States\",\"geoPoint\":{\"lat\":35.22709,\"lon\":-80.84313}},{\"facility\":\"Charlotte
+        Gastroenterology & Hepatology, PLLC\",\"city\":\"Charlotte\",\"state\":\"North
+        Carolina\",\"zip\":\"28207\",\"country\":\"United States\",\"geoPoint\":{\"lat\":35.22709,\"lon\":-80.84313}},{\"facility\":\"Northeast
+        GI Research Division\",\"city\":\"Concord\",\"state\":\"North Carolina\",\"zip\":\"28027\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":35.40888,\"lon\":-80.58158}},{\"facility\":\"Coastal
+        Research Institute\",\"city\":\"Fayetteville\",\"state\":\"North Carolina\",\"zip\":\"28304\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":35.05266,\"lon\":-78.87836}},{\"facility\":\"Lucas
+        Research, Inc.\",\"city\":\"Morehead City\",\"state\":\"North Carolina\",\"zip\":\"28557\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.72294,\"lon\":-76.72604}},{\"facility\":\"Carolina's
+        GI Research, LLC\",\"city\":\"Raleigh\",\"state\":\"North Carolina\",\"zip\":\"27607\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":35.7721,\"lon\":-78.63861}},{\"facility\":\"Optimed
+        Research\",\"city\":\"Columbus\",\"state\":\"Ohio\",\"zip\":\"43235\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.96118,\"lon\":-82.99879}},{\"facility\":\"DSI
+        Research\",\"city\":\"Springboro\",\"state\":\"Ohio\",\"zip\":\"45066\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":39.55228,\"lon\":-84.23327}},{\"facility\":\"Clinical
+        Research Institute of Ohio, LLC\",\"city\":\"Westlake\",\"state\":\"Ohio\",\"zip\":\"44145\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":41.45532,\"lon\":-81.91792}},{\"facility\":\"Options
+        Health Research, LLC\",\"city\":\"Tulsa\",\"state\":\"Oklahoma\",\"zip\":\"74104\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":36.15398,\"lon\":-95.99277}},{\"facility\":\"University
+        of Pittsburgh Medical Center\",\"city\":\"Pittsburgh\",\"state\":\"Pennsylvania\",\"zip\":\"15213\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.44062,\"lon\":-79.99589}},{\"facility\":\"Velocity
+        Clinical Research - Providence\",\"city\":\"East Greenwich\",\"state\":\"Rhode
+        Island\",\"zip\":\"02818\",\"country\":\"United States\",\"geoPoint\":{\"lat\":41.66038,\"lon\":-71.45589}},{\"facility\":\"University
+        Gastroenterology\",\"city\":\"Providence\",\"state\":\"Rhode Island\",\"zip\":\"02905\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":41.82399,\"lon\":-71.41283}},{\"facility\":\"Medical
+        University of South Carolina\",\"city\":\"Charleston\",\"state\":\"South Carolina\",\"zip\":\"29425\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.77632,\"lon\":-79.93275}},{\"facility\":\"Columbia
+        Digestive Health Research\",\"city\":\"Columbia\",\"state\":\"South Carolina\",\"zip\":\"29204\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.00071,\"lon\":-81.03481}},{\"facility\":\"Digestive
+        Disease Research Center\",\"city\":\"Greenwood\",\"state\":\"South Carolina\",\"zip\":\"29646\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":34.1954,\"lon\":-82.16179}},{\"facility\":\"Velocity
+        Clinical Research, Spartanburg\",\"city\":\"Spartanburg\",\"state\":\"South
+        Carolina\",\"zip\":\"29303\",\"country\":\"United States\",\"geoPoint\":{\"lat\":34.94957,\"lon\":-81.93205}},{\"facility\":\"Wake
+        Research - ClinsSearch, LLC\",\"city\":\"Chattanooga\",\"state\":\"Tennessee\",\"zip\":\"37421\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":35.04563,\"lon\":-85.30968}},{\"facility\":\"Gastrointestinal
+        Associates of Northeast Tennessee\",\"city\":\"Johnson City\",\"state\":\"Tennessee\",\"zip\":\"37604\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":36.31344,\"lon\":-82.35347}},{\"facility\":\"Quality
+        Medical Research, PLLC\",\"city\":\"Nashville\",\"state\":\"Tennessee\",\"zip\":\"37211\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":36.16589,\"lon\":-86.78444}},{\"facility\":\"Texas
+        Clinical Research Institute\",\"city\":\"Arlington\",\"state\":\"Texas\",\"zip\":\"76012\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.73569,\"lon\":-97.10807}},{\"facility\":\"Pinnacle
+        Clinical Research\",\"city\":\"Austin\",\"state\":\"Texas\",\"zip\":\"78757\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":30.26715,\"lon\":-97.74306}},{\"facility\":\"South
+        Texas Research Institute\",\"city\":\"Brownsville\",\"state\":\"Texas\",\"zip\":\"78520\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":25.90175,\"lon\":-97.49748}},{\"facility\":\"GI
+        Alliance\",\"city\":\"Cedar Park\",\"state\":\"Texas\",\"zip\":\"78613\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":30.5052,\"lon\":-97.82029}},{\"facility\":\"The
+        Liver Institute at Methodist Dallas Medical Center\",\"city\":\"Dallas\",\"state\":\"Texas\",\"zip\":\"75203\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.78306,\"lon\":-96.80667}},{\"facility\":\"GI
+        Alliance\",\"city\":\"Dallas\",\"state\":\"Texas\",\"zip\":\"75246\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.78306,\"lon\":-96.80667}},{\"facility\":\"Internal
+        Medicine Digestive and Liver Diseases Clinical Trials\",\"city\":\"Dallas\",\"state\":\"Texas\",\"zip\":\"75390\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.78306,\"lon\":-96.80667}},{\"facility\":\"Soma
+        Clinical Trials, LLC\",\"city\":\"Denison\",\"state\":\"Texas\",\"zip\":\"75020\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.75566,\"lon\":-96.53666}},{\"facility\":\"DHR
+        Health Institute for Research and Development Cancer Research Center\",\"city\":\"Edinburg\",\"state\":\"Texas\",\"zip\":\"78539\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":26.30174,\"lon\":-98.16334}},{\"facility\":\"South
+        Texas Research Institute\",\"city\":\"Edinburg\",\"state\":\"Texas\",\"zip\":\"78539\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":26.30174,\"lon\":-98.16334}},{\"facility\":\"GI
+        Alliance\",\"city\":\"Fort Worth\",\"state\":\"Texas\",\"zip\":\"76104\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.72541,\"lon\":-97.32085}},{\"facility\":\"GI
+        Alliance\",\"city\":\"Garland\",\"state\":\"Texas\",\"zip\":\"75044\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":32.91262,\"lon\":-96.63888}},{\"facility\":\"Pinnacle
+        Clinical Research\",\"city\":\"Georgetown\",\"state\":\"Texas\",\"zip\":\"78626\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":30.63269,\"lon\":-97.67723}},{\"facility\":\"Texas
+        Digestive Specialists\",\"city\":\"Harlingen\",\"state\":\"Texas\",\"zip\":\"78550\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":26.19063,\"lon\":-97.6961}},{\"facility\":\"Houston
+        Methodist Hospital\",\"city\":\"Houston\",\"state\":\"Texas\",\"zip\":\"77030\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.76328,\"lon\":-95.36327}},{\"facility\":\"Liver
+        Associates of Texas, P.A.\",\"city\":\"Houston\",\"state\":\"Texas\",\"zip\":\"77030\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.76328,\"lon\":-95.36327}},{\"facility\":\"Liver
+        Specialists of Texas\",\"city\":\"Houston\",\"state\":\"Texas\",\"zip\":\"77030\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.76328,\"lon\":-95.36327}},{\"facility\":\"Biopharma
+        Informatic, LLC\",\"city\":\"Houston\",\"state\":\"Texas\",\"zip\":\"77043\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.76328,\"lon\":-95.36327}},{\"facility\":\"Houston
+        Research Institute\",\"city\":\"Houston\",\"state\":\"Texas\",\"zip\":\"77079\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.76328,\"lon\":-95.36327}},{\"facility\":\"Biopharma
+        Informatic, LLC\",\"city\":\"Houston\",\"state\":\"Texas\",\"zip\":\"77084\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.76328,\"lon\":-95.36327}},{\"facility\":\"BioStar
+        Clinical Research Group Inc.\",\"city\":\"Katy\",\"state\":\"Texas\",\"zip\":\"77494\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.78579,\"lon\":-95.8244}},{\"facility\":\"GI
+        Alliance\",\"city\":\"Lubbock\",\"state\":\"Texas\",\"zip\":\"79410\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.57786,\"lon\":-101.85517}},{\"facility\":\"Biopharma
+        Informatic, LLC\",\"city\":\"McAllen\",\"state\":\"Texas\",\"zip\":\"78503\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":26.20341,\"lon\":-98.23001}},{\"facility\":\"Digestive
+        System Healthcare\",\"city\":\"Pasadena\",\"state\":\"Texas\",\"zip\":\"77505\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.69106,\"lon\":-95.2091}},{\"facility\":\"American
+        Research Corporation at the Texas Liver Institute\",\"city\":\"San Antonio\",\"state\":\"Texas\",\"zip\":\"78215\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.42412,\"lon\":-98.49363}},{\"facility\":\"Diabetes
+        and Glandular Disease Clinic, P.A.\",\"city\":\"San Antonio\",\"state\":\"Texas\",\"zip\":\"78229\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.42412,\"lon\":-98.49363}},{\"facility\":\"Pinnacle
+        Clinical Research, LLC\",\"city\":\"San Antonio\",\"state\":\"Texas\",\"zip\":\"78229\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.42412,\"lon\":-98.49363}},{\"facility\":\"GI
+        Alliance (Patients Seen, IP Shipment & Fibroscan)\",\"city\":\"San Marcos\",\"state\":\"Texas\",\"zip\":\"78666\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.88327,\"lon\":-97.94139}},{\"facility\":\"Impact
+        Research Institute\",\"city\":\"Waco\",\"state\":\"Texas\",\"zip\":\"76710\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":31.54933,\"lon\":-97.14667}},{\"facility\":\"GI
+        Alliance\",\"city\":\"Webster\",\"state\":\"Texas\",\"zip\":\"77598\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":29.53773,\"lon\":-95.11826}},{\"facility\":\"Digestive
+        Health Research of North Texas\",\"city\":\"Wichita Falls\",\"state\":\"Texas\",\"zip\":\"07960\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":33.91371,\"lon\":-98.49339}},{\"facility\":\"Intermountain
+        Medical Center\",\"city\":\"Murray\",\"state\":\"Utah\",\"zip\":\"84107\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.66689,\"lon\":-111.88799}},{\"facility\":\"University
+        of Utah Hospital\",\"city\":\"Salt Lake City\",\"state\":\"Utah\",\"zip\":\"84132\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.76078,\"lon\":-111.89105}},{\"facility\":\"Velocity
+        Clinical Research, Salt Lake City\",\"city\":\"West Jordan\",\"state\":\"Utah\",\"zip\":\"84088\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":40.60967,\"lon\":-111.9391}},{\"facility\":\"The
+        University Of Vermont Medical Center\",\"city\":\"Burlington\",\"state\":\"Vermont\",\"zip\":\"05401\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":44.47588,\"lon\":-73.21207}},{\"facility\":\"University
+        of Virginia Medical Center\",\"city\":\"Charlottesville\",\"state\":\"Virginia\",\"zip\":\"22908\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":38.02931,\"lon\":-78.47668}},{\"facility\":\"Manassas
+        Clinical Research Center\",\"city\":\"Manassas\",\"state\":\"Virginia\",\"zip\":\"20110\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":38.75095,\"lon\":-77.47527}},{\"facility\":\"Digestive
+        and Liver Disease Specialists\",\"city\":\"Norfolk\",\"state\":\"Virginia\",\"zip\":\"23502\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":36.84681,\"lon\":-76.28522}},{\"facility\":\"Bon
+        Secours Richmond Community Hospital, Inc. d/b/a Bon Secours Liver Institute
+        of Richmond\",\"city\":\"Richmond\",\"state\":\"Virginia\",\"zip\":\"23226\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":37.55376,\"lon\":-77.46026}},{\"facility\":\"Virginia
+        Commonwealth University Health Clinical Research Services Unit\",\"city\":\"Richmond\",\"state\":\"Virginia\",\"zip\":\"23298\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":37.55376,\"lon\":-77.46026}},{\"facility\":\"Virginia
+        Mason\",\"city\":\"Seattle\",\"state\":\"Washington\",\"zip\":\"98101\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":47.60621,\"lon\":-122.33207}},{\"facility\":\"Liver
+        Institute Northwest\",\"city\":\"Seattle\",\"state\":\"Washington\",\"zip\":\"98105\",\"country\":\"United
+        States\",\"geoPoint\":{\"lat\":47.60621,\"lon\":-122.33207}},{\"facility\":\"Liverpool
+        Hospital\",\"city\":\"Liverpool\",\"state\":\"New South Wales\",\"zip\":\"2170\",\"country\":\"Australia\",\"geoPoint\":{\"lat\":-33.91938,\"lon\":150.92588}},{\"facility\":\"Westmead
+        Hospital\",\"city\":\"Westmead\",\"state\":\"New South Wales\",\"zip\":\"2145\",\"country\":\"Australia\",\"geoPoint\":{\"lat\":-33.80383,\"lon\":150.98768}},{\"facility\":\"Royal
+        Brisbane and Women's Hospital\",\"city\":\"Herston\",\"state\":\"Queensland\",\"zip\":\"4029\",\"country\":\"Australia\",\"geoPoint\":{\"lat\":-27.44453,\"lon\":153.01852}},{\"facility\":\"Flinders
+        Medical Centre\",\"city\":\"Adelaide\",\"state\":\"South Australia\",\"zip\":\"5042\",\"country\":\"Australia\",\"geoPoint\":{\"lat\":-34.92866,\"lon\":138.59863}},{\"facility\":\"Eastern
+        Health, Box Hill Hospital\",\"city\":\"Box Hill\",\"state\":\"Victoria\",\"zip\":\"3128\",\"country\":\"Australia\",\"geoPoint\":{\"lat\":-37.81887,\"lon\":145.12545}},{\"facility\":\"Monash
+        Health, Monash Medical Centre (Clayton)\",\"city\":\"Clayton\",\"state\":\"Victoria\",\"zip\":\"3168\",\"country\":\"Australia\",\"geoPoint\":{\"lat\":-37.91667,\"lon\":145.11667}},{\"facility\":\"Royal
+        Perth Hospital\",\"city\":\"Perth\",\"state\":\"Western Australia\",\"zip\":\"6000\",\"country\":\"Australia\",\"geoPoint\":{\"lat\":-31.95224,\"lon\":115.8614}},{\"facility\":\"Wlliam
+        Osler Health System - Brampton Civic Hospital\",\"city\":\"Brampton\",\"zip\":\"L6R
+        3J7\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":43.68341,\"lon\":-79.76633}},{\"facility\":\"University
+        of Calgary Liver Unit - Heritage Medical Research Clinic\",\"city\":\"Calgary\",\"zip\":\"T2N
+        4Z6\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":51.05011,\"lon\":-114.08529}},{\"facility\":\"McMaster
+        University Medical Center\",\"city\":\"Hamilton\",\"zip\":\"L8N 3Z5\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":43.25011,\"lon\":-79.84963}},{\"facility\":\"London
+        Health Sciences Centre - University Hospital\",\"city\":\"London\",\"zip\":\"N6A
+        5A5\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":42.98339,\"lon\":-81.23304}},{\"facility\":\"Centre
+        de Recherche du Centre Hospitalier de I'Universite de Montreal (CRCHUM)\",\"city\":\"Montreal\",\"zip\":\"H2X
+        0A9\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":45.50884,\"lon\":-73.58781}},{\"facility\":\"Chronic
+        Viral Illness Service, Royal Victoria Hospital, McGill University Health Centre
+        (MUHC)\",\"city\":\"Montreal\",\"zip\":\"H4A 3J1\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":45.50884,\"lon\":-73.58781}},{\"facility\":\"Toronto
+        General Hospital - University Health Network\",\"city\":\"Toronto\",\"zip\":\"M5G
+        2C4\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":43.70643,\"lon\":-79.39864}},{\"facility\":\"Toronto
+        Liver Centre\",\"city\":\"Toronto\",\"zip\":\"M6H 3M1\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":43.70643,\"lon\":-79.39864}},{\"facility\":\"Gordon
+        and Leslie Diamond Health Care Centre, Vancouver General Hospital, UBC Division
+        of Gastroenterology\",\"city\":\"Vancouver\",\"zip\":\"V5Z 1M9\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":49.24966,\"lon\":-123.11934}},{\"facility\":\"(G.I.R.I.)
+        Gastrointestinal Research Institute\",\"city\":\"Vancouver\",\"zip\":\"V6Z
+        2K5\",\"country\":\"Canada\",\"geoPoint\":{\"lat\":49.24966,\"lon\":-123.11934}},{\"facility\":\"Toronto
+        Digestive Disease Associates Specialty Research\",\"city\":\"Vanghan\",\"zip\":\"L4L
+        4Y7\",\"country\":\"Canada\"},{\"facility\":\"CHU Amiens Picardie\",\"city\":\"Amiens\",\"zip\":\"80054\",\"country\":\"France\",\"geoPoint\":{\"lat\":49.9,\"lon\":2.3}},{\"facility\":\"Centre
+        Hosptitalier Universitaire d'Angers\",\"city\":\"Angers\",\"zip\":\"49033\",\"country\":\"France\",\"geoPoint\":{\"lat\":47.47156,\"lon\":-0.55202}},{\"facility\":\"Centre
+        Hospitalier Regional Universitaire de Tours - Hopital Trousseau\",\"city\":\"Chambray-l\xE8s-Tours\",\"zip\":\"37170\",\"country\":\"France\",\"geoPoint\":{\"lat\":47.33537,\"lon\":0.70286}},{\"facility\":\"Hopital
+        Henri Mondor\",\"city\":\"Cr\xE9teil\",\"zip\":\"94010\",\"country\":\"France\",\"geoPoint\":{\"lat\":48.79266,\"lon\":2.46569}},{\"facility\":\"CHU
+        de Grenoble\",\"city\":\"Grenoble\",\"zip\":\"38043\",\"country\":\"France\",\"geoPoint\":{\"lat\":45.17869,\"lon\":5.71479}},{\"facility\":\"Hopital
+        Claude Huriez\",\"city\":\"Lille\",\"zip\":\"59 037\",\"country\":\"France\",\"geoPoint\":{\"lat\":50.63391,\"lon\":3.05512}},{\"facility\":\"Centre
+        Hospitalier Universitaire Limoges\",\"city\":\"Limoges\",\"zip\":\"87042\",\"country\":\"France\",\"geoPoint\":{\"lat\":45.83362,\"lon\":1.24759}},{\"facility\":\"Hopital
+        de la Croix-Rousse\",\"city\":\"Lyon\",\"zip\":\"69004\",\"country\":\"France\",\"geoPoint\":{\"lat\":45.74906,\"lon\":4.84789}},{\"facility\":\"Hopital
+        Saint Joseph\",\"city\":\"Marseille\",\"zip\":\"13008\",\"country\":\"France\",\"geoPoint\":{\"lat\":43.29695,\"lon\":5.38107}},{\"facility\":\"Centre
+        Hospitalier Universitarie de Montpellier - Hospital Saint-Eloi\",\"city\":\"Montpellier\",\"zip\":\"34295\",\"country\":\"France\",\"geoPoint\":{\"lat\":43.61093,\"lon\":3.87635}},{\"facility\":\"Centre
+        Hospitalier Universitaire de Nice - Hopital L'archet\",\"city\":\"Nice\",\"zip\":\"06202\",\"country\":\"France\",\"geoPoint\":{\"lat\":43.70313,\"lon\":7.26608}},{\"facility\":\"Hopital
+        Universitaire Pitie Salpetriere\",\"city\":\"Paris\",\"zip\":\"75013\",\"country\":\"France\",\"geoPoint\":{\"lat\":48.85341,\"lon\":2.3488}},{\"facility\":\"Hopitaux
+        de Paris - Hopital Cochin\",\"city\":\"Paris\",\"zip\":\"75014\",\"country\":\"France\",\"geoPoint\":{\"lat\":48.85341,\"lon\":2.3488}},{\"facility\":\"Hopital
+        Beaujon\",\"city\":\"Pessac\",\"zip\":\"33600\",\"country\":\"France\",\"geoPoint\":{\"lat\":44.80565,\"lon\":-0.6324}},{\"facility\":\"Hopital
+        Haut Leveque\",\"city\":\"Pessac\",\"zip\":\"33604\",\"country\":\"France\",\"geoPoint\":{\"lat\":44.80565,\"lon\":-0.6324}},{\"facility\":\"CHU
+        Rennes Pontchaillou\",\"city\":\"Rennes\",\"zip\":\"35000\",\"country\":\"France\",\"geoPoint\":{\"lat\":48.11109,\"lon\":-1.67431}},{\"facility\":\"Hopital
+        Rangueil\",\"city\":\"Toulouse\",\"zip\":\"31300\",\"country\":\"France\",\"geoPoint\":{\"lat\":43.60426,\"lon\":1.44367}},{\"facility\":\"Hopital
+        Brabois Adultes - CHU de Nancy\",\"city\":\"Vand\u0153uvre-l\xE8s-Nancy\",\"zip\":\"54500\",\"country\":\"France\",\"geoPoint\":{\"lat\":48.66115,\"lon\":6.17114}},{\"facility\":\"Fukui-ken
+        Saiseikai Hospital\",\"city\":\"Fukui\",\"zip\":\"918-8503\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":34.84214,\"lon\":135.54836}},{\"facility\":\"Juntendo
+        University Shizouka Hospital\",\"city\":\"Izunokuni\",\"zip\":\"410-2295\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":35.03907,\"lon\":138.95143}},{\"facility\":\"University
+        Hospital, Kyoto Prefectural University of Medicine\",\"city\":\"Kyoto\",\"zip\":\"602-8566\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":35.02107,\"lon\":135.75385}},{\"facility\":\"Japanese
+        Red Cross Masashino Hospital\",\"city\":\"Musashino\",\"zip\":\"1808610\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":35.70611,\"lon\":139.55944}},{\"facility\":\"Osaka
+        City University Hospital\",\"city\":\"Osaka\",\"zip\":\"5458586\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":34.69379,\"lon\":135.50107}},{\"facility\":\"Saga
+        University Hospital\",\"city\":\"Saga\",\"zip\":\"849-0937\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":33.23333,\"lon\":130.3}},{\"facility\":\"Sapporo-Kosei
+        General Hospital\",\"city\":\"Sapporo\",\"zip\":\"060-0033\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":43.06667,\"lon\":141.35}},{\"facility\":\"Saiseikai
+        Suita Hospital\",\"city\":\"Suita\",\"zip\":\"564-0013\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":34.76143,\"lon\":135.51567}},{\"facility\":\"Federation
+        of National Public Service Personnel Mutual Aid Associations Toranomon Hospital\",\"city\":\"Tokyo\",\"zip\":\"105-8470\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":35.6895,\"lon\":139.69171}},{\"facility\":\"Ehime
+        University Hospital\",\"city\":\"Toon-Shi\",\"zip\":\"791-0295\",\"country\":\"Japan\"},{\"facility\":\"Yamagata
+        University Hospital\",\"city\":\"Yamagata\",\"zip\":\"9909585\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":38.23333,\"lon\":140.36667}},{\"facility\":\"Yokohama
+        City University Hospital\",\"city\":\"Yokohama\",\"zip\":\"2360004\",\"country\":\"Japan\",\"geoPoint\":{\"lat\":35.43333,\"lon\":139.65}},{\"facility\":\"Latin
+        Clinical Trial Center\",\"city\":\"San Juan\",\"zip\":\"00909\",\"country\":\"Puerto
+        Rico\",\"geoPoint\":{\"lat\":18.46633,\"lon\":-66.10572}},{\"facility\":\"VA
+        Caribbean Healthcare System\",\"city\":\"San Juan\",\"zip\":\"00921\",\"country\":\"Puerto
+        Rico\",\"geoPoint\":{\"lat\":18.46633,\"lon\":-66.10572}},{\"facility\":\"FDI
+        Clinical Research\",\"city\":\"San Juan\",\"zip\":\"00927\",\"country\":\"Puerto
+        Rico\",\"geoPoint\":{\"lat\":18.46633,\"lon\":-66.10572}},{\"facility\":\"Hospital
+        Germans Trias i Pujol\",\"city\":\"Badalona\",\"state\":\"Barcelona\",\"zip\":\"08916\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":41.45004,\"lon\":2.24741}},{\"facility\":\"Hospital
+        Universitario Torrecardenas\",\"city\":\"Almer\xEDa\",\"zip\":\"04009\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":36.83814,\"lon\":-2.45974}},{\"facility\":\"Hospital
+        del Mar\",\"city\":\"Barcelona\",\"zip\":\"08003\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":41.38879,\"lon\":2.15899}},{\"facility\":\"Hospital
+        Universitari Vall d'Hebron\",\"city\":\"Barcelona\",\"zip\":\"08035\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":41.38879,\"lon\":2.15899}},{\"facility\":\"Hospital
+        Clinic De Barcelona\",\"city\":\"Barcelona\",\"zip\":\"8036\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":41.38879,\"lon\":2.15899}},{\"facility\":\"Hospital
+        General Universiatrio Gregorio Maranon\",\"city\":\"Madrid\",\"zip\":\"28007\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":40.4165,\"lon\":-3.70256}},{\"facility\":\"Hospital
+        Universitario Ramon y Cajal\",\"city\":\"Madrid\",\"zip\":\"28034\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":40.4165,\"lon\":-3.70256}},{\"facility\":\"Hospital
+        Universitario La Paz Edificio de Malemidad\",\"city\":\"Madrid\",\"zip\":\"28046\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":40.4165,\"lon\":-3.70256}},{\"facility\":\"Hospital
+        Universitario Puerta de Hierro-Majadahonda\",\"city\":\"Majadahonda\",\"zip\":\"28222\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":40.47353,\"lon\":-3.87182}},{\"facility\":\"Complejo
+        Hospitalario de Pontevedra\",\"city\":\"Pontevedra\",\"zip\":\"36071\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":42.431,\"lon\":-8.64435}},{\"facility\":\"Hospital
+        Universitario Marques de Valdecilla\",\"city\":\"Santander\",\"zip\":\"39008\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":43.46589,\"lon\":-3.80493}},{\"facility\":\"Hospital
+        Clinico Universitario de Santiago\",\"city\":\"Santiago de Compostela\",\"zip\":\"15706\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":42.88052,\"lon\":-8.54569}},{\"facility\":\"Hospital
+        Universitario Virgin del Rocio\",\"city\":\"Seville\",\"zip\":\"41013\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":37.38283,\"lon\":-5.97317}},{\"facility\":\"Consorcio
+        Hospital General Universitario de Valencia\",\"city\":\"Valencia\",\"zip\":\"46014\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":39.47391,\"lon\":-0.37966}},{\"facility\":\"Hospital
+        Universitario y Politecnlo la Fe\",\"city\":\"Valencia\",\"zip\":\"46026\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":39.47391,\"lon\":-0.37966}},{\"facility\":\"Hospital
+        Clinico Universitario de Valladolid\",\"city\":\"Valladolid\",\"zip\":\"47010\",\"country\":\"Spain\",\"geoPoint\":{\"lat\":41.65541,\"lon\":-4.72353}}]},\"referencesModule\":{\"seeAlsoLinks\":[{\"label\":\"Gilead
+        Clinical Trials Website\",\"url\":\"https://www.gileadclinicaltrials.com/study/?id=GS-US-454-6075\"}]},\"ipdSharingStatementModule\":{\"ipdSharing\":\"NO\"}},\"resultsSection\":{\"participantFlowModule\":{\"preAssignmentDetails\":\"1595
+        participants were screened.\",\"recruitmentDetails\":\"Participants were enrolled
+        at study sites in the United States, Canada, France, Japan, Australia and
+        Spain.\",\"groups\":[{\"id\":\"FG000\",\"title\":\"SEMA + CILO/FIR FDC\",\"description\":\"Participants
+        received semaglutide (SEMA) 3.0 mg/mL subcutaneous (SC) injection once weekly
+        and cilofexor and firsocostat (CILO/FIR) 30 mg/20 mg fixed-dose combination
+        (FDC) tablet orally, once daily up to 72 weeks.\"},{\"id\":\"FG001\",\"title\":\"SEMA
+        + PTM CILO/FIR\",\"description\":\"Participants received SEMA 3.0 mg/mL SC
+        injection, once weekly and Placebo-To-Match (PTM) CILO/FIR FDC tablet orally,
+        once daily up to 72 weeks.\"},{\"id\":\"FG002\",\"title\":\"PTM SEMA + CILO/FIR
+        FDC\",\"description\":\"Participants received PTM SEMA SC injection, once
+        weekly and CILO/FIR 30 mg/20 mg FDC tablet orally, once daily up to 72 weeks.\"},{\"id\":\"FG003\",\"title\":\"PTM
+        SEMA + PTM CILO/FIR\",\"description\":\"Participants received PTM SEMA SC
+        injection, once weekly and PTM CILO/FIR FDC tablet orally, once daily up to
+        72 weeks.\"}],\"periods\":[{\"title\":\"Overall Study\",\"milestones\":[{\"type\":\"STARTED\",\"achievements\":[{\"groupId\":\"FG000\",\"numSubjects\":\"125\"},{\"groupId\":\"FG001\",\"numSubjects\":\"124\"},{\"groupId\":\"FG002\",\"numSubjects\":\"123\"},{\"groupId\":\"FG003\",\"numSubjects\":\"85\"}]},{\"type\":\"COMPLETED\",\"achievements\":[{\"groupId\":\"FG000\",\"numSubjects\":\"103\"},{\"groupId\":\"FG001\",\"numSubjects\":\"104\"},{\"groupId\":\"FG002\",\"numSubjects\":\"91\"},{\"groupId\":\"FG003\",\"numSubjects\":\"65\"}]},{\"type\":\"NOT
+        COMPLETED\",\"achievements\":[{\"groupId\":\"FG000\",\"numSubjects\":\"22\"},{\"groupId\":\"FG001\",\"numSubjects\":\"20\"},{\"groupId\":\"FG002\",\"numSubjects\":\"32\"},{\"groupId\":\"FG003\",\"numSubjects\":\"20\"}]}],\"dropWithdraws\":[{\"type\":\"Withdrew
+        Consent\",\"reasons\":[{\"groupId\":\"FG000\",\"numSubjects\":\"5\"},{\"groupId\":\"FG001\",\"numSubjects\":\"5\"},{\"groupId\":\"FG002\",\"numSubjects\":\"17\"},{\"groupId\":\"FG003\",\"numSubjects\":\"7\"}]},{\"type\":\"Adverse
+        Event\",\"reasons\":[{\"groupId\":\"FG000\",\"numSubjects\":\"7\"},{\"groupId\":\"FG001\",\"numSubjects\":\"8\"},{\"groupId\":\"FG002\",\"numSubjects\":\"6\"},{\"groupId\":\"FG003\",\"numSubjects\":\"3\"}]},{\"type\":\"Lost
+        to Follow-up\",\"reasons\":[{\"groupId\":\"FG000\",\"numSubjects\":\"2\"},{\"groupId\":\"FG001\",\"numSubjects\":\"1\"},{\"groupId\":\"FG002\",\"numSubjects\":\"6\"},{\"groupId\":\"FG003\",\"numSubjects\":\"7\"}]},{\"type\":\"Protocol
+        Violation\",\"reasons\":[{\"groupId\":\"FG000\",\"numSubjects\":\"3\"},{\"groupId\":\"FG001\",\"numSubjects\":\"1\"},{\"groupId\":\"FG002\",\"numSubjects\":\"1\"},{\"groupId\":\"FG003\",\"numSubjects\":\"2\"}]},{\"type\":\"Investigator's
+        Discretion\",\"reasons\":[{\"groupId\":\"FG000\",\"numSubjects\":\"3\"},{\"groupId\":\"FG001\",\"numSubjects\":\"1\"},{\"groupId\":\"FG002\",\"numSubjects\":\"1\"},{\"groupId\":\"FG003\",\"numSubjects\":\"0\"}]},{\"type\":\"Randomized
+        but Never Treated\",\"reasons\":[{\"groupId\":\"FG000\",\"numSubjects\":\"1\"},{\"groupId\":\"FG001\",\"numSubjects\":\"2\"},{\"groupId\":\"FG002\",\"numSubjects\":\"0\"},{\"groupId\":\"FG003\",\"numSubjects\":\"1\"}]},{\"type\":\"Death\",\"reasons\":[{\"groupId\":\"FG000\",\"numSubjects\":\"0\"},{\"groupId\":\"FG001\",\"numSubjects\":\"1\"},{\"groupId\":\"FG002\",\"numSubjects\":\"1\"},{\"groupId\":\"FG003\",\"numSubjects\":\"0\"}]},{\"type\":\"Site
+        Terminated by Sponsor\",\"reasons\":[{\"groupId\":\"FG000\",\"numSubjects\":\"1\"},{\"groupId\":\"FG001\",\"numSubjects\":\"1\"},{\"groupId\":\"FG002\",\"numSubjects\":\"0\"},{\"groupId\":\"FG003\",\"numSubjects\":\"0\"}]}]}]},\"baselineCharacteristicsModule\":{\"populationDescription\":\"The
+        Safety Analysis Set included all participants who received at least 1 dose
+        of study drug.\",\"groups\":[{\"id\":\"BG000\",\"title\":\"SEMA + CILO/FIR
+        FDC\",\"description\":\"Participants received semaglutide (SEMA) 3.0 mg/mL
+        subcutaneous (SC) injection once weekly and cilofexor and firsocostat (CILO/FIR)
+        30 mg/20 mg fixed-dose combination (FDC) tablet orally, once daily up to 72
+        weeks.\"},{\"id\":\"BG001\",\"title\":\"SEMA + PTM CILO/FIR\",\"description\":\"Participants
+        received SEMA 3.0 mg/mL SC injection, once weekly and Placebo-To-Match (PTM)
+        CILO/FIR FDC tablet orally, once daily up to 72 weeks.\"},{\"id\":\"BG002\",\"title\":\"PTM
+        SEMA + CILO/FIR FDC\",\"description\":\"Participants received PTM SEMA SC
+        injection, once weekly and CILO/FIR 30 mg/20 mg FDC tablet orally, once daily
+        up to 72 weeks.\"},{\"id\":\"BG003\",\"title\":\"PTM SEMA + PTM CILO/FIR\",\"description\":\"Participants
+        received PTM SEMA SC injection, once weekly and PTM CILO/FIR FDC tablet orally,
+        once daily up to 72 weeks.\"},{\"id\":\"BG004\",\"title\":\"Total\",\"description\":\"Total
+        of all reporting groups\"}],\"denoms\":[{\"units\":\"Participants\",\"counts\":[{\"groupId\":\"BG000\",\"value\":\"124\"},{\"groupId\":\"BG001\",\"value\":\"122\"},{\"groupId\":\"BG002\",\"value\":\"123\"},{\"groupId\":\"BG003\",\"value\":\"84\"},{\"groupId\":\"BG004\",\"value\":\"453\"}]}],\"measures\":[{\"title\":\"Age,
+        Categorical\",\"paramType\":\"COUNT_OF_PARTICIPANTS\",\"unitOfMeasure\":\"Participants\",\"calculatePct\":false,\"classes\":[{\"categories\":[{\"title\":\"<=18
+        years\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"0\"},{\"groupId\":\"BG001\",\"value\":\"0\"},{\"groupId\":\"BG002\",\"value\":\"0\"},{\"groupId\":\"BG003\",\"value\":\"0\"},{\"groupId\":\"BG004\",\"value\":\"0\"}]},{\"title\":\"Between
+        18 and 65 years\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"72\"},{\"groupId\":\"BG001\",\"value\":\"73\"},{\"groupId\":\"BG002\",\"value\":\"67\"},{\"groupId\":\"BG003\",\"value\":\"44\"},{\"groupId\":\"BG004\",\"value\":\"256\"}]},{\"title\":\">=65
+        years\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"52\"},{\"groupId\":\"BG001\",\"value\":\"49\"},{\"groupId\":\"BG002\",\"value\":\"56\"},{\"groupId\":\"BG003\",\"value\":\"40\"},{\"groupId\":\"BG004\",\"value\":\"197\"}]}]}]},{\"title\":\"Age,
+        Continuous\",\"paramType\":\"MEAN\",\"dispersionType\":\"STANDARD_DEVIATION\",\"unitOfMeasure\":\"years\",\"classes\":[{\"categories\":[{\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"61\",\"spread\":\"10.4\"},{\"groupId\":\"BG001\",\"value\":\"61\",\"spread\":\"9.2\"},{\"groupId\":\"BG002\",\"value\":\"62\",\"spread\":\"9.5\"},{\"groupId\":\"BG003\",\"value\":\"63\",\"spread\":\"9.1\"},{\"groupId\":\"BG004\",\"value\":\"62\",\"spread\":\"9.6\"}]}]}]},{\"title\":\"Sex:
+        Female, Male\",\"paramType\":\"COUNT_OF_PARTICIPANTS\",\"unitOfMeasure\":\"Participants\",\"calculatePct\":false,\"classes\":[{\"categories\":[{\"title\":\"Female\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"83\"},{\"groupId\":\"BG001\",\"value\":\"85\"},{\"groupId\":\"BG002\",\"value\":\"74\"},{\"groupId\":\"BG003\",\"value\":\"50\"},{\"groupId\":\"BG004\",\"value\":\"292\"}]},{\"title\":\"Male\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"41\"},{\"groupId\":\"BG001\",\"value\":\"37\"},{\"groupId\":\"BG002\",\"value\":\"49\"},{\"groupId\":\"BG003\",\"value\":\"34\"},{\"groupId\":\"BG004\",\"value\":\"161\"}]}]}]},{\"title\":\"Ethnicity
+        (NIH/OMB)\",\"paramType\":\"COUNT_OF_PARTICIPANTS\",\"unitOfMeasure\":\"Participants\",\"calculatePct\":false,\"classes\":[{\"categories\":[{\"title\":\"Hispanic
+        or Latino\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"28\"},{\"groupId\":\"BG001\",\"value\":\"23\"},{\"groupId\":\"BG002\",\"value\":\"30\"},{\"groupId\":\"BG003\",\"value\":\"19\"},{\"groupId\":\"BG004\",\"value\":\"100\"}]},{\"title\":\"Not
+        Hispanic or Latino\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"95\"},{\"groupId\":\"BG001\",\"value\":\"99\"},{\"groupId\":\"BG002\",\"value\":\"90\"},{\"groupId\":\"BG003\",\"value\":\"62\"},{\"groupId\":\"BG004\",\"value\":\"346\"}]},{\"title\":\"Unknown
+        or Not Reported\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"1\"},{\"groupId\":\"BG001\",\"value\":\"0\"},{\"groupId\":\"BG002\",\"value\":\"3\"},{\"groupId\":\"BG003\",\"value\":\"3\"},{\"groupId\":\"BG004\",\"value\":\"7\"}]}]}]},{\"title\":\"Race
+        (NIH/OMB)\",\"paramType\":\"COUNT_OF_PARTICIPANTS\",\"unitOfMeasure\":\"Participants\",\"calculatePct\":false,\"classes\":[{\"categories\":[{\"title\":\"American
+        Indian or Alaska Native\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"3\"},{\"groupId\":\"BG001\",\"value\":\"1\"},{\"groupId\":\"BG002\",\"value\":\"1\"},{\"groupId\":\"BG003\",\"value\":\"2\"},{\"groupId\":\"BG004\",\"value\":\"7\"}]},{\"title\":\"Asian\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"11\"},{\"groupId\":\"BG001\",\"value\":\"9\"},{\"groupId\":\"BG002\",\"value\":\"15\"},{\"groupId\":\"BG003\",\"value\":\"3\"},{\"groupId\":\"BG004\",\"value\":\"38\"}]},{\"title\":\"Native
+        Hawaiian or Other Pacific Islander\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"0\"},{\"groupId\":\"BG001\",\"value\":\"0\"},{\"groupId\":\"BG002\",\"value\":\"0\"},{\"groupId\":\"BG003\",\"value\":\"0\"},{\"groupId\":\"BG004\",\"value\":\"0\"}]},{\"title\":\"Black
+        or African American\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"2\"},{\"groupId\":\"BG001\",\"value\":\"1\"},{\"groupId\":\"BG002\",\"value\":\"1\"},{\"groupId\":\"BG003\",\"value\":\"5\"},{\"groupId\":\"BG004\",\"value\":\"9\"}]},{\"title\":\"White\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"100\"},{\"groupId\":\"BG001\",\"value\":\"108\"},{\"groupId\":\"BG002\",\"value\":\"98\"},{\"groupId\":\"BG003\",\"value\":\"66\"},{\"groupId\":\"BG004\",\"value\":\"372\"}]},{\"title\":\"More
+        than one race\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"5\"},{\"groupId\":\"BG001\",\"value\":\"2\"},{\"groupId\":\"BG002\",\"value\":\"3\"},{\"groupId\":\"BG003\",\"value\":\"4\"},{\"groupId\":\"BG004\",\"value\":\"14\"}]},{\"title\":\"Unknown
+        or Not Reported\",\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"3\"},{\"groupId\":\"BG001\",\"value\":\"1\"},{\"groupId\":\"BG002\",\"value\":\"5\"},{\"groupId\":\"BG003\",\"value\":\"4\"},{\"groupId\":\"BG004\",\"value\":\"13\"}]}]}]},{\"title\":\"Region
+        of Enrollment\",\"paramType\":\"COUNT_OF_PARTICIPANTS\",\"unitOfMeasure\":\"Participants\",\"calculatePct\":false,\"classes\":[{\"title\":\"United
+        States\",\"categories\":[{\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"95\"},{\"groupId\":\"BG001\",\"value\":\"99\"},{\"groupId\":\"BG002\",\"value\":\"88\"},{\"groupId\":\"BG003\",\"value\":\"63\"},{\"groupId\":\"BG004\",\"value\":\"345\"}]}]},{\"title\":\"Canada\",\"categories\":[{\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"7\"},{\"groupId\":\"BG001\",\"value\":\"7\"},{\"groupId\":\"BG002\",\"value\":\"12\"},{\"groupId\":\"BG003\",\"value\":\"6\"},{\"groupId\":\"BG004\",\"value\":\"32\"}]}]},{\"title\":\"France\",\"categories\":[{\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"5\"},{\"groupId\":\"BG001\",\"value\":\"5\"},{\"groupId\":\"BG002\",\"value\":\"9\"},{\"groupId\":\"BG003\",\"value\":\"10\"},{\"groupId\":\"BG004\",\"value\":\"29\"}]}]},{\"title\":\"Japan\",\"categories\":[{\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"4\"},{\"groupId\":\"BG001\",\"value\":\"6\"},{\"groupId\":\"BG002\",\"value\":\"6\"},{\"groupId\":\"BG003\",\"value\":\"1\"},{\"groupId\":\"BG004\",\"value\":\"17\"}]}]},{\"title\":\"Australia\",\"categories\":[{\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"6\"},{\"groupId\":\"BG001\",\"value\":\"2\"},{\"groupId\":\"BG002\",\"value\":\"6\"},{\"groupId\":\"BG003\",\"value\":\"2\"},{\"groupId\":\"BG004\",\"value\":\"16\"}]}]},{\"title\":\"Spain\",\"categories\":[{\"measurements\":[{\"groupId\":\"BG000\",\"value\":\"7\"},{\"groupId\":\"BG001\",\"value\":\"3\"},{\"groupId\":\"BG002\",\"value\":\"2\"},{\"groupId\":\"BG003\",\"value\":\"2\"},{\"groupId\":\"BG004\",\"value\":\"14\"}]}]}]}]},\"outcomeMeasuresModule\":{\"outcomeMeasures\":[{\"type\":\"PRIMARY\",\"title\":\"Percentage
+        of Participants Who Achieved \u2265 1-Stage Improvement in Fibrosis Without
+        Worsening of Nonalcoholic Steatohepatitis (NASH) at Week 72 in Semaglutide
+        (SEMA) + Cilofexor/Firsocostat (CILO/FIR) Fixed Dose Combination (FDC) Versus
+        Placebo Groups\",\"description\":\"Fibrosis improvement was defined as \u2265
+        1-stage decrease from baseline in fibrosis according to the NASH clinical
+        research network (CRN) classification. Worsening of NASH was defined as \u2265
+        1-point increase from baseline in hepatocellular ballooning or lobular inflammation.\\n\\nClopper-Pearson
+        method was used in outcome measure analysis in each arm. Percentages were
+        rounded-off.\",\"populationDescription\":\"Participants in the Full Analysis
+        Set in SEMA + CILO/FIR FDC and PTM SEMA + PTM CILO/FIR were analyzed. The
+        Full Analysis Set included all randomized participants who received at least
+        1 dose of study drug.\",\"reportingStatus\":\"POSTED\",\"paramType\":\"NUMBER\",\"dispersionType\":\"95%
+        Confidence Interval\",\"unitOfMeasure\":\"percentage of participants\",\"timeFrame\":\"Week
+        72\",\"groups\":[{\"id\":\"OG000\",\"title\":\"SEMA + CILO/FIR FDC\",\"description\":\"Participants
+        received semaglutide (SEMA) 3.0 mg/mL subcutaneous (SC) injection once weekly
+        and cilofexor and firsocostat (CILO/FIR) 30 mg/20 mg fixed-dose combination
+        (FDC) tablet orally, once daily up to 72 weeks.\"},{\"id\":\"OG001\",\"title\":\"PTM
+        SEMA + PTM CILO/FIR\",\"description\":\"Participants received PTM SEMA SC
+        injection, once weekly and PTM CILO/FIR FDC tablet orally, once daily up to
+        72 weeks.\"}],\"denoms\":[{\"units\":\"Participants\",\"counts\":[{\"groupId\":\"OG000\",\"value\":\"124\"},{\"groupId\":\"OG001\",\"value\":\"84\"}]}],\"classes\":[{\"categories\":[{\"measurements\":[{\"groupId\":\"OG000\",\"value\":\"13.7\",\"lowerLimit\":\"8.2\",\"upperLimit\":\"21.0\"},{\"groupId\":\"OG001\",\"value\":\"8.3\",\"lowerLimit\":\"3.4\",\"upperLimit\":\"16.4\"}]}]}],\"analyses\":[{\"groupIds\":[\"OG000\",\"OG001\"],\"nonInferiorityType\":\"SUPERIORITY\",\"pValue\":\"0.2289\",\"statisticalMethod\":\"Stratified
+        Mantel-Haenszel test\",\"paramType\":\"Difference in percentages\",\"paramValue\":\"5.7\",\"ciPctValue\":\"95\",\"ciNumSides\":\"TWO_SIDED\",\"ciLowerLimit\":\"-3.6\",\"ciUpperLimit\":\"14.9\",\"estimateComment\":\"Percentage
+        difference and 95% confidence interval (CI) between each pair of treatment
+        groups were from stratified Mantel-Haenszel test with baseline diabetes status
+        and baseline enhanced liver fibrosis (ELF) category as stratification factors.\"}]},{\"type\":\"SECONDARY\",\"title\":\"Percentage
+        of Participants Who Achieved \u22651-Stage Improvement in Fibrosis Without
+        Worsening of NASH at Week 72 in SEMA + CILO/FIR FDC Versus SEMA Alone\",\"description\":\"Fibrosis
+        improvement was defined as \u2265 1-stage decrease from baseline in fibrosis
+        according to the NASH CRN classification. Worsening of NASH was defined as
+        \u2265 1-point increase from baseline in hepatocellular ballooning or lobular
+        inflammation.\\n\\nClopper-Pearson method was used in outcome measure analysis
+        in each arm. Percentages were rounded-off.\",\"populationDescription\":\"Participants
+        in the Full Analysis Set in SEMA + CILO/FIR and SEMA + PTM CILO/FIR were analyzed.\",\"reportingStatus\":\"POSTED\",\"paramType\":\"NUMBER\",\"dispersionType\":\"95%
+        Confidence Interval\",\"unitOfMeasure\":\"percentage of participants\",\"timeFrame\":\"Week
+        72\",\"groups\":[{\"id\":\"OG000\",\"title\":\"SEMA + CILO/FIR FDC\",\"description\":\"Participants
+        received semaglutide (SEMA) 3.0 mg/mL subcutaneous (SC) injection once weekly
+        and cilofexor and firsocostat (CILO/FIR) 30 mg/20 mg fixed-dose combination
+        (FDC) tablet orally, once daily up to 72 weeks.\"},{\"id\":\"OG001\",\"title\":\"SEMA
+        + PTM CILO/FIR\",\"description\":\"Participants received SEMA 3.0 mg/mL SC
+        injection, once weekly and Placebo-To-Match (PTM) CILO/FIR FDC tablet orally,
+        once daily up to 72 weeks.\"}],\"denoms\":[{\"units\":\"Participants\",\"counts\":[{\"groupId\":\"OG000\",\"value\":\"124\"},{\"groupId\":\"OG001\",\"value\":\"122\"}]}],\"classes\":[{\"categories\":[{\"measurements\":[{\"groupId\":\"OG000\",\"value\":\"13.7\",\"lowerLimit\":\"8.2\",\"upperLimit\":\"21.0\"},{\"groupId\":\"OG001\",\"value\":\"15.6\",\"lowerLimit\":\"9.6\",\"upperLimit\":\"23.2\"}]}]}],\"analyses\":[{\"groupIds\":[\"OG000\",\"OG001\"],\"nonInferiorityType\":\"SUPERIORITY\",\"pValue\":\"0.6959\",\"statisticalMethod\":\"Stratified
+        Mantel-Haenszel test\",\"paramType\":\"Difference in percentages\",\"paramValue\":\"-1.8\",\"ciPctValue\":\"95\",\"ciNumSides\":\"TWO_SIDED\",\"ciLowerLimit\":\"-11.1\",\"ciUpperLimit\":\"7.4\",\"estimateComment\":\"Percentage
+        difference and 95% CI between each pair of treatment groups presented were
+        from stratified Mantel-Haenszel test with baseline diabetes status and baseline
+        ELF category as stratification factors.\"}]},{\"type\":\"SECONDARY\",\"title\":\"Percentage
+        of Participants With NASH Resolution Without Worsening in Fibrosis at Week
+        72 in SEMA + CILO/FIR FDC Versus Placebo Groups\",\"description\":\"NASH resolution
+        is defined as lobular inflammation of 0 or 1 and hepatocellular ballooning
+        of 0. Worsening in fibrosis was defined as a change in fibrosis worsening
+        stage as per NASH CRN criteria.\\n\\nClopper-Pearson method was used in outcome
+        measure analysis in each arm. Percentages were rounded-off.\",\"populationDescription\":\"Participants
+        in the Full Analysis Set in SEMA + CILO/FIR FDC and PTM SEMA + PTM CILO/FIR
+        with available data were analyzed.\",\"reportingStatus\":\"POSTED\",\"paramType\":\"NUMBER\",\"dispersionType\":\"95%
+        Confidence Interval\",\"unitOfMeasure\":\"percentage of participants\",\"timeFrame\":\"Week
+        72\",\"groups\":[{\"id\":\"OG000\",\"title\":\"SEMA + CILO/FIR FDC\",\"description\":\"Participants
+        received semaglutide (SEMA) 3.0 mg/mL subcutaneous (SC) injection once weekly
+        and cilofexor and firsocostat (CILO/FIR) 30 mg/20 mg fixed-dose combination
+        (FDC) tablet orally, once daily up to 72 weeks.\"},{\"id\":\"OG001\",\"title\":\"PTM
+        SEMA + PTM CILO/FIR\",\"description\":\"Participants received PTM SEMA SC
+        injection, once weekly and PTM CILO/FIR FDC tablet orally, once daily up to
+        72 weeks.\"}],\"denoms\":[{\"units\":\"Participants\",\"counts\":[{\"groupId\":\"OG000\",\"value\":\"82\"},{\"groupId\":\"OG001\",\"value\":\"49\"}]}],\"classes\":[{\"categories\":[{\"measurements\":[{\"groupId\":\"OG000\",\"value\":\"57.3\",\"lowerLimit\":\"45.9\",\"upperLimit\":\"68.2\"},{\"groupId\":\"OG001\",\"value\":\"22.4\",\"lowerLimit\":\"11.8\",\"upperLimit\":\"36.6\"}]}]}],\"analyses\":[{\"groupIds\":[\"OG000\",\"OG001\"],\"nonInferiorityType\":\"SUPERIORITY\",\"pValue\":\"<0.0001\",\"statisticalMethod\":\"Stratified
+        Mantel-Haenszel test\",\"paramType\":\"Difference in percentages\",\"paramValue\":\"35.7\",\"ciPctValue\":\"95\",\"ciNumSides\":\"TWO_SIDED\",\"ciLowerLimit\":\"18.8\",\"ciUpperLimit\":\"52.6\",\"estimateComment\":\"Percentage
+        difference and 95% CI between each pair of treatment groups presented are
+        from stratified Mantel-Haenszel test with baseline diabetes status and baseline
+        ELF category as stratification factors.\"}]},{\"type\":\"SECONDARY\",\"title\":\"Percentage
+        of Participants With NASH Resolution Without Worsening in Fibrosis In Participants
+        Treated With SEMA + CILO/FIR FDC Versus CILO/FIR Alone Groups\",\"description\":\"NASH
+        resolution is defined as lobular inflammation of 0 or 1 and hepatocellular
+        ballooning of 0. Worsening in fibrosis was defined as a change in fibrosis
+        worsening stage as per NASH CRN criteria.\\n\\nClopper-Pearson method was
+        used in outcome measure analysis in each arm. Percentages were rounded-off.\",\"populationDescription\":\"Participants
+        in the Full Analysis Set in SEMA + CILO/FIR FDC and PTM SEMA + CILO/FIR FDC
+        with available data were analyzed.\",\"reportingStatus\":\"POSTED\",\"paramType\":\"NUMBER\",\"dispersionType\":\"95%
+        Confidence Interval\",\"unitOfMeasure\":\"percentage of participants\",\"timeFrame\":\"Week
+        72\",\"groups\":[{\"id\":\"OG000\",\"title\":\"SEMA + CILO/FIR FDC\",\"description\":\"Participants
+        received semaglutide (SEMA) 3.0 mg/mL subcutaneous (SC) injection once weekly
+        and cilofexor and firsocostat (CILO/FIR) 30 mg/20 mg fixed-dose combination
+        (FDC) tablet orally, once daily up to 72 weeks.\"},{\"id\":\"OG001\",\"title\":\"PTM
+        SEMA + CILO/FIR FDC\",\"description\":\"Participants received PTM SEMA SC
+        injection, once weekly and CILO/FIR 30 mg/20 mg FDC tablet orally, once daily
+        up to 72 weeks.\"}],\"denoms\":[{\"units\":\"Participants\",\"counts\":[{\"groupId\":\"OG000\",\"value\":\"82\"},{\"groupId\":\"OG001\",\"value\":\"88\"}]}],\"classes\":[{\"categories\":[{\"measurements\":[{\"groupId\":\"OG000\",\"value\":\"57.3\",\"lowerLimit\":\"45.9\",\"upperLimit\":\"68.2\"},{\"groupId\":\"OG001\",\"value\":\"31.8\",\"lowerLimit\":\"22.3\",\"upperLimit\":\"42.6\"}]}]}],\"analyses\":[{\"groupIds\":[\"OG000\",\"OG001\"],\"nonInferiorityType\":\"SUPERIORITY\",\"pValue\":\"0.0006\",\"statisticalMethod\":\"Stratified
+        Mantel-Haenszel test\",\"paramType\":\"Difference in percentages\",\"paramValue\":\"26.1\",\"ciPctValue\":\"95\",\"ciNumSides\":\"TWO_SIDED\",\"ciLowerLimit\":\"11.3\",\"ciUpperLimit\":\"40.9\",\"estimateComment\":\"Percentage
+        difference and 95% CI between each pair of treatment groups presented were
+        from stratified Mantel-Haenszel test with baseline diabetes status and baseline
+        ELF category as stratification factors.\"}]}]},\"adverseEventsModule\":{\"frequencyThreshold\":\"5\",\"timeFrame\":\"All-cause
+        mortality and Adverse events: Up to 72 weeks plus 35 days\",\"description\":\"All-cause
+        mortality: The All Randomized Analysis Set included all participants who were
+        randomized in the study.\\n\\nAdverse events: The Safety Analysis Set included
+        all participants who received at least 1 dose of study drug.\",\"eventGroups\":[{\"id\":\"EG000\",\"title\":\"SEMA
+        + CILO/FIR FDC\",\"description\":\"Participants received semaglutide (SEMA)
+        3.0 mg/mL subcutaneous (SC) injection once weekly and cilofexor and firsocostat
+        (CILO/FIR) 30 mg/20 mg fixed-dose combination (FDC) tablet orally, once daily
+        up to 72 weeks.\",\"deathsNumAffected\":0,\"deathsNumAtRisk\":125,\"seriousNumAffected\":17,\"seriousNumAtRisk\":124,\"otherNumAffected\":101,\"otherNumAtRisk\":124},{\"id\":\"EG001\",\"title\":\"SEMA
+        + PTM CILO/FIR\",\"description\":\"Participants received SEMA 3.0 mg/mL SC
+        injection, once weekly and Placebo-To-Match (PTM) CILO/FIR FDC tablet orally,
+        once daily up to 72 weeks.\",\"deathsNumAffected\":1,\"deathsNumAtRisk\":124,\"seriousNumAffected\":13,\"seriousNumAtRisk\":122,\"otherNumAffected\":97,\"otherNumAtRisk\":122},{\"id\":\"EG002\",\"title\":\"PTM
+        SEMA + CILO/FIR FDC\",\"description\":\"Participants received PTM SEMA SC
+        injection, once weekly and CILO/FIR 30 mg/20 mg FDC tablet orally, once daily
+        up to 72 weeks.\",\"deathsNumAffected\":1,\"deathsNumAtRisk\":123,\"seriousNumAffected\":18,\"seriousNumAtRisk\":123,\"otherNumAffected\":85,\"otherNumAtRisk\":123},{\"id\":\"EG003\",\"title\":\"PTM
+        SEMA + PTM CILO/FIR\",\"description\":\"Participants received PTM SEMA SC
+        injection, once weekly and PTM CILO/FIR FDC tablet orally, once daily up to
+        72 weeks.\",\"deathsNumAffected\":0,\"deathsNumAtRisk\":85,\"seriousNumAffected\":11,\"seriousNumAtRisk\":84,\"otherNumAffected\":60,\"otherNumAtRisk\":84}],\"seriousEvents\":[{\"term\":\"Acute
+        myocardial infarction\",\"organSystem\":\"Cardiac disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Angina
+        pectoris\",\"organSystem\":\"Cardiac disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Atrial
+        septal defect\",\"organSystem\":\"Congenital, familial and genetic disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Ascites\",\"organSystem\":\"Gastrointestinal
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Proctitis\",\"organSystem\":\"Gastrointestinal
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Small
+        intestinal obstruction\",\"organSystem\":\"Gastrointestinal disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Upper
+        gastrointestinal haemorrhage\",\"organSystem\":\"Gastrointestinal disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Asthenia\",\"organSystem\":\"General
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Prosthetic
+        cardiac valve stenosis\",\"organSystem\":\"General disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Bile
+        duct stone\",\"organSystem\":\"Hepatobiliary disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Hepatic
+        cirrhosis\",\"organSystem\":\"Hepatobiliary disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Steatohepatitis\",\"organSystem\":\"Hepatobiliary
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Abdominal
+        wall abscess\",\"organSystem\":\"Infections and infestations\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Appendicitis\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Covid-19\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Covid-19
+        pneumonia\",\"organSystem\":\"Infections and infestations\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":2,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Diverticulitis\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Diverticulitis
+        intestinal perforated\",\"organSystem\":\"Infections and infestations\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Large
+        intestine infection\",\"organSystem\":\"Infections and infestations\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Localised
+        infection\",\"organSystem\":\"Infections and infestations\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Pneumonia\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Post
+        procedural cellulitis\",\"organSystem\":\"Infections and infestations\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Pyelonephritis\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Salmonellosis\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Sepsis\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Femur
+        fracture\",\"organSystem\":\"Injury, poisoning and procedural complications\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Heat
+        exhaustion\",\"organSystem\":\"Injury, poisoning and procedural complications\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Hip
+        fracture\",\"organSystem\":\"Injury, poisoning and procedural complications\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Post
+        procedural haematoma\",\"organSystem\":\"Injury, poisoning and procedural
+        complications\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Post
+        procedural haemorrhage\",\"organSystem\":\"Injury, poisoning and procedural
+        complications\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Shoulder
+        fracture\",\"organSystem\":\"Injury, poisoning and procedural complications\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Dehydration\",\"organSystem\":\"Metabolism
+        and nutrition disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Hyperkalaemia\",\"organSystem\":\"Metabolism
+        and nutrition disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Hypoglycaemia\",\"organSystem\":\"Metabolism
+        and nutrition disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Hypokalaemia\",\"organSystem\":\"Metabolism
+        and nutrition disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Hyponatraemia\",\"organSystem\":\"Metabolism
+        and nutrition disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Arthralgia\",\"organSystem\":\"Musculoskeletal
+        and connective tissue disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Back
+        pain\",\"organSystem\":\"Musculoskeletal and connective tissue disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Cervical
+        spinal stenosis\",\"organSystem\":\"Musculoskeletal and connective tissue
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Diffuse
+        idiopathic skeletal hyperostosis\",\"organSystem\":\"Musculoskeletal and connective
+        tissue disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Intervertebral
+        disc protrusion\",\"organSystem\":\"Musculoskeletal and connective tissue
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Pain
+        in extremity\",\"organSystem\":\"Musculoskeletal and connective tissue disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Spinal
+        stenosis\",\"organSystem\":\"Musculoskeletal and connective tissue disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Spondylolisthesis\",\"organSystem\":\"Musculoskeletal
+        and connective tissue disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Breast
+        cancer\",\"organSystem\":\"Neoplasms benign, malignant and unspecified (incl
+        cysts and polyps)\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Breast
+        cancer recurrent\",\"organSystem\":\"Neoplasms benign, malignant and unspecified
+        (incl cysts and polyps)\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Ductal
+        adenocarcinoma of pancreas\",\"organSystem\":\"Neoplasms benign, malignant
+        and unspecified (incl cysts and polyps)\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Endometrial
+        adenocarcinoma\",\"organSystem\":\"Neoplasms benign, malignant and unspecified
+        (incl cysts and polyps)\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Hepatocellular
+        carcinoma\",\"organSystem\":\"Neoplasms benign, malignant and unspecified
+        (incl cysts and polyps)\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":2,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":3,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Malignant
+        glioma\",\"organSystem\":\"Neoplasms benign, malignant and unspecified (incl
+        cysts and polyps)\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Squamous
+        cell carcinoma\",\"organSystem\":\"Neoplasms benign, malignant and unspecified
+        (incl cysts and polyps)\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Squamous
+        cell carcinoma of the vulva\",\"organSystem\":\"Neoplasms benign, malignant
+        and unspecified (incl cysts and polyps)\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Cerebrovascular
+        accident\",\"organSystem\":\"Nervous system disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Hepatic
+        encephalopathy\",\"organSystem\":\"Nervous system disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Sensory
+        loss\",\"organSystem\":\"Nervous system disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Abortion
+        spontaneous\",\"organSystem\":\"Pregnancy, puerperium and perinatal conditions\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Major
+        depression\",\"organSystem\":\"Psychiatric disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Acute
+        kidney injury\",\"organSystem\":\"Renal and urinary disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":2,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Nephrolithiasis\",\"organSystem\":\"Renal
+        and urinary disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":3,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Pelvi-ureteric
+        obstruction\",\"organSystem\":\"Renal and urinary disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":0,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":1,\"numAtRisk\":84}]},{\"term\":\"Ureterolithiasis\",\"organSystem\":\"Renal
+        and urinary disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Decubitus
+        ulcer\",\"organSystem\":\"Skin and subcutaneous tissue disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]},{\"term\":\"Shock\",\"organSystem\":\"Vascular
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":1,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":0,\"numAtRisk\":84}]}],\"otherEvents\":[{\"term\":\"Abdominal
+        distension\",\"organSystem\":\"Gastrointestinal disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":9,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":10,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":4,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":6,\"numAtRisk\":84}]},{\"term\":\"Abdominal
+        pain\",\"organSystem\":\"Gastrointestinal disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":11,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":10,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":6,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":11,\"numAtRisk\":84}]},{\"term\":\"Abdominal
+        pain upper\",\"organSystem\":\"Gastrointestinal disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":7,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":11,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":6,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":8,\"numAtRisk\":84}]},{\"term\":\"Constipation\",\"organSystem\":\"Gastrointestinal
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":30,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":26,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":11,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":7,\"numAtRisk\":84}]},{\"term\":\"Diarrhoea\",\"organSystem\":\"Gastrointestinal
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":34,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":25,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":16,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":15,\"numAtRisk\":84}]},{\"term\":\"Dyspepsia\",\"organSystem\":\"Gastrointestinal
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":12,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":2,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":4,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":3,\"numAtRisk\":84}]},{\"term\":\"Gastrooesophageal
+        reflux disease\",\"organSystem\":\"Gastrointestinal disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":7,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":13,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":3,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":2,\"numAtRisk\":84}]},{\"term\":\"Nausea\",\"organSystem\":\"Gastrointestinal
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":59,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":49,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":29,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":19,\"numAtRisk\":84}]},{\"term\":\"Vomiting\",\"organSystem\":\"Gastrointestinal
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":27,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":21,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":7,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":6,\"numAtRisk\":84}]},{\"term\":\"Fatigue\",\"organSystem\":\"General
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":17,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":17,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":9,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":11,\"numAtRisk\":84}]},{\"term\":\"Bronchitis\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":2,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":3,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":5,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":5,\"numAtRisk\":84}]},{\"term\":\"Covid-19\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":21,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":15,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":15,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":14,\"numAtRisk\":84}]},{\"term\":\"Influenza\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":1,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":2,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":3,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":5,\"numAtRisk\":84}]},{\"term\":\"Nasopharyngitis\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":7,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":4,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":6,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":4,\"numAtRisk\":84}]},{\"term\":\"Sinusitis\",\"organSystem\":\"Infections
+        and infestations\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":8,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":8,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":4,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":6,\"numAtRisk\":84}]},{\"term\":\"Upper
+        respiratory tract infection\",\"organSystem\":\"Infections and infestations\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":7,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":4,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":12,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":4,\"numAtRisk\":84}]},{\"term\":\"Urinary
+        tract infection\",\"organSystem\":\"Infections and infestations\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":13,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":6,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":8,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":3,\"numAtRisk\":84}]},{\"term\":\"Decreased
+        appetite\",\"organSystem\":\"Metabolism and nutrition disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":19,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":20,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":7,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":5,\"numAtRisk\":84}]},{\"term\":\"Hypertriglyceridaemia\",\"organSystem\":\"Metabolism
+        and nutrition disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":2,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":0,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":7,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":2,\"numAtRisk\":84}]},{\"term\":\"Hypoglycaemia\",\"organSystem\":\"Metabolism
+        and nutrition disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":14,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":4,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":3,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":5,\"numAtRisk\":84}]},{\"term\":\"Arthralgia\",\"organSystem\":\"Musculoskeletal
+        and connective tissue disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":8,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":6,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":12,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":11,\"numAtRisk\":84}]},{\"term\":\"Back
+        pain\",\"organSystem\":\"Musculoskeletal and connective tissue disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":8,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":7,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":8,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":7,\"numAtRisk\":84}]},{\"term\":\"Pain
+        in extremity\",\"organSystem\":\"Musculoskeletal and connective tissue disorders\",\"sourceVocabulary\":\"MedDRA
+        27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":2,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":4,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":7,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":3,\"numAtRisk\":84}]},{\"term\":\"Dizziness\",\"organSystem\":\"Nervous
+        system disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":7,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":10,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":9,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":8,\"numAtRisk\":84}]},{\"term\":\"Headache\",\"organSystem\":\"Nervous
+        system disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":7,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":11,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":12,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":3,\"numAtRisk\":84}]},{\"term\":\"Cough\",\"organSystem\":\"Respiratory,
+        thoracic and mediastinal disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":3,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":3,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":7,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":7,\"numAtRisk\":84}]},{\"term\":\"Dyspnoea\",\"organSystem\":\"Respiratory,
+        thoracic and mediastinal disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":0,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":2,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":5,\"numAtRisk\":84}]},{\"term\":\"Pruritus\",\"organSystem\":\"Skin
+        and subcutaneous tissue disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":8,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":13,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":12,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":6,\"numAtRisk\":84}]},{\"term\":\"Hypertension\",\"organSystem\":\"Vascular
+        disorders\",\"sourceVocabulary\":\"MedDRA 27.1\",\"assessmentType\":\"SYSTEMATIC_ASSESSMENT\",\"stats\":[{\"groupId\":\"EG000\",\"numAffected\":3,\"numAtRisk\":124},{\"groupId\":\"EG001\",\"numAffected\":1,\"numAtRisk\":122},{\"groupId\":\"EG002\",\"numAffected\":3,\"numAtRisk\":123},{\"groupId\":\"EG003\",\"numAffected\":6,\"numAtRisk\":84}]}]},\"moreInfoModule\":{\"certainAgreement\":{\"piSponsorEmployee\":false,\"restrictionType\":\"OTHER\",\"restrictiveAgreement\":true,\"otherDetails\":\"After
+        conclusion of the study and without prior written approval from Gilead, investigators
+        in this study may communicate, orally present, or publish in scientific journals
+        or other media only after the following conditions have been met:\\n\\n* The
+        results of the study in their entirety have been publicly disclosed by or
+        with the consent of Gilead in an abstract, manuscript, or presentation form;
+        or\\n* The study has been completed at all study sites for at least 2 years.\"},\"pointOfContact\":{\"title\":\"Gilead
+        Clinical Study Information Center\",\"organization\":\"Gilead Sciences\",\"email\":\"GileadClinicalTrials@gilead.com\",\"phone\":\"1-833-445-3230
+        (GILEAD-0)\"}}},\"documentSection\":{\"largeDocumentModule\":{\"largeDocs\":[{\"typeAbbrev\":\"Prot\",\"hasProtocol\":true,\"hasSap\":false,\"hasIcf\":false,\"label\":\"Study
+        Protocol\",\"date\":\"2023-10-26\",\"uploadDate\":\"2025-08-01T09:48\",\"filename\":\"Prot_000.pdf\",\"size\":4885099},{\"typeAbbrev\":\"SAP\",\"hasProtocol\":false,\"hasSap\":true,\"hasIcf\":false,\"label\":\"Statistical
+        Analysis Plan\",\"date\":\"2025-01-07\",\"uploadDate\":\"2025-08-01T09:49\",\"filename\":\"SAP_001.pdf\",\"size\":2817361}]}},\"derivedSection\":{\"miscInfoModule\":{\"versionHolder\":\"2026-09-17\"},\"conditionBrowseModule\":{\"meshes\":[{\"id\":\"D065626\",\"term\":\"Non-alcoholic
+        Fatty Liver Disease\"}],\"ancestors\":[{\"id\":\"D005234\",\"term\":\"Fatty
+        Liver\"},{\"id\":\"D008107\",\"term\":\"Liver Diseases\"},{\"id\":\"D004066\",\"term\":\"Digestive
+        System Diseases\"}]},\"interventionBrowseModule\":{\"meshes\":[{\"id\":\"C000591245\",\"term\":\"semaglutide\"},{\"id\":\"C000717094\",\"term\":\"cilofexor\"}]}},\"hasResults\":true}\n"
+    headers:
+      Alt-Svc:
+      - clear
+      Content-Type:
+      - application/json
+      Date:
+      - Fri, 18 Sep 2026 02:04:02 GMT
+      Etag:
+      - '"0/0.34.1/mu5atyiw"'
+      Server:
+      - istio-envoy
+      Set-Cookie:
+      - ncbi_sid=5BE7C21F194FDBD9_0CDESID; Max-Age=31536000; Domain=clinicaltrials.gov;
+        Path=/; $x-enc=URI_ENCODING
+      Strict-Transport-Security:
+      - max-age=31536000; includeSubDomains; preload
+      Transfer-Encoding:
+      - chunked
+      Via:
+      - 1.1 google
+      X-Frame-Options:
+      - SAMEORIGIN
+      X-UA-Compatible:
+      - IE=Edge
+      X-XSS-Protection:
+      - 1; mode=block
+      content-length:
+      - '107744'
+      x-envoy-upstream-service-time:
+      - '5'
+    status:
+      code: 200
+      message: OK
+version: 1

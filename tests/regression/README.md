@@ -10,6 +10,7 @@ set of drugs.
 
 ```
 gold_standard/          # frozen SupervisorOutput snapshots (JSON) + rendered reports (MD)
+layer0_contracts/       # per-client contract tests + their cassettes
 specs/                  # per-drug YAML: the invariants extracted from each snapshot
 layer1_deterministic/   # pure-unit tests of the evidence gate (no fixtures)
 layer2_structural/      # spec-driven assertions run against the newest generated report
@@ -18,6 +19,37 @@ common/                 # shared helpers: constants, failure-mode taxonomy, cass
 ```
 
 ## The layers
+
+### Layer 0 — data-source contracts (`layer0_contracts/`)
+
+One recorded response per data source client method, replayed offline. Each
+test calls the client and asserts every field of the parsed model against the
+values in the cassette, so a change to a client, a parse helper, or a Pydantic
+model fails here and names the source that broke. Nothing above the client
+layer is involved — no agents, no LLM, no database.
+
+Each test gets an empty cache directory, so the call always goes through the
+client's own parse path instead of being served from a warm file cache.
+
+Cassettes are recorded under the test constants file (`.env.constants.test`);
+recording with the production constants produces different page sizes and the
+replay then finds no matching request.
+
+Re-record one when its client legitimately changes shape:
+
+```bash
+SCOUT_CASSETTE_MODE=record pytest -m contract -k chembl
+```
+
+Run against the real APIs to check for upstream drift (expect volatile counts —
+citation counts and relevance-sorted PMID lists move):
+
+```bash
+SCOUT_CASSETTE_MODE=live pytest -m contract
+```
+
+A shorter tour of the whole suite, including this layer, is in
+`docs/reference/testing.md`.
 
 ### Layer 1 — deterministic (`layer1_deterministic/`)
 
@@ -116,7 +148,10 @@ external HTTP/LLM traffic).
 ## Running
 
 ```bash
-# Layer 1 runs in the default suite:
+# Layer 0 and Layer 1 run in the default suite:
+pytest -m contract
+
+
 pytest tests/regression/layer1_deterministic/
 
 # Layer 2 (marked, excluded from the default run — opt in with -m).

@@ -15,10 +15,12 @@ Modes:
 
 from __future__ import annotations
 
+import json
 import os
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Any
 
 from tests.regression.common.constants import (
     CASSETTE_MODE_ENV,
@@ -60,11 +62,41 @@ _SCRUB_HEADERS = (
 )
 
 
+def _canonical_body(body: object) -> str:
+    """Normalize a request body to a comparable string.
+
+    aiohttp hands vcrpy the *unserialized* body for GraphQL POSTs (a dict, from the `json=`
+    kwarg), while a replayed cassette holds the serialized text. vcrpy's own body matcher
+    assumes text and raises on the dict, so both sides are normalized here: JSON is compared
+    as a key-order-independent structure, anything else as plain text.
+    """
+    if body is None:
+        return ""
+    if isinstance(body, (bytes, bytearray)):
+        body = body.decode("utf-8", errors="replace")
+    if isinstance(body, str):
+        try:
+            body = json.loads(body)
+        except ValueError:
+            return body
+    return json.dumps(body, sort_keys=True)
+
+
+def _match_body(request_a: Any, request_b: Any) -> bool:
+    return _canonical_body(request_a.body) == _canonical_body(request_b.body)
+
+
 @contextmanager
-def use_cassette(cassette_path: Path) -> Iterator[None]:
+def use_cassette(
+    cassette_path: Path, filter_query_parameters: Sequence[str] = ()
+) -> Iterator[None]:
     """Wrap a block of code so all aiohttp + httpx traffic flows through vcrpy.
 
     In live mode this is a no-op context manager — requests hit the real APIs.
+
+    `filter_query_parameters` names query-string keys to scrub before recording (PubMed and
+    openFDA carry their API key there, not in a header). Scrubbed keys are also dropped from
+    the match, so leaving the default empty keeps existing cassettes matching as recorded.
     """
     mode = get_mode()
     if mode == CASSETTE_MODE_LIVE:
@@ -81,10 +113,20 @@ def use_cassette(cassette_path: Path) -> Iterator[None]:
     recorder = vcr.VCR(
         record_mode=_vcr_record_mode(mode),
         filter_headers=list(_SCRUB_HEADERS),
-        # Match on method + URI + body so that LLM calls with different prompts
-        # are treated as distinct requests during replay.
-        match_on=("method", "scheme", "host", "port", "path", "query", "body"),
+        filter_query_parameters=list(filter_query_parameters),
         decode_compressed_response=True,
+    )
+    recorder.register_matcher("json_aware_body", _match_body)
+    # Match on method + URI + body so that LLM calls with different prompts
+    # are treated as distinct requests during replay.
+    recorder.match_on = (
+        "method",
+        "scheme",
+        "host",
+        "port",
+        "path",
+        "query",
+        "json_aware_body",
     )
     with recorder.use_cassette(str(cassette_path)):
         yield

@@ -40,11 +40,13 @@ test:
 	pytest tests/unit/
 	$(OK) "unit tests"
 
-# Offline half of the regression suite: the deterministic evidence-gate tests and
-# the report-diff unit tests. No network, no LLM, no DB. The structural specs are
-# not here — they need freshly generated reports (see regression-reports).
+# Offline half of the regression suite: the data-source contract tests, the
+# deterministic evidence-gate tests and the report-diff unit tests. No network,
+# no LLM, no DB. The structural specs are not here — they need freshly generated
+# reports (see regression-reports).
 test-regression:
 	$(START) "offline regression tests"
+	pytest -m contract tests/regression/layer0_contracts/
 	pytest tests/regression/layer1_deterministic/ tests/regression/pipeline_replay/test_compare_reports.py
 	$(OK) "offline regression tests"
 

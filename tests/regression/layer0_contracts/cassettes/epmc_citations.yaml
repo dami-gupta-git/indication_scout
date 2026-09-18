@@ -1,0 +1,42 @@
+interactions:
+- request:
+    body: null
+    headers: {}
+    method: GET
+    uri: https://www.ebi.ac.uk/europepmc/webservices/rest/search?format=json&pageSize=40&query=%28EXT_ID%3A39215927+OR+EXT_ID%3A27633186%29+AND+SRC%3AMED
+  response:
+    body:
+      string: "{\"version\":\"6.9\",\"hitCount\":2,\"request\":{\"queryString\":\"(EXT_ID:39215927
+        OR EXT_ID:27633186) AND SRC:MED\",\"resultType\":\"lite\",\"cursorMark\":\"*\",\"pageSize\":40,\"sort\":\"\",\"synonym\":false},\"resultList\":{\"result\":[{\"id\":\"39215927\",\"source\":\"MED\",\"pmid\":\"39215927\",\"doi\":\"10.1007/s10735-024-10252-y\",\"title\":\"Metformin
+        protects against small intestine damage induced by diabetes and dunning's
+        prostate cancer: A biochemical and histological study.\",\"authorString\":\"Dagsuyu
+        E, Koroglu P, Bulan OK, Gul IB, Yanardag R.\",\"journalTitle\":\"J Mol Histol\",\"issue\":\"6\",\"journalVolume\":\"55\",\"pubYear\":\"2024\",\"journalIssn\":\"1567-2379;
+        1567-2387; \",\"pageInfo\":\"1093-1105\",\"pubType\":\"journal article\",\"isOpenAccess\":\"N\",\"inEPMC\":\"N\",\"inPMC\":\"N\",\"citedByCount\":1,\"hasReferences\":\"Y\",\"hasTextMinedTerms\":\"Y\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"N\",\"hasBook\":\"N\",\"hasSuppl\":\"N\",\"hasLabsLinks\":\"N\",\"hasTMAccessionNumbers\":\"N\",\"firstPublicationDate\":\"2024-08-31\",\"firstIndexDate\":\"2024-09-02\"},{\"id\":\"27633186\",\"source\":\"MED\",\"pmid\":\"27633186\",\"doi\":\"10.1056/nejmoa1607141\",\"title\":\"Semaglutide
+        and Cardiovascular Outcomes in Patients with Type 2 Diabetes.\",\"authorString\":\"Marso
+        SP, Bain SC, Consoli A, Eliaschewitz FG, J\xF3dar E, Leiter LA, Lingvay I,
+        Rosenstock J, Seufert J, Warren ML, Woo V, Hansen O, Holst AG, Pettersson
+        J, Vilsb\xF8ll T, SUSTAIN-6 Investigators.\",\"journalTitle\":\"N Engl J Med\",\"issue\":\"19\",\"journalVolume\":\"375\",\"pubYear\":\"2016\",\"journalIssn\":\"0028-4793;
+        1533-4406; \",\"pageInfo\":\"1834-1844\",\"pubType\":\"multicenter study;
+        randomized controlled trial; journal article\",\"isOpenAccess\":\"N\",\"inEPMC\":\"N\",\"inPMC\":\"N\",\"citedByCount\":4961,\"hasReferences\":\"Y\",\"hasTextMinedTerms\":\"Y\",\"hasDbCrossReferences\":\"N\",\"hasPDF\":\"N\",\"hasBook\":\"N\",\"hasSuppl\":\"N\",\"hasLabsLinks\":\"Y\",\"hasTMAccessionNumbers\":\"Y\",\"tmAccessionTypeList\":{\"accessionType\":[\"nct\"]},\"firstPublicationDate\":\"2016-09-15\",\"firstIndexDate\":\"2016-09-17\"}]}}"
+    headers:
+      Connection:
+      - keep-alive
+      Content-Type:
+      - application/json;charset=UTF-8
+      Date:
+      - Fri, 18 Sep 2026 02:04:04 GMT
+      Set-Cookie:
+      - JSESSIONID=0682B665DC894250D28CDE06C0AAD731; Path=/europepmc/webservices/rest;
+        Secure; HttpOnly
+      Transfer-Encoding:
+      - chunked
+      Vary:
+      - accept-encoding
+      content-length:
+      - '1905'
+      strict-transport-security:
+      - max-age=31536000; includeSubDomains
+    status:
+      code: 200
+      message: ''
+version: 1

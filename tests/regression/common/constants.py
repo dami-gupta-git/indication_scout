@@ -12,6 +12,7 @@ REGRESSION_DIR = Path(
 ).parent.parent  # tests/regression (this file is in common/)
 GOLD_STANDARD_DIR = REGRESSION_DIR / "gold_standard"
 CASSETTE_DIR = REGRESSION_DIR / "pipeline_replay" / "cassettes"
+CONTRACT_CASSETTE_DIR = REGRESSION_DIR / "layer0_contracts" / "cassettes"
 
 CASSETTE_MODE_ENV = "SCOUT_CASSETTE_MODE"
 CASSETTE_MODE_REPLAY = "replay"
