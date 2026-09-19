@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from pathlib import Path
-
 import pytest
 
 from indication_scout.data_sources.pubmed import PubMedClient
+from tests.regression.layer0_contracts.conftest import ContractClient
 
 pytestmark = pytest.mark.contract
 
 
-async def test_search_returns_recorded_pmids(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
-) -> None:
-    with cassette("pubmed_search"):
-        async with PubMedClient(cache_dir=contract_cache_dir) as client:
-            pmids = await client.search("semaglutide alzheimer", max_results=10)
+async def test_search_returns_recorded_pmids(contract_client: ContractClient) -> None:
+    async with contract_client(PubMedClient, "pubmed_search") as client:
+        pmids = await client.search("semaglutide alzheimer", max_results=10)
 
     assert pmids == [
         "39780249",
@@ -34,11 +29,10 @@ async def test_search_returns_recorded_pmids(
 
 
 async def test_fetch_abstracts_parses_every_field(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
+    contract_client: ContractClient,
 ) -> None:
-    with cassette("pubmed_abstracts"):
-        async with PubMedClient(cache_dir=contract_cache_dir) as client:
-            articles = await client.fetch_abstracts(["39215927"])
+    async with contract_client(PubMedClient, "pubmed_abstracts") as client:
+        articles = await client.fetch_abstracts(["39215927"])
 
     assert len(articles) == 1
     article = articles[0]

@@ -21,6 +21,7 @@ from collections.abc import Iterator, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
+from weakref import WeakKeyDictionary
 
 from tests.regression.common.constants import (
     CASSETTE_MODE_ENV,
@@ -61,6 +62,9 @@ _SCRUB_HEADERS = (
     "cookie",
 )
 
+# PubMed and openFDA carry their API key as a query parameter rather than a header.
+SCRUB_QUERY_PARAMS = ("api_key",)
+
 
 def _canonical_body(body: object) -> str:
     """Normalize a request body to a comparable string.
@@ -82,8 +86,22 @@ def _canonical_body(body: object) -> str:
     return json.dumps(body, sort_keys=True)
 
 
+# vcrpy rescans every stored interaction for each incoming request (twice, via
+# can_play_response_for then play_response), so canonicalizing on each comparison is
+# quadratic in interactions x body size. Canonicalize each stored interaction once instead.
+_CANONICAL_BODIES: WeakKeyDictionary[Any, str] = WeakKeyDictionary()
+
+
+def _request_canonical_body(request: Any) -> str:
+    cached = _CANONICAL_BODIES.get(request)
+    if cached is None:
+        cached = _canonical_body(request.body)
+        _CANONICAL_BODIES[request] = cached
+    return cached
+
+
 def _match_body(request_a: Any, request_b: Any) -> bool:
-    return _canonical_body(request_a.body) == _canonical_body(request_b.body)
+    return _request_canonical_body(request_a) == _request_canonical_body(request_b)
 
 
 @contextmanager
@@ -115,18 +133,20 @@ def use_cassette(
         filter_headers=list(_SCRUB_HEADERS),
         filter_query_parameters=list(filter_query_parameters),
         decode_compressed_response=True,
+        # Match on method + URI + body so that LLM calls with different prompts
+        # are treated as distinct requests during replay.
+        match_on=(
+            "method",
+            "scheme",
+            "host",
+            "port",
+            "path",
+            "query",
+            "json_aware_body",
+        ),
     )
+    # vcrpy resolves matcher names when the cassette is entered, so registering after
+    # construction is fine.
     recorder.register_matcher("json_aware_body", _match_body)
-    # Match on method + URI + body so that LLM calls with different prompts
-    # are treated as distinct requests during replay.
-    recorder.match_on = (
-        "method",
-        "scheme",
-        "host",
-        "port",
-        "path",
-        "query",
-        "json_aware_body",
-    )
     with recorder.use_cassette(str(cassette_path)):
         yield

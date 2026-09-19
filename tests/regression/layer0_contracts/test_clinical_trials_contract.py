@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from pathlib import Path
-
 import pytest
 
 from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
+from tests.regression.layer0_contracts.conftest import ContractClient
 
 pytestmark = pytest.mark.contract
 
 
-async def test_get_trial_parses_every_field(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
-) -> None:
-    with cassette("ct_trial"):
-        async with ClinicalTrialsClient(cache_dir=contract_cache_dir) as client:
-            trial = await client.get_trial("NCT04971785")
+async def test_get_trial_parses_every_field(contract_client: ContractClient) -> None:
+    async with contract_client(ClinicalTrialsClient, "ct_trial") as client:
+        trial = await client.get_trial("NCT04971785")
 
     assert trial.nct_id == "NCT04971785"
     assert trial.title.startswith("Study of Semaglutide, and Cilofexor/Firsocostat")

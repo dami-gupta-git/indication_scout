@@ -5,22 +5,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from pathlib import Path
-
 import pytest
 
 from indication_scout.data_sources.open_targets import OpenTargetsClient
+from tests.regression.layer0_contracts.conftest import ContractClient
 
 pytestmark = pytest.mark.contract
 
 
-async def test_get_drug_parses_metformin(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
-) -> None:
-    with cassette("ot_drug"):
-        async with OpenTargetsClient(cache_dir=contract_cache_dir) as client:
-            drug = await client.get_drug("CHEMBL1431")
+async def test_get_drug_parses_metformin(contract_client: ContractClient) -> None:
+    async with contract_client(OpenTargetsClient, "ot_drug") as client:
+        drug = await client.get_drug("CHEMBL1431")
 
     assert drug.chembl_id == "CHEMBL1431"
     assert drug.drug_type == "Small molecule"
@@ -57,12 +52,9 @@ async def test_get_drug_parses_metformin(
     assert event.log_likelihood_ratio == pytest.approx(27686.59554770874)
 
 
-async def test_get_target_data_parses_glp1r(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
-) -> None:
-    with cassette("ot_target"):
-        async with OpenTargetsClient(cache_dir=contract_cache_dir) as client:
-            target = await client.get_target_data("ENSG00000112164")
+async def test_get_target_data_parses_glp1r(contract_client: ContractClient) -> None:
+    async with contract_client(OpenTargetsClient, "ot_target") as client:
+        target = await client.get_target_data("ENSG00000112164")
 
     assert target.target_id == "ENSG00000112164"
     assert target.symbol == "GLP1R"

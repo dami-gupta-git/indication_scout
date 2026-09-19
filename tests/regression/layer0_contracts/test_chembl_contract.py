@@ -2,22 +2,17 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from pathlib import Path
-
 import pytest
 
 from indication_scout.data_sources.chembl import ChEMBLClient
+from tests.regression.layer0_contracts.conftest import ContractClient
 
 pytestmark = pytest.mark.contract
 
 
-async def test_get_molecule_parses_metformin(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
-) -> None:
-    with cassette("chembl_molecule"):
-        async with ChEMBLClient(cache_dir=contract_cache_dir) as client:
-            molecule = await client.get_molecule("CHEMBL1431")
+async def test_get_molecule_parses_metformin(contract_client: ContractClient) -> None:
+    async with contract_client(ChEMBLClient, "chembl_molecule") as client:
+        molecule = await client.get_molecule("CHEMBL1431")
 
     assert molecule.molecule_chembl_id == "CHEMBL1431"
     assert molecule.pref_name == "metformin"
@@ -37,11 +32,10 @@ async def test_get_molecule_parses_metformin(
 
 
 async def test_get_atc_description_parses_full_hierarchy(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
+    contract_client: ContractClient,
 ) -> None:
-    with cassette("chembl_atc"):
-        async with ChEMBLClient(cache_dir=contract_cache_dir) as client:
-            atc = await client.get_atc_description("A10BG03")
+    async with contract_client(ChEMBLClient, "chembl_atc") as client:
+        atc = await client.get_atc_description("A10BG03")
 
     assert atc.level1 == "A"
     assert atc.level1_description == "ALIMENTARY TRACT AND METABOLISM"

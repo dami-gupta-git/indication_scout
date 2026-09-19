@@ -108,3 +108,6 @@ scripts/validation/*
 !scripts/validation/probe_ot_score_rank.py
 validation/logs/
 .chart-data*
+
+# Agent skills installer lockfile
+skills-lock.json

@@ -2,22 +2,19 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterator
-from pathlib import Path
-
 import pytest
 
 from indication_scout.data_sources.fda import FDAClient
+from tests.regression.layer0_contracts.conftest import ContractClient
 
 pytestmark = pytest.mark.contract
 
 
 async def test_get_label_indications_returns_one_string_per_label(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
+    contract_client: ContractClient,
 ) -> None:
-    with cassette("fda_labels"):
-        async with FDAClient(cache_dir=contract_cache_dir) as client:
-            indications = await client.get_label_indications("pioglitazone")
+    async with contract_client(FDAClient, "fda_labels") as client:
+        indications = await client.get_label_indications("pioglitazone")
 
     assert len(indications) == 5
     assert all(
@@ -27,11 +24,10 @@ async def test_get_label_indications_returns_one_string_per_label(
 
 
 async def test_get_label_safety_parses_boxed_warnings(
-    cassette: Callable[[str], Iterator[None]], contract_cache_dir: Path
+    contract_client: ContractClient,
 ) -> None:
-    with cassette("fda_labels"):
-        async with FDAClient(cache_dir=contract_cache_dir) as client:
-            records = await client.get_label_safety("pioglitazone")
+    async with contract_client(FDAClient, "fda_labels") as client:
+        records = await client.get_label_safety("pioglitazone")
 
     assert len(records) == 5
     record = records[0]
