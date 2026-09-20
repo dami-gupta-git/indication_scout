@@ -1,17 +1,9 @@
-"""Standalone harness: does the LLM judge the development STAGE correctly from raw trial
-details alone (phase + status), applying clinical-trial conventions it already knows — WITHOUT
-being handed a precomputed dev_stage?
+"""Can the LLM judge dev-stage from raw phase+status alone, without a precomputed dev_stage? Hard
+cases: Phase 4 is post-approval, not progression past Phase 3; a completed "Phase 2/Phase 3" counts
+as completed Phase 3; unknown-status and withdrawn Phase 3s don't count as completed.
 
-The question this settles: can we drop the deterministic dev_stage and just say "apply the
-phase conventions you know"? The hard cases are the ones that recurred this session:
-  - Phase 4 ranks ABOVE Phase 3 numerically but is POST-APPROVAL, not progression. A completed
-    Phase 4 alongside a Phase 2 must NOT read as "past Phase 3".
-  - A completed "Phase 2/Phase 3" DOES count as a completed Phase 3 (it has a Phase 3 arm).
-  - An UNKNOWN-status Phase 3 is "on record, status unknown", not a completed Phase 3.
-  - A WITHDRAWN Phase 3 never ran — not "a Phase 3 on record".
-
-Each case lists trials; the model must return one tier label. We score against EXPECTED.
-Run N times per case to measure consistency (the real failure mode is drift, not ignorance).
+Each case lists trials, model returns one tier label, scored against EXPECTED. Run N times per
+case — the failure mode is drift, not ignorance.
 
 Run: .venv/bin/python tests/harness_tests/dev_stage_judgment_harness.py
 """

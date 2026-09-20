@@ -1,15 +1,5 @@
-"""Standalone harness for _render_active_programs (services/dev_stage): does the deterministic
-"active programs" summary line describe each trial's status HONESTLY?
-
-The label had a recurring failure mode: it collapsed statuses that are NOT "recruiting/ongoing"
-into either "active" or "None active", overstating what we know.
-  - NOT_YET_RECRUITING is a PLANNED program, not an ongoing one — must not read as "active".
-  - UNKNOWN status is NOT confirmed inactive — "None active" over it asserts an inactivity we
-    cannot confirm; it must be surfaced as "status unknown".
-  - COMPLETED / TERMINATED / WITHDRAWN are known-inactive and stay silent (never listed).
-
-Each case builds a relevant trial set and asserts the exact rendered line. Pure/deterministic —
-no LLM, no network.
+"""Asserts _render_active_programs never overstates trial status: NOT_YET_RECRUITING must not
+read as "active", UNKNOWN must not read as "None active". Pure/deterministic, no LLM/network.
 
 Run: PYTHONPATH=src python tests/harness_tests/active_programs_render_harness.py
 """

@@ -1,16 +1,7 @@
-"""Signal-ablation harness for per-trial relevance tagging.
-
-Question: which trial fields let the LLM reliably + completely tag each trial
-RELEVANT vs CONTAMINATED for sildenafil × (systemic) hypertension? The registry
-search recalls PAH/PH trials (a distinct disease sildenafil is already approved
-for) plus other-drug trials (sitaxsentan etc.). MeSH is known unreliable — it
-tags an Alzheimer's trial "PAH" and an ED trial "Hypertension".
-
-Two conditions, one batched LLM call each (forced per-trial verdict):
-  A. mesh-only   — current baseline; expected to under-perform
-  B. title+interventions+summary — candidate fix
-
-Scored vs hand labels: COVERAGE (every trial tagged?) and ACCURACY (tags right?).
+"""Signal-ablation harness: which trial fields let the LLM reliably tag each trial relevant vs
+contaminated for sildenafil × systemic hypertension, given MeSH is known unreliable (tags an
+Alzheimer's trial "PAH", an ED trial "Hypertension")? Compares mesh-only baseline vs
+title+interventions+summary, scored against hand labels for coverage and accuracy.
 
 Run: .venv/bin/python tests/harness_tests/trial_relevance_harness.py
 """

@@ -1,14 +1,9 @@
-"""Measure how reliably the ranking critic demotes a withdrawn-only / animal-only candidate below a
-human-observational one — the humira × asthma vs CRMO case.
+"""Measures how reliably the ranking critic demotes a withdrawn-only/animal-only candidate below a
+human-observational one (humira × asthma vs CRMO): asthma's FACT has a withdrawn trial plus
+animal-only literature, and we test whether "a trial exists" wrongly outweighs those caveats.
 
-Uses THREE candidates (asthma, CRMO, T1DM) to match what the live run feeds the critic. Asthma's
-FACT carries the real tension: dev_stage untested BUT "1 trial on record" (withdrawn), plus
-animal/in-vitro-only literature — so we test whether "a trial exists" wrongly outweighs the
-withdrawn + animal caveats.
-
-Drives the REAL critic prompt (_RANKING_CRITIC_SYSTEM) in the exact FACT-block + blurbs format
-_run_fact_critic builds. Real disease names (the critic must rank on the FACTs regardless).
-PASS = CRMO ranked above asthma.
+Drives the real critic prompt (_RANKING_CRITIC_SYSTEM) in the exact FACT-block + blurbs format
+_run_fact_critic builds. PASS = CRMO ranked above asthma.
 
 Run: .venv/bin/python tests/harness_tests/critic_reorder_animal_withdrawn_harness.py [model]
 """

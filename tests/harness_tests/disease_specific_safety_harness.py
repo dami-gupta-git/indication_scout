@@ -1,13 +1,7 @@
-"""Harness: can an LLM reliably tell a DISEASE-SPECIFIC safety signal from a generic drug-wide one?
-
-Motivation: the safety pass fetches drug-level + disease-scoped adverse-event abstracts. We want a
-per-candidate "disease-specific safety" flag for the ranking summary table — but only if the
-classification is reliable. First pass (a loose prompt) scored 3/6, over-calling disease-specific
-for generic harms merely STUDIED in a disease's patients (aspirin/warfarin bleeding). This harness
-iterates on the prompt against a labeled case set.
-
-Each case: (drug, disease, expected disease_specific). Abstracts come from the live safety_search
-(drug-level [Majr] + disease-scoped), so the harness tests the real input the pipeline would give.
+"""Can an LLM reliably tell a disease-specific safety signal from a generic drug-wide one? A loose
+first-pass prompt scored 3/6, over-calling disease-specific for generic harms merely studied in a
+disease's patients (aspirin/warfarin bleeding). Iterates the prompt against a labeled case set,
+using abstracts from the live safety_search so the input matches production.
 
 Run: .venv/bin/python tests/harness_tests/disease_specific_safety_harness.py [runs]
 """

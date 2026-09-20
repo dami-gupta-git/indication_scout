@@ -1,11 +1,7 @@
-"""Test that the ranking critic REORDERS a bad order (not just confirms a good one).
-
-Bug: imatinib run put GBM (strong, CONTRADICTS, closed — disproven) at #1 over live candidates.
-The supervisor's ranking is variance-prone; the restored critic (_RANKING_CRITIC_SYSTEM) is the
-guard. This harness feeds the critic a DELIBERATELY WRONG order (the disproven candidate first) in
-the exact FACT-block + blurbs format the code uses, and asserts the critic moves the
-tested-and-failed / closed candidate to last, keeping the live ones on top — by reasoning, not a
-spelled-out rule.
+"""Tests that the ranking critic REORDERS a bad order, not just confirms a good one. Bug: imatinib
+run put GBM (strong, contradicts, closed/disproven) at #1 over live candidates. Feeds the critic
+a deliberately wrong order in the exact FACT-block + blurbs format the code uses, and asserts it
+moves the closed candidate to last.
 
 Run: .venv/bin/python tests/harness_tests/critic_reorder_harness.py [model]
 """

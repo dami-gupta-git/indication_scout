@@ -1,21 +1,7 @@
-"""Test the proposed UPSTREAM 4-way approval-relationship classifier.
-
-Today get_fda_approved_disease_mapping returns a bool per candidate ("approved?"). The plan is to
-widen that single label-grounded LLM call to return one of four labels per candidate, decided once
-and carried as data — instead of the supervisor re-deriving demotion in free-text prose each run
-(the source of the T1DM/NAFLD flip-flopping).
-
-Labels:
-  approved          — same condition, synonym, OR a narrower CHILD/subset of a labeled
-                      indication (patients already covered)              → DROP upstream
-  combination_only  — labeled only as part of a combo product           → demote
-  contaminated      — broader candidate that contains a supplied approved indication
-                                                                         → KEEP ranked + suppress tables
-  none              — sibling / related-family / unrelated candidate     → KEEP, rank normally
-
-Only "approved" removes a candidate. "contaminated" and "none" are BOTH kept and ranked — the only
-difference is whether the trial tables are trustworthy. This kills the "demoted a real candidate"
-class of bugs (systemic HTN for sildenafil, NAFLD, T1DM all stay ranked).
+"""Tests the upstream 4-way approval-relationship classifier (approved / combination_only /
+contaminated / none), decided once and carried as data instead of the supervisor re-deriving
+demotion in free-text prose each run (source of the T1DM/NAFLD flip-flopping). Only "approved"
+drops a candidate; "contaminated" and "none" stay ranked, differing only in trial-table trust.
 
 Run: .venv/bin/python tests/harness_tests/approval_relationship_harness.py [model]
 """

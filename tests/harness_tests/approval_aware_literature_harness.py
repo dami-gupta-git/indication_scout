@@ -1,23 +1,9 @@
-"""Harness: APPROVAL-AWARE literature strength.
+"""Extension to judge_literature_strength: papers studying an APPROVED sub-indication of a broad
+candidate must not count toward its strength (evidence_basis="approved", not drug_specific).
+Anchor: bupropion x "mood disorder" — a MeSH-ancestor search pulls in MDD/SAD papers, which are
+already-approved evidence, not repurposing evidence for the broader umbrella term.
 
-Tests the planned extension to judge_literature_strength — given the drug's APPROVED indications,
-papers studying an APPROVED sub-indication of a broad candidate must NOT count toward the
-candidate's strength (they are already-approved evidence, not repurposing evidence for the broader
-term). The literature analogue of the trial relevance gate dropping approved-sub-indication trials.
-
-The case that motivated it (bupropion x "mood disorder"): "mood disorder" is a broad umbrella over
-APPROVED sub-indications MDD and SAD. A MeSH-ancestor search pulls in MDD/SAD papers; if they count
-toward strength, the broad candidate looks better-evidenced than its genuinely-broader (e.g.
-bipolar) evidence warrants.
-
-What we assert per case:
-  - approved_basis: when the ONLY relevant drug-specific abstracts are about APPROVED
-    sub-indications, evidence_basis must be "approved" (new value) — NOT drug_specific — and
-    strength must drop out of {strong, moderate}.
-  - control (no approved list / genuinely-broader evidence): unchanged drug_specific grading.
-
-Real abstracts pulled by PMID from the pgvector pubmed_abstracts table (same text the pipeline
-sees). Run N times to catch drift; gate before wiring.
+Real abstracts pulled by PMID from pgvector. Run N times to catch drift; gate before wiring.
 
 Run: .venv/bin/python tests/harness_tests/approval_aware_literature_harness.py [model]
 """

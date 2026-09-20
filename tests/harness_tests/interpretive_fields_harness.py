@@ -1,15 +1,7 @@
-"""Harness: does an ISOLATED call that is HANDED the authoritative facts (stage,
-active_programs, literature) and asked ONLY for the interpretive fields (constraint, key_risk,
-assessment) stay consistent with those facts — i.e. NOT contradict the stage?
-
-The bug (reports 17:15 .. 17:30): in the 8-field blurb pass the LLM writes "no dedicated
-Phase 2/3 program" / "exploratory only" in constraint/key_risk/assessment even though Stage
-says "Phase 3 completed" and active_programs lists 6 recruiting Phase 3s. Prompt rules in the
-big pass don't hold. This tests whether a focused call, given the facts as INPUT, behaves.
-
-Pass = the three interpretive fields contain NO phase-tier understatement that contradicts the
-given stage (no "no dedicated Phase 2/3 program", "exploratory only", "Phase 4 only", "post-
-Phase 2", "no Phase 3", etc. when stage says a Phase 3 is completed/active).
+"""Does an isolated call handed the authoritative facts (stage, active_programs, literature) and
+asked only for constraint/key_risk/assessment stay consistent with the given stage? Bug: the
+combined 8-field blurb pass wrote "no dedicated Phase 2/3 program" even when stage said Phase 3 was
+completed with 6 recruiting. Pass = no phase-tier understatement contradicting the fed stage.
 
 Run: .venv/bin/python tests/harness_tests/interpretive_fields_harness.py
 """

@@ -1,15 +1,7 @@
-"""Test the interpretive call with PRODUCTION-shaped approval inputs (not the harness's clean
-hand-typed prose). The plan feeds two things for approval:
-  - relationship: the LLM-judged approval_relationship Literal (best-effort, constrained enum)
-  - approved_indication: ApprovalCheck.matched_indication (typed FDA-label fact) or None
-
-Open question being settled: is feeding the LLM-set enum safe, and does the call avoid
-over-claiming approval (e.g. NOT writing "approved for this indication" when it is NOT)?
-
-Checks per case:
-  (1) no phase-tier understatement contradicting the stage  [_BAD list, gated on asserts_phase3]
-  (2) no FALSE approval claim: if approved_indication is None, the fields must not say the drug
-      is "approved for" THIS indication.
+"""Runs the interpretive call with production-shaped approval inputs (the LLM-judged
+approval_relationship enum plus ApprovalCheck.matched_indication or None) and checks it doesn't
+understate a completed-Phase-3 stage and doesn't falsely claim "approved for this indication" when
+approved_indication is None.
 
 Run: .venv/bin/python tests/harness_tests/approval_input_harness.py
 """

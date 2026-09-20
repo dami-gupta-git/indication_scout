@@ -1,13 +1,7 @@
-"""End-to-end test of the STAGED blurb pipeline on real-shaped data:
-
-  real trials + literature
-      -> stage 1: judge_dev_stage  (stage tier + active_programs)        [existing service]
-      -> stage 2: judge_interpretive (constraint, key_risk, assessment, prose, fed stage-1 out)
-      -> assemble the full card
-
-Proves the CHAIN (not just isolated stages) yields an internally-consistent card with no
-phase contradictions. If this holds on the T1DM shape that broke every monolithic run, the
-staged-synthesis redesign is validated.
+"""End-to-end test of the staged blurb pipeline (judge_dev_stage -> judge_interpretive, fed the
+stage-1 output -> assemble) on real trial+literature data, proving the chain (not just isolated
+stages) yields an internally-consistent card with no phase contradictions on the T1DM shape that
+broke every monolithic run.
 
 Run: .venv/bin/python tests/harness_tests/staged_blurb_harness.py
 """

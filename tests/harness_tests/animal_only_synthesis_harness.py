@@ -1,20 +1,9 @@
-"""B3 gate: can the synthesize/grading call ALSO emit an accurate `is_animal_only` flag from the
-abstracts it already reads — no new PubMed/MeSH fetch?
+"""B3 gate: can the synthesize call also emit a reliable `is_animal_only` flag (true only if every
+relevant study is animal/in-vitro, false if any is human, null if no relevant evidence) from the
+abstracts it already reads, no new fetch? Motivated by adalimumab×asthma ranking #1 on a murine-only
+study (PMID 24882395) that the ranking critic couldn't demote for lack of an animal-vs-human signal.
 
-Context (humira run, 2026-07-10): adalimumab×asthma ranked #1 despite its only supporting study
-being a murine OVA model (PMID 24882395); the ranking critic couldn't demote it because the
-FACT/ranking string has no animal-vs-human descriptor. Fix option B3: since synthesize already reads
-the abstract text in-context, have it additionally return `is_animal_only`. This harness tests
-whether that added field is RELIABLE before we wire it into the model + retrieval path.
-
-is_animal_only semantics under test:
-  - true  : ALL relevant drug-specific studies are animal/in-vitro (no human clinical/observational).
-  - false : at least one relevant HUMAN study (RCT, cohort, case series, observational).
-  - null  : no relevant drug-specific evidence to grade (don't fabricate).
-
-Pulls REAL abstracts from the pgvector pubmed_abstracts table (same text synthesize saw). N runs per
-case to catch drift. If this passes, B3 is viable and the plan's animal-only item is a one-field add
-to synthesize.txt + EvidenceSummary. If it drifts, fall back to B1 (MeSH fetch).
+Pulls real abstracts from the pgvector pubmed_abstracts table. N runs per case to catch drift.
 
 Run: .venv/bin/python tests/harness_tests/animal_only_synthesis_harness.py [model]
 """

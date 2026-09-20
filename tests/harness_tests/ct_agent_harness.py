@@ -1,15 +1,6 @@
-"""Standalone harness: send a drug × disease into the REAL clinical_trials agent and
-dump (a) the raw message-history response and (b) the assembled ClinicalTrialsOutput —
-i.e. the DECISION the agent made (summary verdict + relevance split + derived signals).
-
-Purpose: this is the data we need to carry faithfully up to the supervisor. The harness
-runs the agent exactly as the supervisor does (build_clinical_trials_agent +
-run_clinical_trials_agent, same ChatAnthropic config as analysis_runner.build_agent),
-with no supervisor pipeline in between.
-
-Two REAL agent runs per case: one raw invoke (to print the message history) and one via
-run_clinical_trials_agent (to print the typed decision through the production assembly
-path). temperature=0 but tool I/O is live, so the two runs can differ slightly.
+"""Sends a drug x disease into the real clinical_trials agent (same build/run path the supervisor
+uses, no supervisor pipeline) and dumps the raw message history plus the assembled
+ClinicalTrialsOutput decision, to inspect the data carried up to the supervisor.
 
 Run: .venv/bin/python tests/harness_tests/ct_agent_harness.py "metformin" "polycystic ovary syndrome"
      .venv/bin/python tests/harness_tests/ct_agent_harness.py        # runs the built-in A1/A2 cases

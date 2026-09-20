@@ -1,12 +1,6 @@
-"""Isolated harness for the A2 critic-rewrite step ONLY — no supervisor, no finalize.
-
-Builds the exact prompt critique_ranking sends (per-disease FACT block + full blurbs as
-JSON), calls the real critic LLM with _RANKING_CRITIC_SYSTEM, and checks that it:
-  - REWRITES a false "no Phase 3 trials" claim when FACT says a completed Phase 3 is on record,
-  - LEAVES a true "no regulatory/NDA program" claim untouched (the trial-vs-program distinction),
-  - LEAVES fields alone when FACT says no completed Phase 3.
-
-Each case is hand-labeled: which field should change, which must NOT. Scored pass/fail.
+"""Isolated harness for the A2 critic-rewrite step: builds the exact prompt critique_ranking sends
+and checks it rewrites a false "no Phase 3 trials" claim when FACT says a completed Phase 3 is on
+record, while leaving a true "no regulatory/NDA program" claim untouched.
 
 Run: .venv/bin/python tests/harness_tests/critic_rewrite_harness.py
 """

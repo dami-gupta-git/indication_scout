@@ -1,23 +1,10 @@
-"""Test whether the relevance gate rejects trials whose STUDIED object is not the drug.
+"""Does the relevance gate reject trials whose studied object is not the drug? Bug: metformin's
+NCT02440893 (sole intervention is a diagnostic test) and NCT03122769 (11C-metformin PET tracer,
+intervention type Radiation) were tagged relevant — TEST 0 only covers the case where ANOTHER DRUG
+is the subject, not a diagnostic/device/tracer, so the verdict fell back on the title.
 
-Anchor bug (metformin, 2026-09-07 run): NCT02440893 ("Understanding the Effect of Metformin on
-Corus CAD") was tagged RELEVANT under coronary artery disorder and CONTAMINATED under
-cardiovascular disorder. Metformin is not a registered intervention at all — the sole intervention
-is a diagnostic test, and the primary outcome is whether metformin shifts the test's gene-expression
-score. The same run counted NCT03122769 (an 11C-metformin PET tracer study) as heart-failure
-evidence; its only intervention is of type Radiation.
-
-TEST 0 asks whether this drug is the studied/experimental agent, but its clauses only cover the case
-where ANOTHER DRUG is the subject. Nothing covers a trial whose subject is a diagnostic test, a
-device, or a tracer, so the verdict falls back on the title — and both titles read as metformin
-trials.
-
-Feeds the REAL clinical_trials.txt as the system prompt and the REAL row formatter, so the rows are
-shaped exactly as production sends them (including intervention types). Every trial is a real
-ClinicalTrials.gov record; interventions, phases and summaries are transcribed from the v2 API.
-
-Batched per candidate disease, matching production: each disease is classified in its own call, so a
-contaminated verdict cannot be earned on a disease mismatch the gate would have caught anyway.
+Feeds the real clinical_trials.txt prompt and row formatter with real CT.gov records, batched per
+disease as in production.
 
 Run: .venv/bin/python tests/harness_tests/trial_relevance_nontherapeutic_harness.py [model]
 """

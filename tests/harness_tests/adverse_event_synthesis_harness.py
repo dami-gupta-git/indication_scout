@@ -1,20 +1,7 @@
-"""Standalone harness: does the new ADVERSE-EVENT grounding rule (candidate prompt) change the
-synthesis verdict, and where — across the whole seed corpus?
-
-The bug it targets (snapshot minoxidil_2026-06-15_23-27-28.md, Diabetes Mellitus): synthesize cited
-PMID 6985752 ("Minoxidil." review) as a *contradicting* signal because the abstract lists "diabetes
-mellitus" inside an adverse-effect enumeration — a bare AE-list term, not a causal/clinical study.
-The candidate prompt (tests/harness_tests/prompts/adverse_event_synthesis_prompt.txt) adds rule #5: an AE-list disease
-mention is NOT evidence for/against repurposing and must not anchor the assessment.
-
-WIDE TEST: sweep every disease in every seed_examples/*.json, run BOTH prompts (current
-synthesize.txt vs candidate) N times each, and report only the pairs where they DIVERGE — by
-modal direction, or by supporting/contradicting PMID sets. This surfaces both the intended fixes
-(AE-list → none) and any REGRESSIONS (the rule wrongly suppressing genuine harm evidence, e.g.
-minoxidil x atherosclerosis, which is a real contraindication and must stay "contradicts").
-
-Abstracts are read straight from the seed JSON (the same text synthesize saw — no DB / no
-embeddings). Each pair's modal verdict across N runs is compared.
+"""Sweeps the seed corpus running current vs candidate synthesize.txt (adds rule #5: a bare
+adverse-event-list disease mention, e.g. PMID 6985752 listing "diabetes mellitus" as an AE, is not
+evidence for/against repurposing) and reports only pairs whose verdict diverges — catching both the
+intended fix and regressions (e.g. minoxidil x atherosclerosis must stay "contradicts").
 
 Run: .venv/bin/python tests/harness_tests/adverse_event_synthesis_harness.py [model] [runs] [--all]
        --all  print every pair, not just divergent ones

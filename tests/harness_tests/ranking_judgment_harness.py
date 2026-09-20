@@ -1,14 +1,7 @@
-"""Test the new LLM-judgment supervisor RANKING (no critique_ranking guard).
-
-The supervisor prompt now hands ranking to the LLM instead of a fixed tier ladder. This harness
-feeds the REAL supervisor.txt as the system prompt plus a synthetic per-candidate label block in
-the EXACT shape the supervisor sees at ranking time (dev_stage tier + completed/active Phase 3 +
-contaminated-excluded count + closure verdict + literature strength/direction/design/basis), and
-asks ONLY for the ranked disease order. No tools, no critique step — this isolates whether the
-prompt alone produces a sensible order from the labels.
-
-Each case lists candidates (already de-identified to invented diseases to avoid the model leaning
-on real-world priors) and an `expect` predicate over the returned order.
+"""Tests the LLM-judgment supervisor ranking alone (no critique_ranking guard, no tools): feeds the
+real supervisor.txt plus a synthetic per-candidate label block in the exact shape the supervisor
+sees at ranking time, and checks whether the prompt alone produces a sensible order. Candidates use
+invented disease names to avoid the model leaning on real-world priors.
 
 Run: .venv/bin/python tests/harness_tests/ranking_judgment_harness.py [model]
 """

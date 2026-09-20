@@ -1,14 +1,7 @@
-"""Test that the supervisor's `watch` blurb field only cites THIS candidate's own NCTs.
-
-Bug observed (semaglutide run): Parkinson (#3, "None active", only trial NCT03659682) got
-"Watch: NCT06082063" — a Type 1 Diabetes trial. An NCT from one candidate's trial set leaked into
-another candidate's watch line. `watch` is LLM-authored in supervisor.txt; the fix is a one-line
-prompt rule ("before citing an NCT, check it belongs to THIS candidate's trials").
-
-This harness feeds the REAL supervisor.txt as the system prompt and several candidates, each with
-its OWN distinct NCT ids, then asks for blurbs with watch lines. It asserts that each candidate's
-watch cites ONLY its own NCTs — never another candidate's. The crux candidate (Parkinson-shape) has
-NO active trial, so its watch should be empty.
+"""Tests that the supervisor's `watch` blurb field only cites THIS candidate's own NCTs. Bug:
+semaglutide's Parkinson candidate (no active trial) got "Watch: NCT06082063", an NCT that belonged
+to a different candidate. Feeds the real supervisor.txt prompt with several candidates each holding
+distinct NCT ids, and asserts no cross-candidate leakage.
 
 Run: .venv/bin/python tests/harness_tests/watch_nct_harness.py [model]
 """

@@ -1,20 +1,10 @@
-"""Standalone harness: when the CT trial-section summary is FED the already-resolved
-development STAGE (the authoritative dev_stage phrase), does the prose stop contradicting it?
+"""When the CT trial-section summary is fed the already-resolved dev_stage, does the prose stop
+contradicting it? Bug (semaglutide T1DM run): the in-loop summary judged the tier itself and wrote
+"no completed Phase 3" while dev_stage said Phase 3 was completed. Checks the fed-stage prose never
+contradicts the tier, and judges closure correctly (closed only on a Phase 3 terminated for
+safety/benefit:risk).
 
-The bug this settles (snapshot semaglutide_2026-06-14_18-58-57.md, T1DM): the in-loop summary
-judged the tier on its own and wrote "no completed Phase 3 specifically for T1DM" while the
-authoritative dev_stage said "Phase 3 completed" (a completed Phase 2/Phase 3 counts). The fix
-is to author the prose AFTER the stage is resolved and FEED it that stage so it cannot
-contradict it.
-
-This harness proves the fed-the-stage prose:
-  1. NEVER writes a tier-contradiction (e.g. "no completed Phase 3", "no dedicated Phase 3
-     program", "Phase 4 / exploratory only") when the fed stage says a completed Phase 3 exists.
-  2. Judges CLOSURE correctly (live vs closed): closed ONLY on a relevant Phase 3 terminated for
-     safety/benefit:risk; an old/off-patent drug with no approval is NOT closure.
-
-It mirrors the prompt that services/clinical_trials_summary.py will carry. Run N times per case
-to catch drift, not just ignorance.
+Mirrors the prompt services/clinical_trials_summary.py carries. Run N times per case for drift.
 
 Run: .venv/bin/python tests/harness_tests/ct_summary_harness.py [model] [subset]
 """

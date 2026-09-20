@@ -1,13 +1,7 @@
-"""Test the THERAPEUTIC-INTENT clause of the per-trial relevance gate (TEST 2).
-
-Anchor bug: sildenafil × systemic hypertension, NCT02620995 ("Sildenafil on Penile Vascular
-Function in Hypertensive Men With Erectile Dysfunction") was tagged RELEVANT to systemic
-hypertension. ED is sildenafil's approved indication; hypertension only names the POPULATION, not
-the treatment target -> CONTAMINATION. The gate now has a therapeutic-intent clause in TEST 2.
-
-Feeds the REAL clinical_trials.txt as the system prompt and a synthetic batch: the NCT02620995
-shape + a genuine systemic-HTN trial (relevant control) + a PAH distinct-disease trial
-(contaminated) + an ED-only trial (contaminated, approved indication).
+"""Tests the therapeutic-intent clause of the per-trial relevance gate (TEST 2): sildenafil ×
+systemic hypertension, NCT02620995 ("...in Hypertensive Men With Erectile Dysfunction") was tagged
+relevant when hypertension only names the population, not the treatment target (ED is the approved
+indication) -> should be contamination. Feeds the real clinical_trials.txt prompt plus controls.
 
 Run: .venv/bin/python tests/harness_tests/trial_relevance_intent_harness.py [model]
 """

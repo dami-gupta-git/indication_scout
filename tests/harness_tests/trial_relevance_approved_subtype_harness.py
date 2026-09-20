@@ -1,14 +1,7 @@
-"""Test TEST 1 (approved-subtype) of the per-trial relevance gate after the clarity refactor +
-multi-condition rule.
-
-Anchor bug: semaglutide × NAFLD, NCT04639414 ("combined active treatment in type 2 diabetes with
-NASH") flipped from contaminated (correct — NASH is the approved subtype) to relevant across runs.
-The compound "T2DM with NASH" condition let the model latch on T2DM and miss the NASH subtype. The
-refactor adds: a trial contaminates if ANY listed condition is the approved subtype.
-
-Feeds the REAL clinical_trials.txt as the system prompt and a synthetic batch (the NCT04639414
-shape + regression anchors: severity-qualifier NASH, broad NAFLD kept, T1D sibling kept, PAH
-distinct, NSCLC minority-biomarker kept, wrong-drug). Approved = "MASH (NASH) with fibrosis".
+"""Tests TEST 1 (approved-subtype) of the per-trial relevance gate: semaglutide × NAFLD,
+NCT04639414 ("T2DM with NASH") flipped from contaminated to relevant because the model latched on
+T2DM and missed the NASH subtype. The fix: a trial contaminates if ANY listed condition is the
+approved subtype. Feeds the real clinical_trials.txt prompt plus regression-anchor controls.
 
 Run: .venv/bin/python tests/harness_tests/trial_relevance_approved_subtype_harness.py [model]
 """

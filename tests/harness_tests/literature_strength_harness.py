@@ -1,20 +1,9 @@
-"""Standalone harness: does an ISOLATED call judge DRUG-SPECIFIC literature strength correctly —
-not inflating to "strong" when the strong RCTs are for OTHER drugs in the same class?
+"""Does an isolated call judge drug-specific literature strength correctly, without inflating to
+"strong" on other-drug class-level RCTs? Bug: semaglutide×Parkinson graded "strong" off
+lixisenatide/exenatide/NLY01 RCTs while the only semaglutide abstract was off-topic (depression).
+Class-level evidence must surface as evidence_basis="class_level", never as drug strength.
 
-The bug (snapshot semaglutide_2026-06-14_19-41-15.md, Parkinson): synthesize set
-strength="strong" while its own prose said "no direct clinical evidence for semaglutide in
-Parkinson's disease" — the strong RCTs are lixisenatide / exenatide / NLY01, and the one
-semaglutide abstract is for depression. Strength must grade THIS DRUG's evidence; class-level
-(other-drug) evidence is surfaced as evidence_basis="class_level", never as drug strength.
-
-This harness pulls the REAL abstracts (by PMID) from the pgvector pubmed_abstracts table — the
-same text synthesize saw — and runs the isolated call. Crux cases:
-  - Parkinson (the bug): class-level GLP-1 RCTs + 1 off-topic semaglutide(depression) abstract
-    → evidence_basis="class_level", strength NOT "strong".
-  - T1DM: two genuine semaglutide RCTs → drug_specific, strength strong/moderate.
-  - NASH: semaglutide RCTs, mixed fibrosis → drug_specific, direction mixed.
-
-Run N times per case to catch drift. Gate before any wiring.
+Real abstracts pulled by PMID from pgvector. Run N times per case to catch drift; gate before wiring.
 
 Run: .venv/bin/python tests/harness_tests/literature_strength_harness.py [model]
 """

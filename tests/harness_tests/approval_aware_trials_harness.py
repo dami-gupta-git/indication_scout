@@ -1,25 +1,10 @@
-"""Harness: APPROVAL-AWARE clinical-trials relevance gate.
+"""Extension to the CT relevance gate: a trial whose condition is an APPROVED sub-indication of a
+broad candidate must be CONTAMINATION, not relevant roll-up evidence. Anchor: bupropion x "mood
+disorder" — CT.gov's MeSH-ancestor match pulls in the approved-SAD trial NCT00046241, which the
+current roll-up rule wrongly marks relevant. Generalizes the CURATED_CONTAMINATED_NCTS hardcode.
 
-Tests the planned extension to the CT relevance gate (prompts/clinical_trials.txt) — given the
-drug's APPROVED indications, a trial whose condition is an APPROVED sub-indication of a BROAD
-candidate must be classified CONTAMINATION, not relevant evidence that rolls up into the parent.
-The trial analogue of the literature harness's approved-sub-indication exclusion.
-
-The case that motivated it (bupropion x "mood disorder"): "mood disorder" is a broad umbrella over
-APPROVED sub-indications MDD and SAD. CT.gov AREA[ConditionMeshTerm] matches via MeSH ancestors, so
-the umbrella query pulls in the approved-SAD trial NCT00046241; the current relevance rule ("a
-narrower subtype rolls up") marks it RELEVANT — propping up the broad candidate's dev-stage signal
-with already-approved evidence. Today this is patched by the CURATED_CONTAMINATED_NCTS hardcode;
-this harness gates the GENERAL rule that subsumes it.
-
-What we assert per case:
-  - approved-subtype contamination: a trial about an APPROVED sub-indication of a BROAD candidate
-    must be verdict "contaminated" — NOT relevant — once the approved list is supplied.
-  - control (no approved list, OR a genuinely-narrower non-approved subtype, OR a sibling): the
-    trial keeps its normal roll-up verdict; the exclusion must NOT over-fire.
-
-Trial records are REAL (pulled by NCT from CT.gov), embedded as literals so the harness is offline
-and stable. Run N times to catch drift; gate before wiring the prompt change.
+Trial records are real (pulled by NCT from CT.gov), embedded as literals for offline/stable runs.
+Run N times to catch drift; gate before wiring.
 
 Run: .venv/bin/python tests/harness_tests/approval_aware_trials_harness.py [model]
 """
