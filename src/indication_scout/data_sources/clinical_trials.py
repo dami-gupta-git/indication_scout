@@ -87,6 +87,14 @@ class ClinicalTrialsClient(BaseClient):
         Args:  nct_id: The NCT identifier (e.g., "NCT04971785")
         Returns: Trial object with all available data
         """
+        cache_params = {
+            "nct_id": nct_id,
+            "trial_schema_version": "arm_groups_v1",
+        }
+        cached = cache_get("ct_trial", cache_params, self.cache_dir)
+        if cached is not None:
+            return Trial.model_validate(cached)
+
         url = f"{self.BASE_URL}/{nct_id}"
         params = {"format": "json"}
         data = await self._rest_get(url, params)
@@ -94,7 +102,17 @@ class ClinicalTrialsClient(BaseClient):
         if not data:
             raise DataSourceError(self._source_name, f"No trial found for '{nct_id}'")
 
-        return self._parse_trial(data)
+        trial = self._parse_trial(data)
+        # Only the success path is cached: a missing NCT ID must re-raise on every call rather
+        # than remembering an absence that may be temporary upstream.
+        cache_set(
+            "ct_trial",
+            cache_params,
+            trial.model_dump(mode="json"),
+            self.cache_dir,
+            ttl=CLINICAL_TRIALS_CACHE_TTL,
+        )
+        return trial
 
     # ------------------------------------------------------------------
     # Public: search_trials (all-status pair query: counts + reviewed union)

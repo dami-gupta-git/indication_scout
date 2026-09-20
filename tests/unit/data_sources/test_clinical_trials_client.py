@@ -2,6 +2,9 @@
 
 from unittest.mock import AsyncMock, patch
 
+import pytest
+
+from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
 from indication_scout.models.model_clinical_trials import (
     Intervention,
@@ -468,3 +471,64 @@ async def test_get_landscape_calls_fetch_and_count_total(tmp_path):
     expected_cond = 'AREA[ConditionMeshTerm]"Gastroparesis"'
     assert mock_fetch.await_args.args[0] == expected_cond
     assert mock_count.await_args.kwargs["indication"] == expected_cond
+
+
+# ------------------------------------------------------------------
+# get_trial — file cache
+# ------------------------------------------------------------------
+
+
+async def test_get_trial_serves_second_call_from_cache(tmp_path):
+    """A repeat get_trial for the same NCT ID returns an equal Trial without a second request."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+    study = _make_study("NCT04971785", overall_status="COMPLETED")
+
+    with patch.object(
+        client, "_rest_get", new=AsyncMock(return_value=study)
+    ) as mock_get:
+        first = await client.get_trial("NCT04971785")
+        second = await client.get_trial("NCT04971785")
+
+    assert mock_get.await_count == 1
+    assert first == second
+    assert second.nct_id == "NCT04971785"
+    assert (tmp_path / "ct_trial").is_dir()
+
+
+async def test_get_trial_does_not_collide_across_nct_ids(tmp_path):
+    """Two different NCT IDs cache separately and each issues its own request."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+    studies = {
+        "NCT00000001": _make_study("NCT00000001", intervention_name="Drug A"),
+        "NCT00000002": _make_study("NCT00000002", intervention_name="Drug B"),
+    }
+
+    async def fake_rest_get(url, params):
+        return studies[url.rsplit("/", 1)[1]]
+
+    with patch.object(
+        client, "_rest_get", new=AsyncMock(side_effect=fake_rest_get)
+    ) as mock_get:
+        first = await client.get_trial("NCT00000001")
+        second = await client.get_trial("NCT00000002")
+        first_again = await client.get_trial("NCT00000001")
+
+    assert mock_get.await_count == 2
+    assert first.nct_id == "NCT00000001"
+    assert second.nct_id == "NCT00000002"
+    assert first_again == first
+    assert len(list((tmp_path / "ct_trial").glob("*.json"))) == 2
+
+
+async def test_get_trial_does_not_cache_missing_trial(tmp_path):
+    """An empty response raises every time — absence is never cached."""
+    client = ClinicalTrialsClient(cache_dir=tmp_path)
+
+    with patch.object(client, "_rest_get", new=AsyncMock(return_value={})) as mock_get:
+        with pytest.raises(DataSourceError):
+            await client.get_trial("NCT99999999")
+        with pytest.raises(DataSourceError):
+            await client.get_trial("NCT99999999")
+
+    assert mock_get.await_count == 2
+    assert not (tmp_path / "ct_trial").exists()
