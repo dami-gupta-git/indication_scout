@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Note: I am on a time crunch. Do not examine or suggest minute items. But main functionality should work.
 
 ## Design
-When asked to propose a design for a task, make sure that the design should be as simple as appropriate. Documentation should also be brief and to the point. Do not repeat statements.
+When asked to propose a design for a task, make sure that the design should be as simple as appropriate. For writing or editing any markdown document, follow `.claude/skills/writedocs/SKILL.md`.
 
 ## Communication
 Be brief by default. Judge for yourself what level of detail the moment calls for — a quick fix gets a quick answer, a design question gets real discussion. Cut preamble, recaps, and narration of your own process regardless of length.
@@ -174,9 +174,10 @@ When creating a plan:
 
 ## Plan Tracking Workflow
 - When asked to design, plan, spec, or scope a feature, first read `.claude/skills/plan/SKILL.md` and follow it.
-- When asked to design or plan a feature, write the plan to `PLAN_<something>.md` in the **project root** as a checklist (`- [ ]` items) before touching any code.
+- When asked to design or plan a feature, write the plan to `docs/plans/open/PLAN_<something>.md` as a checklist (`- [ ]` items) before touching any code. Never write a plan to the project root.
 - Every phase of the plan states how it will be verified — the tests to write, CI changes needed, and what "working" looks like.
-- While implementing, mark each step complete (`- [x]`) in `PLAN_<something>.md` as it is finished.
+- While implementing, mark each step complete (`- [x]`) in the plan file as it is finished.
+- When every item in a plan is ticked, move it to `docs/plans/done/`. A plan in `open/` with unticked items is the work still outstanding.
 
 ## Design & Implementation Guidelines
 - Favor clear, explicit control flow over clever patterns.

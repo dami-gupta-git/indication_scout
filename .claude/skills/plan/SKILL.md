@@ -22,10 +22,14 @@ source files.
 3. **Survey the existing code.** Name the files the plan will touch and the existing patterns it
    must follow. A plan that reinvents an existing helper is a defect.
 
-4. **Write the plan** to `PLAN_<name>.md` in the project root, in the format below.
+4. **Write the plan** to `docs/plans/open/PLAN_<name>.md`, in the format below. Never write a plan to
+   the project root.
 
 5. **Stop.** Do not implement until told to. Once implementing, tick items off in the plan file as
    each is finished.
+
+6. **On completion.** When every phase in the plan is checked off, ask the user whether the plan
+   file should be moved to `docs/plans/done/`. If yes, move it there.
 
 ## Plan format
 
