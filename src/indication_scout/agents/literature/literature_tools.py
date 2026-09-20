@@ -15,6 +15,7 @@ from indication_scout.config import get_settings
 from indication_scout.data_sources.chembl import resolve_drug_name
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.services.drug_safety import DrugSafetyService
 from indication_scout.services.retrieval import AbstractResult, RetrievalService
 
 _settings = get_settings()
@@ -25,6 +26,8 @@ logger = logging.getLogger(__name__)
 def build_literature_tools(
     svc: RetrievalService,
     db: Session,
+    *,
+    safety_svc: DrugSafetyService,
     date_before: date | None = None,
     approved_indications: list[str] | None = None,
     drug_profile: DrugProfile | None = None,
@@ -151,10 +154,10 @@ def build_literature_tools(
             chembl_id
         )
         store["drug_profile"] = drug_profile
-        safety_results = await svc.safety_search(
+        safety_results = await safety_svc.safety_search(
             chembl_id, date_before=date_before, disease=disease_name
         )
-        safety = await svc.summarize_safety(
+        safety = await safety_svc.summarize_safety(
             chembl_id,
             disease_name,
             drug_profile,
@@ -162,7 +165,7 @@ def build_literature_tools(
             date_before=date_before,
         )
         # Disease-specific: does the safety literature report a harm for THIS indication?
-        harm, harm_summary, harm_pmids = await svc.classify_indication_harm(
+        harm, harm_summary, harm_pmids = await safety_svc.classify_indication_harm(
             chembl_id, disease_name, safety_results.disease_scoped
         )
         store["safety_summary"] = safety.safety_summary

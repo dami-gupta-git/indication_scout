@@ -34,6 +34,7 @@ from indication_scout.services.cost_tracking import (
     CostTrackingCallback,
     candidate_cost_scope,
 )
+from indication_scout.services.drug_safety import DrugSafetyService
 from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -117,6 +118,9 @@ async def run_pair_analysis(
         callbacks=[CostTrackingCallback(settings.llm_model)],
     )
     svc = RetrievalService(DEFAULT_CACHE_DIR)
+    # One safety service for this run, shared by the literature agent below (see build_supervisor_tools for why it is not
+    # built per candidate).
+    safety_svc = DrugSafetyService(DEFAULT_CACHE_DIR)
     # One shared sessionmaker (single engine/pool). Only the literature agent uses a DB session, and it must get its own
     # per-call session — a SQLAlchemy Session is not safe across the concurrent gather below.
     session_factory = make_session_factory()
@@ -137,6 +141,7 @@ async def run_pair_analysis(
                 llm=llm,
                 svc=svc,
                 db=call_db,
+                safety_svc=safety_svc,
                 date_before=date_before,
                 approved_indications=list(intake.approved_indications),
             )

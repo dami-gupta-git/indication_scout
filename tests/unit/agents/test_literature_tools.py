@@ -10,7 +10,8 @@ from indication_scout.agents.literature.literature_tools import build_literature
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.models.model_safety import DrugSafetyAssessment
-from indication_scout.services.retrieval import AbstractResult, SafetySearchResult
+from indication_scout.services.drug_safety import SafetySearchResult
+from indication_scout.services.retrieval import AbstractResult
 
 logger = logging.getLogger(__name__)
 
@@ -92,15 +93,21 @@ def _make_svc() -> MagicMock:
     svc.expand_search_terms = AsyncMock(return_value=SEARCH_TERMS)
     svc.fetch_and_cache = AsyncMock(return_value=PMIDS)
     svc.semantic_search = AsyncMock(return_value=SEMANTIC_RESULTS)
-    svc.safety_search = AsyncMock(return_value=SAFETY_RESULTS)
-    svc.summarize_safety = AsyncMock(return_value=SAFETY_ASSESSMENT)
-    svc.classify_indication_harm = AsyncMock(
-        return_value=(True, HARM_SUMMARY, HARM_PMIDS)
-    )
     # Fresh copy per call — the synthesize tool mutates the returned EvidenceSummary (merges in the
     # safety fields), so a shared module-level constant would leak state across tests.
     svc.synthesize = AsyncMock(side_effect=lambda *a, **k: EVIDENCE.model_copy())
     return svc
+
+
+def _make_safety_svc() -> MagicMock:
+    safety_svc = MagicMock()
+    safety_svc.cache_dir = Path("/tmp/test_cache")
+    safety_svc.safety_search = AsyncMock(return_value=SAFETY_RESULTS)
+    safety_svc.summarize_safety = AsyncMock(return_value=SAFETY_ASSESSMENT)
+    safety_svc.classify_indication_harm = AsyncMock(
+        return_value=(True, HARM_SUMMARY, HARM_PMIDS)
+    )
+    return safety_svc
 
 
 def _patch_resolve():
@@ -110,8 +117,10 @@ def _patch_resolve():
     )
 
 
-def _build(svc, **kwargs):
-    tools = build_literature_tools(svc=svc, db=MagicMock(), **kwargs)
+def _build(svc, safety_svc, **kwargs):
+    tools = build_literature_tools(
+        svc=svc, db=MagicMock(), safety_svc=safety_svc, **kwargs
+    )
     return {t.name: t for t in tools}
 
 
@@ -123,7 +132,8 @@ def _build(svc, **kwargs):
 async def test_build_drug_profile_calls_svc_and_returns_artifact():
     """build_drug_profile resolves drug_name → chembl_id and returns the DrugProfile as artifact."""
     svc = _make_svc()
-    tool_map = _build(svc)
+    safety_svc = _make_safety_svc()
+    tool_map = _build(svc, safety_svc)
 
     with _patch_resolve():
         msg = await tool_map["build_drug_profile"].ainvoke(
@@ -146,7 +156,8 @@ async def test_build_drug_profile_calls_svc_and_returns_artifact():
 async def test_build_drug_profile_reuses_injected_profile():
     """A run-scoped profile is returned without rebuilding it for this candidate."""
     svc = _make_svc()
-    tool_map = _build(svc, drug_profile=DRUG_PROFILE)
+    safety_svc = _make_safety_svc()
+    tool_map = _build(svc, safety_svc, drug_profile=DRUG_PROFILE)
 
     msg = await tool_map["build_drug_profile"].ainvoke(
         ToolCall(
@@ -172,7 +183,8 @@ async def test_build_drug_profile_reuses_injected_profile():
 async def test_expand_search_terms_uses_profile_from_store():
     """expand_search_terms reads drug_profile from store and does not call build_drug_profile."""
     svc = _make_svc()
-    tools = build_literature_tools(svc=svc, db=MagicMock())
+    safety_svc = _make_safety_svc()
+    tools = build_literature_tools(svc=svc, db=MagicMock(), safety_svc=safety_svc)
     tool_map = {t.name: t for t in tools}
     # Inject profile into the shared store via build_drug_profile side-effect
     # by calling build_drug_profile first so the store is populated
@@ -207,7 +219,8 @@ async def test_expand_search_terms_uses_profile_from_store():
 async def test_expand_search_terms_builds_profile_when_store_empty():
     """expand_search_terms calls svc.build_drug_profile when no profile is in the store."""
     svc = _make_svc()
-    tool_map = _build(svc)
+    safety_svc = _make_safety_svc()
+    tool_map = _build(svc, safety_svc)
 
     with _patch_resolve():
         await tool_map["expand_search_terms"].ainvoke(
@@ -230,7 +243,8 @@ async def test_expand_search_terms_builds_profile_when_store_empty():
 async def test_fetch_and_cache_reads_queries_from_store_and_returns_pmids():
     """fetch_and_cache reads queries written by expand_search_terms and returns PMIDs."""
     svc = _make_svc()
-    tools = build_literature_tools(svc=svc, db=MagicMock())
+    safety_svc = _make_safety_svc()
+    tools = build_literature_tools(svc=svc, db=MagicMock(), safety_svc=safety_svc)
     tool_map = {t.name: t for t in tools}
     # Populate store via expand_search_terms
     with _patch_resolve():
@@ -262,7 +276,8 @@ async def test_fetch_and_cache_reads_queries_from_store_and_returns_pmids():
 async def test_fetch_and_cache_returns_empty_when_no_queries():
     """fetch_and_cache returns early with an empty list and informative message when store has no queries."""
     svc = _make_svc()
-    tool_map = _build(svc)
+    safety_svc = _make_safety_svc()
+    tool_map = _build(svc, safety_svc)
 
     msg = await tool_map["fetch_and_cache"].ainvoke(
         ToolCall(
@@ -283,8 +298,11 @@ async def test_fetch_and_cache_passes_date_before():
     from datetime import date
 
     svc = _make_svc()
+    safety_svc = _make_safety_svc()
     cutoff = date(2020, 1, 1)
-    tools = build_literature_tools(svc=svc, db=MagicMock(), date_before=cutoff)
+    tools = build_literature_tools(
+        svc=svc, db=MagicMock(), safety_svc=safety_svc, date_before=cutoff
+    )
     tool_map = {t.name: t for t in tools}
     with _patch_resolve():
         await tool_map["expand_search_terms"].ainvoke(
@@ -316,7 +334,8 @@ async def test_fetch_and_cache_passes_date_before():
 async def test_semantic_search_reads_pmids_from_store_and_returns_results():
     """semantic_search reads PMIDs written by fetch_and_cache and returns ranked AbstractResults."""
     svc = _make_svc()
-    tools = build_literature_tools(svc=svc, db=MagicMock())
+    safety_svc = _make_safety_svc()
+    tools = build_literature_tools(svc=svc, db=MagicMock(), safety_svc=safety_svc)
     tool_map = {t.name: t for t in tools}
     # Populate store
     with _patch_resolve():
@@ -366,7 +385,8 @@ async def test_semantic_search_reads_pmids_from_store_and_returns_results():
 async def test_semantic_search_returns_empty_when_no_pmids():
     """semantic_search returns early with empty list when store has no PMIDs."""
     svc = _make_svc()
-    tool_map = _build(svc)
+    safety_svc = _make_safety_svc()
+    tool_map = _build(svc, safety_svc)
 
     with _patch_resolve():
         msg = await tool_map["semantic_search"].ainvoke(
@@ -393,7 +413,8 @@ async def test_safety_search_fetches_summarizes_and_classifies():
     disease), source-separated drug-wide summarization, and disease-scoped harm classification,
     returning an EvidenceSummary carrying both."""
     svc = _make_svc()
-    tools = build_literature_tools(svc=svc, db=MagicMock())
+    safety_svc = _make_safety_svc()
+    tools = build_literature_tools(svc=svc, db=MagicMock(), safety_svc=safety_svc)
     tool_map = {t.name: t for t in tools}
     with _patch_resolve():
         await tool_map["build_drug_profile"].ainvoke(
@@ -416,17 +437,17 @@ async def test_safety_search_fetches_summarizes_and_classifies():
         )
 
     svc.build_drug_profile.assert_not_awaited()  # profile came from the store
-    svc.safety_search.assert_awaited_once_with(
+    safety_svc.safety_search.assert_awaited_once_with(
         CHEMBL_ID, date_before=None, disease="colorectal cancer"
     )
-    svc.summarize_safety.assert_awaited_once_with(
+    safety_svc.summarize_safety.assert_awaited_once_with(
         CHEMBL_ID,
         "colorectal cancer",
         DRUG_PROFILE,
         SAFETY_RESULTS.combined,
         date_before=None,
     )
-    svc.classify_indication_harm.assert_awaited_once_with(
+    safety_svc.classify_indication_harm.assert_awaited_once_with(
         CHEMBL_ID, "colorectal cancer", SAFETY_RESULTS.disease_scoped
     )
 
@@ -447,7 +468,8 @@ async def test_safety_search_fetches_summarizes_and_classifies():
 async def test_safety_search_builds_profile_when_store_empty():
     """safety_search builds the drug profile on the fly when the store has none."""
     svc = _make_svc()
-    tool_map = _build(svc)
+    safety_svc = _make_safety_svc()
+    tool_map = _build(svc, safety_svc)
 
     with _patch_resolve():
         msg = await tool_map["safety_search"].ainvoke(
@@ -460,7 +482,7 @@ async def test_safety_search_builds_profile_when_store_empty():
         )
 
     svc.build_drug_profile.assert_awaited_once_with(CHEMBL_ID)
-    svc.safety_search.assert_awaited_once_with(
+    safety_svc.safety_search.assert_awaited_once_with(
         CHEMBL_ID, date_before=None, disease="colorectal cancer"
     )
     assert msg.artifact.safety_summary == SAFETY_SUMMARY
@@ -469,7 +491,8 @@ async def test_safety_search_builds_profile_when_store_empty():
 async def test_safety_search_no_signal_content_is_explicit():
     """No drug-level signal AND no indication harm → content says so explicitly."""
     svc = _make_svc()
-    svc.summarize_safety = AsyncMock(
+    safety_svc = _make_safety_svc()
+    safety_svc.summarize_safety = AsyncMock(
         return_value=DrugSafetyAssessment(
             regulatory_summary="",
             pharmacovigilance_summary="",
@@ -480,8 +503,8 @@ async def test_safety_search_no_signal_content_is_explicit():
             label_data_available=False,
         )
     )
-    svc.classify_indication_harm = AsyncMock(return_value=(None, "", []))
-    tool_map = _build(svc)
+    safety_svc.classify_indication_harm = AsyncMock(return_value=(None, "", []))
+    tool_map = _build(svc, safety_svc)
     with _patch_resolve():
         msg = await tool_map["safety_search"].ainvoke(
             ToolCall(
@@ -506,7 +529,8 @@ async def test_safety_search_no_signal_content_is_explicit():
 async def test_finalize_analysis_stores_summary_and_returns_artifact():
     """finalize_analysis returns the summary string as artifact and echoes it in content."""
     svc = _make_svc()
-    tool_map = _build(svc)
+    safety_svc = _make_safety_svc()
+    tool_map = _build(svc, safety_svc)
 
     text = "Metformin shows moderate evidence in colorectal cancer based on 2 RCTs."
     msg = await tool_map["finalize_analysis"].ainvoke(
@@ -531,7 +555,8 @@ async def test_synthesize_reads_abstracts_from_store_and_returns_evidence():
     """synthesize reads abstracts written by semantic_search, merges in safety_search's result
     (called first in the chain), and returns one EvidenceSummary carrying both."""
     svc = _make_svc()
-    tools = build_literature_tools(svc=svc, db=MagicMock())
+    safety_svc = _make_safety_svc()
+    tools = build_literature_tools(svc=svc, db=MagicMock(), safety_svc=safety_svc)
     tool_map = {t.name: t for t in tools}
     # Populate store through the full chain, including safety_search
     with _patch_resolve():
@@ -601,7 +626,8 @@ async def test_synthesize_defaults_safety_fields_when_safety_search_skipped():
     literature.txt — but must not crash), synthesize's EvidenceSummary defaults to ""/[] rather
     than fabricating a safety verdict."""
     svc = _make_svc()
-    tools = build_literature_tools(svc=svc, db=MagicMock())
+    safety_svc = _make_safety_svc()
+    tools = build_literature_tools(svc=svc, db=MagicMock(), safety_svc=safety_svc)
     tool_map = {t.name: t for t in tools}
     with _patch_resolve():
         await tool_map["expand_search_terms"].ainvoke(

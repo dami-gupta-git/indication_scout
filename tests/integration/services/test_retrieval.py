@@ -426,57 +426,6 @@ async def test_build_drug_profile_carries_opentargets_safety_signal(
     assert ae.log_likelihood_ratio is not None
 
 
-async def test_safety_search_fetches_drug_level_and_disease_scoped(svc):
-    """safety_search fetches the DRUG-LEVEL adverse-event pool ([Majr], citation-ranked) plus the
-    DISEASE-SCOPED pool, deduped. rofecoxib × colorectal cancer: the drug-wide pool surfaces the
-    landmark CV papers (APPROVe, PMID 15713943), and the disease-scoped query pulls colorectal-
-    context safety papers the drug-level pool alone misses."""
-    results = await svc.safety_search("CHEMBL122", disease="colorectal cancer")
-
-    assert len(results.combined) > 0, "expected safety abstracts"
-    pmids = {r.pmid for r in results.combined}
-    # APPROVe (the trial that got rofecoxib withdrawn) — a stable drug-level landmark.
-    assert "15713943" in pmids, f"expected APPROVe (15713943); got {sorted(pmids)[:10]}"
-
-
-async def test_summarize_safety_prod_reports_ot_signal_and_severity(svc):
-    """PRODUCTION summarize_safety returns a 3-tuple, states the OT-authoritative signal (rofecoxib
-    withdrawal / cardiovascular), cites only provided-pool PMIDs, and severity is 'withdrawn' from
-    the OT warning_type."""
-    profile = await svc.build_drug_profile("CHEMBL122")
-    abstracts = await svc.safety_search("CHEMBL122", disease="arthritis")
-
-    result = await svc.summarize_safety(
-        "CHEMBL122", "arthritis", profile, abstracts.combined
-    )
-
-    assert (
-        result.safety_summary != ""
-    ), "expected a non-empty safety summary for rofecoxib"
-    assert "withdrawn" in result.regulatory_summary.lower()
-    assert "not proof of causation" in result.pharmacovigilance_summary.lower()
-    assert result.safety_severity == "withdrawn"
-    assert result.safety_pmids == []
-
-
-async def test_classify_indication_harm_true_for_colorectal(svc):
-    """classify_indication_harm returns True + cited PMIDs when the disease-scoped literature
-    reports a harm for the indication. rofecoxib × colorectal has the APPROVe CV signal in
-    adenoma-prevention dosing — a disease-context harm."""
-    abstracts = await svc.safety_search("CHEMBL122", disease="colorectal cancer")
-
-    harm, summary, pmids = await svc.classify_indication_harm(
-        "CHEMBL122", "colorectal cancer", abstracts.disease_scoped
-    )
-
-    assert (
-        harm is True
-    ), "expected an indication-context harm for rofecoxib × colorectal"
-    assert summary != ""
-    pool = {r.pmid for r in abstracts.disease_scoped}
-    assert all(p in pool for p in pmids), f"cited PMIDs not in provenance pool: {pmids}"
-
-
 # --- embed_abstracts ---
 
 # PMID 21133896: sildenafil + diabetic nephropathy — stable journal article with title and abstract.

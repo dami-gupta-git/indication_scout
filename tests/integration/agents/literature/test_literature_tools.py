@@ -18,6 +18,7 @@ from indication_scout.agents.literature.literature_tools import build_literature
 from indication_scout.config import get_settings
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.services.drug_safety import DrugSafetyService
 from indication_scout.services.retrieval import AbstractResult, RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -84,8 +85,14 @@ def _tool_map(tools: list) -> dict:
     return {t.name: t for t in tools}
 
 
+def _safety_svc(svc: RetrievalService) -> DrugSafetyService:
+    return DrugSafetyService(svc.cache_dir)
+
+
 def _build_tools(svc: RetrievalService, db):
-    return build_literature_tools(svc, db, date_before=_CUTOFF)
+    return build_literature_tools(
+        svc, db, safety_svc=_safety_svc(svc), date_before=_CUTOFF
+    )
 
 
 async def test_build_drug_profile(db_session_truncating, test_cache_dir):
@@ -291,7 +298,9 @@ async def test_safety_search(db_session_truncating, test_cache_dir):
     """
     svc = RetrievalService(test_cache_dir)
     tools = _tool_map(
-        build_literature_tools(svc, db_session_truncating, date_before=None)
+        build_literature_tools(
+            svc, db_session_truncating, safety_svc=_safety_svc(svc), date_before=None
+        )
     )
 
     msg = await tools["safety_search"].ainvoke(
@@ -365,7 +374,12 @@ async def test_fetch_and_cache_respects_date_before(
 
     svc = RetrievalService(test_cache_dir)
     tools = _tool_map(
-        build_literature_tools(svc, db_session_truncating, date_before=_LIT_CUTOFF)
+        build_literature_tools(
+            svc,
+            db_session_truncating,
+            safety_svc=_safety_svc(svc),
+            date_before=_LIT_CUTOFF,
+        )
     )
 
     await tools["build_drug_profile"].ainvoke(
@@ -462,7 +476,12 @@ async def test_fetch_and_cache_cutoff_shift_narrows_result_set(
 
     async def _run(cutoff: date) -> list[str]:
         tools = _tool_map(
-            build_literature_tools(svc, db_session_truncating, date_before=cutoff)
+            build_literature_tools(
+                svc,
+                db_session_truncating,
+                safety_svc=_safety_svc(svc),
+                date_before=cutoff,
+            )
         )
         await tools["build_drug_profile"].ainvoke(
             _tc("build_drug_profile", drug_name=_CUTOFF_DRUG_LIT)

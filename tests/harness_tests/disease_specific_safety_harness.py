@@ -17,7 +17,7 @@ import logging
 
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.chembl import resolve_drug_name
-from indication_scout.services.retrieval import RetrievalService
+from indication_scout.services.drug_safety import DrugSafetyService
 
 logger = logging.getLogger(__name__)
 
@@ -69,7 +69,7 @@ CASES: list[tuple[str, str, bool]] = [
 ]
 
 
-async def _classify(svc: RetrievalService, drug: str, disease: str) -> bool | None:
+async def _classify(svc: DrugSafetyService, drug: str, disease: str) -> bool | None:
     chembl_id = await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
     safety_results = await svc.safety_search(chembl_id, disease=disease)
     verdict, _, _ = await svc.classify_indication_harm(
@@ -81,7 +81,7 @@ async def _classify(svc: RetrievalService, drug: str, disease: str) -> bool | No
 
 
 async def main() -> None:
-    svc = RetrievalService(cache_dir=DEFAULT_CACHE_DIR)
+    svc = DrugSafetyService(cache_dir=DEFAULT_CACHE_DIR)
     correct = 0
     for drug, disease, expect in CASES:
         verdict = await _classify(svc, drug, disease)

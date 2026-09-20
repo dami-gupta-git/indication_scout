@@ -36,6 +36,7 @@ from indication_scout.services.cost_tracking import (
     candidate_cost_scope,
     reset_cost_tracker,
 )
+from indication_scout.services.drug_safety import DrugSafetyService
 from indication_scout.services.retrieval import AbstractResult, RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -199,11 +200,14 @@ async def _run_fixed_arm(
     case: EvalCase,
     llm: ChatAnthropic,
     svc: RetrievalService,
+    safety_svc: DrugSafetyService,
     db: Any,
 ) -> LiteratureOutput:
     tools = {
         tool.name: tool
-        for tool in literature_tools.build_literature_tools(svc=svc, db=db)
+        for tool in literature_tools.build_literature_tools(
+            svc=svc, db=db, safety_svc=safety_svc
+        )
     }
     profile = await tools["build_drug_profile"].ainvoke(
         _tool_call("build_drug_profile", "profile", drug_name=case.drug)
@@ -284,6 +288,7 @@ async def _run_case(
     case: EvalCase,
     llm: ChatAnthropic,
     svc: RetrievalService,
+    safety_svc: DrugSafetyService,
     session_factory: Any,
 ) -> EvalCaseRun:
     tracker = CostTracker()
@@ -292,10 +297,12 @@ async def _run_case(
     try:
         with candidate_cost_scope(case.case_id), session_factory() as db:
             if arm == "agent":
-                agent = build_literature_agent(llm=llm, svc=svc, db=db)
+                agent = build_literature_agent(
+                    llm=llm, svc=svc, db=db, safety_svc=safety_svc
+                )
                 output = await run_literature_agent(agent, case.drug, case.disease)
             else:
-                output = await _run_fixed_arm(arm, case, llm, svc, db)
+                output = await _run_fixed_arm(arm, case, llm, svc, safety_svc, db)
     finally:
         reset_cost_tracker(token)
     elapsed = time.perf_counter() - started
@@ -345,6 +352,7 @@ async def _run(args: argparse.Namespace) -> None:
         callbacks=[CostTrackingCallback(settings.llm_model)],
     )
     svc = RetrievalService(args.cache_dir)
+    safety_svc = DrugSafetyService(args.cache_dir)
     session_factory = make_session_factory()
     try:
         runs = []
@@ -356,6 +364,7 @@ async def _run(args: argparse.Namespace) -> None:
                     case,
                     llm,
                     svc,
+                    safety_svc,
                     session_factory,
                 )
             )

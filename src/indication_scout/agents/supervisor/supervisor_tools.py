@@ -72,6 +72,7 @@ from indication_scout.services.approval_check import (
 )
 from indication_scout.services.cost_tracking import candidate_cost_scope
 from indication_scout.services.dev_stage import DEV_STAGE_PHRASE, dev_stage_phrase
+from indication_scout.services.drug_safety import DrugSafetyService
 from indication_scout.services.judge_interpretive import judge_interpretive
 from indication_scout.services.llm import parse_last_json_object, query_llm
 from indication_scout.services.progress import (
@@ -413,6 +414,11 @@ def build_supervisor_tools(
     # race on that mutable state. A fresh build per call isolates the closure state (graph compile only, no I/O — cheap
     # relative to the network/LLM work).
     mech_agent = build_mechanism_agent(llm=llm, date_before=date_before)
+
+    # One safety service per supervisor run, shared by every per-candidate literature agent. Its in-flight FDA-label task
+    # map dedups concurrent label fetches for the same drug; building one per candidate would narrow the dedup to a single
+    # candidate and let the concurrent fan-out fire identical openFDA requests on a cold cache.
+    safety_svc = DrugSafetyService(svc.cache_dir)
 
     # Closure-scoped allowlist — populated by find_candidates and analyze_mechanism, checked by analyze_literature /
     # analyze_clinical_trials.
@@ -893,6 +899,7 @@ def build_supervisor_tools(
                 llm=llm,
                 svc=svc,
                 db=call_db,
+                safety_svc=safety_svc,
                 date_before=date_before,
                 approved_indications=approved_indications,
                 drug_profile=drug_profile,

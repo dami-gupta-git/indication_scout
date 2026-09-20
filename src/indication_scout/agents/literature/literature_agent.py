@@ -21,6 +21,7 @@ from indication_scout.agents._react_loop import (
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.literature.literature_tools import build_literature_tools
 from indication_scout.models.model_drug_profile import DrugProfile
+from indication_scout.services.drug_safety import DrugSafetyService
 from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,8 @@ def build_literature_agent(
     llm: BaseChatModel,
     svc: RetrievalService,
     db: Session,
+    *,
+    safety_svc: DrugSafetyService,
     date_before: date | None = None,
     approved_indications: list[str] | None = None,
     drug_profile: DrugProfile | None = None,
@@ -47,6 +50,7 @@ def build_literature_agent(
     tools = build_literature_tools(
         svc,
         db,
+        safety_svc=safety_svc,
         date_before=date_before,
         approved_indications=approved_indications,
         drug_profile=drug_profile,

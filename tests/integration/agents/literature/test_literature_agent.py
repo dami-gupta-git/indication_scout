@@ -16,6 +16,7 @@ from indication_scout.agents.literature.literature_agent import (
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.config import get_settings
 from indication_scout.models.model_evidence_summary import EvidenceSummary
+from indication_scout.services.drug_safety import DrugSafetyService
 from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
@@ -73,10 +74,12 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
     """
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
     svc = RetrievalService(test_cache_dir)
+    safety_svc = DrugSafetyService(test_cache_dir)
     agent = build_literature_agent(
         llm,
         svc,
         db_session_truncating,
+        safety_svc=safety_svc,
         date_before=_CUTOFF,
     )
 
@@ -154,10 +157,12 @@ async def test_random_literature_agent(db_session_truncating, test_cache_dir):
 
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
     svc = RetrievalService(test_cache_dir)
+    safety_svc = DrugSafetyService(test_cache_dir)
     agent = build_literature_agent(
         llm,
         svc,
         db_session_truncating,
+        safety_svc=safety_svc,
         date_before=_CUTOFF,
     )
     test_cache_dir = "abc"
