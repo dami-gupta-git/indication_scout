@@ -1,14 +1,18 @@
 """Integration tests for ClinicalTrialsClient."""
 
+import json
+
 import pytest
 
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     _classify_stop_reason,
 )
 from indication_scout.data_sources.base_client import DataSourceError
+from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
 from indication_scout.models.model_clinical_trials import (
     MeshTerm,
     TerminatedTrialsResult,
+    Trial,
 )
 
 # --- Main functionality ---
@@ -122,6 +126,32 @@ async def test_get_trial(clinical_trials_client):
         trial.primary_outcomes[0].time_frame
         == "at the time of definitive surgery; after four 3-week cycles (3-4 months)"
     )
+
+
+async def test_get_trial_caches_live_response(tmp_path):
+    """A live get_trial writes one cache entry that round-trips to the same Trial.
+
+    Runs against an isolated cache dir so the first call is always a real API fetch. The disk
+    round-trip is the part unit tests with synthetic studies cannot cover: it checks that a
+    response carrying the live field shapes survives model_dump/model_validate unchanged.
+    """
+    async with ClinicalTrialsClient(cache_dir=tmp_path) as client:
+        fetched = await client.get_trial("NCT00127933")
+        from_cache = await client.get_trial("NCT00127933")
+
+    assert fetched == from_cache
+    assert fetched.nct_id == "NCT00127933"
+    assert fetched.enrollment == 157
+    assert len(fetched.interventions) == 5
+
+    entries = list((tmp_path / "ct_trial").glob("*.json"))
+    assert len(entries) == 1
+    stored = json.loads(entries[0].read_text())
+    assert stored["params"] == {
+        "nct_id": "NCT00127933",
+        "trial_schema_version": "arm_groups_v1",
+    }
+    assert Trial.model_validate(stored["data"]) == fetched
 
 
 @pytest.mark.parametrize(

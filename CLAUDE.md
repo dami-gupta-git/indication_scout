@@ -39,6 +39,17 @@ At the start of every session, for context, first read these files
 - Entries are **appended** to the current session file, never rewritten. See `skills/session.md` for the format and rules.
 - A context-threshold hook asks for an entry at 50 and 80 percent of the window. Write when asked, and at natural milestones without waiting.
 
+## Weekly Goals
+
+- The current week's goals live in `goals/GOALS_FOR_<ISO week>.md` (e.g. `goals/GOALS_FOR_2026-W38.md`).
+- Before implementing any `PLAN_*.md`, read that file and state in one line which goal the work serves, naming its slug. If it
+  serves none, say so and name what the work is instead.
+- Make the statement even when the work is clearly in scope. A silent session is then recognisable as a missed check rather than
+  a pass.
+- If the current week has no goals file, say so and ask whether to write one. Never infer the week's goals from an earlier week
+  or from the work in progress.
+- This is a warning, not a gate. Work that serves no current goal still proceeds once it has been named.
+
 ## Build & Development Commands
 
 ```bash
@@ -129,8 +140,8 @@ tests/
 - Do not refactor or "clean up" code unless explicitly asked.
 - Prioritize **correctness** and safety over speed or brevity of implementation.
 - Prefer small, incremental changes over large rewrites, unless explicitly requested.
-- Do NOT modify existing logic without explicitly asking me first.
-- When you identify a logic change is needed, describe what you want to change and wait for approval.
+- Change existing logic when it is part of what I asked for; report what behaviour changed. Ask first if the change is outside the ask, or alters scientific/clinical output or a public interface.
+- Once I say implement, finish without checking in. Resolve ambiguity yourself and report the assumption at the end.
 - Only make the specific changes I request - no "while I'm here" improvements.
 - If you see potential bugs or improvements, list them separately rather than fixing automatically.
 - When asked to make changes, only make those changes, do not introduce new functionality without getting approval.
