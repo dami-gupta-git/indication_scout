@@ -11,7 +11,7 @@ interactions:
         data is accurate, you should assume all results are unvalidated. We may limit
         or otherwise restrict your access to the API in line with our Terms of Service.\",\n
         \   \"terms\": \"https://open.fda.gov/terms/\",\n    \"license\": \"https://open.fda.gov/license/\",\n
-        \   \"last_updated\": \"2026-09-17\",\n    \"results\": {\n      \"skip\":
+        \   \"last_updated\": \"2026-09-18\",\n    \"results\": {\n      \"skip\":
         0,\n      \"limit\": 5,\n      \"total\": 52\n    }\n  },\n  \"results\":
         [\n    {\n      \"spl_product_data_elements\": [\n        \"PIOGLITAZONE HYDROCHLORIDE
         pioglitazone hydrochloride PIOGLITAZONE HYDROCHLORIDE PIOGLITAZONE CARBOXYMETHYLCELLULOSE
@@ -14637,7 +14637,7 @@ interactions:
       Access-Control-Allow-Origin:
       - '*'
       Age:
-      - '0'
+      - '2'
       Cache-Control:
       - no-cache, no-store, must-revalidate
       Connection:
@@ -14647,9 +14647,9 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Fri, 18 Sep 2026 02:04:06 GMT
+      - Sun, 20 Sep 2026 21:01:09 GMT
       Etag:
-      - W/"114a7c-CiLMvlaR/ThNznoFJrh2G4JqVzQ"
+      - W/"114a7c-YZbs7h+/DQc7jMYNr1snoY93fI0"
       Link:
       - <https://api.fda.gov/drug/label.json?search=%28openfda.brand_name%3A%22pioglitazone%22%20OR%20openfda.generic_name%3A%22pioglitazone%22%29&limit=5&skip=0&search_after=0%3D1f259863-21fd-4d62-b094-4eff845944df>;
         rel="next"
@@ -14663,7 +14663,7 @@ interactions:
       Via:
       - https/1.1 api-umbrella (ApacheTrafficServer [cMsSf ])
       X-Api-Umbrella-Request-Id:
-      - d0m90rhmp7861mv5ucbg
+      - d0o2fmr1gs1hkdn87iqg
       X-Cache:
       - MISS
       X-Content-Type-Options:
@@ -14673,9 +14673,9 @@ interactions:
       X-Ratelimit-Limit:
       - '240'
       X-Ratelimit-Remaining:
-      - '239'
+      - '238'
       X-Vcap-Request-Id:
-      - 1acf3a85-3603-4813-448a-eb132f67c52d
+      - bfa90a2a-d2fa-4cdb-7ce7-714297708f3e
       X-Xss-Protection:
       - 1; mode=block
       content-length:

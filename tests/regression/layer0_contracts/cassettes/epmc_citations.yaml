@@ -24,9 +24,9 @@ interactions:
       Content-Type:
       - application/json;charset=UTF-8
       Date:
-      - Fri, 18 Sep 2026 02:04:04 GMT
+      - Sun, 20 Sep 2026 21:01:04 GMT
       Set-Cookie:
-      - JSESSIONID=0682B665DC894250D28CDE06C0AAD731; Path=/europepmc/webservices/rest;
+      - JSESSIONID=2D521A1E03D77BF3B86EF5CB35F11985; Path=/europepmc/webservices/rest;
         Secure; HttpOnly
       Transfer-Encoding:
       - chunked

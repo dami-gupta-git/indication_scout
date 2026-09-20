@@ -53,7 +53,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 18 Sep 2026 02:04:05 GMT
+      - Sun, 20 Sep 2026 21:00:42 GMT
       Server:
       - gunicorn/20.0.4
       Vary:
@@ -61,7 +61,7 @@ interactions:
       X-ChEMBL-in-cache:
       - 'True'
       X-ChEMBL-retrieval-time:
-      - '0.028087854385375977'
+      - '0.012898445129394531'
       strict-transport-security:
       - max-age=31536000; includeSubDomains
     status:

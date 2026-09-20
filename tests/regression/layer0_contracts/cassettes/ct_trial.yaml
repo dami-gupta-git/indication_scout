@@ -857,7 +857,7 @@ interactions:
         Clinical Study Information Center\",\"organization\":\"Gilead Sciences\",\"email\":\"GileadClinicalTrials@gilead.com\",\"phone\":\"1-833-445-3230
         (GILEAD-0)\"}}},\"documentSection\":{\"largeDocumentModule\":{\"largeDocs\":[{\"typeAbbrev\":\"Prot\",\"hasProtocol\":true,\"hasSap\":false,\"hasIcf\":false,\"label\":\"Study
         Protocol\",\"date\":\"2023-10-26\",\"uploadDate\":\"2025-08-01T09:48\",\"filename\":\"Prot_000.pdf\",\"size\":4885099},{\"typeAbbrev\":\"SAP\",\"hasProtocol\":false,\"hasSap\":true,\"hasIcf\":false,\"label\":\"Statistical
-        Analysis Plan\",\"date\":\"2025-01-07\",\"uploadDate\":\"2025-08-01T09:49\",\"filename\":\"SAP_001.pdf\",\"size\":2817361}]}},\"derivedSection\":{\"miscInfoModule\":{\"versionHolder\":\"2026-09-17\"},\"conditionBrowseModule\":{\"meshes\":[{\"id\":\"D065626\",\"term\":\"Non-alcoholic
+        Analysis Plan\",\"date\":\"2025-01-07\",\"uploadDate\":\"2025-08-01T09:49\",\"filename\":\"SAP_001.pdf\",\"size\":2817361}]}},\"derivedSection\":{\"miscInfoModule\":{\"versionHolder\":\"2026-09-18\"},\"conditionBrowseModule\":{\"meshes\":[{\"id\":\"D065626\",\"term\":\"Non-alcoholic
         Fatty Liver Disease\"}],\"ancestors\":[{\"id\":\"D005234\",\"term\":\"Fatty
         Liver\"},{\"id\":\"D008107\",\"term\":\"Liver Diseases\"},{\"id\":\"D004066\",\"term\":\"Digestive
         System Diseases\"}]},\"interventionBrowseModule\":{\"meshes\":[{\"id\":\"C000591245\",\"term\":\"semaglutide\"},{\"id\":\"C000717094\",\"term\":\"cilofexor\"}]}},\"hasResults\":true}\n"
@@ -867,13 +867,13 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 18 Sep 2026 02:04:02 GMT
+      - Sun, 20 Sep 2026 21:00:44 GMT
       Etag:
-      - '"0/0.34.1/mu5atyiw"'
+      - '"0/0.34.1/mu6q9sf4"'
       Server:
       - istio-envoy
       Set-Cookie:
-      - ncbi_sid=5BE7C21F194FDBD9_0CDESID; Max-Age=31536000; Domain=clinicaltrials.gov;
+      - ncbi_sid=745BB80570C301B4_2AAASID; Max-Age=31536000; Domain=clinicaltrials.gov;
         Path=/; $x-enc=URI_ENCODING
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload

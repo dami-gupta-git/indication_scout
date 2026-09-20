@@ -7133,7 +7133,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 18 Sep 2026 02:03:55 GMT
+      - Sun, 20 Sep 2026 21:01:09 GMT
       Server:
       - nginx/1.31.5
       Strict-Transport-Security:
@@ -7207,7 +7207,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 18 Sep 2026 02:03:58 GMT
+      - Sun, 20 Sep 2026 21:01:09 GMT
       Server:
       - gunicorn/20.0.4
       Vary:
@@ -7215,7 +7215,7 @@ interactions:
       X-ChEMBL-in-cache:
       - 'True'
       X-ChEMBL-retrieval-time:
-      - '0.015105009078979492'
+      - '0.01551675796508789'
       strict-transport-security:
       - max-age=31536000; includeSubDomains
     status:
@@ -7404,7 +7404,7 @@ interactions:
       Content-Type:
       - application/json
       Date:
-      - Fri, 18 Sep 2026 02:03:59 GMT
+      - Sun, 20 Sep 2026 21:01:10 GMT
       Server:
       - gunicorn/20.0.4
       Vary:
@@ -7412,7 +7412,7 @@ interactions:
       X-ChEMBL-in-cache:
       - 'True'
       X-ChEMBL-retrieval-time:
-      - '0.02373480796813965'
+      - '0.01886463165283203'
       strict-transport-security:
       - max-age=31536000; includeSubDomains
     status:

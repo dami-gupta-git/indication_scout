@@ -6,7 +6,7 @@ interactions:
     uri: https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&retmax=10&retmode=json&sort=relevance&term=semaglutide+alzheimer
   response:
     body:
-      string: '{"header":{"type":"esearch","version":"0.3"},"esearchresult":{"count":"147","retmax":"10","retstart":"0","idlist":["39780249","39445596","39405916","40156843","37730113","39976940","40552638","38639975","41865758","36989942"],"translationset":[{"from":"semaglutide","to":"\"semaglutide\"[Supplementary
+      string: '{"header":{"type":"esearch","version":"0.3"},"esearchresult":{"count":"147","retmax":"10","retstart":"0","idlist":["40156843","39445596","39405916","39780249","37730113","39976940","40552638","38639975","41865758","36989942"],"translationset":[{"from":"semaglutide","to":"\"semaglutide\"[Supplementary
         Concept] OR \"semaglutide\"[All Fields] OR \"semaglutide\"[MeSH Terms]"},{"from":"alzheimer","to":"\"alzheime''s\"[All
         Fields] OR \"alzheimer disease\"[MeSH Terms] OR (\"alzheimer\"[All Fields]
         AND \"disease\"[All Fields]) OR \"alzheimer disease\"[All Fields] OR \"alzheimer\"[All
@@ -33,18 +33,18 @@ interactions:
       Content-Type:
       - application/json; charset=UTF-8
       Date:
-      - Fri, 18 Sep 2026 02:04:03 GMT
+      - Sun, 20 Sep 2026 21:01:12 GMT
       Ncbi-Phid:
-      - 1D332A4424E25E4500004C035B1C6158.1.1.m_1
+      - 1D3281394968168500004538C257C8CE.1.1.m_1
       Ncbi-Sid:
-      - 3182731BC7C744F8_B64DSID
+      - 3C105EF1EF326DAC_DCCASID
       Referrer-Policy:
       - origin-when-cross-origin
       Server:
       - Finatra
       Set-Cookie:
-      - ncbi_sid=3182731BC7C744F8_B64DSID; domain=.nih.gov; path=/; expires=Sat, 18
-        Sep 2027 02:04:03 GMT
+      - ncbi_sid=3C105EF1EF326DAC_DCCASID; domain=.nih.gov; path=/; expires=Mon, 20
+        Sep 2027 21:01:13 GMT
       Strict-Transport-Security:
       - max-age=31536000; includeSubDomains; preload
       Transfer-Encoding:

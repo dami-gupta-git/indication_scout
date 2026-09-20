@@ -123,6 +123,10 @@ def use_cassette(
 
     if mode == CASSETTE_MODE_RECORD:
         cassette_path.parent.mkdir(parents=True, exist_ok=True)
+        # vcrpy's "all" record mode appends to whatever cassette is already on disk
+        # rather than replacing it, so a re-record leaves stale interactions ahead
+        # of the fresh ones and replay silently plays back the old response first.
+        cassette_path.unlink(missing_ok=True)
 
     # Deferred import so the default test suite (which excludes -m regression)
     # collects cleanly even when vcrpy isn't installed.
