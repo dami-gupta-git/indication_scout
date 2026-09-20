@@ -42,13 +42,16 @@ At the start of every session, for context, first read these files
 ## Weekly Goals
 
 - The current week's goals live in `goals/GOALS_FOR_<ISO week>.md` (e.g. `goals/GOALS_FOR_2026-W38.md`).
-- Before implementing any `PLAN_*.md`, read that file and state in one line which goal the work serves, naming its slug. If it
-  serves none, say so and name what the work is instead.
-- Make the statement even when the work is clearly in scope. A silent session is then recognisable as a missed check rather than
-  a pass.
+- Before implementing any `PLAN_*.md`, read that file and check which goal the work serves.
+- If it serves a goal, or isn't plan work (a bug fix, a one-off edit), state that in one line, naming the slug or saying "not
+  plan work", and carry on. Make the statement even when the work is clearly in scope. A silent session is then recognisable as
+  a missed check rather than a pass.
+- If it serves NO current goal and IS work from a `PLAN_*.md`, stop and give a prominent, unmissable warning before proceeding —
+  not a passing one-liner — naming the work and that it falls outside this week's goals, and ask the user to confirm if they
+  really want to implement it. Do not phrase this as "want me to proceed anyway?"
 - If the current week has no goals file, say so and ask whether to write one. Never infer the week's goals from an earlier week
   or from the work in progress.
-- This is a warning, not a gate. Work that serves no current goal still proceeds once it has been named.
+- This is a warning, not a gate. Work that serves no current goal still proceeds once it has been clearly flagged.
 
 ## Build & Development Commands
 

@@ -66,11 +66,15 @@ if body is None:
 else:
     context = (
         f"[goals] Current week ({week}):\n\n{body}\n\n"
-        "Before continuing, state in one line which of the goals above this work serves, naming its "
-        "slug. If it serves none, say so and name what it is instead. If this is not work from a "
-        "PLAN_*.md — a bug fix, a one-off edit — say \"not plan work\" and carry on. Make the "
-        "statement even when the work is clearly in scope: a silent session means this check never "
-        "ran. This is a warning only; the edit proceeds regardless."
+        "Before continuing, check whether this work serves one of the goals above. If it serves a "
+        "goal, or is not plan work (a bug fix, a one-off edit), state that in one line naming the "
+        "slug or saying \"not plan work\", and carry on — a silent session means this check never "
+        "ran. If it serves NONE of the goals above and IS plan work (from a PLAN_*.md), stop and "
+        "surface a prominent, unmissable warning to the user before proceeding — not a passing "
+        "one-liner — naming what the work is and that it falls outside this week's goals, and ask "
+        "the user to confirm if they really want to implement it. Do not phrase this as \"want me "
+        "to proceed anyway?\" This is a warning only, not a hard gate: the edit still proceeds once "
+        "the user has confirmed."
     )
 
 print(json.dumps({
