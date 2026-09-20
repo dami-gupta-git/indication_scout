@@ -159,7 +159,9 @@ When creating a plan:
 - [ ] Suggest changes that need to be made to the unit and integration tests
 
 ## Plan Tracking Workflow
+- When asked to design, plan, spec, or scope a feature, first read `.claude/skills/plan/SKILL.md` and follow it.
 - When asked to design or plan a feature, write the plan to `PLAN_<something>.md` in the **project root** as a checklist (`- [ ]` items) before touching any code.
+- Every phase of the plan states how it will be verified — the tests to write, CI changes needed, and what "working" looks like.
 - While implementing, mark each step complete (`- [x]`) in `PLAN_<something>.md` as it is finished.
 
 ## Design & Implementation Guidelines
