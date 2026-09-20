@@ -5,11 +5,15 @@ from langchain_core.messages import AIMessage
 from langchain_core.outputs import ChatGeneration, LLMResult
 
 from indication_scout.services.cost_tracking import (
+    PRICE_TABLE_VERIFIED_DATE,
+    CostSnapshot,
     CostTracker,
     CostTrackingCallback,
+    UsageTotals,
     bind_cost_tracker,
     calculate_usage,
     candidate_cost_scope,
+    format_cost_summary,
     record_anthropic_response,
     record_usage,
     reset_cost_tracker,
@@ -143,3 +147,54 @@ def test_langchain_callback_records_response_usage():
     assert total.cache_write_1h_tokens == 0
     assert total.cost_usd == Decimal("0.0007185")
     assert not total.unpriced_models
+
+
+def test_format_cost_summary_renders_priced_total_and_tokens():
+    total = UsageTotals(
+        input_tokens=300,
+        output_tokens=30,
+        cache_read_tokens=50,
+        cache_write_5m_tokens=10,
+        cache_write_1h_tokens=5,
+        cost_usd=Decimal("1.23456"),
+    )
+    overhead = UsageTotals(
+        input_tokens=100,
+        output_tokens=10,
+        cost_usd=Decimal("0.5"),
+    )
+    snapshot = CostSnapshot(total=total, overhead=overhead, candidates={})
+
+    summary = format_cost_summary(snapshot)
+
+    assert f"${1.23456:.4f}" in summary
+    assert PRICE_TABLE_VERIFIED_DATE in summary
+    assert "input=300 output=30 cache_read=50 cache_write=15" in summary
+    assert f"${0.5:.4f}" in summary
+
+
+def test_format_cost_summary_reports_unpriced_models_without_dollar_figure():
+    total = UsageTotals(
+        input_tokens=100,
+        output_tokens=10,
+        cost_usd=Decimal("0"),
+        unpriced_models={"claude-haiku-4-5"},
+    )
+    overhead = UsageTotals()
+    snapshot = CostSnapshot(total=total, overhead=overhead, candidates={})
+
+    summary = format_cost_summary(snapshot)
+
+    assert "input=100 output=10" in summary
+    assert "pricing unavailable for claude-haiku-4-5" in summary
+    assert "$" not in summary.splitlines()[0]
+
+
+def test_format_cost_summary_omits_overhead_line_when_no_overhead_tokens():
+    total = UsageTotals(input_tokens=100, output_tokens=10, cost_usd=Decimal("0.1"))
+    overhead = UsageTotals()
+    snapshot = CostSnapshot(total=total, overhead=overhead, candidates={})
+
+    summary = format_cost_summary(snapshot)
+
+    assert "Overhead" not in summary

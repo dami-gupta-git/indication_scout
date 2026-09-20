@@ -31,6 +31,8 @@ class ModelPrices:
     cache_read: Decimal
 
 
+PRICE_TABLE_VERIFIED_DATE = "2026-09-12"
+
 # Anthropic Claude API list prices verified on 2026-09-12. Unknown models are
 # recorded by token count but do not receive an inferred monetary cost.
 MODEL_PRICES: dict[str, ModelPrices] = {
@@ -237,6 +239,47 @@ class CostTrackingCallback(BaseCallbackHandler):
                         cache_write_1h_tokens=cache_write_1h,
                     )
                 )
+
+
+def format_cost_summary(snapshot: CostSnapshot) -> str:
+    """Render a run's cost/token totals as a short human-readable block."""
+    lines = [_format_totals_line("Cost", snapshot.total)]
+    lines.append(
+        "Tokens:    input={input} output={output} cache_read={cache_read} "
+        "cache_write={cache_write}".format(
+            input=snapshot.total.input_tokens,
+            output=snapshot.total.output_tokens,
+            cache_read=snapshot.total.cache_read_tokens,
+            cache_write=(
+                snapshot.total.cache_write_5m_tokens
+                + snapshot.total.cache_write_1h_tokens
+            ),
+        )
+    )
+    overhead = snapshot.overhead
+    has_overhead_tokens = (
+        overhead.input_tokens
+        or overhead.output_tokens
+        or overhead.cache_read_tokens
+        or overhead.cache_write_5m_tokens
+        or overhead.cache_write_1h_tokens
+    )
+    if has_overhead_tokens:
+        lines.append(_format_totals_line("Overhead", overhead))
+    return "\n".join(lines)
+
+
+def _format_totals_line(label: str, totals: UsageTotals) -> str:
+    if totals.unpriced_models:
+        models = ", ".join(sorted(totals.unpriced_models))
+        return (
+            f"{label}:    pricing unavailable for {models} "
+            f"(price table verified {PRICE_TABLE_VERIFIED_DATE})"
+        )
+    return (
+        f"{label}:    ${totals.cost_usd:.4f} "
+        f"(price table verified {PRICE_TABLE_VERIFIED_DATE})"
+    )
 
 
 def _copy_totals(totals: UsageTotals) -> UsageTotals:

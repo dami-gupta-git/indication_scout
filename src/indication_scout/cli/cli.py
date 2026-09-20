@@ -54,6 +54,7 @@ async def _run_for_drug(
     from indication_scout.services.cost_tracking import (
         CostTracker,
         bind_cost_tracker,
+        format_cost_summary,
         reset_cost_tracker,
     )
     from indication_scout.services.progress import reset_emitter, set_emitter
@@ -63,6 +64,7 @@ async def _run_for_drug(
     session_factory = make_session_factory()
     log_token = None
     cost_token = None
+    cost_tracker: CostTracker | None = None
     setup_tracing()
     try:
         # Normalize at the entry point so filenames/logs below see the same lowercased form
@@ -173,6 +175,8 @@ async def _run_for_drug(
         click.echo(f"Report:    {md_path}")
 
     finally:
+        if cost_tracker is not None:
+            click.echo(format_cost_summary(cost_tracker.snapshot()))
         if cost_token is not None:
             reset_cost_tracker(cost_token)
         if log_token is not None:
@@ -196,6 +200,7 @@ async def _run_for_pair(
     from indication_scout.services.cost_tracking import (
         CostTracker,
         bind_cost_tracker,
+        format_cost_summary,
         reset_cost_tracker,
     )
     from indication_scout.services.progress import reset_emitter, set_emitter
@@ -205,6 +210,7 @@ async def _run_for_pair(
     session_factory = make_session_factory()
     log_token = None
     cost_token = None
+    cost_tracker: CostTracker | None = None
     setup_tracing()
     try:
         drug = normalize_drug_name(drug)
@@ -313,6 +319,8 @@ async def _run_for_pair(
         logger.info("Finished pair %s x %s -> %s", drug, disease, md_path)
         click.echo(f"Report:    {md_path}")
     finally:
+        if cost_tracker is not None:
+            click.echo(format_cost_summary(cost_tracker.snapshot()))
         if cost_token is not None:
             reset_cost_tracker(cost_token)
         if log_token is not None:
