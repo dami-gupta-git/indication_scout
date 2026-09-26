@@ -1595,6 +1595,20 @@ def build_supervisor_tools(
                 f"{a['trials_terminated'] if a['trials_terminated'] is not None else 'unavailable'} relevant terminated; "
                 f"relevant highest phase {phase}{term_note}{stage_note}{withdrawn_note}{animal_note}{safety_note}"
             )
+        # Name the exact candidates the ranking must cover, using finalize's own evidence gate and unresolved-trial rule.
+        # Left to decide membership itself, the model cut the list short at an arbitrary length and misapplied the gate.
+        must_rank = [
+            a["disease"]
+            for a in artifacts
+            if not a["trial_query_unresolved"]
+            and _evidence_gate_reason(auto_findings[a["disease"].lower().strip()])
+            is None
+        ]
+        if must_rank:
+            lines.append(
+                f"\nYour ranking (summary and blurbs) must include every one of these "
+                f"{len(must_rank)} candidates: {', '.join(must_rank)}."
+            )
         return "\n".join(lines), artifacts
 
     async def _run_fact_critic(items: list[dict]) -> list[dict]:
@@ -1750,8 +1764,8 @@ def build_supervisor_tools(
         Arguments:
         - summary: your ranked structured fact list of investigated candidates
           (see WRITING THE SUMMARY in the system prompt).
-        - blurbs: a list of structured per-candidate entries, one for EVERY
-          ranked candidate in your summary, in rank order. Each entry is a
+        - blurbs: a list of structured per-candidate entries, one for each candidate
+          named in the must-include list that ends the investigate_top_candidates result, in rank order. Each entry is a
           dict with these keys:
             - disease: <verbatim candidate name from find_candidates or
               analyze_mechanism>

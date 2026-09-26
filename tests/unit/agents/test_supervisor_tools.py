@@ -1965,3 +1965,74 @@ async def test_finalize_discloses_every_investigated_disease_not_ranked():
         "(direction=none, study_count=0); silent gate drop — 0 relevant trials and no usable "
         "literature signal (direction=none, study_count=0)"
     )
+
+
+async def test_investigate_top_candidates_names_every_candidate_to_rank():
+    """The result ends by naming the candidates the ranking must cover: gate-excluded and unresolved ones are left out.
+
+    Without this line the supervisor decided membership itself, cut the list short and misapplied the gate.
+    """
+    settings = get_settings().model_copy(
+        update={
+            "supervisor_fanout": True,
+            "supervisor_investigation_cap": 4,
+            "supervisor_investigation_concurrency": 4,
+        }
+    )
+    svc = MagicMock()
+    svc.build_drug_profile = AsyncMock(return_value=DrugProfile(chembl_id="CHEMBL1431"))
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_settings",
+            return_value=settings,
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.build_mechanism_agent",
+            return_value=MagicMock(),
+        ),
+    ):
+        tools, _, _, _ = build_supervisor_tools(llm=MagicMock(), svc=svc, db=MagicMock())
+
+    investigate = {tool.name: tool for tool in tools}["investigate_top_candidates"]
+    closure = dict(
+        zip(investigate.coroutine.__code__.co_freevars, investigate.coroutine.__closure__, strict=False)
+    )
+    literature = {
+        "Registered Disease": _make_lit("strong", n_pmids=40, study_count=8),
+        "Thin Disease": _make_lit("weak", n_pmids=30, study_count=1),
+        "Empty Disease": _make_lit("none", n_pmids=20, study_count=0, direction="none"),
+        "Unresolved Disease": _make_lit("weak", n_pmids=10, study_count=2),
+    }
+    trials = {
+        "Registered Disease": _make_ct(total=5, completed=2, terminated=0),
+        "Thin Disease": _make_ct(total=0, completed=0, terminated=0),
+        "Empty Disease": _make_ct(total=0, completed=0, terminated=0),
+        "Unresolved Disease": ClinicalTrialsOutput(search=SearchTrialsResult(resolution_status="unresolved")),
+    }
+    closure["allowed_diseases"].cell_contents.update({d.lower(): (d, "competitor") for d in literature})
+    closure["find_candidates_done"].cell_contents.set()
+    closure["analyze_mechanism_done"].cell_contents.set()
+    closure["_ensure_drug_entry"].cell_contents("metformin")["chembl_id"] = "CHEMBL1431"
+
+    async def run_tool(tool_instance: Any, tool_call: dict[str, Any], *args: Any, **kwargs: Any) -> MagicMock:
+        disease = tool_call["args"]["disease_name"]
+        if tool_instance.name == "analyze_literature":
+            return MagicMock(artifact=literature[disease])
+        return MagicMock(artifact=trials[disease])
+
+    literature_tool = closure["analyze_literature"].cell_contents
+    with (
+        patch.object(type(literature_tool), "ainvoke", new=run_tool),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.random.uniform",
+            return_value=0.0,
+        ),
+    ):
+        content, artifacts = await investigate.coroutine("metformin")
+
+    assert [a["disease"] for a in artifacts] == list(literature)
+    assert content.splitlines()[0] == "Auto-investigated 4 top candidates for metformin:"
+    assert content.splitlines()[-1] == (
+        "Your ranking (summary and blurbs) must include every one of these 2 candidates: "
+        "Registered Disease, Thin Disease."
+    )

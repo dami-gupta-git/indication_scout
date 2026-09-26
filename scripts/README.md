@@ -56,6 +56,9 @@ tracing/eval utilities. None are part of the installed package; run them directl
   candidates from its ranked list. `--reports` classifies saved `test_reports/` payloads;
   `--run DRUG... --repeats N` runs the pipeline fresh. Prints per-run counts, the omission
   rate, and diseases that flip between ranked and absent across runs of the same drug.
+- **replay_ranking_step.py** — Resends only the supervisor turn that drafts the ranked blurbs,
+  taken from a pipeline-replay recording, N times per variant. Each variant changes one thing in
+  the request, and the script counts candidates missing from the blurbs.
 
 ## Misc
 
