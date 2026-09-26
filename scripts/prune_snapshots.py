@@ -1,11 +1,10 @@
-"""Prune snapshot reports: keep only the most recent report per drug, move older ones to bak/.
+"""Keep only the newest snapshot report per drug; move older ones to snapshots/bak/.
 
-Report files are named `{drug}_{YYYY-MM-DD_HH-MM-SS}.md`. The timestamp format sorts
-lexically, so the most recent report per drug is the lexically-largest filename.
+Filenames are `{drug}_{YYYY-MM-DD_HH-MM-SS}.md`, so the newest sorts last.
 
-Usage (run from the project root):
-    python scripts/prune_snapshots.py            # move older reports to snapshots/bak/
-    python scripts/prune_snapshots.py --dry-run  # show what would move, change nothing
+Usage (from the project root):
+    python scripts/prune_snapshots.py
+    python scripts/prune_snapshots.py --dry-run
 """
 
 import logging

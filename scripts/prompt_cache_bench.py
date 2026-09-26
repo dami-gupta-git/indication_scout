@@ -1,29 +1,13 @@
-"""Before/after benchmark for Anthropic prompt caching, full pipeline, no monkeypatching.
+"""Cold vs warm benchmark for Anthropic prompt caching on the full pipeline.
 
-Runs the full pipeline (run_analysis: supervisor + mechanism + literature + clinical_trials
-agents) twice, back-to-back, for the same drug:
+Runs `run_analysis` twice back-to-back for one drug: the first run writes the cache_control breakpoints, the second
+reads them within the TTL. Token usage is read by tapping ChatAnthropic._agenerate; agent behaviour is unchanged.
 
-  - run 1 ("COLD"): nothing for this drug/prompt combination is in Anthropic's server-side
-    cache yet (assuming it hasn't been run recently) - each agent's first turn WRITES the
-    cache_control breakpoints (system prompt + tool defs) rather than reading them.
-  - run 2 ("WARM"): run 1 already wrote those breakpoints, and they're within the 5-minute
-    (or 1-hour) ephemeral TTL, so run 2's equivalent turns READ from cache instead.
-
-This exercises the real shipped code path with no changes to agent source or behavior - it
-simply compares a cold start to a warm one, which is what prompt caching is actually for
-(e.g. concurrent/back-to-back requests for the same drug, or a user re-running after a partial
-result). Captures usage_metadata by patching ChatAnthropic._agenerate (read-only tap, not a
-caching interceptor) so no agent behavior changes - this only observes what the SDK returns.
-
-Reports: wall-clock, cache hit rate (cache_read / (cache_read + input_tokens), summed over all
-turns), USD cost from published per-token rates (see _RATES - correct if pricing changes), and
-token breakdown.
+Reports wall-clock, cache hit rate (cache_read / (cache_read + input_tokens)), USD cost from _RATES (update if
+pricing changes), and token breakdown. Each run is a real, billed pipeline run.
 
 Usage:
     python scripts/prompt_cache_bench.py <drug>
-
-Requires ANTHROPIC_API_KEY / DB / etc. set up as for a normal `scout find` run. Each run is a
-real, full, API-billed pipeline run.
 """
 
 import argparse

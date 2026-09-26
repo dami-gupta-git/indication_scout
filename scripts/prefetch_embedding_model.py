@@ -1,12 +1,6 @@
-"""Download and cache the BioLORD-2023 embedding model into the HF cache.
+"""Download the BioLORD-2023 embedding model into the HF cache so the app's first request does not download ~500MB.
 
-Run this once (manually or as a one-off job) against the persistent volume so
-the app's first request loads the cached snapshot instantly instead of
-downloading ~500MB at startup.
-
-The model name and HF cache location come from the same config/env the app
-uses (`embedding_model`, `HF_HOME`), so this populates exactly the path
-`_get_model()` reads with `local_files_only=True`.
+Uses the app's own `embedding_model` and `HF_HOME` settings, so it fills exactly the path `_get_model()` reads.
 
     HF_HOME=/cache python scripts/prefetch_embedding_model.py
 """

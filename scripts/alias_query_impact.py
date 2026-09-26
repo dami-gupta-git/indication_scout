@@ -1,15 +1,7 @@
-"""Check whether querying by drug alias (brand vs INN vs other synonyms) changes
-CT.gov / PubMed results.
+"""Check whether querying by drug alias (brand, INN, other synonyms) changes CT.gov / PubMed results.
 
-Resolves the drug's ChEMBL id, pulls all known aliases (INN, trade names, USAN,
-BAN, etc.), then runs CT.gov's drug-only trial sweep AND a PubMed search
-separately per alias. Reports, per source:
-  - NCT ids / PMIDs returned by each alias
-  - which ids are alias-exclusive (only found via that name, missed by others)
-  - a "union vs single-alias-as-typed" delta, to show what a user typing just
-    one name (e.g. the brand) would miss vs a canonicalized/expanded query.
-
-Investigation only — does not change any query logic in the app.
+Runs the CT.gov drug-only sweep and a PubMed search once per ChEMBL alias, and reports per source the ids each alias
+returns, which ids only one alias finds, and what a single typed name misses versus the union. Investigation only.
 
 Run:
     python scripts/alias_query_impact.py wegovy

@@ -1,20 +1,11 @@
-"""Assert seed-phase candidate recall for the regression drugs.
+"""CI guard: assert seed-phase candidate recall for the regression drugs.
 
-CI guard, not part of the live pipeline. For every runbook row belonging to a drug named in
-`tests/regression/labels/seed_recall.yaml`, run the seed phase under that row's holdout cutoff and
-check that the target indication reaches the merged candidate list. Matching is exact name against
-the row's `indication` plus its `accepted` column — the same rule
-`scripts/validation/gen_seed_candidate_recall.py` scores with.
+For each runbook row of a drug in `tests/regression/labels/seed_recall.yaml`, runs the seed phase under the row's
+holdout cutoff and checks the target indication (exact name, or one in the `accepted` column) reaches the merged
+candidate list. Rows in `known_missing` must be absent; one that starts passing also fails, so the spec gets updated.
 
-Rows listed in the spec's `known_missing` are expected to be absent. A known-missing row that
-starts passing is also a failure, so a fix gets recorded in the spec instead of going unnoticed.
-
-Writes a JSON result file (`--out`, default `results/ci/seed_recall.json`): a `summary` block with
-the run's counts and recall, and one `rows` entry per runbook row carrying its position, matched
-name, source and verdict. The shape is shared with the precision check so both metrics land in the
-same directory in the same form.
-
-Exit status is 0 when every row matches its expectation, 1 otherwise.
+Writes a JSON result (`--out`, default `results/ci/seed_recall.json`) in the same shape as the precision check.
+Exits 0 when every row matches its expectation, 1 otherwise.
 
 Run:
     CONSTANTS_FILE=.env.constants python scripts/check_seed_recall.py [--out path.json]

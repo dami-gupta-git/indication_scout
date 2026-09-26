@@ -1,26 +1,14 @@
 """Latency experiment: where does a cold full-pipeline run spend its time?
 
-Runs the REAL supervisor pipeline (`run_analysis`) on a drug that has never been
-examined locally, so PubMed fetch + BioLORD embedding are genuinely cold. While the
-run executes, an in-process logging handler scrapes the `[TIMING]`/`[LLMTURN]` lines
-the pipeline already emits and rolls them into the three buckets the user cares about:
-
-    1. embedding        — BioLORD encode time (fetch_and_cache embed + every
-                          semantic_search query embed)
-    2. semantic_search  — per-disease pgvector scan + pubtype fetch + query embed
-    3. agent loop       — supervisor ReAct orchestration (LLM + overhead remainder)
-
-It also prints a FETCH-VOLUME / RELEVANCE audit: how many queries were issued per
-disease, how many PMIDs each returned, how many were newly embedded, and how the
-final top-k compares to the candidate pool — to judge whether the pipeline is
-fetching more than it uses.
+Runs `run_analysis` on a drug not yet seen locally and buckets the `[TIMING]`/`[LLMTURN]` log lines into embedding,
+semantic_search and agent loop. Also prints a fetch-volume audit (queries, PMIDs returned, newly embedded, top-k vs
+pool) per disease.
 
 Usage:
     python scripts/latency_experiment.py                 # default cold drug
-    python scripts/latency_experiment.py pioglitazone    # explicit drug
+    python scripts/latency_experiment.py pioglitazone
 
-Pick a drug NOT present in cache/chembl_id_to_names and NOT in pgvector, or the
-embed/fetch phases will be warm and the numbers will understate prod cost.
+The drug must not be in cache/chembl_id_to_names or pgvector, or the numbers understate prod cost.
 """
 
 import asyncio

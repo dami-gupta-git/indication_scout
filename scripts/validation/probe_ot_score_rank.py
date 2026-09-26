@@ -1,21 +1,8 @@
-"""Probe: rank the merged (competitor + mechanism) candidate list by OT association score.
+"""Probe: rank the merged (competitor + mechanism) candidate list by OT association score. Diagnostic only.
 
-For each drug we build the SAME candidate universe the supervisor would see —
-competitor diseases (sibling-drug ranking, via `get_drug_competitors`) UNION
-mechanism diseases (OT target-disease associations over the drug's targets) — then
-score EVERY candidate on ONE comparable axis: the Open Targets `overall_score` for
-that (target, disease) pair, taken as the max across the drug's targets. We rank the
-merged list by that score and report, per known approved indication, where it lands.
-
-This answers: "how good is the OT association rank?" for the full merged set, with
-competitor and mechanism candidates on the same scale (option B — no invented
-cross-source weighting). Diagnostic only; writes nothing into the pipeline.
-
-OT associations have no date filter, so `overall_score` reflects today's evidence
-(it can include post-cutoff literature). The competitor list IS cutoff-aware via
-`date_before`. Writes a CSV (drug name in every row) with rank, score, source, the
-target-indication flag, and the approval date when the disease is a known approved
-indication (matched against drug_approvals.json — curated ground-truth, not fabricated).
+Scores every candidate by the max Open Targets `overall_score` across the drug's targets and reports where each known
+approved indication lands. OT scores are not date-filtered (may include post-cutoff evidence); the competitor list
+is. Writes a CSV with rank, score, source, target flag and approval date from drug_approvals.json.
 
 Run:
     CONSTANTS_FILE=.env.constants .venv/bin/python scripts/validation/probe_ot_score_rank.py

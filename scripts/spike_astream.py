@@ -1,15 +1,9 @@
-"""THROWAWAY spike (Phase 9 / T9.1) — confirm astream reproduces ainvoke's messages.
+"""Throwaway spike: confirm astream reproduces ainvoke's messages for the supervisor agent.
 
-Read-only: builds the supervisor agent the same way run_analysis does, then runs it
-BOTH ways for one drug and compares. Does NOT touch any production code path.
+Runs the supervisor both ways for one drug and checks what stream_mode="updates" yields per chunk and that the
+concatenated streamed messages match ainvoke's result["messages"]. Read-only.
 
 Run:  .venv/bin/python scripts/spike_astream.py [drug]
-
-Checks:
-  1. What stream_mode="updates" yields per chunk (node -> {"messages": [...]}).
-  2. That concatenating streamed messages reproduces ainvoke's result["messages"]
-     (same length, types, and tool-call / content sequence) — the load-bearing
-     assumption for swapping ainvoke -> astream in run_supervisor_agent.
 """
 
 import asyncio

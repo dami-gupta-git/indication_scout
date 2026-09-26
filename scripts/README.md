@@ -52,6 +52,10 @@ tracing/eval utilities. None are part of the installed package; run them directl
   messages for the supervisor agent (read-only).
 - **trailing_turn_bench.py** — Before/after benchmark for the trailing-turn removal:
   warm-up run + one timed run, capturing total time and per-agent turn counts.
+- **ranked_list_completeness.py** — Measures how often the supervisor omits investigated
+  candidates from its ranked list. `--reports` classifies saved `test_reports/` payloads;
+  `--run DRUG... --repeats N` runs the pipeline fresh. Prints per-run counts, the omission
+  rate, and diseases that flip between ranked and absent across runs of the same drug.
 
 ## Misc
 

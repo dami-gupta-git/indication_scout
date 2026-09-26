@@ -1,20 +1,11 @@
-"""Probe the competitor-candidate stage standalone, to debug a missed disease.
+"""Probe the competitor-candidate stage standalone, to debug a missed disease. No LLM.
 
-When a holdout run scores -1 for a known indication, the first question is "did
-find_candidates even produce this disease?". This runs only the competitor path
-that feeds find_candidates' allowlist — Open Targets sibling ranking, top-N
-prefetch, and the dedup/merge — without invoking any LLM agent. It reports
-whether a target disease survived to the merged candidate list, and (from the
-raw OT ranking) where it fell if it did not.
-
-The target disease argument is a plain substring match, not a disease matcher. Pass a short
-fragment ("neuroendocrine"), not a full clinical phrase ("progressive pancreatic neuroendocrine
-tumors") — no Open Targets disease name contains the latter, so it matches nothing.
+Runs the Open Targets sibling ranking, top-N prefetch and merge behind find_candidates, and reports whether the
+target disease reached the merged list, or where it ranked if not. The target is a plain substring: pass a short
+fragment ("neuroendocrine"), not a full clinical phrase.
 
 Usage:
     python scripts/validation/probe_candidates.py <drug> <YYYY-MM-DD> [target disease substring]
-
-Example:
     python scripts/validation/probe_candidates.py imatinib 2006-05-05 eosinophil
 """
 

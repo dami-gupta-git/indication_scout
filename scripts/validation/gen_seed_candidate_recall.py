@@ -1,32 +1,17 @@
 """Generate a holdout candidate-recall markdown table (seed phase only).
 
-Validation probe, not part of the live pipeline. Per runbook row: under a holdout cutoff,
-does the drug's known target indication surface in the seed-phase candidate list, and at
-what rank? Runs only the cheap seed phase (mechanism + competitor surfacing + merge).
+Per runbook row, runs `analyze_mechanism` and `find_candidates` with `date_before=cutoff`, snapshots
+`get_merged_allowlist()`, and checks whether the target indication is in it. One run per distinct (drug, cutoff).
+The `#` column is the 1-based data-row index used by `--lines`.
 
-Per row: run `analyze_mechanism` and `find_candidates` concurrently as the ReAct loop does,
-snapshot `get_merged_allowlist()` (merged competitor + mechanism list, insertion order — the
-same order `investigate_top_candidates[:N]` slices), then LLM-match the target indication
-into it. Every run passes `date_before=cutoff`, so the mechanism score excludes
-clinical_precedence and no post-cutoff approval signal can inflate a rank.
+Score: 1 = the `indication` or an `accepted` name (semicolon-separated) equals a candidate after lowercasing and
+trimming; 0 = none does; ERROR = run failed. No fuzzy or LLM matching, so an unlisted synonym reads 0 until added
+to the runbook.
 
-One seed-phase run per distinct (drug, cutoff); rows sharing it reuse the cached result.
-Rows are written as they complete.
+Args: <runbook.txt> [output.md] [--lines 3-7,12]. Runbook columns: drug,indication,date,accepted. Without output.md,
+writes the next free results/holdout_validation/validation_results_N.md.
 
-The leading `#` column is the 1-based runbook data-row index — the same number `--lines` takes.
-
-Score: 1 = one of the row's accepted names is in the merged list, 0 = none is, ERROR = run
-failed. The accepted names are the runbook's `indication` plus its `accepted` column (semicolon-
-separated), compared to the candidate names by exact equality after lowercasing and trimming.
-Nothing else is inferred: no LLM matching, no fuzzy or substring matching. When a target surfaces
-under a name that is not listed, the row reads 0 until the name is added to the runbook by hand.
-
-Args: <runbook.txt> [output.md] [--lines 3-7,12]. Runbook columns: drug,indication,date,accepted
-(accepted = semicolon-separated candidate names that count as the target, may be empty).
-`--lines` selects 1-based data rows; default runs every row. With no output.md, writes to
-the next free results/holdout_validation/validation_results_N.md (never overwrites).
-
-Run (per-target read widened to 30 to test deeper recall):
+Run:
     MECHANISM_ASSOCIATIONS_PER_TARGET=30 CONSTANTS_FILE=.env.constants \\
         .venv/bin/python scripts/validation/gen_seed_candidate_recall.py \\
         scripts/validation/runbook.txt --lines 1-5,48

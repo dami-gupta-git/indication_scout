@@ -1,8 +1,4 @@
-"""One-off script to fetch PMIDs needed for fetch_and_cache integration tests.
-
-Fetches PMIDs for two overlapping queries and prints:
-- PMIDs for each query
-- The intersection (overlap)
+"""One-off: fetch PMIDs for the fetch_and_cache integration tests (two overlapping queries and their intersection).
 
 Run:
     python scripts/fetch_pmids_for_tests.py

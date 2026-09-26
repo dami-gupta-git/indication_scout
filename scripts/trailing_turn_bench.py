@@ -1,8 +1,6 @@
 """Before/after benchmark for the trailing-turn removal.
 
-Runs the full pipeline (run_analysis) warm: one throwaway warm-up run, then one timed run.
-Captures the [TIMING] run_analysis total and the per-agent [LLMTURN] turn counts so the
-before/after can be compared on turns (deterministic) and seconds (noisy ±15s).
+One warm-up run, then one timed run; reports the run_analysis total and per-agent [LLMTURN] counts.
 
 Usage: python scripts/trailing_turn_bench.py <drug>
 """

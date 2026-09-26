@@ -1,11 +1,7 @@
-"""Run `scout find` for a drug, but with CT.gov's `query.intr` widened to an
-OR of all ChEMBL-known aliases (brand names, INN, synonyms) instead of just
-the single name the user typed.
+"""Run `scout find` with CT.gov's `query.intr` widened to an OR of all ChEMBL aliases.
 
-Investigation-only monkeypatch: patches ClinicalTrialsClient._build_search_params
-in-process for the duration of this run so we can diff the resulting report
-against an unpatched `scout find` run on the same drug. Does not touch any
-committed source.
+Monkeypatches ClinicalTrialsClient._build_search_params in-process only, so the report can be diffed against an
+unpatched run. Investigation only.
 
 Run:
     python scripts/run_alias_union_report.py wegovy

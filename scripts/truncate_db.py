@@ -1,7 +1,4 @@
-"""Truncate all user tables in the main database.
-
-Queries information_schema to find all tables in the public schema
-(excluding alembic_version), then truncates them with CASCADE.
+"""Truncate (CASCADE) every table in the public schema except alembic_version.
 
 Usage:
     python scripts/truncate_db.py

@@ -1,26 +1,11 @@
 """Scaffold a Layer 2 regression spec from a gold_standard snapshot.
 
-Reads a frozen `tests/regression/gold_standard/<drug>_<date>.json`
-(`SupervisorOutput`) and emits a starter `tests/regression/specs/<drug>.yaml`
-pre-filled with every extractable invariant:
+Reads `tests/regression/gold_standard/<drug>_<date>.json` and writes a starter `tests/regression/specs/<drug>.yaml`
+with ranked_order, candidate_set_contains, required_ncts_surfaced and required_pmids_cited filled in.
 
-  - ranked_order            <- top_diseases (in order)
-  - candidate_set_contains  <- candidate_diseases
-  - required_ncts_surfaced  <- clinical_trials.relevant_nct_ids (per ranked disease)
-  - required_pmids_cited    <- evidence_summary supporting + contradicting (per ranked disease)
-
-The scaffold is a STARTING POINT, not a finished spec. It cannot make the
-domain calls a good spec needs — which NCTs/PMIDs are load-bearing anchors vs.
-incidental, which demotions matter, which phrases to forbid. After generating:
-
-  1. Prune required_ncts_surfaced / required_pmids_cited to 2-3 high-signal
-     anchors per disease (relevant_nct_ids can run to dozens).
-  2. Trim candidate_set_contains to the diseases that must not silently drop.
-  3. Fill in the commented forbidden_in_ranked / forbidden_phrases stubs if the
-     drug has a known demotion (e.g. combination-product) or factual guard.
-
-Then verify:  pytest tests/regression/layer2_structural/test_per_drug.py \
-                     -m regression_layer2 -k <drug>
+It is a starting point. Afterwards, prune NCTs/PMIDs to 2-3 anchors per disease, trim candidate_set_contains to
+diseases that must not drop, and fill the forbidden_in_ranked / forbidden_phrases stubs if needed. Then verify with
+`pytest tests/regression/layer2_structural/test_per_drug.py -m regression_layer2 -k <drug>`.
 
 Usage:
     python scripts/scaffold_regression_spec.py <drug>

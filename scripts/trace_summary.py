@@ -1,14 +1,10 @@
-"""Per-agent LLM cost/token summary for one Langfuse trace.
+"""Per-agent LLM calls, tokens and cost for one Langfuse trace.
 
 Usage:
     python scripts/trace_summary.py <trace_id>
-    python scripts/trace_summary.py            # defaults to the most recent trace
+    python scripts/trace_summary.py            # most recent trace
 
-Collapses a trace's hundreds of spans into a per-agent table (calls, input/output tokens,
-cost) by attributing each LLM generation to the supervisor tool/phase it nests under. This
-is the answer to "how many LLM calls + tokens + cost did each agent make".
-
-Reads Langfuse creds from .env: LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL.
+Needs LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY, LANGFUSE_BASE_URL in .env.
 """
 
 import base64

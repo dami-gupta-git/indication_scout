@@ -1,10 +1,7 @@
-"""Populate seed_examples/ from saved test_reports/ payloads.
+"""Populate seed_examples/ from the latest test_reports/{drug}_{timestamp}.json per drug.
 
-For each requested drug, picks the latest test_reports/{drug}_{timestamp}.json
-payload, validates it as a SupervisorOutput, copies it to
-seed_examples/{drug}.json, and records the report's capture time (parsed from the
-filename timestamp) into seed_examples/captured_at.json. Existing manifest entries
-for drugs not processed are left untouched.
+Validates each payload as SupervisorOutput, copies it to seed_examples/{drug}.json, and records its capture time in
+seed_examples/captured_at.json. Manifest entries for other drugs are left alone.
 
 Usage:
     python scripts/seed_examples_from_reports.py                 # every drug in test_reports/

@@ -1,17 +1,12 @@
-"""One-off maintenance script: backfill the pubtypes file cache for PMIDs already in pgvector.
+"""One-off: backfill the pubtypes cache for PMIDs already in pgvector.
 
-Context: `fetch_and_cache` now warms `cache/pubmed_pubtypes/` from efetch XML, but only for
-NEWLY fetched abstracts. PMIDs stored in pubmed_abstracts before that change have no cached
-pubtype, so semantic_search still pays a cold esummary round-trip for them. This script closes
-that gap once: it reads every PMID from pubmed_abstracts, diffs against the pubtypes cache, and
-fetches the missing ones via the same `fetch_pubtypes` path (which writes the cache as it goes).
-
-Idempotent: re-running only fetches whatever is still missing. Safe to interrupt and resume.
-Will sppedup
+Abstracts stored before `fetch_and_cache` started warming `cache/pubmed_pubtypes/` have no cached pubtype, so
+semantic_search pays a cold esummary call for them. This fetches the missing ones via `fetch_pubtypes`.
+Idempotent and resumable.
 
 Run:
     python scripts/backfill_pubtypes.py
-    python scripts/backfill_pubtypes.py --dry-run    # just report the gap, fetch nothing
+    python scripts/backfill_pubtypes.py --dry-run    # report the gap only
 """
 
 import argparse

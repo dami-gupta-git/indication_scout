@@ -1,20 +1,14 @@
 """
-Session file manager for IndicationScout.
+Session file manager for IndicationScout. See design_session_memory.md.
 
 Usage:
     python scripts/session.py startup                      # rotation check, then print session file + summary
     python scripts/session.py rotate-check                  # prints "due" or "ok"
     python scripts/session.py rotate --summary-file <path>  # append summary, archive, create replacement
 
-Rules:
-- Session files are named session_{datetime}.md in the project root, one per rotation (not per session).
-- Rotation is a size rule, evaluated at session start: past MAX_SIZE_BYTES the file is summarized into
-  sessions_summary.md, moved to session_archive/, and replaced.
-- Summarizing needs a model, so it happens outside this script: `startup` reports that rotation is due and the
-  model calls `rotate` with the summary it wrote.
-- Nothing in the archive is pruned. sessions_summary.md rotates by the same rule at SUMMARY_MAX_SIZE_BYTES.
-
-See design_session_memory.md.
+Session files (session_{datetime}.md, project root) rotate at session start once past MAX_SIZE_BYTES: summarized into
+sessions_summary.md, moved to session_archive/, and replaced. The model writes the summary and calls `rotate`.
+sessions_summary.md rotates the same way at SUMMARY_MAX_SIZE_BYTES. The archive is never pruned.
 """
 
 import argparse
