@@ -203,9 +203,12 @@ MESH_RESOLVER_MAX_CONCURRENT: int = 5
 
 # -- Clinical stage ranking (Open Targets) ----------------------------------
 # Maps maximumClinicalStage / maxClinicalStage string values to numeric ranks
-# for comparison. Higher rank = further in pipeline.
+# for comparison. Higher rank = further in pipeline. PHASE_4 is post-approval: target drug rows report it in place of
+# APPROVAL for approved drugs with phase 4 trials. WITHDRAWAL ranks with UNKNOWN: a drug pulled from the market is not a
+# current competitor.
 CLINICAL_STAGE_RANK: dict[str, int] = {
     "UNKNOWN": 0,
+    "WITHDRAWAL": 0,
     "PRECLINICAL": 1,
     "IND": 2,
     "EARLY_PHASE_1": 3,
@@ -216,7 +219,11 @@ CLINICAL_STAGE_RANK: dict[str, int] = {
     "PHASE_3": 8,
     "PREAPPROVAL": 9,
     "APPROVAL": 10,
+    "PHASE_4": 11,
 }
+# Cache-key version for the Open Targets competitor lists (raw, and the merged lists built from them). Bump when the
+# competitor selection logic changes, e.g. CLINICAL_STAGE_RANK, so cached lists built under the old rule are not reused.
+OPEN_TARGETS_COMPETITOR_LOGIC_VERSION: str = "phase4_rank_v1"
 
 # -- Interaction type mapping (Open Targets) --------------------------------
 INTERACTION_TYPE_MAP: dict[str, str] = {

@@ -317,7 +317,8 @@ async def test_drug_target_competitors_semaglutide(open_targets_client):
     liraglutide = next(d for d in result["GLP1R"] if d.drug_name == "liraglutide")
     assert liraglutide.drug_id == "CHEMBL4084119"
     assert liraglutide.drug_name == "liraglutide"
-    assert liraglutide.max_clinical_stage == "APPROVAL"
+    # Target drug rows report PHASE_4 in place of APPROVAL for approved drugs with phase 4 trials (2026-09 release).
+    assert liraglutide.max_clinical_stage == "PHASE_4"
     assert len(liraglutide.diseases) > 0
 
 
@@ -457,6 +458,38 @@ async def test_get_rich_drug_data_null_interactions(open_targets_client):
         assert isinstance(
             t.drug_summaries, list
         ), f"{t.symbol} drug_summaries is not a list"
+
+
+async def test_get_drug_competitors_keeps_phase_4_rivals(open_targets_client):
+    """Rivals Open Targets labels PHASE_4 on a shared target must pass the PHASE_3 competitor cut.
+
+    Since the 2026-09 release, target drug rows report PHASE_4 in place of APPROVAL for approved drugs with phase 4
+    trials. On SLC6A3 (a bupropion target) modafinil, armodafinil and methylphenidate carry PHASE_4 and list fatigue.
+    """
+    summaries = await open_targets_client.get_target_data_drug_summaries(
+        "ENSG00000142319"
+    )
+    fatigue_rivals = {
+        "armodafinil",
+        "dexmethylphenidate",
+        "methylphenidate",
+        "modafinil",
+    }
+    stages = {
+        s.drug_name: s.max_clinical_stage
+        for s in summaries
+        if s.drug_name in fatigue_rivals
+    }
+    assert stages == {
+        "armodafinil": "PHASE_4",
+        "dexmethylphenidate": "APPROVAL",
+        "methylphenidate": "PHASE_4",
+        "modafinil": "PHASE_4",
+    }
+
+    result = await open_targets_client.get_drug_competitors("CHEMBL894")
+
+    assert result["diseases"]["fatigue"] == fatigue_rivals
 
 
 async def test_get_drug_competitors_bupropion(open_targets_client):

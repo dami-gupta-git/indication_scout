@@ -2621,6 +2621,7 @@ async def test_get_drug_competitors_merge_retains_empty_competitor_set(tmp_path)
 async def test_get_drug_competitors_returns_cached(tmp_path):
     """A cache hit is filtered without calling the client or LLM."""
     from indication_scout.config import get_settings
+    from indication_scout.constants import OPEN_TARGETS_COMPETITOR_LOGIC_VERSION
     from indication_scout.utils.cache import cache_set
 
     cached = {
@@ -2637,6 +2638,7 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
             "top_k": get_settings().literature_top_k,
             "prefetch_max": get_settings().open_targets_competitor_prefetch_max,
             "logic_version": "cache_disease_aliases_v2_opus_merge",
+            "competitor_logic_version": OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
         },
         cached,
         tmp_path,
@@ -2655,6 +2657,7 @@ async def test_get_drug_competitors_returns_cached(tmp_path):
 
 async def test_get_drug_competitors_returns_cached_empty_result(tmp_path):
     from indication_scout.config import get_settings
+    from indication_scout.constants import OPEN_TARGETS_COMPETITOR_LOGIC_VERSION
     from indication_scout.utils.cache import cache_set
 
     cache_set(
@@ -2665,6 +2668,7 @@ async def test_get_drug_competitors_returns_cached_empty_result(tmp_path):
             "top_k": get_settings().literature_top_k,
             "prefetch_max": get_settings().open_targets_competitor_prefetch_max,
             "logic_version": "cache_disease_aliases_v2_opus_merge",
+            "competitor_logic_version": OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
         },
         {},
         tmp_path,

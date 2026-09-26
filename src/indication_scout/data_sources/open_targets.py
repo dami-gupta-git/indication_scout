@@ -23,6 +23,7 @@ from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     INTERACTION_TYPE_MAP,
     OPEN_TARGETS_BASE_URL,
+    OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
 )
 from indication_scout.data_sources.base_client import BaseClient, DataSourceError
 from indication_scout.data_sources.chembl import (
@@ -277,9 +278,15 @@ class OpenTargetsClient(BaseClient):
         for t, summaries in zip(targets, all_summaries, strict=True):
             logger.debug(t.mechanism_of_action)
             for summary in summaries:
-                stage_rank = CLINICAL_STAGE_RANK.get(
-                    summary.max_clinical_stage or "", 0
-                )
+                stage = summary.max_clinical_stage or ""
+                if stage not in CLINICAL_STAGE_RANK:
+                    logger.warning(
+                        "Unrecognised Open Targets clinical stage %r for %s on %s; treating as below any threshold",
+                        stage,
+                        summary.drug_id,
+                        t.target_id,
+                    )
+                stage_rank = CLINICAL_STAGE_RANK.get(stage, 0)
                 if stage_rank >= min_rank:
                     competitor_name: str | None = None
                     if not summary.drug_id:
@@ -362,6 +369,7 @@ class OpenTargetsClient(BaseClient):
             "min_stage": min_stage,
             "date_before": date_before.isoformat() if date_before else None,
             "prefetch_max": _settings.open_targets_competitor_prefetch_max,
+            "logic_version": OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
         }
         cached = cache_get("competitors_raw", cache_params, self.cache_dir)
         if cached is not None:
@@ -379,7 +387,7 @@ class OpenTargetsClient(BaseClient):
         sorted_siblings = ranking["siblings"]
         approved_indications = ranking["approved_indications"]
 
-        drug_indications = list(approved_indications)
+        drug_indications = sorted(approved_indications)
         top_40 = dict(
             list(sorted_siblings.items())[
                 : _settings.open_targets_competitor_prefetch_max

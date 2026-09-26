@@ -27,7 +27,7 @@ from indication_scout.regression.harness import (
     has_errors,
     render_diffs,
 )
-from tests.regression.common.cassette import use_cassette
+from tests.regression.common.cassette import SCRUB_QUERY_PARAMS, use_cassette
 from tests.regression.common.constants import CASSETTE_DIR, GOLD_STANDARD_DIR
 
 PINNED_DRUGS = ["semaglutide"]
@@ -119,7 +119,8 @@ async def _run_pipeline(drug: str, cassette_path: Path):
     db = next(get_db())
     svc = RetrievalService(DEFAULT_CACHE_DIR)
 
-    with use_cassette(cassette_path):
+    # Scrub the PubMed/openFDA key from recorded URLs so the cassette can be committed.
+    with use_cassette(cassette_path, filter_query_parameters=SCRUB_QUERY_PARAMS):
         agent, get_merged_allowlist, get_auto_findings, get_approval_labels = (
             build_supervisor_agent(llm=llm, svc=svc, db=db, date_before=None)
         )

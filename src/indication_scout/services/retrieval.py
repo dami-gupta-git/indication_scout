@@ -21,6 +21,7 @@ from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
     LITERATURE_TRIAL_REFERENCE_RESERVE,
+    OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
     PUBMED_NCT_QUERY_BATCH_SIZE,
 )
 from indication_scout.data_sources.base_client import DataSourceError
@@ -524,6 +525,8 @@ class RetrievalService:
             # The merge runs over the prefetched disease list, so a change to the prefetch size changes this result.
             "prefetch_max": _settings.open_targets_competitor_prefetch_max,
             "logic_version": "cache_disease_aliases_v2_opus_merge",
+            # Built from the raw competitor list, so it goes stale whenever that list's selection logic changes.
+            "competitor_logic_version": OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
         }
         cached = cache_get("competitors_merged", cache_params, self.cache_dir)
         if cached is not None:
