@@ -12,11 +12,11 @@ async def test_get_target_associations(open_targets_client):
     assert len(associations) > 10
     [gastroparesis] = [a for a in associations if a.disease_name == "gastroparesis"]
     # Verify all Association fields
-    assert gastroparesis.disease_id == "EFO_1000948"
+    assert gastroparesis.disease_id == "MONDO_0006769"
     assert gastroparesis.disease_name == "gastroparesis"
     assert gastroparesis.overall_score > 0.2
-    assert 0.4 < gastroparesis.datatype_scores["genetic_association"] < 0.5
-    assert 0.2 < gastroparesis.datatype_scores["literature"] < 0.3
+    assert 0.35 < gastroparesis.datatype_scores["genetic_association"] < 0.4
+    assert 0.15 < gastroparesis.datatype_scores["literature"] < 0.2
     assert "gastrointestinal disease" in gastroparesis.therapeutic_areas
 
 
@@ -138,7 +138,8 @@ async def test_get_target_drug_summaries(open_targets_client):
     assert liraglutide.drug_id == "CHEMBL4084119"
     assert liraglutide.drug_name == "liraglutide"
     assert liraglutide.drug_type == "Protein"
-    assert liraglutide.max_clinical_stage == "APPROVAL"
+    # Target drug rows report PHASE_4 in place of APPROVAL for approved drugs with phase 4 trials (2026-09 release).
+    assert liraglutide.max_clinical_stage == "PHASE_4"
     assert len(liraglutide.diseases) > 0
     t2d = next(
         d for d in liraglutide.diseases if d.disease_name == "type 2 diabetes mellitus"
@@ -206,10 +207,10 @@ async def test_get_target_genetic_constraints(open_targets_client):
     lof_constraint = next(gc for gc in constraints if gc.constraint_type == "lof")
     # Verify all GeneticConstraint fields
     assert lof_constraint.constraint_type == "lof"
-    assert 0.41 < lof_constraint.oe < 0.42
+    assert 0.40 < lof_constraint.oe < 0.41
     assert 0.33 < lof_constraint.oe_lower < 0.34
-    assert 0.51 < lof_constraint.oe_upper < 0.52
-    assert 0.06 < lof_constraint.score < 0.07
+    assert 0.50 < lof_constraint.oe_upper < 0.51
+    assert 0.24 < lof_constraint.score < 0.25
     assert lof_constraint.upper_bin == 1
     assert lof_constraint.exp > 100
     assert lof_constraint.obs > 0
@@ -286,10 +287,11 @@ async def test_get_target_evidences_variant_functional_consequence(open_targets_
     SLC6A3, so the evidence records carry vFC labels like missense_variant /
     absent_gene_product.
     """
+    # 2026-09 release: infantile parkinsonism-dystonia moved from Orphanet_238455 to MONDO_0013150.
     ev_map = await open_targets_client.get_target_evidences(
-        "ENSG00000142319", ["Orphanet_238455"]
+        "ENSG00000142319", ["MONDO_0013150"]
     )
-    records = ev_map["Orphanet_238455"]
+    records = ev_map["MONDO_0013150"]
     vfc_labels = {
         e.variant_functional_consequence.label
         for e in records

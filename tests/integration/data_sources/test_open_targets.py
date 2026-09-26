@@ -167,13 +167,13 @@ async def test_get_disease_synonyms(open_targets_client):
     assert result.disease_id == "MONDO_0005148"
     assert result.disease_name == "type 2 diabetes mellitus"
     assert result.parent_names == ["diabetes mellitus"]
-    assert len(result.exact) == 25
-    assert len(result.related) == 9
+    # 2026-09 release: Open Targets lists every synonym as exact; none are related.
+    assert len(result.exact) == 46
+    assert result.related == []
     assert len(result.narrow) == 1
     assert "T2DM" in result.exact
     assert "NIDDM" in result.exact
     assert "type 2 diabetes" in result.exact
-    assert "maturity-onset diabetes" in result.related
     assert "diabetes mellitus, noninsulin-dependent, 2" in result.narrow
 
 
@@ -213,14 +213,15 @@ async def test_glp1r_target_data(open_targets_client):
     [assoc] = [a for a in target.associations if a.disease_name == "gastroparesis"]
     assert assoc.disease_id.startswith("EFO_") or assoc.disease_id.startswith("MONDO_")
     assert assoc.overall_score > 0.2
-    assert 0.4 < assoc.datatype_scores["genetic_association"] < 0.5
-    assert 0.2 < assoc.datatype_scores["literature"] < 0.3
+    assert 0.35 < assoc.datatype_scores["genetic_association"] < 0.4
+    assert 0.15 < assoc.datatype_scores["literature"] < 0.2
     assert "gastrointestinal disease" in assoc.therapeutic_areas
 
     # DrugSummary — liraglutide
     liraglutide = next(d for d in target.drug_summaries if d.drug_name == "liraglutide")
     assert liraglutide.drug_id == "CHEMBL4084119"
-    assert liraglutide.max_clinical_stage == "APPROVAL"
+    # Target drug rows report PHASE_4 in place of APPROVAL for approved drugs with phase 4 trials (2026-09 release).
+    assert liraglutide.max_clinical_stage == "PHASE_4"
     assert len(liraglutide.diseases) > 0
     t2d = next(
         d for d in liraglutide.diseases if d.disease_name == "type 2 diabetes mellitus"
@@ -290,10 +291,10 @@ async def test_glp1r_target_mouse_phenotype_and_erbb2_constraint(open_targets_cl
     lof_constraint = next(
         gc for gc in erbb2.genetic_constraint if gc.constraint_type == "lof"
     )
-    assert 0.41 < lof_constraint.oe < 0.42
+    assert 0.40 < lof_constraint.oe < 0.41
     assert 0.33 < lof_constraint.oe_lower < 0.34
-    assert 0.51 < lof_constraint.oe_upper < 0.52
-    assert 0.06 < lof_constraint.score < 0.07
+    assert 0.50 < lof_constraint.oe_upper < 0.51
+    assert 0.24 < lof_constraint.score < 0.25
     assert lof_constraint.upper_bin == 1
     assert lof_constraint.exp > 100
     assert lof_constraint.obs > 0
@@ -386,11 +387,11 @@ async def test_get_rich_drug_data_semaglutide(open_targets_client):
     gastroparesis = next(
         a for a in glp1r.associations if a.disease_name == "gastroparesis"
     )
-    assert gastroparesis.disease_id == "EFO_1000948"
+    assert gastroparesis.disease_id == "MONDO_0006769"
     assert gastroparesis.disease_name == "gastroparesis"
     assert gastroparesis.overall_score > 0.2
-    assert 0.4 < gastroparesis.datatype_scores["genetic_association"] < 0.5
-    assert 0.2 < gastroparesis.datatype_scores["literature"] < 0.3
+    assert 0.35 < gastroparesis.datatype_scores["genetic_association"] < 0.4
+    assert 0.15 < gastroparesis.datatype_scores["literature"] < 0.2
     assert "gastrointestinal disease" in gastroparesis.therapeutic_areas
 
     # DrugSummary — semaglutide on GLP1R
@@ -398,7 +399,7 @@ async def test_get_rich_drug_data_semaglutide(open_targets_client):
     assert sema_summary.drug_id == "CHEMBL2108724"
     assert sema_summary.drug_name == "semaglutide"
     assert sema_summary.drug_type == "Protein"
-    assert sema_summary.max_clinical_stage == "APPROVAL"
+    assert sema_summary.max_clinical_stage == "PHASE_4"
     assert len(sema_summary.diseases) > 0
     t2d_disease = next(
         d for d in sema_summary.diseases if d.disease_name == "type 2 diabetes mellitus"
