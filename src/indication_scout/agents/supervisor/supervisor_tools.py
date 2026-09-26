@@ -1750,8 +1750,8 @@ def build_supervisor_tools(
         Arguments:
         - summary: your ranked structured fact list of investigated candidates
           (see WRITING THE SUMMARY in the system prompt).
-        - blurbs: a list of structured per-candidate entries for the TOP 3
-          ranked candidates in your summary, in rank order. Each entry is a
+        - blurbs: a list of structured per-candidate entries, one for EVERY
+          ranked candidate in your summary, in rank order. Each entry is a
           dict with these keys:
             - disease: <verbatim candidate name from find_candidates or
               analyze_mechanism>

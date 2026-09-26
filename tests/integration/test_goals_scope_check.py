@@ -13,8 +13,6 @@ import subprocess
 import uuid
 from pathlib import Path
 
-import pytest
-
 REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOK = REPO_ROOT / ".claude" / "hooks" / "goals-scope-check.sh"
 SETTINGS = REPO_ROOT / ".claude" / "settings.json"

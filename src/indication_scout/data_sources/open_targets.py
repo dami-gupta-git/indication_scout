@@ -685,7 +685,7 @@ class OpenTargetsClient(BaseClient):
         data = await self._graphql(
             self.BASE_URL,
             TARGET_QUERY,
-            variables={"id": target_id},
+            variables={"id": target_id, "size": self.PAGE_SIZE},
         )
         raw_target = data["data"]["target"]
         if raw_target is None:
@@ -1012,8 +1012,8 @@ query($id: String!) {
                 id maxClinicalStage
                 disease { id name }
                 clinicalReports {
-                    id source clinicalStage hasExpertReview
-                    title type trialOverallStatus trialLiterature
+                    id source clinicalStage
+                    title type trialOverallStatus trialLiterature { id type }
                     drugs { drugFromSource drug { id name } }
                     diseases { diseaseFromSource disease { id name } }
                 }
@@ -1034,11 +1034,11 @@ query($id: String!) {
 """
 
 TARGET_QUERY = """
-query($id: String!) {
+query($id: String!, $size: Int!) {
     target(ensemblId: $id) {
         id approvedSymbol approvedName functionDescriptions
 
-        associatedDiseases(page: {index: 0, size: 500}) {
+        associatedDiseases(page: {index: 0, size: $size}) {
             rows {
                 disease {
                     id name description
@@ -1074,8 +1074,8 @@ query($id: String!) {
                 }
                 diseases { diseaseFromSource disease { id name } }
                 clinicalReports {
-                    id source clinicalStage hasExpertReview
-                    title type trialOverallStatus trialLiterature
+                    id source clinicalStage
+                    title type trialOverallStatus trialLiterature { id type }
                     drugs { drugFromSource drug { id name } }
                     diseases { diseaseFromSource disease { id name } }
                 }
@@ -1159,8 +1159,8 @@ query($id: String!) {
                     }
                 }
                 clinicalReports {
-                    id source clinicalStage hasExpertReview
-                    title type trialOverallStatus trialLiterature
+                    id source clinicalStage
+                    title type trialOverallStatus trialLiterature { id type }
                     drugs { drugFromSource drug { id name } }
                     diseases { diseaseFromSource disease { id name } }
                 }

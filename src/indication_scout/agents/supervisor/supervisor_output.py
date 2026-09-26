@@ -17,7 +17,7 @@ class CandidateBlurb(BaseModel):
 
     Single-line fields plus a 2-sentence prose synthesis. Fields are independently optional — an
     empty string means nothing to write for that field this run, and the formatter omits empty
-    fields. Populated only for the top 3 ranked candidates; None for un-ranked candidates.
+    fields. Populated for every ranked candidate; None for un-ranked candidates.
     """
 
     stage: str = Field(
@@ -113,7 +113,7 @@ class CandidateFindings(BaseModel):
         description=(
             "Structured supervisor-written synthesis of the literature and "
             "clinical-trials sub-agent summaries for this disease. Populated "
-            "only for the supervisor's top 3 ranked candidates; None for "
+            "for every candidate in the supervisor's ranking; None for "
             "un-ranked candidates."
         ),
     )
@@ -142,7 +142,7 @@ class SupervisorOutput(BaseModel):
     top_diseases: list[str] = Field(
         default_factory=list,
         description=(
-            "Ranked top diseases (max 5) selected by the supervisor for the "
+            "Every disease in the supervisor's ranking, in rank order, for the "
             "Summary section. Strict subset of disease_findings."
         ),
     )

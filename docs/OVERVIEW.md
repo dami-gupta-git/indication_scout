@@ -94,12 +94,17 @@ them from memory.
 ### Supervisor
 
 The supervisor wraps each sub-agent as a tool. Its run has a fixed skeleton: surface candidates,
-run the mechanism analysis, investigate the top candidates, critique the draft ranking (finalize is
-rejected until the critique has run), then finalize with a narrative summary and top-5 blurbs. In
-fan-out mode the per-candidate literature and trials tools are replaced by a single parallel
-investigation tool, so the top candidates are investigated concurrently. After the loop, assembly
-code canonicalises disease names against the merged candidate allowlist — a disease the supervisor
-names that is not in the allowlist is rejected and logged, never "tried anyway".
+run the mechanism analysis, deterministically investigate the top candidates, rank the
+evidence-complete candidates, critique the draft ranking, then finalize with a narrative summary
+and top-5 blurbs. Investigation is deterministic because omitting a candidate would prevent its
+evidence from being collected. Ranking remains LLM-based because it synthesizes trial maturity,
+literature strength, safety, approval overlap, and competitive activity; a fixed numeric score
+would require unvalidated weights across these signals. Finalization is rejected until the
+critique has run. In fan-out mode the per-candidate literature and trials tools are replaced by a
+single parallel investigation tool, so the top candidates are investigated concurrently. After
+the loop, assembly code canonicalises disease names against the merged candidate allowlist. A
+disease the supervisor names that is not in the allowlist is rejected and logged, never "tried
+anyway".
 
 ### Mechanism
 

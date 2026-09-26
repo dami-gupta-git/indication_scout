@@ -51,6 +51,16 @@
       "rationale": "A direct feasibility study makes this a legitimate preliminary candidate."
     },
     {
+      "drug": "semaglutide",
+      "disease": "coronary artery disorder",
+      "aliases": [
+        "coronary artery disease",
+        "coronary heart disease"
+      ],
+      "decision": "invalid",
+      "rationale": "Wegovy is FDA-approved to reduce major adverse cardiovascular events in adults with established cardiovascular disease and obesity or overweight."
+    },
+    {
       "drug": "metformin",
       "disease": "polycystic ovary syndrome",
       "aliases": [
