@@ -6,13 +6,12 @@ import json
 import logging
 import re
 import time
-from collections.abc import Sequence
 from datetime import date
 from pathlib import Path
 from typing import Any, cast
 
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import Row, text
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -1177,7 +1176,11 @@ class RetrievalService:
                 "rerank_cap": rerank_cap,
             },
         ).fetchall()
-        linked_rows: Sequence[Row[Any]] = []
+        baseline_pmids = {str(row[0]) for row in rows}
+        rows_by_pmid = {str(row[0]): row for row in rows}
+        # The linked rows are not given an explicit Row[...] annotation: SQLAlchemy 2.1
+        # made Row variadic, so Row[Any] there means a one-column row and mypy rejects
+        # row[3] below. Letting the type come from fetchall() works on 2.0 and 2.1.
         if linked_pmids:
             linked_rows = db.execute(
                 text("""
@@ -1192,10 +1195,8 @@ class RetrievalService:
                     "pmids": linked_pmids,
                 },
             ).fetchall()
-        baseline_pmids = {str(row[0]) for row in rows}
-        rows_by_pmid = {str(row[0]): row for row in rows}
-        for row in linked_rows:
-            rows_by_pmid.setdefault(str(row[0]), row)
+            for row in linked_rows:
+                rows_by_pmid.setdefault(str(row[0]), row)
         all_rows = list(rows_by_pmid.values())
         # Rows are fully materialized, so the read transaction is no longer
         # needed while PubMed and the literature agent perform awaited work.
