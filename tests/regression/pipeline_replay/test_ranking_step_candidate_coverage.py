@@ -129,7 +129,9 @@ def test_semaglutide_recording_and_current_variant_are_exact() -> None:
     assert _investigation_result(current)["content"].endswith(_LIST_LINE)
 
     # Undo the two intended edits; every other request field must be identical.
-    next(t for t in current["tools"] if t["name"] == "finalize_supervisor")["description"] = recorded_description
+    next(t for t in current["tools"] if t["name"] == "finalize_supervisor")[
+        "description"
+    ] = recorded_description
     current_result = _investigation_result(current)
     current_result["content"] = current_result["content"][: -len(_LIST_LINE)]
     assert current == recorded
@@ -156,7 +158,9 @@ async def test_current_request_keeps_every_rankable_semaglutide_candidate() -> N
     results_by_variant: dict[str, list[list[str] | None]] = {}
     for variant in ("recorded", "current_with_list"):
         request = make_variant(base, variant, expected)
-        calls = await asyncio.gather(*(one_call(client, request) for _ in range(repeats)))
+        calls = await asyncio.gather(
+            *(one_call(client, request) for _ in range(repeats))
+        )
         results_by_variant[variant] = [blurbs for blurbs, _text_lines in calls]
 
     stats: dict[str, tuple[int, Counter[str]]] = {}
