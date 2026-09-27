@@ -15,7 +15,7 @@ import os
 from functools import lru_cache
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings
 
 # Project root (config.py -> indication_scout -> src -> root).
@@ -34,6 +34,19 @@ class Settings(BaseSettings):
     # database_url but pointing to scout_test. Set in .env for local dev;
     # must be migrated separately before running integration tests.
     test_database_url: str | None = None
+
+    @field_validator("database_url", "test_database_url")
+    @classmethod
+    def _pin_psycopg2_driver(cls, v: str | None) -> str | None:
+        # A bare "postgresql://" scheme (e.g. Railway's managed Postgres URL) lets
+        # SQLAlchemy pick the driver. SQLAlchemy 2.1 changed that default from
+        # psycopg2 to psycopg (v3), which this project does not install (only
+        # psycopg2-binary is a dependency), breaking every DB connection at
+        # startup. Pin the driver explicitly so the resolved dialect always
+        # matches the installed driver, regardless of SQLAlchemy's default.
+        if v is not None and v.startswith("postgresql://"):
+            return "postgresql+psycopg2://" + v[len("postgresql://") :]
+        return v
 
     # API Keys
     openai_api_key: str = ""
