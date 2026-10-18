@@ -1,10 +1,7 @@
-"""
-Disease term normalizer for PubMed search.
+"""Disease term normalizer for PubMed search.
 
-Converts raw disease terms from Open Targets (e.g., "narcolepsy-cataplexy syndrome")
-into normalized PubMed-friendly search terms (e.g., "narcolepsy").
-
-Strategy: LLM normalize → verify with PubMed count → cache everything.
+Converts raw Open Targets disease terms (e.g., "narcolepsy-cataplexy syndrome") into PubMed-friendly search terms
+(e.g., "narcolepsy"). Strategy: LLM normalize → verify with PubMed count → cache everything.
 """
 
 import asyncio
@@ -57,10 +54,9 @@ class MergeResult(TypedDict):
 def _validated_merge_result(raw: Any, disease_count: int, source: str) -> MergeResult:
     """Return `raw` as a MergeResult, raising DataSourceError if it is not one.
 
-    A response that parses as JSON but omits `merge`/`remove`, or types them wrongly, would reach
-    callers as an empty result once they guard it — the same silent no-op a parse failure used to
-    produce, and the same consequence: an already-approved indication surviving as a novel
-    candidate. `MergeResult` is a TypedDict, so nothing enforces the shape at runtime without this.
+    A response that parses as JSON but omits `merge`/`remove`, or types them wrongly, would otherwise reach callers as
+    an empty result and let an already-approved indication survive as a novel candidate. `MergeResult` is a TypedDict,
+    so nothing enforces the shape at runtime without this.
     """
     if not isinstance(raw, dict):
         raise DataSourceError(
@@ -132,8 +128,7 @@ async def llm_normalize_disease(raw_term: str) -> str:
 async def llm_normalize_disease_batch(raw_terms: list[str]) -> dict[str, str]:
     """Normalize multiple disease terms in a single LLM call.
 
-    Checks cache for each term first, batches only the cache misses into one
-    LLM call, then caches the new results individually.
+    Cache hits are skipped; only misses go into one LLM call and are cached individually.
 
     Args:
         raw_terms: List of raw disease terms to normalize.
@@ -209,19 +204,14 @@ async def merge_duplicate_diseases(
     diseases: list[str],
     drug_indications: list[str],
 ) -> MergeResult:
-    """
-    Ask the big LLM to collapse synonymous/duplicate disease terms.
+    """Ask the big LLM to collapse synonymous/duplicate disease terms.
 
-    Returns a MergeResult with a `merge` map (canonical → list of aliases) and a
-    `remove` list (terms to drop, e.g. already-approved indications). Cached by the
-    sorted input sets so identical disease/indication lists reuse the prior result.
+    Returns a MergeResult with a `merge` map (canonical → list of aliases) and a `remove` list (terms to drop, e.g.
+    already-approved indications). Cached by the sorted input sets.
 
-    Raises DataSourceError on an unparseable LLM response. An empty result is
-    indistinguishable from a legitimate "nothing to merge, nothing to remove", and every
-    caller uses `remove` to drop already-approved indications — so a silent empty result
-    lets an approved indication survive as a novel candidate. The LLM layer already
-    retries transient failures, so reaching this point means the model returned something
-    genuinely unusable.
+    Raises DataSourceError on an unparseable LLM response: an empty result is indistinguishable from "nothing to merge",
+    and every caller uses `remove` to drop approved indications, so a silent empty result lets one survive as a novel
+    candidate. The LLM layer already retries transient failures, so reaching this point means the output was unusable.
     """
     # Cache key is order-independent: sort both lists so equivalent inputs collide.
     cache_params = {
@@ -231,8 +221,7 @@ async def merge_duplicate_diseases(
     }
     cached = cache_get("disease_merge", cache_params, DEFAULT_CACHE_DIR)
     if cached is not None:
-        # Validated too: a cache entry written before this check, or hand-edited, can hold any
-        # shape, and an unvalidated one reaches callers by the same route as a bad live response.
+        # Validated too: a cache entry written before this check, or hand-edited, can hold any shape.
         return _validated_merge_result(cached, len(diseases), source="cache")
 
     prompt = (
@@ -241,8 +230,7 @@ async def merge_duplicate_diseases(
         .format(disease_names=diseases, drug_indications=drug_indications)
     )
     response = await query_big_llm(prompt)
-    # The model routinely prefaces the JSON with its reasoning, so take the last complete JSON object
-    # rather than parsing the whole reply. A reply carrying no JSON object at all is still an error.
+    # The model often prefaces the JSON with reasoning, so take the last complete JSON object; a reply with none is an error.
     parsed = parse_last_json_object(response)
     if parsed is None:
         logger.error(
@@ -348,10 +336,9 @@ async def normalize_for_pubmed(raw_term: str, drug_name: str | None = None) -> s
 async def normalize_batch(
     terms: list[str], drug_name: str | None = None
 ) -> dict[str, str]:
-    """
-    Normalize a list of disease terms. Returns dict of raw → normalized.
-    Processes sequentially to respect NCBI rate limits (3 req/sec without API key,
-    10 req/sec with one).
+    """Normalize a list of disease terms, returning raw → normalized.
+
+    Processes sequentially to respect NCBI rate limits (3 req/sec without API key, 10 req/sec with one).
     """
     results = {}
     for term in terms:
@@ -363,15 +350,12 @@ async def normalize_batch(
 
 # ── MeSH Resolver ────────────────────────────────────────────────────────────
 
-# Pre-emptive sleep before every NCBI call. Crude desynchronization: when several
-# coroutines (e.g. parallel disease pairs from the supervisor) hit NCBI in the
-# same scheduler tick they otherwise blow past the 10 req/s ceiling and 429.
-# Jitter widens the firing window so concurrent callers don't land in lockstep.
+# Pre-emptive sleep before every NCBI call: coroutines hitting NCBI in the same scheduler tick would exceed the 10 req/s
+# ceiling and 429. Jitter spreads the firing window so concurrent callers don't land in lockstep.
 _NCBI_PRECALL_SLEEP_BASE: float = 1.5
 _NCBI_PRECALL_SLEEP_JITTER: float = 0.5
 
-# Per-request timeout for NCBI MeSH calls. Without an explicit timeout a stalled
-# connection can hang on aiohttp's 5min default before TimeoutError fires; a tight
+# Per-request timeout for NCBI MeSH calls: without one a stalled connection waits on aiohttp's 5min default, so a tight
 # cap fails fast into the 3s/6s/9s retry. sock_connect bounds connection setup.
 _NCBI_TIMEOUT_TOTAL: float = 30.0
 _NCBI_SOCK_CONNECT: float = 10.0
@@ -385,13 +369,9 @@ async def _ncbi_get_json(
 ) -> dict[str, Any]:
     """GET json from NCBI with up to 3 linearly-spaced retries on transient failure.
 
-    Initial attempt + 3 retries (4 total tries). Each retry waits min(3*(attempt+1), 90)s
-    (3s/6s/9s) before firing. If all 4 attempts fail, the program exits non-zero — NCBI is
-    a hard dependency for MeSH resolution and continuing without it would
-    silently produce degraded clinical analysis.
-
-    A pre-emptive jittered sleep runs before every attempt to keep concurrent
-    callers from saturating NCBI's per-second rate ceiling.
+    Initial attempt + 3 retries (4 total tries); each retry waits min(3*(attempt+1), 90)s (3s/6s/9s). If all 4 fail,
+    the program exits non-zero: NCBI is a hard dependency for MeSH resolution and continuing would silently degrade
+    the analysis. A pre-emptive jittered sleep runs before every attempt to avoid saturating NCBI's rate ceiling.
     """
     max_retries = 3
     last_exc: Exception | None = None
@@ -413,8 +393,7 @@ async def _ncbi_get_json(
             last_exc = e
             error_summary = summarize_http_exception(e)
             if attempt < max_retries:
-                # NCBI eutils is a per-second rate limit, so a transient
-                # failure clears within ~1s — short linear backoff is enough.
+                # NCBI eutils is a per-second rate limit, so a transient failure clears within ~1s; short linear backoff suffices.
                 delay = min(3 * (attempt + 1), 90)
                 logger.warning(
                     "MeSH resolver: NCBI request failed for '%s': %s; sleeping %ds "
@@ -435,11 +414,8 @@ async def _ncbi_get_json(
                     max_retries + 1,
                     error_summary,
                 )
-    # All attempts exhausted. NCBI is unreachable / sustainedly throttling us;
-    # downstream MeSH-dependent analysis cannot proceed correctly without it.
-    # Append a timestamped record to data_source_failures.log so a later
-    # session can see *which* indication crashed the previous run, even
-    # after stderr scrolls away.
+    # All attempts exhausted: NCBI is unreachable or sustainedly throttling, and MeSH-dependent analysis cannot proceed.
+    # Append a timestamped record to data_source_failures.log so a later session can see which indication crashed the run.
     assert last_exc is not None
     log_data_source_failure(
         source="ncbi-mesh",
@@ -458,9 +434,8 @@ _MESH_RESOLVER_LOOP: asyncio.AbstractEventLoop | None = None
 
 
 def _mesh_semaphore() -> asyncio.Semaphore:
-    # Rebind when the running event loop changes — an asyncio.Semaphore binds to
-    # the loop it is created on, so a cached one would raise "bound to a
-    # different event loop" on a second asyncio.run().
+    # Rebind when the running event loop changes: an asyncio.Semaphore binds to its creating loop, so a cached one would
+    # raise "bound to a different event loop" on a second asyncio.run().
     global _MESH_RESOLVER_SEMAPHORE, _MESH_RESOLVER_LOOP
     loop = asyncio.get_running_loop()
     if _MESH_RESOLVER_SEMAPHORE is None or _MESH_RESOLVER_LOOP is not loop:
@@ -472,10 +447,10 @@ def _mesh_semaphore() -> asyncio.Semaphore:
 async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
     """Resolve an indication to (descriptor_id, preferred_term), retrying on its canonical synonym.
 
-    MeSH registers one vocabulary; candidate names arrive in another. "cocaine use disorder" (DSM-5) has no MeSH
-    entry, while its synonym "cocaine dependence" resolves to Cocaine-Related Disorders (D019970) — so a direct
-    miss silently yields zero trials for an indication that has them. On a miss, retry once with the name
-    `DISEASE_SYNONYM_CANONICAL` maps this one to. Misses are not cached, so the retry costs nothing on the hit path.
+    MeSH registers one vocabulary; candidate names arrive in another. "cocaine use disorder" (DSM-5) has no MeSH entry,
+    while its synonym "cocaine dependence" resolves to Cocaine-Related Disorders (D019970), so a direct miss would
+    silently yield zero trials. On a miss, retry once with the name `DISEASE_SYNONYM_CANONICAL` maps this one to. Misses
+    are not cached, so the retry costs nothing on the hit path.
     """
     direct = await _resolve_mesh_id_direct(indication)
     if direct is not None:
@@ -496,11 +471,9 @@ async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
 async def _resolve_mesh_id_direct(indication: str) -> tuple[str, str] | None:
     """Resolve an indication to (descriptor_id, preferred_term) via MeSH ATM, with no synonym retry.
 
-    esearch (sorted by relevance) returns candidate MeSH record UIDs; esummary
-    on each yields its descriptor id (`ds_meshui`, the canonical D-number) and
-    preferred heading (`ds_meshterms[0]`). We take the first esummary record
-    that is a descriptor with a valid D-number — this skips non-descriptor
-    records (qualifiers, supplementary concepts) that esearch can rank in.
+    esearch (sorted by relevance) returns candidate MeSH record UIDs; esummary on each yields its descriptor id
+    (`ds_meshui`, the D-number) and preferred heading (`ds_meshterms[0]`). The first record that is a descriptor with a
+    valid D-number wins, skipping qualifiers and supplementary concepts that esearch can rank in.
     """
     cache_params = {"indication": indication.strip().lower()}
     cached = cache_get("mesh_resolver", cache_params, DEFAULT_CACHE_DIR)
@@ -511,18 +484,13 @@ async def _resolve_mesh_id_direct(indication: str) -> tuple[str, str] | None:
 
     esearch_params: dict[str, Any] = {
         "db": "mesh",
-        # Qualify to the MeSH-term field. A bare free-text term lets esearch match
-        # every sub-concept that merely CONTAINS the word — e.g. "covid-19" ranks
-        # "COVID-19 Testing"/"Vaccines"/"Serotherapy" above (or instead of) the bare
-        # disease "COVID-19" (D000086382), silently resolving to the wrong descriptor
-        # and returning a false-zero trial count. "[MeSH Terms]" makes esearch return
-        # the disease descriptor first. Verified: fixes covid-19 and leaves the
-        # previously-correct diseases unchanged.
+        # Qualify to the MeSH-term field: a bare free-text term lets esearch match every sub-concept containing the word
+        # (e.g. "covid-19" ranks "COVID-19 Testing"/"Vaccines" above the disease descriptor D000086382), resolving to the
+        # wrong descriptor and a false-zero trial count. "[MeSH Terms]" returns the disease descriptor first.
         "term": f"{indication}[MeSH Terms]",
         "retmode": "json",
-        # Fetch several candidates sorted by relevance: the top idlist entry can still
-        # be a narrower variant (e.g. "hypertension" can return pulmonary-hypertension
-        # first), so rank by relevance and pick the first true descriptor below.
+        # Fetch several candidates by relevance: the top entry can be a narrower variant ("hypertension" can return
+        # pulmonary-hypertension first), so pick the first true descriptor below.
         "retmax": 5,
         "sort": "relevance",
     }
@@ -533,8 +501,8 @@ async def _resolve_mesh_id_direct(indication: str) -> tuple[str, str] | None:
         total=_NCBI_TIMEOUT_TOTAL, sock_connect=_NCBI_SOCK_CONNECT
     )
     async with _mesh_semaphore(), aiohttp.ClientSession(timeout=_timeout) as session:
-        # NCBI's MeSH backend intermittently returns empty idlist for valid
-        # terms. Retry up to 3 times on empty before treating as a real miss.
+        # NCBI's MeSH backend intermittently returns an empty idlist for valid terms; retry up to 3 times before treating
+        # it as a miss.
         for _attempt in range(3):
             await asyncio.sleep(0.1)
             async with PubMedClient._get_semaphore():

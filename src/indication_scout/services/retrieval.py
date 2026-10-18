@@ -76,12 +76,8 @@ def _filter_overly_broad_candidates(
     }
 
 
-# Pubtype multiplicative boosts applied to semantic similarity to surface
-# primary clinical evidence (RCTs, phase trials) over reviews/commentary
-# in the final top-k. Types not listed get a neutral 1.0 boost; the
-# per-record boost is max() across the record's pubtype list, so a paper
-# tagged both "Journal Article" and "Randomized Controlled Trial" gets
-# the RCT boost.
+# Pubtype multiplicative boosts on semantic similarity, surfacing primary clinical evidence (RCTs, phase trials) over
+# reviews/commentary. Unlisted types get 1.0; a record's boost is the max across its pubtype list.
 PUBTYPE_BOOSTS: dict[str, float] = {
     "Randomized Controlled Trial": 2.0,
     "Clinical Trial, Phase III": 1.8,
@@ -100,13 +96,10 @@ PUBTYPE_BOOST_DEFAULT: float = 1.0
 _PMID_DIRECTION_PROMPT = (_PROMPTS_DIR / "pmid_direction.txt").read_text()
 _EVIDENCE_DIRECTION_PROMPT = (_PROMPTS_DIR / "judge_evidence_direction.txt").read_text()
 _PMID_DRUG_IDENTITY_PROMPT = (_PROMPTS_DIR / "pmid_drug_identity.txt").read_text()
-# "class_level" = the abstract's result belongs to the drug's mechanistic class, not to the drug
-# alone (a pooled sildenafil+tadalafil meta-analysis, a review of PDE5 inhibitors). It is judged
-# PER PAPER because evidence_basis is one verdict for the whole candidate: without a per-paper
-# value a single drug-specific animal study made the candidate "drug_specific" and the class-level
-# papers then counted at full weight in the supporting list, which is what the strength cap exists
-# to prevent (sildenafil x ischemic stroke read "moderate, supports" on rodent data plus two
-# class-level papers).
+# "class_level" = the abstract's result belongs to the drug's mechanistic class, not the drug alone (a pooled
+# sildenafil+tadalafil meta-analysis). It is judged per paper because evidence_basis is one verdict per candidate:
+# otherwise one drug-specific animal study made a candidate "drug_specific" and class-level papers counted at full
+# weight (sildenafil x ischemic stroke read "moderate, supports" on rodent data plus two class-level papers).
 _PMID_DRUG_IDENTITY_VERDICTS = {"studied", "class_level", "not_studied"}
 _PMID_TREATS_DISEASE_PROMPT = (_PROMPTS_DIR / "pmid_treats_disease.txt").read_text()
 _PMID_TREATS_DISEASE_VERDICTS = {"treats", "not_treats"}
@@ -151,11 +144,10 @@ async def _judge_pmid_drug_identity(
 ) -> dict[str, str]:
     """Return each PMID's drug-role verdict: "studied", "class_level" or "not_studied".
 
-    Absence of every accepted drug name is a deterministic rejection. Remaining abstracts are judged
-    in isolated calls and cached by ChEMBL ID and PMID, so changing the surrounding batch cannot
-    affect a decision. The question does not depend on the candidate disease, so one entry serves
-    every candidate in a run. Missing or invalid responses fail closed as "not_studied" and are not
-    cached.
+    Abstracts mentioning none of the accepted drug names are rejected deterministically. The rest are judged in isolated
+    calls cached by ChEMBL ID and PMID, so the surrounding batch cannot affect a decision; the question is
+    disease-independent, so one entry serves every candidate. Missing or invalid responses fail closed as "not_studied"
+    and are not cached.
     """
     if not abstracts:
         return {}
@@ -166,8 +158,8 @@ async def _judge_pmid_drug_identity(
 
     async def judge_one(result: "AbstractResult") -> tuple[str, str]:
         if not _mentions_exact_drug(names, result):
-            # Logged because this branch excludes a paper WITHOUT an LLM call: a name the corpus
-            # uses but ChEMBL does not carry would otherwise drop real evidence with no trace.
+            # Logged because this branch excludes a paper without an LLM call; a name the corpus uses but ChEMBL lacks
+            # would otherwise drop real evidence with no trace.
             logger.debug(
                 "pmid_drug_identity: no accepted name for %s in PMID %s; excluding paper",
                 chembl_id,
@@ -242,11 +234,10 @@ async def _judge_pmid_treats_disease(
 ) -> dict[str, bool]:
     """Return whether each PMID gave the drug IN ORDER TO treat this disease.
 
-    Isolated one-question-per-abstract calls, cached by ChEMBL ID, PMID and disease, so changing the
-    surrounding batch cannot affect a decision. This is the therapeutic-target gate the combined
-    synthesize prompt still owned; kept there, a related but distinct condition could grade as the
-    candidate disease (sildenafil for neonatal hypoxic-ischemic brain injury read as evidence for
-    ischemic stroke). Missing or invalid responses fail closed as ``False`` and are not cached.
+    Isolated one-question-per-abstract calls, cached by ChEMBL ID, PMID and disease. This is the therapeutic-target gate:
+    left in the combined synthesize prompt, a related condition could grade as the candidate (sildenafil for neonatal
+    hypoxic-ischemic brain injury read as evidence for ischemic stroke). Missing or invalid responses fail closed as
+    ``False`` and are not cached.
     """
     if not abstracts:
         return {}
@@ -319,15 +310,12 @@ async def _judge_pmid_directions(
     drug: str, disease: str, relevant_abstracts: list["AbstractResult"]
 ) -> dict[str, PmidJudgment]:
     """Per-PMID direction (supporting | contradicting | mixed | neutral) AND study design over the RELEVANT abstracts, via
-    a small isolated sub-call. This is the AUTHORITATIVE direction for each relevant abstract — it replaces both the
-    in-prompt verdict-direction and the old regex guards, which could not reliably attribute a benefit to the right
-    drug-arm (metformin × hepatic steatosis: a benefit that belonged to the comparator, or a metabolic-marker improvement,
-    read as "supporting" for metformin). The narrow one-question-per-abstract framing handles attribution that phrase
-    matching cannot. The same call answers whether each study is in humans and whether it is itself controlled, which
-    phrase matching over the whole abstract could not (sildenafil × ischemic stroke: an uncontrolled human safety study
-    whose background described placebo-controlled RAT experiments certified the pair as RCT-backed). Returns a
-    {pmid: judgment} map; a PMID the sub-call omits or labels unrecognizably is left out (the caller keeps the synthesize
-    verdict for it)."""
+    a small isolated sub-call. This is the AUTHORITATIVE direction for each relevant abstract; it replaces the in-prompt
+    verdict-direction and the old regex guards, which couldn't attribute a benefit to the right drug arm (metformin ×
+    hepatic steatosis: a comparator's benefit read as supporting for metformin). The same call answers whether each study
+    is in humans and itself controlled (sildenafil × ischemic stroke: an uncontrolled human safety study whose background
+    described placebo-controlled rat experiments certified the pair as RCT-backed). Returns a {pmid: judgment} map; a PMID
+    the sub-call omits or labels unrecognizably is left out (the caller keeps the synthesize verdict for it)."""
     if not relevant_abstracts:
         return {}
     formatted = "\n\n".join(
@@ -355,8 +343,8 @@ async def _judge_pmid_directions(
         try:
             out[str(pmid)] = PmidJudgment(**payload)
         except ValidationError:
-            # An unrecognized verdict drops the whole abstract, as before: the caller then keeps the synthesize verdict
-            # for it, and it can never certify the pair as controlled human evidence.
+            # An unrecognized verdict drops the whole abstract; the caller keeps the synthesize verdict, and it can never
+            # certify the pair as controlled human evidence.
             logger.warning(
                 "pmid_direction: unusable judgment for PMID %s (%s / %s): %s",
                 pmid,
@@ -504,15 +492,12 @@ class RetrievalService:
     ) -> dict[str, set[str]]:
         """Fetch top disease indications and their competitor drugs from Open Targets.
 
-        Fetches raw competitor data from the client, then uses an LLM to merge
-        duplicate disease names and remove overly broad terms before returning.
+        Fetches raw competitor data, then uses an LLM to merge duplicate disease names and remove overly broad terms.
 
         Args:
             chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
-            date_before: Optional temporal holdout cutoff. Forwarded to the
-                OT client to suppress its current-state approved-indications
-                strip; cache key is keyed on the cutoff so cutoff and no-cutoff
-                runs do not share cached competitor lists.
+            date_before: Optional temporal holdout cutoff, forwarded to the OT client to suppress its current-state
+                approved-indications strip. The cache key includes the cutoff.
 
         Returns:
             Dict mapping disease name to set of competitor drug names.
@@ -598,8 +583,7 @@ class RetrievalService:
         )
         top_15 = dict(list(sorted_data.items())[: _settings.literature_top_k])
         for disease in top_15:
-            # Read back by DrugSafetyService.safety_search in services/drug_safety.py; keep the namespace and key shape
-            # byte-identical with that reader.
+            # Read back by DrugSafetyService.safety_search (services/drug_safety.py); keep the namespace and key shape identical.
             cache_set(
                 "disease_aliases",
                 {"chembl_id": chembl_id, "disease": disease},
@@ -619,15 +603,13 @@ class RetrievalService:
         return top_15
 
     async def build_drug_profile(self, chembl_id: str) -> DrugProfile:
-        """Fetch drug + target data from Open Targets, enrich with ATC descriptions from ChEMBL,
-        and return a DrugProfile ready for use in search term expansion.
+        """Fetch drug + target data from Open Targets, enrich with ATC descriptions from ChEMBL, and return a DrugProfile.
 
         Args:
             chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
 
         Returns:
-            DrugProfile with all fields populated. atc_descriptions will be [] if the drug
-            has no ATC classifications.
+            DrugProfile with all fields populated; atc_descriptions is [] if the drug has no ATC classifications.
         """
         async with OpenTargetsClient(cache_dir=self.cache_dir) as open_targets_client:
             rich = await open_targets_client.get_rich_drug_data(chembl_id)
@@ -645,16 +627,14 @@ class RetrievalService:
     def get_stored_pmids(self, pmids: list[str], db: Session) -> set[str]:
         """Return the subset of the given PMIDs that already exist in pubmed_abstracts.
 
-        Used by fetch_and_cache to avoid re-fetching and re-embedding abstracts that
-        are already in pgvector. A single bulk SELECT is used rather than one query
-        per PMID to keep DB round-trips to a minimum.
+        Used by fetch_and_cache to avoid re-fetching and re-embedding stored abstracts, via one bulk SELECT.
 
         Args:
             pmids: Candidate PMIDs to check.
             db: Active SQLAlchemy session.
 
         Returns:
-            Set of PMIDs that are present in the pubmed_abstracts table.
+            Set of PMIDs present in the pubmed_abstracts table.
         """
         if not pmids:
             return set()
@@ -671,9 +651,8 @@ class RetrievalService:
     ) -> list[PubmedAbstract]:
         """Fetch PubMed abstracts for PMIDs not already in the database.
 
-        Computes the set difference between all_pmids and stored_pmids, then
-        calls client.fetch_abstracts on only the new ones. If there are
-        no new PMIDs the network call is skipped entirely.
+        Calls client.fetch_abstracts on the set difference of all_pmids and stored_pmids, skipping the network call when
+        there are no new PMIDs.
 
         Args:
             all_pmids: Full list of PMIDs from a PubMed search result.
@@ -681,8 +660,7 @@ class RetrievalService:
             client: Open PubMedClient session to reuse (owned by the caller).
 
         Returns:
-            List of PubmedAbstract objects for each newly fetched PMID.
-            Empty list if all PMIDs were already stored.
+            PubmedAbstract objects for the newly fetched PMIDs; empty if all were already stored.
         """
         new_pmids = [p for p in all_pmids if p not in stored_pmids]
         if not new_pmids:
@@ -761,15 +739,13 @@ class RetrievalService:
     ) -> list[tuple[PubmedAbstract, list[float]]]:
         """Embed a list of PubMed abstracts using BioLORD-2023.
 
-        Builds embed text as "<title>. <abstract>" for each abstract and calls
-        embed_async() in a single batch. Returns (abstract, vector) pairs aligned by index.
+        Embeds "<title>. <abstract>" for each abstract in a single embed_async() batch; empty input skips embed().
 
         Args:
             abstracts: Abstracts to embed.
 
         Returns:
-            List of (PubmedAbstract, embedding vector) pairs in the same order as input.
-            Empty list if abstracts is empty (embed() is not called).
+            List of (PubmedAbstract, embedding vector) pairs in input order.
         """
         if not abstracts:
             return []
@@ -786,8 +762,8 @@ class RetrievalService:
     ) -> None:
         """Bulk-insert (abstract, embedding) pairs into pubmed_abstracts.
 
-        Uses INSERT ... ON CONFLICT DO NOTHING so re-running with already-stored
-        PMIDs is safe and idempotent. Does nothing when pairs is empty.
+        Uses INSERT ... ON CONFLICT DO NOTHING, so re-running with stored PMIDs is idempotent. Does nothing when pairs
+        is empty.
 
         Args:
             pairs: Output of embed_abstracts — (PubmedAbstract, vector) tuples.
@@ -823,16 +799,9 @@ class RetrievalService:
     def _parse_pub_date_conservative(raw: str | None) -> date | None:
         """Parse a PubMed pub_date string into a conservative date.
 
-        PubMed publication dates come in mixed formats from _parse_pubmed_xml:
-            "2023"            → year only
-            "2023-Mar"        → year + 3-letter month
-            "2023-03"         → year + numeric month
-            "2023-03-15"      → full ISO date
-        For partial dates we use the LAST day of the partial range so the
-        cutoff comparison errs toward "later" (a paper dated "2023-Mar"
-        becomes 2023-03-31, which is correctly excluded by a 2023-04-01
-        cutoff but not by a 2023-04-30 one). Returns None for missing or
-        unparseable input — caller decides what to do with that.
+        Formats from _parse_pubmed_xml: "2023", "2023-Mar", "2023-03", "2023-03-15". Partial dates use the LAST day of
+        the range so the cutoff comparison errs toward "later" ("2023-Mar" becomes 2023-03-31: excluded by a 2023-04-01
+        cutoff but not a 2023-04-30 one). Returns None for missing or unparseable input; the caller decides what to do.
         """
         if not raw:
             return None
@@ -897,9 +866,7 @@ class RetrievalService:
     ) -> dict[str, str | None]:
         """Bulk-read (pmid → raw pub_date string) from pubmed_abstracts.
 
-        Returns a dict containing only the PMIDs found in the DB. Values
-        may be None (the column is nullable). PMIDs not in the DB are
-        absent from the result.
+        Only PMIDs found in the DB are returned; values may be None (nullable column).
         """
         if not pmids:
             return {}
@@ -920,18 +887,14 @@ class RetrievalService:
     ) -> list[str]:
         """Drop PMIDs whose publication date is on/after `date_before`.
 
-        Reads pub_date from pgvector for already-stored PMIDs (no HTTP),
-        falls back to esummary for the unknowns. The fallback uses the
-        existing client._filter_pmids_by_date so the esummary parsing
-        logic stays in one place. Missing or unparseable dates are KEPT
-        — same policy as client._filter_pmids_by_date.
+        Reads pub_date from pgvector for stored PMIDs (no HTTP) and falls back to esummary for unknowns via
+        client._filter_pmids_by_date. Missing or unparseable dates are KEPT, as in the client.
         """
         if not pmids:
             return []
 
         known = self._read_pub_dates_from_db(pmids, db)
-        # The SELECT starts a transaction. End it before the possible PubMed
-        # request below so the connection returns to the pool while awaiting I/O.
+        # The SELECT starts a transaction; end it before the PubMed request below so the connection returns to the pool.
         db.rollback()
         from_db_kept: list[str] = []
         unknown: list[str] = []
@@ -941,8 +904,7 @@ class RetrievalService:
                 continue
             parsed = self._parse_pub_date_conservative(known[pmid])
             if parsed is None:
-                # Stored row but no usable date — match the production
-                # policy of keeping the PMID rather than dropping it.
+                # Stored row but no usable date: keep the PMID, matching the production policy.
                 from_db_kept.append(pmid)
                 continue
             if parsed < date_before:
@@ -981,22 +943,17 @@ class RetrievalService:
           4. Single embed call with BioLORD-2023
           5. Single bulk INSERT into pgvector (ON CONFLICT DO NOTHING)
 
-        Returns the deduplicated union of all PMIDs across all queries.
-
         Args:
             queries: PubMed keyword queries (e.g. from expand_search_terms).
             db: Active SQLAlchemy session.
-            date_before: Optional temporal holdout cutoff; only articles published
-                before this date are returned by PubMed search.
-            direct_query: Deterministic drug-disease query to retrieve completely.
-                Other queries retain the configured relevance-result cap.
+            date_before: Optional temporal holdout cutoff; only articles published before it are returned.
+            direct_query: Deterministic drug-disease query to retrieve completely; other queries keep the configured
+                relevance-result cap.
 
         Returns:
-            Deduplicated list of all PMIDs returned by PubMed search across all queries.
-            Note: not every returned PMID has a row in pubmed_abstracts — articles without
-            an abstract (letters, editorials) are excluded from the vector store. Callers
-            that pass this list to semantic_search will see those PMIDs silently skipped
-            by the WHERE pmid = ANY(:pmids) clause, which is intentional and correct.
+            Deduplicated list of PMIDs across all queries. Not every PMID has a row in pubmed_abstracts: articles
+            without an abstract (letters, editorials) are excluded, and semantic_search skips them via
+            WHERE pmid = ANY(:pmids).
         """
         _t_search = time.perf_counter()
         async with PubMedClient(cache_dir=self.cache_dir) as client:
@@ -1026,17 +983,13 @@ class RetrievalService:
             )
             _dt_search = time.perf_counter() - _t_search
 
-            # Per-query attribution: how many PMIDs each query returned (PMIDs themselves
-            # omitted to keep logs readable).
+            # Per-query attribution: how many PMIDs each query returned (PMIDs omitted to keep logs readable).
             for _q, _pmids in zip(queries, search_results, strict=True):
                 # logger.warning("[QUERYMAP] query=%r returned %d pmids", _q, len(_pmids))
                 pass
 
-            # 1.5 Cutoff post-guard. PubMed's eutils maxdate filter is not
-            # strictly respected, so we re-verify each PMID's publication
-            # date. Reads pub_date from pgvector for already-stored PMIDs
-            # (no HTTP) and only falls back to esummary for unknowns.
-            # Massively reduces NCBI traffic on re-runs.
+            # 1.5 Cutoff post-guard: PubMed's maxdate filter is not strictly respected, so re-verify each PMID's date from
+            # pgvector for stored PMIDs and esummary only for unknowns (cuts NCBI traffic on re-runs).
             if date_before is not None:
                 all_pmids = await self._filter_pmids_by_date(
                     all_pmids, date_before, db, client
@@ -1044,8 +997,7 @@ class RetrievalService:
 
             # 2. Single bulk check against pgvector
             stored = self.get_stored_pmids(all_pmids, db)
-            # Release the read transaction before fetching abstracts or embedding
-            # them. The later insert starts and commits its own transaction.
+            # Release the read transaction before fetching/embedding; the later insert starts and commits its own.
             db.rollback()
 
             # 3. Single fetch for all new abstracts
@@ -1053,12 +1005,11 @@ class RetrievalService:
             new_abstracts = await self.fetch_new_abstracts(all_pmids, stored, client)
             _dt_fetch = time.perf_counter() - _t_fetch
 
-        # Articles with no abstract (letters, editorials) are excluded —
-        # they have no text to embed meaningfully.
+        # Articles with no abstract (letters, editorials) are excluded: nothing to embed.
         abstracts_with_text = [a for a in new_abstracts if a.abstract]
 
-        # 4. Single embed call for the entire batch (embed_async chunks internally and releases
-        # the lock between chunks so concurrent candidates' query-embeds stay responsive).
+        # 4. Single embed call for the batch (embed_async chunks internally and releases the lock between chunks so
+        # concurrent candidates' query-embeds stay responsive).
         _t_embed = time.perf_counter()
         pairs = await self.embed_abstracts(abstracts_with_text)
         _dt_embed = time.perf_counter() - _t_embed
@@ -1085,28 +1036,24 @@ class RetrievalService:
         db: Session,
         date_before: date | None = None,
     ) -> list[AbstractResult]:
-        """For a given drug, disease, and list of PMIDs, return top-k most similar abstracts from pgvector
+        """For a given drug, disease, and list of PMIDs, return top-k most similar abstracts from pgvector.
 
-        Constructs a natural-language query from drug and disease (e.g. "Evidence for metformin
-        as a treatment for colorectal cancer..."), embeds it with BioLORD-2023, then runs a
-        cosine similarity search restricted to the given PMIDs.
+        Builds a natural-language query from drug and disease (e.g. "Evidence for metformin as a treatment for colorectal
+        cancer..."), embeds it with BioLORD-2023, and runs a cosine similarity search restricted to the given PMIDs.
 
         Args:
             disease: e.g. "colorectal cancer"
             chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
             pmids: e.g. ["29734553", "31245678", "30198432"]
-            date_before: Optional temporal leak-free cutoff. pgvector is a
-                shared cache that may hold abstracts fetched in a prior
-                run with no cutoff, so re-apply the same date post-guard here
-                before re-ranking.
+            date_before: Optional leak-free cutoff. pgvector is a shared cache that may hold abstracts fetched without a
+                cutoff, so the date post-guard is re-applied before re-ranking.
 
         Returns:
             List of dicts ranked by descending similarity, e.g.:
             [{"pmid": "29734553", "title": "Metformin suppresses colorectal...", "abstract": "...", "similarity": 0.89}, ...]
         """
-        # Holdout post-guard: drop PMIDs published on/after the cutoff that
-        # may have leaked in via the shared pgvector cache. Reuses the same
-        # filter as fetch_and_cache so the date policy stays in one place.
+        # Holdout post-guard: drop PMIDs published on/after the cutoff that leaked in via the shared pgvector cache, using
+        # the same filter as fetch_and_cache.
         if date_before is not None:
             async with PubMedClient(cache_dir=self.cache_dir) as client:
                 pmids = await self._filter_pmids_by_date(pmids, date_before, db, client)
@@ -1132,17 +1079,13 @@ class RetrievalService:
         #     time.perf_counter() - _t_embed,
         # )
 
-        # Over-fetch cap: pull top-N by similarity from pgvector, then rerank
-        # by pubtype in Python. Cap gives the boost headroom to reorder
-        # (a 2x RCT boost at rank 50 can beat a review at rank 5) without
-        # an unbounded scan if the candidate pool grows.
+        # Over-fetch cap: pull top-N by similarity from pgvector, then rerank by pubtype in Python. The cap gives the boost
+        # headroom to reorder (a 2x RCT boost at rank 50 can beat a review at rank 5) without an unbounded scan.
         top_k = _settings.semantic_search_top_k
         rerank_cap = max(top_k * 10, 100)
 
-        # Relevance audit: how many of the fetched PMIDs actually have an embedding
-        # row (i.e. truly competed in the rerank), independent of the rerank_cap
-        # LIMIT below. Compares against len(pmids) to expose over-fetch — abstracts
-        # fetched + embedded but never surfaced in the top-k. Read-only COUNT.
+        # Relevance audit: how many fetched PMIDs have an embedding row (competed in the rerank), independent of the
+        # rerank_cap LIMIT below; compared with len(pmids) it exposes abstracts embedded but never surfaced. Read-only COUNT.
         _embedded_count = db.execute(
             text("SELECT count(*) FROM pubmed_abstracts WHERE pmid = ANY(:pmids)"),
             {"pmids": pmids},
@@ -1178,9 +1121,8 @@ class RetrievalService:
         ).fetchall()
         baseline_pmids = {str(row[0]) for row in rows}
         rows_by_pmid = {str(row[0]): row for row in rows}
-        # The linked rows are not given an explicit Row[...] annotation: SQLAlchemy 2.1
-        # made Row variadic, so Row[Any] there means a one-column row and mypy rejects
-        # row[3] below. Letting the type come from fetchall() works on 2.0 and 2.1.
+        # No explicit Row[...] annotation on the linked rows: SQLAlchemy 2.1 made Row variadic, so Row[Any] means a
+        # one-column row and mypy rejects row[3]. Inferring from fetchall() works on 2.0 and 2.1.
         if linked_pmids:
             linked_rows = db.execute(
                 text("""
@@ -1198,8 +1140,7 @@ class RetrievalService:
             for row in linked_rows:
                 rows_by_pmid.setdefault(str(row[0]), row)
         all_rows = list(rows_by_pmid.values())
-        # Rows are fully materialized, so the read transaction is no longer
-        # needed while PubMed and the literature agent perform awaited work.
+        # Rows are fully materialized, so the read transaction can end before the awaited PubMed and agent work.
         db.rollback()
         # logger.warning(
         #     "[TIMING] semantic_search %s pgvector_scan: %.1fs (%d pmids in)",
@@ -1311,22 +1252,19 @@ class RetrievalService:
     ) -> EvidenceSummary:
         """Summarize PubMed evidence for a drug-disease pair using an LLM.
 
-        Formats the top abstracts from semantic_search into a prompt, calls the LLM,
-        and parses the JSON response into an EvidenceSummary.
+        Formats the top abstracts from semantic_search into a prompt, calls the LLM, and parses the JSON response into
+        an EvidenceSummary.
 
         Args:
             chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
             disease: Candidate disease (e.g. "colorectal cancer").
-            top_abstracts: Output of semantic_search — list of dicts with keys
-                "pmid", "title", "abstract", "similarity".
+            top_abstracts: Output of semantic_search — list of dicts with keys "pmid", "title", "abstract", "similarity".
 
         Returns:
             EvidenceSummary with all fields populated from the LLM response.
         """
-        # Cache key uses sorted PMIDs so two abstract orderings that contain the
-        # same evidence collapse to one cache entry. The combined prompt now
-        # owns the approved-indication exclusion, so the sorted approved set MUST be
-        # in the key — the same PMIDs grade differently under different approved lists.
+        # Cache key uses sorted PMIDs so orderings of the same evidence collapse to one entry. The sorted approved set
+        # is also in the key, since the same PMIDs grade differently under different approved lists.
         approved = sorted(
             {i.strip() for i in (approved_indications or []) if i.strip()}
         )
@@ -1336,8 +1274,8 @@ class RetrievalService:
             "pmids": sorted(r.pmid for r in top_abstracts),
             "approved_indications": approved,
             "llm_model": _settings.llm_model,
-            # Bump when the relevance prompt or DERIVED fields (direction rollup, strength cap)
-            # change, so stale judgments cannot preserve behavior that the new rules reject.
+            # Bump when the relevance prompt or derived fields (direction rollup, strength cap) change, so stale judgments
+            # cannot preserve behavior the new rules reject.
             "logic_version": "per_pmid_class_and_target_gates_v6_animal_only_from_judgments",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
@@ -1350,9 +1288,8 @@ class RetrievalService:
 
         drug_names = await get_all_drug_names(chembl_id, self.cache_dir)
         pref_name = drug_names[0]
-        # Two isolated per-paper gates run BEFORE the combined prompt, so the prompt only ever sees
-        # abstracts already established as this drug alone, given to treat this disease. Both are
-        # cached per paper, so a paper's fate no longer moves when the surrounding batch changes.
+        # Two isolated per-paper gates run BEFORE the combined prompt, so it only sees abstracts already established as this
+        # drug alone, given to treat this disease. Both are cached per paper, so a paper's fate doesn't move with the batch.
         drug_identity = await _judge_pmid_drug_identity(
             chembl_id, drug_names, top_abstracts, self.cache_dir
         )
@@ -1373,8 +1310,8 @@ class RetrievalService:
             if drug_identity.get(result.pmid) == "studied"
             and on_topic.get(result.pmid, False)
         ]
-        # Class-level papers never enter the supporting/contradicting lists. Their only role is to
-        # distinguish "no evidence at all" from "evidence exists, but only for the class".
+        # Class-level papers never enter the supporting/contradicting lists; they only distinguish "no evidence at all"
+        # from "evidence exists, but only for the class".
         class_level_pmids = [
             result.pmid
             for result in top_abstracts
@@ -1422,9 +1359,8 @@ class RetrievalService:
             approved_indications=", ".join(approved) if approved else "(none)",
         )
 
-        # The identifier lists below are rebuilt in code, so they cannot name an abstract that was
-        # not supplied. The prose is the exception — the model types those digits itself — so a
-        # cited PMID that was never supplied costs a retry, and then the offending sentence.
+        # Identifier lists below are rebuilt in code, so they cannot name an unsupplied abstract. The prose is the
+        # exception (the model types those digits), so a cited PMID never supplied costs a retry, then the sentence.
         allowed_pmids = {r.pmid for r in synthesis_abstracts}
         prose_context = f"{pref_name} / {disease} synthesis"
         data = None
@@ -1432,12 +1368,10 @@ class RetrievalService:
             response = await query_llm(
                 prompt if attempt == 1 else prompt + _PMID_RETRY_NOTE
             )
-            # Tolerant parse: the merged prompt is long, so the model sometimes emits prose before
-            # the JSON or an empty/overflowed response. parse_last_json_object scans for the last
-            # balanced {...} block (same tolerance the retired judge had). On a genuine parse
-            # failure, DEGRADE to a safe floor (basis=none, strength none, all abstracts
-            # contaminated) rather than `raise` — one bad LLM response must not crash the whole
-            # analysis pipeline.
+            # Tolerant parse: the merged prompt is long, so the model sometimes emits prose before the JSON or an
+            # empty/overflowed response. parse_last_json_object scans for the last balanced {...} block. On a genuine
+            # failure, DEGRADE to a safe floor (basis=none, strength none, all abstracts contaminated) rather than raise;
+            # one bad LLM response must not crash the pipeline.
             data = parse_last_json_object(response)
             if data is None:
                 break
@@ -1487,19 +1421,16 @@ class RetrievalService:
                 "verdicts": {},
             }
 
-        # Per-PMID DIRECTIONAL verdict over the INPUT PMID set. The prompt labels every abstract
-        # one of "contaminated"/"supporting"/"contradicting"/"mixed"; any input PMID the model
-        # OMITS (or labels unrecognizably) is treated as contaminated (conservative — an
-        # unclassified abstract never counts as evidence). The supporting/contradicting/relevant
-        # lists are BUILT HERE from this map, NOT emitted by the LLM — this removes the loose
-        # second-pass bucketing that mis-placed a positive trial as contradicting (BRAVE-I).
+        # Per-PMID directional verdict over the INPUT PMID set: the prompt labels each abstract
+        # "contaminated"/"supporting"/"contradicting"/"mixed"; an omitted or unrecognizably labelled PMID counts as
+        # contaminated (an unclassified abstract never counts as evidence). The supporting/contradicting/relevant lists
+        # are built here from this map, not emitted by the LLM, which removed a bucketing error that mis-placed a positive
+        # trial as contradicting (BRAVE-I).
         verdicts = data.get("verdicts")
         input_pmids = [r.pmid for r in top_abstracts]
         synthesis_pmids = {r.pmid for r in synthesis_abstracts}
-        # Relevant = anything not contaminated. "neutral" (PK/safety/mechanism, set by the direction
-        # sub-call) is relevant — it counts toward study_count — but is excluded from supporting AND
-        # contradicting below. synthesize itself never emits "neutral", so including it here only
-        # affects post-sub-call membership.
+        # Relevant = anything not contaminated. "neutral" (PK/safety/mechanism, set by the direction sub-call) is relevant
+        # and counts toward study_count but is excluded from supporting AND contradicting below. synthesize never emits it.
         _RELEVANT_VERDICTS = {"supporting", "contradicting", "mixed", "neutral"}
         if isinstance(verdicts, dict):
             verdict_of = {
@@ -1520,13 +1451,10 @@ class RetrievalService:
             )
             verdict_of = dict.fromkeys(input_pmids, "contaminated")
 
-        # AUTHORITATIVE per-PMID DIRECTION via an isolated sub-call over the relevant abstracts.
-        # synthesize's verdict map decides relevant-vs-contaminated; this sub-call decides the
-        # DIRECTION (supporting/contradicting/mixed) of each relevant abstract. It replaces the old
-        # phrase-matching guards, which could not attribute a benefit to the right drug-arm
-        # (metformin × hepatic steatosis: comparator's benefit / metabolic-marker improvement read
-        # as supporting for metformin). The sub-call's verdict OVERRIDES the synthesize direction
-        # for any relevant PMID it returns; PMIDs it omits keep the synthesize direction.
+        # AUTHORITATIVE per-PMID DIRECTION via an isolated sub-call over the relevant abstracts. synthesize's verdict map
+        # decides relevant-vs-contaminated; this sub-call decides supporting/contradicting/mixed, replacing phrase-matching
+        # guards that couldn't attribute a benefit to the right drug arm (metformin × hepatic steatosis). It OVERRIDES the
+        # synthesize direction for any relevant PMID it returns; omitted PMIDs keep the synthesize direction.
         relevant_for_direction = [
             r for r in synthesis_abstracts if verdict_of[r.pmid] in _RELEVANT_VERDICTS
         ]
@@ -1554,16 +1482,15 @@ class RetrievalService:
         contaminated_pmids = [
             p for p in input_pmids if verdict_of[p] not in _RELEVANT_VERDICTS
         ]
-        # supporting = supporting + mixed; contradicting = contradicting + mixed (a mixed abstract
-        # appears in both — it carries evidence in each direction).
+        # supporting = supporting + mixed; contradicting = contradicting + mixed (a mixed abstract appears in both).
         supporting_pmids = [
             p for p in input_pmids if verdict_of[p] in ("supporting", "mixed")
         ]
         contradicting_pmids = [
             p for p in input_pmids if verdict_of[p] in ("contradicting", "mixed")
         ]
-        # neutral = relevant but non-efficacy (PK/safety/mechanism): in neither directional list,
-        # surfaced separately so a cited-as-context PMID does not look dropped.
+        # neutral = relevant but non-efficacy (PK/safety/mechanism): in neither directional list, surfaced separately so a
+        # cited-as-context PMID doesn't look dropped.
         neutral_pmids = [p for p in input_pmids if verdict_of[p] == "neutral"]
 
         data["relevant_pmids"] = relevant_pmids
@@ -1574,15 +1501,14 @@ class RetrievalService:
         data["study_count"] = len(relevant_pmids)
         summary = EvidenceSummary(**data)
 
-        # The synthesis model sometimes emits is_observational=False even while describing every relevant human study as
-        # uncontrolled. The card renders False as "RCT-backed / controlled", so require a per-abstract controlled-design
-        # signal before allowing that claim. Only a paper carrying an EFFICACY verdict may certify the pair: a neutral
-        # (PK/safety/mechanism) paper is excluded from the grade, so it must not set the design word either. The judgment
-        # is per-abstract because a document-wide phrase match cannot tell a study's own design from one it cites
-        # (sildenafil × ischemic stroke: two animal studies graded the pair, and an uncontrolled 12-patient safety study
-        # whose background described placebo-controlled RAT experiments supplied the "RCT-backed" claim). The guard is
-        # one-way: it withdraws an unsupported controlled claim without upgrading any study to one. With no judgments at
-        # all (sub-call failure) there is no evidence either way, so the synthesis value stands.
+        # The synthesis model sometimes emits is_observational=False while describing every relevant human study as
+        # uncontrolled, and the card renders False as "RCT-backed / controlled". So require a per-abstract controlled-design
+        # signal first. Only a paper with an EFFICACY verdict may certify the pair (neutral papers are excluded from the
+        # grade, so they must not set the design word). The judgment is per abstract because a document-wide phrase match
+        # can't tell a study's own design from one it cites (sildenafil × ischemic stroke: an uncontrolled 12-patient safety
+        # study describing placebo-controlled rat experiments supplied the "RCT-backed" claim). The guard is one-way: it
+        # withdraws an unsupported controlled claim and never upgrades. With no judgments (sub-call failure), the synthesis
+        # value stands.
         directional_judgments = [
             pmid_judgment
             for pmid, pmid_judgment in pmid_judgments.items()
@@ -1599,13 +1525,11 @@ class RetrievalService:
         ):
             summary.is_observational = None
 
-        # Animal-only is likewise derived from the per-abstract judgments, not the synthesis model. The model counts ANY
-        # human paper — including a neutral safety study with no efficacy result — as human evidence, so sildenafil x
-        # ischemic stroke read "moderate, supports, undetermined design" on two rodent studies plus a 12-patient safety
-        # study, while Duchenne on one mouse study correctly read "weak, animal/in-vitro only". Only papers carrying an
-        # efficacy verdict count. When none of them is human the pair is animal-only and its strength is capped at
-        # "weak" (the prompt's own rule for animal/in-vitro-only evidence); when at least one is human it is not. Both
-        # are one-way: a grade is never raised. With no judgments the synthesis values stand.
+        # Animal-only is also derived from the per-abstract judgments: the synthesis model counts ANY human paper, even a
+        # neutral safety study, as human evidence (sildenafil x ischemic stroke read "moderate, supports" on two rodent
+        # studies plus a 12-patient safety study). Only efficacy-verdict papers count. If none is human the pair is
+        # animal-only and strength is capped at "weak"; if at least one is human it is not. Both are one-way (a grade is
+        # never raised), and with no judgments the synthesis values stand.
         if summary.evidence_basis == "drug_specific" and directional_judgments:
             any_human = any(
                 pmid_judgment.is_human for pmid_judgment in directional_judgments
@@ -1622,9 +1546,8 @@ class RetrievalService:
                     )
                     summary.strength = "weak"
 
-        # Preserve the synthesis model's evidence-weighted overall direction when individual papers
-        # disagree. A presence-only rollup made any positive case report cancel controlled negative
-        # evidence. The one-sided and no-efficacy cases remain deterministic guardrails.
+        # Preserve the synthesis model's evidence-weighted overall direction when papers disagree (a presence-only rollup let
+        # any positive case report cancel controlled negative evidence). One-sided and no-efficacy cases stay deterministic.
         has_support = bool(supporting_pmids)
         has_against = any(
             verdict_of[p] in ("contradicting", "mixed") for p in input_pmids
@@ -1652,19 +1575,15 @@ class RetrievalService:
         elif has_against:
             summary.direction = "contradicts"
         else:
-            # Every relevant abstract is "neutral" (PK / safety-only / mechanism) — there is no
-            # efficacy result in either direction to grade. Without this branch the LLM's own
-            # direction survived unchecked: sildenafil x astrocytoma read "weak, supports" on four
-            # neutral abstracts and an empty supporting list, and the non-zero study_count then
-            # carried it past the supervisor's zero-evidence gate.
+            # Every relevant abstract is "neutral" (PK / safety-only / mechanism), so there is no efficacy result to grade.
+            # Without this branch the LLM's direction survived unchecked (sildenafil x astrocytoma read "weak, supports" on
+            # four neutral abstracts) and the non-zero study_count carried it past the supervisor's zero-evidence gate.
             summary.direction = "none"
 
-        # DETERMINISTIC strength cap — the one clinical-accuracy invariant NOT trusted to the
-        # prompt. strength/direction grade DRUG-SPECIFIC evidence only; whenever evidence_basis is
-        # not "drug_specific" (class_level / approved / none) they MUST be "none", else a
-        # class-level RCT body could inflate the card to "strong" while the prose says "no direct
-        # evidence for <drug>" (the Parkinson bug). Every consumer (the supervisor ranking path
-        # reads es.strength directly) depends on this.
+        # DETERMINISTIC strength cap, the one clinical-accuracy invariant not trusted to the prompt: strength/direction grade
+        # DRUG-SPECIFIC evidence only, so when evidence_basis is not "drug_specific" (class_level / approved / none) they
+        # MUST be "none", else a class-level RCT body could inflate the card to "strong" while the prose says "no direct
+        # evidence for <drug>" (the Parkinson bug). The supervisor ranking path reads es.strength directly.
         if summary.evidence_basis != "drug_specific":
             summary.strength = "none"
             summary.direction = "none"
@@ -1712,10 +1631,8 @@ class RetrievalService:
     ) -> list[str]:
         """Use LLM to generate diverse PubMed search queries from a drug-disease pair.
 
-        Combines the drug's synonyms, gene targets, mechanisms of action, and ATC
-        classifications with the organ term extracted from the disease name to produce
-        a broad set of complementary PubMed queries. Results are cached by drug/disease
-        pair and deduplicated (case-insensitive) before return.
+        Combines the drug's synonyms, gene targets, mechanisms of action, and ATC classifications with the organ term
+        extracted from the disease name. Results are cached by drug/disease pair and deduplicated (case-insensitive).
 
         Args:
             chembl_id: ChEMBL ID of the drug (e.g. "CHEMBL1431").
@@ -1733,15 +1650,6 @@ class RetrievalService:
             ...     "AMPK colorectal cancer",
             ...     "biguanide colon neoplasm",
             ...     "metformin PRKAB1 cancer",
-            ... ]
-
-            >>> # semaglutide × non-alcoholic steatohepatitis might return:
-            >>> [
-            ...     "semaglutide NASH",
-            ...     "GLP-1 receptor agonist liver fibrosis",
-            ...     "semaglutide non-alcoholic fatty liver disease",
-            ...     "ozempic hepatic steatosis",
-            ...     "GLP1R liver inflammation",
             ... ]
         """
         cache_params = {
@@ -1766,12 +1674,9 @@ class RetrievalService:
         synonyms = all_names[1:]
         organ_term = await self.extract_organ_term(disease_name)
 
-        # Resolve the disease string to its canonical MeSH preferred term and
-        # pass that into the prompt instead of the raw disease name. PubMed's
-        # auto-term-mapping breaks when bare multi-word phrases appear on
-        # either side of AND, so the prompt template instructs the LLM to wrap
-        # the disease term in double quotes for reliable parsing. If the
-        # MeSH lookup misses, fall back to the raw disease name.
+        # Resolve the disease to its canonical MeSH preferred term for the prompt: PubMed's auto-term-mapping breaks on bare
+        # multi-word phrases around AND, so the prompt has the LLM wrap the term in double quotes. Falls back to the raw
+        # disease name if the MeSH lookup misses.
         from indication_scout.services.disease_helper import resolve_mesh_id
 
         mesh_result = await resolve_mesh_id(disease_name)
@@ -1812,9 +1717,8 @@ class RetrievalService:
         quoted_disease = f'"{disease_term}"'
         direct_query = f"{pref_name} AND {quoted_disease}"
 
-        # Substitute the <DISEASE> placeholder with the quoted MeSH preferred term.
-        # The prompt instructs the LLM to emit `<DISEASE>` instead of writing the
-        # disease name directly, so the JSON array never contains embedded quotes.
+        # Substitute the <DISEASE> placeholder with the quoted MeSH preferred term; the LLM emits the placeholder so the
+        # JSON array never contains embedded quotes.
         substituted = [q.replace("<DISEASE>", quoted_disease) for q in raw]
 
         # Case-normalised dedup: direct query stays first and model duplicates are removed.

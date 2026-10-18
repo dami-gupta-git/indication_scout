@@ -53,9 +53,8 @@ _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 _DRUG_APPROVAL_NS = "fda_drug_disease_approval"
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
-# Per-candidate approval relationship, decided once from the FDA label. Only "approved" removes a
-# candidate; "combination_only" demotes; "contaminated" and "none" both rank (contaminated also
-# flags trial-table suppression). See PLAN_approval_labeling_upstream.md.
+# Per-candidate approval relationship, decided once from the FDA label. Only "approved" removes a candidate;
+# "combination_only" demotes; "contaminated" and "none" both rank (contaminated also flags trial-table suppression).
 ApprovalLabel = Literal["approved", "combination_only", "contaminated", "none"]
 APPROVAL_LABELS: frozenset[str] = frozenset(
     ("approved", "combination_only", "contaminated", "none")
@@ -103,11 +102,10 @@ _APPROVAL_DECISION_ADAPTER: TypeAdapter[_ContaminatedDecision | _UnanchoredDecis
 
 
 def _coerce_label(value: Any) -> ApprovalLabel | None:
-    """Validate a raw value as an ApprovalLabel. Returns None if invalid.
+    """Validate a raw value as an ApprovalLabel; None if invalid.
 
-    Single source of truth for label validation — used by both the LLM-parse path
-    and the per-drug cache loader so an invalid/legacy value is skipped, never
-    silently coerced (e.g. a bool or stale string must NOT become "approved").
+    Shared by the LLM-parse path and the per-drug cache loader so an invalid or legacy value (a bool, a stale string) is
+    skipped, never coerced to "approved".
     """
     if isinstance(value, str) and value in APPROVAL_LABELS:
         return value  # type: ignore[return-value]
@@ -162,13 +160,11 @@ def _parse_approval_decisions(
 def _drug_approval_path(drug_name: str, cache_dir: Path) -> Path:
     """Return the per-drug cache file path for the approvals namespace.
 
-    Slugifies the drug name to a filesystem-safe stem; appends an 8-char
-    SHA suffix to disambiguate names that collapse to the same slug
+    The slugified drug name carries an 8-char SHA suffix to disambiguate names that collapse to the same slug
     (e.g. "5-FU" vs "5_FU") and to handle empty slugs.
     """
     slug = _SLUG_RE.sub("_", drug_name.lower()).strip("_")
-    # Fold the LLM model into the key: verdicts are LLM-generated, so a model
-    # change must not serve stale verdicts from the prior model.
+    # Fold the LLM model into the key: verdicts are LLM-generated, so a model change must not serve stale ones.
     keyed = f"{drug_name}\x00{_settings.llm_model}"
     suffix = hashlib.sha256(keyed.encode()).hexdigest()[:8]
     stem = f"{slug}_{suffix}" if slug else suffix
@@ -178,10 +174,8 @@ def _drug_approval_path(drug_name: str, cache_dir: Path) -> Path:
 def _load_drug_approvals(drug_name: str, cache_dir: Path) -> dict[str, dict[str, Any]]:
     """Load the per-drug approvals file as {disease_lower: {label, cached_at, ttl}}.
 
-    Returns an empty dict if the file is missing or unparseable. Expired
-    entries are dropped lazily; the file is rewritten only when a caller
-    invokes _save_drug_approvals. Entries whose `label` is missing or not a
-    valid ApprovalLabel are skipped (stale bool-shaped caches do not survive).
+    Returns an empty dict if the file is missing or unparseable. Expired entries are dropped lazily (the file is
+    rewritten only by _save_drug_approvals), and entries with a missing or invalid `label` are skipped.
     """
     path = _drug_approval_path(drug_name, cache_dir)
     if not path.exists():
@@ -225,8 +219,7 @@ def _save_drug_approvals(
 ) -> None:
     """Merge new_labels into the per-drug file and write it back.
 
-    Existing unexpired entries are preserved; new labels overwrite any
-    prior entry for the same disease (refreshing its cached_at).
+    Unexpired entries are preserved; a new label overwrites any prior entry for the same disease (refreshing cached_at).
     """
     if not new_labels:
         return
@@ -251,12 +244,9 @@ def _save_drug_approvals(
 # --------------------------------------------------------------------------
 # Hardcoded FDA approval lookup (used during temporal holdouts)
 #
-# When the pipeline is invoked with `date_before` set, the live openFDA
-# label path leaks today's approvals into a holdout (e.g. a 2020 holdout
-# would see semaglutide as approved for MASH because the current label
-# lists it). The lookup below replaces the live path with a hardcoded
-# {drug: [{disease, approved}]} table, gated on `as_of`, so a holdout sees
-# only approvals that existed on or before the cutoff.
+# With `date_before` set, the live openFDA path would leak today's approvals into a holdout (a 2020 holdout would see
+# semaglutide approved for MASH). This {drug: [{disease, approved}]} table, gated on `as_of`, replaces it so a holdout
+# sees only approvals that existed on or before the cutoff.
 # --------------------------------------------------------------------------
 
 
@@ -296,17 +286,12 @@ async def get_approved_indications(
     candidate_diseases: list[str],
     as_of: date | None,
 ) -> set[str]:
-    """Return the subset of candidate_diseases that the drug was FDA-approved
-    for on or before `as_of`, sourced from the hardcoded approvals table.
+    """Return the candidate_diseases the drug was FDA-approved for on or before `as_of`, per the hardcoded table.
 
-    Matching uses the same LLM disease matcher as the competitor merge
-    (`merge_duplicate_diseases` REMOVE): a candidate is dropped only when it is
-    the SAME clinical condition as a pre-cutoff approved indication. This avoids
-    the substring trap where a broader/sibling candidate ("leukemia",
-    "depressive disorder") was wrongly stripped because it shares a substring
-    with a more specific approved indication ("chronic myeloid leukemia",
-    "major depressive disorder"). Subtype/parent and same-category-distinct
-    pairs stay separate per the matcher's prohibition rules.
+    Matching uses the same LLM disease matcher as the competitor merge (`merge_duplicate_diseases` REMOVE): a candidate
+    is dropped only when it is the SAME clinical condition as a pre-cutoff approved indication. This avoids the
+    substring trap where a broader or sibling candidate ("leukemia") was stripped because it shares a substring with a
+    more specific approved indication ("chronic myeloid leukemia"). Subtype/parent and same-category pairs stay separate.
 
     Returns empty set when:
       - drug is not in the table (logs a warning)
@@ -350,9 +335,7 @@ async def get_approved_indications(
     if not pre_cutoff_diseases:
         return set()
 
-    # LLM equivalence: REMOVE returns the candidate names that are the SAME
-    # condition as a pre-cutoff approved indication (subtype/parent/sibling kept
-    # separate by the prompt's prohibition rules).
+    # LLM equivalence: REMOVE returns candidates that are the SAME condition as a pre-cutoff approved indication.
     from indication_scout.services.disease_helper import merge_duplicate_diseases
 
     merge_result = await merge_duplicate_diseases(
@@ -366,12 +349,10 @@ def list_approved_indications_at(
     drug_name: str,
     as_of: date | None,
 ) -> list[str]:
-    """Return all approved indication strings for `drug_name` on or before
-    `as_of`, sourced from the hardcoded approvals table.
+    """Return all approved indication strings for `drug_name` on or before `as_of`, from the hardcoded approvals table.
 
-    Used to seed the supervisor's drug briefing (the analogue of
-    `list_approved_indications_from_labels`) during temporal holdouts.
-    Returns empty list when as_of is None or drug is not in the table.
+    Seeds the supervisor's drug briefing during temporal holdouts (analogue of `list_approved_indications_from_labels`).
+    Returns an empty list when as_of is None or the drug is not in the table.
     """
     if as_of is None:
         return []
@@ -413,22 +394,18 @@ async def list_approved_indications_from_labels(
     label_texts: list[str],
     cache_dir: Path = DEFAULT_CACHE_DIR,
 ) -> list[str]:
-    """Extract the approved indications named in FDA label text, no candidate list.
+    """Extract the approved indications named in FDA label text, with no candidate list.
 
-    Companion to extract_approved_from_labels. That function asks "which of
-    THESE candidates are approved per the label?" — useful for filtering a
-    candidate list. This function asks "what indications does the label
-    approve?" — useful for seeding the supervisor's drug-level briefing with
-    approvals discovered up front, before any candidate list exists.
+    Companion to extract_approved_from_labels, which asks which of THESE candidates are approved. This asks what the
+    label approves, to seed the supervisor's drug-level briefing before any candidate list exists.
 
     Args:
         label_texts: Raw indications_and_usage strings from openFDA.
         cache_dir: Cache directory for storing LLM results.
 
     Returns:
-        Deduplicated list of approved indication names extracted from the
-        label text. Empty list if label_texts is empty, the LLM response is
-        not parseable JSON, or the LLM returns a non-list. Order-preserving.
+        Deduplicated, order-preserving list of approved indication names. Empty if label_texts is empty, the LLM
+        response is not parseable JSON, or the LLM returns a non-list.
     """
     if not label_texts:
         return []
@@ -566,14 +543,11 @@ async def get_fda_approved_disease_mapping(
     """Classify each candidate's relationship to the drug's approved indications.
 
     Two-tier lookup:
-      1. Curated short-circuit — exact (case-sensitive) match against the drug's
-         curated approved / contaminated / rejected lists; skips the LLM.
-      2. LLM fallback — for remaining candidates, the input drug_name is
-         expanded to all known aliases (generic, trade, INN, USAN, salt forms)
-         via ChEMBL, all matching openFDA labels are fetched, and the
-         candidates are batched into one LLM call. Each structured decision
-         includes an ApprovalLabel; contaminated decisions must also name an
-         exact item from approved_indications.
+      1. Curated short-circuit: exact (case-sensitive) match against the drug's curated approved / contaminated /
+         rejected lists; skips the LLM.
+      2. LLM fallback: the drug_name is expanded to all known aliases via ChEMBL, all matching openFDA labels are
+         fetched, and the remaining candidates go into one LLM call. Each structured decision includes an
+         ApprovalLabel; contaminated decisions must also name an exact item from approved_indications.
 
     Args:
         drug_name: A single drug name (trade, generic/INN, or USAN).
@@ -582,20 +556,17 @@ async def get_fda_approved_disease_mapping(
         cache_dir: Cache directory.
 
     Returns:
-        Dict mapping each input candidate (verbatim) to an ApprovalLabel:
-        "approved" (already covered → drop), "combination_only" (demote),
-        "contaminated" (keep, suspect trial counts), or "none" (keep, clean).
-        Every input candidate is always present as a key. Defaults to "none"
-        on any failure (chembl, FDA fetch, LLM parse) — a failure must NOT
-        drop a candidate.
+        Dict mapping each input candidate (verbatim) to an ApprovalLabel: "approved" (already covered → drop),
+        "combination_only" (demote), "contaminated" (keep, suspect trial counts), or "none" (keep, clean). Every input
+        candidate is a key. Defaults to "none" on any failure (chembl, FDA fetch, LLM parse): a failure must NOT drop a
+        candidate.
     """
     result: dict[str, ApprovalLabel] = dict.fromkeys(candidate_diseases, "none")
 
     if not drug_name or not candidate_diseases:
         return result
 
-    # Curated short-circuit: exact, case-sensitive match against the drug's
-    # curated lists. Hits skip both the FDA fetch and the LLM call.
+    # Curated short-circuit: exact, case-sensitive match against the drug's curated lists; hits skip the FDA fetch and LLM.
     approved_set = set(CURATED_FDA_APPROVED_CANDIDATES.get(drug_name, []))
     contaminated_set = set(CURATED_FDA_CONTAMINATED_CANDIDATES.get(drug_name, []))
     combination_set = set(CURATED_FDA_COMBINATION_ONLY_CANDIDATES.get(drug_name, []))
@@ -616,14 +587,9 @@ async def get_fda_approved_disease_mapping(
     if not uncurated:
         return result
 
-    # Per-pair drug-disease label cache: one file per drug holding a
-    # {disease_lower: {label, cached_at, ttl}} map. Apply unexpired hits
-    # directly to result; only the still-missing candidates are sent to
-    # ChEMBL/FDA/LLM below. New labels are merged back into the same file
-    # after the LLM call. Curated entries are applied above and never cached
-    # here, so curated overrides always win. TTL is per-label, preserving
-    # the previous semantics where each (drug, disease) pair expired
-    # independently.
+    # Per-pair label cache: one file per drug holding {disease_lower: {label, cached_at, ttl}}. Unexpired hits go straight
+    # into result; only the rest are sent to ChEMBL/FDA/LLM, and new labels are merged back after the call. Curated
+    # entries are applied above and never cached, so curated overrides always win. TTL is per label.
     drug_cache = _load_drug_approvals(drug_name, cache_dir)
     still_missing: list[str] = []
     for c in uncurated:
@@ -636,12 +602,9 @@ async def get_fda_approved_disease_mapping(
     if not still_missing:
         return result
 
-    # Expand the input drug name to all known aliases (generic, trade, INN,
-    # USAN, salt forms, etc.) via ChEMBL. Different formulations of the same
-    # drug carry distinct openFDA labels (e.g. fluoxetine generic vs Sarafem
-    # for PMDD), so feeding all aliases to get_all_label_indications surfaces
-    # approvals that a single-name lookup would miss. On any chembl failure,
-    # fall back to the bare drug_name.
+    # Expand the drug name to all known aliases via ChEMBL: different formulations carry distinct openFDA labels
+    # (fluoxetine generic vs Sarafem for PMDD), so all aliases surface approvals a single-name lookup would miss. On any
+    # chembl failure, fall back to the bare drug_name.
     try:
         chembl_id = await resolve_drug_name(drug_name, cache_dir)
         drug_aliases = await get_all_drug_names(chembl_id, cache_dir)
@@ -706,9 +669,8 @@ async def get_fda_approved_disease_mapping(
     )
     result.update(llm_labels)
 
-    # Merge fresh labels into the per-drug cache file. Only candidates the LLM
-    # returned a valid label for are cached — parse failures or skipped
-    # candidates remain uncached so a future call can retry them.
+    # Merge fresh labels into the per-drug cache file. Only candidates with a valid LLM label are cached; parse failures
+    # and skipped candidates stay uncached so a later call can retry them.
     _save_drug_approvals(drug_name, llm_labels, cache_dir, ttl=CACHE_TTL)
 
     return result
