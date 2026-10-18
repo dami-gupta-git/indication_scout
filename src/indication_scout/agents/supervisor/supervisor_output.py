@@ -15,9 +15,8 @@ from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
 class CandidateBlurb(BaseModel):
     """Structured per-candidate synthesis written by the supervisor.
 
-    Single-line fields plus a 2-sentence prose synthesis. Fields are independently optional — an
-    empty string means nothing to write for that field this run, and the formatter omits empty
-    fields. Populated for every ranked candidate; None for un-ranked candidates.
+    Single-line fields plus a 2-sentence prose synthesis. Each field is independently optional; empty fields are
+    omitted by the formatter. Populated for every ranked candidate; None for un-ranked ones.
     """
 
     stage: str = Field(
@@ -78,8 +77,7 @@ class CandidateBlurb(BaseModel):
             "clinical-trials sub-agent summaries for this disease."
         ),
     )
-    # NOTE: the approval relationship is NOT a blurb field. It is set UPSTREAM from the FDA
-    # label and lives on CandidateFindings.approval_relationship — never authored by the LLM.
+    # The approval relationship is not a blurb field; it is set upstream from the FDA label on CandidateFindings.
 
     @model_validator(mode="before")
     @classmethod
@@ -94,8 +92,7 @@ class CandidateFindings(BaseModel):
     """Per-candidate findings aggregated by the supervisor."""
 
     disease: str
-    # "" is the CLI pair-runner's honest value — a user-specified pair is neither competitor- nor mechanism-sourced.
-    # The supervisor path never sets "" (defaults to "competitor" and is always assigned a real source).
+    # "" is the CLI pair-runner's value (a user-specified pair has no source); the supervisor path always assigns one.
     source: Literal["", "competitor", "mechanism", "both"] = "competitor"
     approval_relationship: Literal["contaminated", "combination_only", "none"] = Field(
         default="none",
@@ -164,10 +161,8 @@ class SupervisorOutput(BaseModel):
             "(pair mode); False for open-ended `scout find` candidate discovery."
         ),
     )
-    # Collapsed DRUG-LEVEL safety blurb (drug-wide, ~identical across candidates) — rendered ONCE
-    # at the top of the report. Built by format_report from the per-candidate EvidenceSummary
-    # safety_summary fields (pick-first non-empty). Per-candidate DISEASE-SPECIFIC harm stays on
-    # each finding.
+    # Drug-level safety blurb collapsed across candidates and rendered once at the top of the report, built by
+    # format_report from the per-candidate safety_summary fields. Disease-specific harm stays on each finding.
     drug_safety_summary: str = ""
     drug_regulatory_safety_summary: str = ""
     drug_regulatory_safety_full_labels: str = ""

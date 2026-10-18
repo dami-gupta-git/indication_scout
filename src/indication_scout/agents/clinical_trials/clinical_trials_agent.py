@@ -43,11 +43,7 @@ SYSTEM_PROMPT = (_PROMPTS_DIR / "clinical_trials.txt").read_text()
 
 
 def _finalize_done(messages: list) -> bool:
-    """End the loop once finalize_analysis has SUCCEEDED this turn.
-
-    A rejected finalize returns an empty artifact and must loop back to retry, so end only
-    on a truthy one.
-    """
+    """End the loop once finalize_analysis succeeds; a rejected finalize returns an empty artifact and retries."""
     for m in _trailing_tool_messages(messages):
         if m.name == "finalize_analysis" and m.artifact:
             return True
@@ -63,11 +59,8 @@ def build_clinical_trials_agent(
 ) -> CompiledStateGraph:
     """Return a compiled ReAct agent.
 
-    `assigned_indication` pins the tools to one indication; a call for any other is
-    soft-rejected so a drifting agent self-corrects instead of crashing at finalize.
-
-    `target_drug` pins the drug the finalize drug-role check is asked about, so the model
-    cannot widen it through its own tool arguments.
+    `assigned_indication` pins the tools to one indication; calls for any other are soft-rejected.
+    `target_drug` pins the drug for the finalize drug-role check so the model cannot widen it.
     """
     tools = build_clinical_trials_tools(
         date_before=date_before,
@@ -127,11 +120,9 @@ async def run_clinical_trials_agent(
 ) -> ClinicalTrialsOutput:
     """Invoke the agent and assemble a ClinicalTrialsOutput from the run.
 
-    `first_approval` (ChEMBL) lets the closure judgment tell "old generic, no new NDA expected"
-    from a genuine negative. None renders "unknown" — never a default year.
-
-    `approved_indications` feeds the relevance gate's approved-subtype test. Empty renders
-    "(none)", which disables that test.
+    `first_approval` (ChEMBL) lets the closure judgment tell an old generic from a genuine negative; None renders
+    "unknown", never a default year. `approved_indications` feeds the relevance gate's approved-subtype test;
+    empty renders "(none)", which disables that test.
     """
     approval_line = (
         f"first_approval (year first approved anywhere): {first_approval}"
@@ -205,8 +196,7 @@ async def run_clinical_trials_agent(
     }
 
     for msg in result["messages"]:
-        # A rejected call (wrong indication) returns artifact=None — skip it so it can't
-        # overwrite an earlier genuine result for the same tool.
+        # A rejected call (wrong indication) returns artifact=None; skip it so it can't overwrite an earlier result.
         if (
             isinstance(msg, ToolMessage)
             and msg.name in field_map
@@ -245,9 +235,8 @@ async def run_clinical_trials_agent(
         relevance_reasoning=finalize.relevance_reasoning,
     )
 
-    # Signals come from RELEVANT trials only, so supervisor and report read identical numbers.
-    # Left None when finalize never ran, so the supervisor knows no relevance judgment was made
-    # rather than seeing everything filtered out by an empty relevant set.
+    # Signals come from relevant trials only. Left None when finalize never ran, so a missing relevance judgment
+    # is not mistaken for an empty relevant set.
     query_unresolved = (
         output.search is not None and output.search.resolution_status == "unresolved"
     )
@@ -274,13 +263,9 @@ async def run_clinical_trials_agent(
             relevant_nct_ids=relevant_ids,
             contaminated_nct_ids=contaminated_ids,
         )
-        # dev_stage is an LLM judgment, not the deterministic phase-rank (which mis-encoded the
-        # Phase-4 trap). Only nct/phase/status is sent; cached per trial set. The deterministic
-        # dev_stage stays as the fallback when the relevant set is empty.
-        #
-        # completed + terminated + search, all filtered by relevant_nct_ids. Search trials —
-        # where active Phase 3s live — go through the relevance gate too, so the same filter
-        # applies to every scope.
+        # dev_stage is an LLM judgment over nct/phase/status, cached per trial set; the deterministic dev_stage is
+        # the fallback when the relevant set is empty. Completed, terminated and search trials are all filtered by
+        # relevant_nct_ids.
         relevant_set = set(output.relevant_nct_ids)
         seen: set[str] = set()
         relevant_trials = []
@@ -302,8 +287,7 @@ async def run_clinical_trials_agent(
             output.signals.dev_stage = judgment.tier
             output.signals.active_programs = judgment.active_programs
 
-            # LOAD-BEARING ORDER: judge_dev_stage MUST run before judge_ct_summary — the prose
-            # is fed the resolved stage so it cannot contradict it. Do NOT reorder.
+            # Order matters: judge_dev_stage must run before judge_ct_summary, which is fed the resolved stage.
             stage_phrase = dev_stage_phrase(output.signals)
             if stage_phrase:
                 ct_summary = await judge_ct_summary(

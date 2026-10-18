@@ -11,10 +11,9 @@ from indication_scout.models.model_open_targets import MechanismOfAction
 class MechanismCandidate(BaseModel):
     """A repurposing candidate surfaced by the mechanism agent.
 
-    A (target, disease) pair where the drug's action direction aligns with the disease mechanism per Open
-    Targets evidence, and the disease is not an approved indication. Carries text context the LLM
-    reasons over. No scores, no direction labels — those are used upstream for selection and discarded
-    here.
+    A (target, disease) pair where the drug's action direction aligns with the disease mechanism per Open Targets
+    evidence, and the disease is not an approved indication. Carries text context only; scores and direction labels
+    are discarded after selection.
     """
 
     target_symbol: str = ""

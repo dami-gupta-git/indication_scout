@@ -34,12 +34,9 @@ def build_literature_tools(
 ) -> list:
     """Build tools that share data via a closure-scoped store dict.
 
-    Tools write to the store themselves as a side effect, so subsequent tools can read prior results
-    without the LLM passing them around.
-
-    `approved_indications` is the drug's FDA-approved indication list, threaded into synthesize so
-    the strength judge can exclude papers about an approved sub-indication of a broad candidate.
-    `drug_profile` seeds this candidate's local store when the supervisor already built it.
+    Tools write to the store as a side effect, so later tools read prior results without the LLM passing them.
+    `approved_indications` is threaded into synthesize so the strength judge can exclude approved sub-indication
+    papers. `drug_profile` seeds the local store when the supervisor already built it.
     """
 
     store: dict = {}
@@ -215,12 +212,9 @@ def build_literature_tools(
             abstracts,
             approved_indications=approved_indications,
         )
-        # Merge in the safety pass's result (see safety_search) — ONLY if safety_search has already
-        # run and populated the store. safety_search is REQUIRED-before-synthesize by the prompt,
-        # but the LLM controls ordering and could batch synthesize first; overwriting with defaults
-        # in that case would silently drop a real withdrawn/harm signal that safety_search populates
-        # afterward. "safety_summary" in store is the presence marker (set by safety_search even
-        # when the value is "" for a no-signal drug). EvidenceSummary's own defaults stand otherwise.
+        # Merge the safety pass's result only if safety_search has already run: the LLM controls ordering, and
+        # overwriting with defaults would drop a real withdrawn/harm signal. "safety_summary" in store is the
+        # presence marker (set even when "" for a no-signal drug).
         if "safety_summary" in store:
             evidence.safety_summary = store["safety_summary"]
             evidence.regulatory_safety_summary = store["regulatory_safety_summary"]

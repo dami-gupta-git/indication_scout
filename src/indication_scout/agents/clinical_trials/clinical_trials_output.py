@@ -12,41 +12,31 @@ from indication_scout.models.model_clinical_trials import (
 
 
 class TrialSignals(BaseModel):
-    """Machine-computed trial facts for a single drug × indication pair (no verdict).
+    """Machine-computed trial facts for one drug × indication pair (no verdict), from relevant trials only.
 
-    Computed from RELEVANT trials only by derive_trial_signals (agents/_trial_signals).
-    Lives here so ClinicalTrialsOutput can store it without an import cycle.
+    Computed by derive_trial_signals; lives here to avoid an import cycle.
     """
 
-    # Highest phase label among ANY completed (or P3-terminated-for-cause) trial — including
-    # pure Phase 4, which ranks above Phase 3. This is a DISPLAY fact ("highest completed, any
-    # kind"), NOT a pivotal-evidence signal: it can read "Phase 4" while has_completed_phase3 is
-    # False. Do NOT make tier/closure decisions on it — use has_completed_phase3 / dev_stage.
+    # Highest phase label among any completed (or P3-terminated-for-cause) trial, including pure Phase 4.
+    # Display fact only; use has_completed_phase3 / dev_stage for tier or closure decisions.
     highest_completed_phase: str | None = None
     has_completed_phase3: bool = False
     completed_phase3_nct_ids: list[str] = []
-    # Subset of completed_phase3 that are PURE Phase 3 ("Phase 3" / "Phase 3/Phase 4"), excluding
-    # combined "Phase 2/Phase 3". A completed Phase 2/3 trial is NOT a completed pivotal Phase 3
-    # readout on its own — when has_completed_phase3 is True but this is empty, the "Phase 3
-    # completed" stage came only from a Phase 2/3 trial and the dev-stage judge must not call it a
-    # completed pivotal Phase 3 (prefer active_phase3 framing if active pure Phase 3 exists).
+    # Completed pure Phase 3 trials ("Phase 3" / "Phase 3/Phase 4"), excluding "Phase 2/Phase 3". If
+    # has_completed_phase3 is True but this is empty, the dev-stage judge must not call it a completed pivotal Phase 3.
     has_completed_pure_phase3: bool = False
     completed_pure_phase3_nct_ids: list[str] = []
-    # An active/recruiting Phase 3 (>= Phase 2/Phase 3 floor) on the all-status search set.
-    # The recruiting-pipeline analog of has_completed_phase3 — blocks a false "no
-    # development program / Phase 4 only" claim. Best-effort contamination drop only.
+    # An active/recruiting Phase 3 (>= Phase 2/Phase 3) on the all-status search set; blocks a false
+    # "Phase 4 only" claim. Contamination drop is best-effort.
     has_active_phase3: bool = False
     active_phase3_nct_ids: list[str] = []
-    # A true Phase 3 terminated for a non-operational reason — the positive closure
-    # signal. The sub-agent decides whether this actually closes the candidate.
+    # A Phase 3 terminated for a non-operational reason: the positive closure signal; the sub-agent decides closure.
     phase3_terminated_for_cause: bool = False
     terminated_phase3_nct_ids: list[str] = []
-    # Single authoritative development-stage tier + the "what is still moving" line, both from
-    # the isolated LLM judgment (services/dev_stage.judge_dev_stage) over the relevant trials.
-    # The supervisor renders these verbatim in the blurb stage / active_programs — it does NOT
-    # re-author them. dev_stage is one of: phase3_terminated_for_cause, completed_phase3,
-    # active_phase3, phase3_unknown_status, completed_phase2, exploratory_phase4_only,
-    # early_phase, untested. active_programs is a free-text line or "None active".
+    # Development-stage tier and the "what is still moving" line, both from judge_dev_stage over the relevant
+    # trials; the supervisor renders them verbatim. dev_stage is one of: phase3_terminated_for_cause,
+    # completed_phase3, active_phase3, phase3_unknown_status, completed_phase2, exploratory_phase4_only,
+    # early_phase, untested. active_programs is free text or "None active".
     dev_stage: str = "untested"
     active_programs: str = "None active"
 
@@ -173,11 +163,9 @@ class ClinicalTrialsOutput(BaseModel):
 
 
 class FinalizeClinicalTrialsArtifact(BaseModel):
-    """Artifact returned by the finalize_analysis tool.
+    """Artifact returned by finalize_analysis: the agent's relevance split, harvested by run_clinical_trials_agent.
 
-    Carries the agent's structured relevance split, harvested into ClinicalTrialsOutput by
-    run_clinical_trials_agent. The trial-section prose is NO LONGER authored here — it is
-    written post-loop by services.clinical_trials_summary fed the resolved dev_stage.
+    Trial-section prose is written post-loop by services.clinical_trials_summary.
     """
 
     relevant_ncts: list[str] = []

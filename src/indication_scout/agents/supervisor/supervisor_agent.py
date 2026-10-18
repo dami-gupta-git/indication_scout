@@ -1,9 +1,4 @@
-"""Supervisor agent.
-
-Orchestrates the literature, clinical trials, and mechanism sub-agents. Given a drug, the LLM
-surfaces candidate diseases, picks which to investigate in depth, chooses literature/trials/both
-for each, and decides when enough evidence has been gathered to stop.
-"""
+"""Supervisor agent: orchestrates the literature, clinical trials, and mechanism sub-agents for a drug."""
 
 import logging
 import time
@@ -36,8 +31,7 @@ logger = logging.getLogger(__name__)
 _PROMPTS_DIR = Path(__file__).parent.parent.parent / "prompts"
 
 
-# Appended when supervisor_fanout is on. Replaces WORKFLOW step 2's serial per-candidate investigation with one
-# parallel fan-out call. Kept out of supervisor.txt so the default prompt is byte-identical when the flag is off.
+# Appended when supervisor_fanout is on; replaces WORKFLOW step 2 with one parallel fan-out call.
 _FANOUT_DIRECTIVE = """
 
 # FAN-OUT MODE (overrides ONLY WORKFLOW step 2)
@@ -51,11 +45,7 @@ run this turn), then finalize_supervisor (step 5).
 
 
 def _load_system_prompt(fanout: bool = False) -> str:
-    """Return the supervisor system prompt.
-
-    When `fanout` is set, append the fan-out directive. The summary/blurbs count is rendered from
-    supervisor_investigation_cap so the write-up count tracks how many were investigated.
-    """
+    """Return the supervisor system prompt, with the fan-out directive appended when `fanout` is set."""
     summary_count = get_settings().supervisor_investigation_cap
     prompt = (
         (_PROMPTS_DIR / "supervisor.txt")
@@ -67,17 +57,12 @@ def _load_system_prompt(fanout: bool = False) -> str:
     return prompt
 
 
-# Production prompt loaded at import time; some scripts reference this binding directly.
+# Loaded at import time; some scripts reference this directly.
 SYSTEM_PROMPT = _load_system_prompt()
 
 
 def _finalize_done(messages: list) -> bool:
-    """End the loop once finalize_supervisor has SUCCEEDED this turn.
-
-    finalize_supervisor returns an empty-dict artifact until critique_ranking has run, so require both a
-    truthy artifact AND a critique_ranking ToolMessage — this enforces the critique-before-finalize ordering.
-    A rejected finalize loops back to retry.
-    """
+    """End the loop once finalize_supervisor succeeds, which requires critique_ranking to have run first."""
     critique_ran = any(
         isinstance(m, ToolMessage) and m.name == "critique_ranking" for m in messages
     )
@@ -102,14 +87,10 @@ def build_supervisor_agent(
     """Return (agent, get_merged_allowlist, get_auto_findings, get_approval_labels).
 
     - get_merged_allowlist: snapshots the competitor + mechanism disease allowlist after the run.
-    - get_auto_findings: snapshots fan-out-only investigate_top_candidates artifacts (empty when fan-out is
-      off). Merged into findings_by_disease because those calls bypass the ReAct loop.
-    - get_approval_labels: snapshots upstream FDA approval-relationship labels (contaminated / combination_only)
-      for kept candidates, used to set CandidateFindings.approval_relationship.
+    - get_auto_findings: snapshots fan-out artifacts (empty when fan-out is off).
+    - get_approval_labels: snapshots FDA approval-relationship labels for kept candidates.
 
-    `date_before` is forwarded to the literature and clinical trials sub-agents so PubMed and ClinicalTrials.gov
-    queries share one temporal cutoff. The pipeline runs identically to a no-cutoff run; only the upstream data
-    is restricted to on-or-before the cutoff date.
+    `date_before` is forwarded to the literature and clinical trials sub-agents as a shared temporal cutoff.
     """
     tools, get_merged_allowlist, get_auto_findings, get_approval_labels = (
         build_supervisor_tools(
@@ -143,13 +124,8 @@ async def run_supervisor_agent(
 ) -> SupervisorOutput:
     """Invoke the supervisor and assemble a SupervisorOutput from the run.
 
-    Filters out tool calls rejected by the candidate guard, and canonicalises disease names against the merged
-    allowlist so casing variants (e.g. "Parkinson disease" vs "parkinson disease") don't produce duplicate
-    findings and mechanism-promoted diseases land with their correct source tag.
-
-    `get_auto_findings` (fan-out only): zero-arg callable returning investigate_top_candidates artifacts. Those
-    calls bypass the ReAct loop, so their artifacts don't reach result["messages"]; we pull them via the closure
-    and merge into findings_by_disease. None when fan-out is off.
+    Drops tool calls rejected by the candidate guard and canonicalises disease names against the merged allowlist.
+    `get_auto_findings` (fan-out only) supplies artifacts that bypass the ReAct loop; None when fan-out is off.
     """
     _agent_t0 = time.perf_counter()
     result = await agent.ainvoke(
@@ -162,16 +138,14 @@ async def run_supervisor_agent(
     _agent_elapsed = time.perf_counter() - _agent_t0
     emit_progress(PHASE_SUMMARY, "Ranking candidates and writing the summary")
 
-    # Per-turn LLM accounting for the supervisor's own ReAct loop. Each AIMessage is one round-trip; the tool(s)
-    # it calls are the sub-agent invocations. Read-only.
+    # Per-turn LLM accounting; read-only.
     _ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
     _total_out = 0
     for _i, _msg in enumerate(_ai_turns):
         _usage: Mapping[str, Any] = _msg.usage_metadata or {}
         _in_tok = _usage.get("input_tokens", 0)
         _out_tok = _usage.get("output_tokens", 0)
-        # cache_read/cache_write show whether prompt-caching is hitting; cache_read==0 across turns 2+ means a
-        # silent invalidator (e.g. prefix below the min cacheable size). langchain-anthropic reports fresh writes
+        # cache_read==0 across turns 2+ means prompt caching is silently missing. Fresh writes are reported
         # under the TTL-specific ephemeral keys.
         _details = _usage.get("input_token_details", {})
         _cache_read = _details.get("cache_read", 0)
@@ -204,15 +178,14 @@ async def run_supervisor_agent(
     blurbs: list[dict] = []
     findings_by_disease: dict[str, CandidateFindings] = {}
 
-    # tool_call_id → args, to recover the disease_name passed to each analyze_* call.
+    # tool_call_id → args, to recover each analyze_* call's disease_name.
     tool_call_args: dict[str, dict] = {}
     for msg in result["messages"]:
         if isinstance(msg, AIMessage):
             for tc in msg.tool_calls:
                 tool_call_args[cast(str, tc["id"])] = tc["args"]
 
-    # First pass: capture mechanism artifact and the supervisor's final summary.
-    # finalize_supervisor's artifact: {"summary": str, "blurbs": list[dict]}.
+    # First pass: capture the mechanism artifact and the final summary/blurbs.
     for msg in result["messages"]:
         if not isinstance(msg, ToolMessage):
             continue
@@ -223,8 +196,7 @@ async def run_supervisor_agent(
             summary = artifact.get("summary", "") or ""
             blurbs = artifact.get("blurbs", []) or []
 
-    # Single source of truth: the merged allowlist the runtime tools enforced. Keyed by lowercase disease name →
-    # (canonical_name, source), source ∈ {competitor, mechanism, both}.
+    # Merged allowlist enforced by the runtime tools: lowercase name → (canonical_name, source).
     allowed_lower = get_merged_allowlist()
 
     def _canonical(
@@ -254,9 +226,7 @@ async def run_supervisor_agent(
             continue
 
         canonical, source = match
-        # A None artifact means the sub-agent call errored before producing output (LangGraph returns an error
-        # ToolMessage with artifact=None). Don't create a finding for it — an uninvestigated disease must not
-        # reach disease_findings with empty results.
+        # None artifact = sub-agent errored; skip so an uninvestigated disease gets no empty finding.
         if msg.artifact is None:
             logger.warning(
                 "Skipping %s for disease=%r (None artifact — sub-agent errored)",
@@ -274,9 +244,7 @@ async def run_supervisor_agent(
         else:  # analyze_clinical_trials
             findings.clinical_trials = msg.artifact
 
-    # Fan-out merge: investigate_top_candidates calls analyze_* directly (not via the ReAct loop), so their
-    # artifacts don't reach result["messages"]. LLM-driven calls take precedence (possible re-runs with refined
-    # names); we only fill slots the LLM didn't populate.
+    # Fan-out merge: LLM-driven calls take precedence; only fill slots the LLM didn't populate.
     if get_auto_findings is not None:
         auto = get_auto_findings()
         for disease_lower, artifacts in auto.items():
@@ -295,8 +263,7 @@ async def run_supervisor_agent(
             ):
                 findings.clinical_trials = artifacts["clinical_trials"]
 
-    # Set each finding's approval relationship from the upstream FDA check (NOT LLM prose). Canonicalised names
-    # may differ, so match on both the canonical key and the finding's own disease string. Absent → stays "none".
+    # Set approval relationship from the upstream FDA check, matching on canonical key or the finding's disease.
     approval_labels = get_approval_labels() if get_approval_labels is not None else {}
     finding: CandidateFindings | None
     if approval_labels:
@@ -309,8 +276,7 @@ async def run_supervisor_agent(
                     Literal["contaminated", "combination_only"], label
                 )
 
-    # Attach supervisor-written blurbs to the matching CandidateFindings — only diseases
-    # investigated this run. Names are canonicalised so casing / synonym variants land right.
+    # Attach blurbs to the matching findings (investigated diseases only).
     structured_keys = (
         "stage",
         "literature",
@@ -344,12 +310,10 @@ async def run_supervisor_agent(
             continue
         finding.blurb = CandidateBlurb(prose=prose, **fields)
 
-    # Candidates surfaced downstream = every allowlist disease by canonical name (incl.
-    # mechanism-promoted).
+    # Every allowlist disease by canonical name, including mechanism-promoted.
     candidate_diseases = [canonical for (canonical, _) in allowed_lower.values()]
 
-    # Build top_diseases from the rank-ordered blurbs, dropping any not in the allowlist or not
-    # investigated, then hard cap. Enforces top_diseases ⊆ disease_findings ⊆ candidate_diseases.
+    # top_diseases from rank-ordered blurbs, dropping uninvestigated ones, then capped.
     top_diseases: list[str] = []
     seen_top: set[str] = set()
     for entry in blurbs:
@@ -372,17 +336,15 @@ async def run_supervisor_agent(
         top_diseases.append(canonical)
     top_diseases = top_diseases[: get_settings().supervisor_candidate_cap]
 
-    # Reorder disease_findings: top_diseases first in rank order, then the rest in insertion order.
+    # top_diseases first in rank order, then the rest.
     top_set = set(top_diseases)
     disease_findings = [findings_by_disease[name] for name in top_diseases]
     for canonical, finding in findings_by_disease.items():
         if canonical not in top_set:
             disease_findings.append(finding)
 
-    # Collapse the per-candidate DRUG-LEVEL safety signal (drug-wide, ~identical across candidates)
-    # to a single blurb shown once at the top of the report. Summary: pick-first non-empty (in
-    # top-first disease_findings order). PMIDs: order-preserving union across candidates (the per-
-    # candidate lists overlap heavily but differ in order; union keeps the anchor stable run-to-run).
+    # Collapse the drug-wide safety signal to one report-level blurb: first non-empty summary,
+    # order-preserving union of PMIDs.
     drug_safety_summary = ""
     drug_regulatory_safety_summary = ""
     drug_regulatory_safety_full_labels = ""

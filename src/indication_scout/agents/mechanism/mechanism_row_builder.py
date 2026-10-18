@@ -1,9 +1,7 @@
 """Assemble OT data into rows for mechanism_candidates.select_top_candidates.
 
-Data-layer glue between OpenTargetsClient and the pure-function classifier. Fetches a single target's
-data + per-(target, disease) evidences and returns dict rows shaped for select_top_candidates.
-
-Kept separate from mechanism_candidates.py so the classifier module has no OT / I/O dependencies.
+Fetches a single target's data and per-(target, disease) evidences. Kept separate from mechanism_candidates.py so
+the classifier has no OT / I/O dependencies.
 """
 
 from datetime import date
@@ -15,11 +13,8 @@ from indication_scout.models.model_open_targets import Association
 
 
 def _ranking_score(association: Association, date_before: date | None) -> float:
-    """Score used to rank an association for truncation and downstream selection.
-
-    Production (date_before is None) uses OT's overall_score as-is. Holdout recomputes the overall
-    score with leaky datasources (clinical_precedence) dropped, so post-cutoff trial/approval data
-    cannot influence the ranking.
+    """Score used to rank an association: OT's overall_score in production; in holdout, the score recomputed with
+    leaky datasources (clinical_precedence) dropped so post-cutoff data cannot influence ranking.
     """
     if date_before is None:
         return association.overall_score or 0.0
@@ -35,15 +30,12 @@ async def build_candidate_rows(
     top_n: int,
     date_before: date | None = None,
 ) -> list[dict]:
-    """Fetch a target's top-N associations + per-pair evidences and return row dicts shaped for
-    select_top_candidates.
+    """Fetch a target's top-N associations + per-pair evidences and return row dicts for select_top_candidates.
 
-    Ranking (and thus which associations survive the top_n cut) uses `ranking_score`: OT's
-    overall_score in production, or the leak-free recomputed score in holdout mode (date_before set).
+    Which associations survive the top_n cut is decided by `ranking_score` (see _ranking_score).
 
-    The row contract (keys):
-        target_symbol, action_types, disease_name, overall_score, ranking_score, evidences,
-        disease_description, target_function
+    Row keys: target_symbol, action_types, disease_name, overall_score, ranking_score, evidences,
+    disease_description, target_function.
     """
     target = await ot_client.get_target_data(target_id)
     target_function = (

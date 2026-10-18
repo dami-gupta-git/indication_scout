@@ -42,34 +42,19 @@ logger = logging.getLogger(__name__)
 
 
 def _scrub_post_cutoff_outcome(trial: Trial, cutoff: date) -> tuple[Trial, bool]:
-    """Strip outcome fields a 2020 holdout couldn't have known in 2020.
+    """Strip outcome fields a holdout could not have known (status, why_stopped, completion_date).
 
-    Returns (trial_or_scrubbed_copy, was_scrubbed).
+    Returns (trial_or_scrubbed_copy, was_scrubbed). A trial completed/terminated AFTER the cutoff has those fields
+    replaced with UNKNOWN / None so it appears in progress at the cutoff. A terminal-status trial with no
+    completion_date is scrubbed conservatively; non-terminal trials are unchanged.
 
-    A trial that started before the cutoff is correctly included in a
-    holdout — but if it completed or terminated AFTER the cutoff, its
-    `overall_status`, `why_stopped`, and `completion_date` reflect a
-    future the holdout shouldn't see. We replace those with UNKNOWN /
-    None so the trial appears as "still in progress at the cutoff."
-
-    Trials with a completion_date before the cutoff are returned
-    unchanged. A trial with a terminal status (COMPLETED/TERMINATED)
-    but NO completion_date is scrubbed conservatively — we can't prove
-    it completed before the cutoff, so we don't surface its outcome.
-    Non-terminal trials with no completion_date are returned unchanged.
-
-    The caller decides what to do with `was_scrubbed=True` trials — e.g.
-    `get_completed` and `get_terminated` drop them entirely (a trial
-    that wasn't yet completed/terminated at the cutoff doesn't belong
-    in those scopes), while `search_trials` keeps them with the
-    scrubbed status.
+    The caller handles `was_scrubbed=True`: `get_completed` and `get_terminated` drop such trials, `search_trials`
+    keeps them with the scrubbed status.
     """
     _TERMINAL_STATUSES = {"COMPLETED", "TERMINATED"}
     completion_iso = trial.completion_date
     if not completion_iso:
-        # No completion date. If the trial reports a terminal status, we
-        # can't prove that outcome predates the cutoff — scrub it. A
-        # non-terminal trial has no future outcome to hide, so keep it.
+        # No completion date: scrub a terminal status (the outcome may postdate the cutoff); keep non-terminal trials.
         if trial.overall_status in _TERMINAL_STATUSES:
             scrubbed = trial.model_copy(
                 update={
@@ -81,8 +66,7 @@ def _scrub_post_cutoff_outcome(trial: Trial, cutoff: date) -> tuple[Trial, bool]
             return scrubbed, True
         return trial, False
     cutoff_iso = cutoff.isoformat()
-    # CT.gov dates are "YYYY-MM-DD" or "YYYY-MM"; both compare
-    # lexicographically against an ISO cutoff prefix.
+    # CT.gov dates are "YYYY-MM-DD" or "YYYY-MM"; both compare lexicographically with an ISO cutoff prefix.
     if completion_iso < cutoff_iso:
         return trial, False
     scrubbed = trial.model_copy(
@@ -102,38 +86,27 @@ def build_clinical_trials_tools(
     cache_dir: Path = DEFAULT_CACHE_DIR,
 ) -> list:
 
-    # Closure-scoped snapshot of the NCTs rendered to the agent for the relevance
-    # classification, keyed by (drug, indication). get_completed/get_terminated
-    # populate it; finalize_analysis reads it to enforce that every shown trial got
-    # a verdict. Keyed (not flat) so a re-call of the same pair rewrites the same
-    # deterministic set and a different indication can't contaminate the check.
-    # Keyed on INDICATION only, not (drug, indication): the agent investigates one indication
-    # per instance, but may query the trial tools under several drug-name VARIANTS of that pair
-    # (e.g. "bupropion" and the combo alias "naltrexone bupropion"). Keying on the stable
-    # indication keeps a re-call rewriting the same set, tolerates drug-name variants, and still
-    # separates distinct indications (the cross-pair-reuse guard).
+    # Snapshot of the NCTs shown to the agent for relevance classification, keyed by normalized indication only (not
+    # drug): the agent may query under several drug-name variants of one pair, so this keeps a re-call rewriting the
+    # same set while separating distinct indications. get_completed/get_terminated populate it; finalize_analysis
+    # enforces a verdict for every shown trial.
     shown_by_indication: dict[str, set[str]] = {}
 
-    # The Trial records behind the ids above, so the therapeutic-target gate at finalize can read
-    # each trial's objective. Keyed on NCT alone: a trial's own text does not vary by which tool
-    # fetched it, and a later fetch simply rewrites the same entry.
+    # The Trial records behind those ids, so the therapeutic-target gate at finalize can read each objective.
+    # Keyed on NCT alone; a later fetch rewrites the same entry.
     records_by_nct: dict[str, Trial] = {}
 
-    # NCTs the therapeutic-target gate has already rejected and named back to the agent. Rejecting
-    # the call once lets the agent correct its structured verdicts; this set bounds that to one
-    # round before the deterministic gate applies the demotion itself.
+    # NCTs the therapeutic-target gate already rejected and named back to the agent; bounds that to one round
+    # before the gate applies the demotion itself.
     gate_rejected_told: set[str] = set()
 
-    # The drug this agent instance was launched to analyze. Pinned by the caller so the
-    # finalize drug-role question is anchored to one agent: were it taken from the tools' own
-    # `drug` argument, a model querying under another drug's name would widen its own check.
+    # The drug this agent was launched to analyze, pinned by the caller so a model cannot widen the finalize
+    # drug-role check by querying under another drug's name.
     _target_drug = (target_drug or "").strip()
 
-    # The indication this agent instance was launched to investigate. The trial tools
-    # reject a call for any OTHER indication so a drifting LLM (e.g. querying "smoking
-    # cessation" while assigned "nicotine dependence" — a distinct MeSH descriptor) is
-    # nudged back instead of accumulating a second key and crashing at finalize. None
-    # disables the check (callers that don't pin an indication).
+    # The indication this agent was launched to investigate. Calls for any OTHER indication are rejected so a
+    # drifting LLM (e.g. "smoking cessation" vs assigned "nicotine dependence") is nudged back instead of crashing
+    # at finalize. None disables the check.
     _assigned = (assigned_indication or "").lower().strip()
 
     def _drop_non_therapeutic(
@@ -141,10 +114,8 @@ def build_clinical_trials_tools(
     ) -> list:
         """Remove trials whose every typed intervention is non-therapeutic, logging what went.
 
-        Applied at fetch, before the classification set is recorded, so the trial reaches no
-        candidate at all. Dropping here (rather than letting each candidate's relevance gate
-        decide) is what makes the verdict identical across candidates: the check is
-        disease-independent, so re-asking it per candidate can only introduce disagreement.
+        Applied at fetch, before the classification set is recorded. The check is disease-independent, so doing it
+        once here keeps the verdict identical across candidates.
         """
         kept = [t for t in trials if not is_non_therapeutic_study(t)]
         dropped = [t.nct_id for t in trials if is_non_therapeutic_study(t)]
@@ -213,11 +184,7 @@ def build_clinical_trials_tools(
             result.trials, "search_trials", drug, indication
         )
 
-        # Holdout scrubber: when date_before is set, strip outcome fields
-        # for trials that completed/terminated AFTER the cutoff so the
-        # supervisor doesn't see future trial outcomes. search_trials
-        # keeps these trials (they were in progress at the cutoff) but
-        # rewrites their status to UNKNOWN.
+        # Holdout scrubber: trials that completed/terminated AFTER the cutoff stay in the results with UNKNOWN status.
         scrubbed_n = 0
         if date_before is not None:
             new_trials = []
@@ -240,9 +207,7 @@ def build_clinical_trials_tools(
             if scrubbed_n
             else ""
         )
-        # Per-status breakdown from the artifact's by_status (see
-        # agent_data_contracts.md). Rendered from the SearchTrialsResult field
-        # so header and artifact stay consistent.
+        # Per-status breakdown from the artifact's by_status, so header and artifact stay consistent.
         bs = result.by_status
         status_breakdown = (
             f" (recruiting={bs.get('RECRUITING', 0)}, "
@@ -257,9 +222,7 @@ def build_clinical_trials_tools(
             f"column against this descriptor to judge relevance vs contamination."
         )
         phase_dist = _phase_distribution(result.trials)
-        # `interventions` + `arms` + `brief_summary` feed the relevance gate's TEST 0. Arm groups
-        # distinguish a fixed combination from separate active-drug arms; the summary states what
-        # the trial is testing. All fields come from the same Trial object, so this adds no fetch.
+        # `interventions` + `arms` + `brief_summary` feed the relevance gate's TEST 0 (no extra fetch).
         table = _format_trial_table(
             result.trials,
             columns=(
@@ -280,12 +243,9 @@ def build_clinical_trials_tools(
             f"Trials shown (all {shown} — classify EVERY one):\n"
             f"{table}"
         )
-        # Record the search-pool trials in the classification set too, so the relevance gate
-        # forces a verdict on them at finalize. Without this, search trials (which feed the
-        # active / dev-stage signal) bypass the gate and a contaminated active trial — e.g. a
-        # PAH trial under a systemic-hypertension query — leaks into the "Phase 3 active" signal.
-        # The table above is un-capped for the same reason: a trial recorded but never shown
-        # gets a blind verdict, and a blind verdict reads "relevant".
+        # Record search-pool trials in the classification set too, so the relevance gate forces a verdict on them;
+        # otherwise a contaminated active trial leaks into the "Phase 3 active" signal. The table above is un-capped
+        # because a trial never shown gets a blind verdict, which reads "relevant".
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
@@ -329,9 +289,8 @@ def build_clinical_trials_tools(
             result.trials, "get_completed", drug, indication
         )
 
-        # Holdout drop: a trial that completed AFTER the cutoff was not
-        # completed at the cutoff, so it does not belong in this scope.
-        # Drop it (search_trials will still surface it as in-progress).
+        # Holdout drop: a trial that completed AFTER the cutoff doesn't belong in this scope (search_trials still
+        # shows it as in progress).
         scrub_dropped = 0
         if date_before is not None:
             kept = []
@@ -344,9 +303,8 @@ def build_clinical_trials_tools(
             result.trials = kept
             result.total_count = max(0, result.total_count - scrub_dropped)
 
-        # Record the classification set for this indication (un-capped — every shown
-        # trial must get a verdict at finalize). Keyed on normalized indication so drug-name
-        # variants AND case/whitespace variants accumulate into one set rather than splitting.
+        # Record the un-capped classification set (every shown trial needs a verdict at finalize), keyed on
+        # normalized indication so drug-name and case/whitespace variants accumulate into one set.
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
@@ -427,9 +385,8 @@ def build_clinical_trials_tools(
             result.trials, "get_terminated", drug, indication
         )
 
-        # Holdout drop: a trial that terminated AFTER the cutoff was not
-        # terminated at the cutoff. Drop from this scope (search_trials
-        # still surfaces it with UNKNOWN status).
+        # Holdout drop: a trial that terminated AFTER the cutoff doesn't belong in this scope (search_trials still
+        # shows it with UNKNOWN status).
         scrub_dropped = 0
         if date_before is not None:
             kept = []
@@ -455,9 +412,8 @@ def build_clinical_trials_tools(
             else ""
         )
 
-        # Record the classification set for this indication (un-capped — every shown
-        # trial must get a verdict at finalize). Keyed on normalized indication so drug-name
-        # variants AND case/whitespace variants accumulate into one set rather than splitting.
+        # Record the un-capped classification set (every shown trial needs a verdict at finalize), keyed on
+        # normalized indication so drug-name and case/whitespace variants accumulate into one set.
         shown_by_indication.setdefault(indication.lower().strip(), set()).update(
             t.nct_id for t in result.trials if t.nct_id
         )
@@ -503,13 +459,8 @@ def build_clinical_trials_tools(
         mismatch = _indication_mismatch(indication)
         if mismatch is not None:
             return mismatch, None
-        # Holdout skip: the landscape aggregates per-trial overall_status and
-        # phase across all competitors for the indication. Those aggregates
-        # would leak post-cutoff trial outcomes (e.g. a competitor that
-        # advanced to Phase 3 in 2024 would show as Phase 3 in a 2020
-        # holdout). Rather than scrub per-trial inside the aggregator, just
-        # disable landscape entirely under date_before — the supervisor's
-        # core reasoning runs off search/completed/terminated.
+        # Holdout skip: the landscape aggregates per-trial status and phase across competitors, which would leak
+        # post-cutoff outcomes (a competitor reaching Phase 3 in 2024 showing as Phase 3 in a 2020 holdout).
         if date_before is not None:
             return (
                 f"Landscape for {indication}: skipped under date_before "
@@ -561,12 +512,9 @@ def build_clinical_trials_tools(
         mismatch = _indication_mismatch(indication)
         if mismatch is not None:
             return mismatch, None
-        # Holdout path: when date_before is set, the live openFDA labels would
-        # leak today's approvals (e.g. semaglutide's 2025 MASH approval into a
-        # 2020 holdout). Use the hardcoded approvals table instead. Drugs not
-        # in the table return is_approved=False with label_found=False so the
-        # supervisor knows approval reasoning was disabled, not that the drug
-        # is unapproved.
+        # Holdout path: live openFDA labels would leak today's approvals (e.g. semaglutide's 2025 MASH approval into
+        # a 2020 holdout), so use the hardcoded approvals table. Drugs not in it return is_approved=False with
+        # label_found=False: approval reasoning was disabled, not the drug unapproved.
         if date_before is not None:
             approved_set = await get_approved_indications(
                 drug_name=drug,
@@ -676,13 +624,9 @@ def build_clinical_trials_tools(
         a value outside those listed; an entry is "relevant" while drug_role is not
         "studied"; or a trial marked "relevant" did not set out to treat this indication.
         """
-        # The supervisor builds a fresh agent (fresh, empty shown_by_indication) per
-        # analyze_clinical_trials call, so this instance investigates ONE indication —
-        # shown_by_indication holds AT MOST one key (drug-name variants of the same pair
-        # accumulate into it). More than one key means a tools instance was reused across
-        # indications: the relevance gate would tag one pair's trials contaminated under
-        # another (the cross-pair leak). That is a wiring error the LLM can't fix by
-        # retrying, so fail loudly rather than silently union an accumulated set into a verdict.
+        # Each analyze_clinical_trials call builds a fresh agent, so shown_by_indication holds at most one key.
+        # More than one means a tools instance was reused across indications and the relevance gate would leak one
+        # pair's contamination into another. The LLM can't fix that by retrying, so fail loudly.
         if len(shown_by_indication) > 1:
             raise DataSourceError(
                 "clinical_trials",
@@ -694,8 +638,7 @@ def build_clinical_trials_tools(
         # Empty when no trials were shown (e.g. MeSH unresolved) → empty verdicts is valid.
         shown: set[str] = next(iter(shown_by_indication.values()), set())
 
-        # Parse before counting. An entry with a typo'd verdict or role used to fall through
-        # every filter and drop its trial from BOTH the relevant and contaminated sets.
+        # Parse before counting: an entry with a typo'd verdict or role would otherwise drop its trial from both sets.
         parsed: list[TrialVerdict] = []
         malformed: list[str] = []
         for raw in verdicts:
@@ -744,9 +687,8 @@ def build_clinical_trials_tools(
                 "",
             )
 
-        # A trial is this drug's own evidence only when this drug is the agent under study.
-        # The role is asked per trial and checked here, so a comparator-arm trial cannot be
-        # counted no matter how relevant its disease looks.
+        # A trial is this drug's evidence only when the drug is the agent under study (role asked per trial), so a
+        # comparator-arm trial cannot count.
         mismatched = sorted(
             v.nct
             for v in parsed
@@ -767,12 +709,9 @@ def build_clinical_trials_tools(
         relevant_ncts = [v.nct for v in parsed if v.verdict == "relevant"]
         contaminated_ncts = [v.nct for v in parsed if v.verdict == "contaminated"]
 
-        # THERAPEUTIC-TARGET GATE — the drug's ROLE is checked above; this checks the trial's
-        # OBJECTIVE. Asked once per trial in isolation and cached, so the answer cannot move with
-        # the batch, and applied deterministically here rather than trusted to the agent's own
-        # relevance call, which counted a cardiomyopathy trial in muscular-dystrophy patients as
-        # muscular-dystrophy development and a pharmacokinetics study as an acute-kidney-injury
-        # programme. A trial the gate rejects moves to contaminated; it is never re-admitted.
+        # Therapeutic-target gate: the drug's role is checked above; this checks the trial's objective. Asked once per
+        # trial in isolation and cached, then applied deterministically because the agent's own relevance call counted
+        # a cardiomyopathy trial as muscular-dystrophy development. A rejected trial moves to contaminated for good.
         gated = [records_by_nct[n] for n in relevant_ncts if n in records_by_nct]
         if relevant_ncts:
             treats = (
@@ -785,8 +724,7 @@ def build_clinical_trials_tools(
                 if gated
                 else {}
             )
-            # A relevant NCT with no stored record cannot be gated, so it is demoted rather than
-            # admitted ungated — the same fail-closed rule the gate itself uses.
+            # A relevant NCT with no stored record can't be gated, so it is demoted (fail-closed).
             demoted = [n for n in relevant_ncts if not treats.get(n, False)]
             if demoted:
                 logger.debug(

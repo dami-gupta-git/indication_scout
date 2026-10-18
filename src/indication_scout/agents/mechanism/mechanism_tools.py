@@ -25,12 +25,8 @@ _settings = get_settings()
 def build_mechanism_tools(date_before: date | None = None) -> list:
     """Build tools that share data via a closure-scoped store dict.
 
-    get_drug must be called first — it populates the store with the symbol→target_id map that
-    get_target_associations uses to resolve target symbols.
-
-    `date_before` switches get_target_associations to a leak-free ranking: in holdout mode the
-    overall score is recomputed with the clinical_precedence datasource dropped, so post-cutoff
-    trial/approval data cannot bias which associations the agent sees.
+    get_drug must be called first: it populates the symbol→target_id map that get_target_associations uses.
+    `date_before` switches get_target_associations to the leak-free ranking (clinical_precedence dropped).
     """
 
     def ranking_score(association: Association) -> float:
@@ -55,8 +51,7 @@ def build_mechanism_tools(date_before: date | None = None) -> list:
                 chembl_id = await resolve_drug_name(drug_name, client.cache_dir)
                 drug = await client.get_drug(chembl_id)
         except DataSourceError as e:
-            # Resolution failed (unknown name, salt with no parent, etc.) — return an empty MoA list so
-            # the agent's "no mechanisms" short-circuit fires instead of crashing the agent loop.
+            # Resolution failed; return an empty MoA list so the agent's "no mechanisms" short-circuit fires.
             logger.info("get_drug: could not resolve %r: %s", drug_name, e)
             store["target_ids"] = {}
             return (

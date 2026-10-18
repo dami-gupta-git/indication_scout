@@ -1,11 +1,9 @@
 """Hierarchical LLM dedup pass for candidate diseases.
 
-`merge_and_dedup()` calls `run_hierarchical_dedup` after the deterministic exact-match passes (ID, name, OT
-name-resolve). The LLM sees the full merged candidate list and identifies super/subtype pairs the exact-match
-passes can't catch (e.g. "ulcerative colitis" ⊂ "inflammatory bowel disease"; "type 2 diabetes mellitus" ⊂
-"diabetes mellitus"), picking ONE survivor per pair by which level is most actionable for the drug's mechanism.
-On failure (LLM error, unparseable JSON, unknown survivors) it logs a WARNING and yields zero decisions, so the
-caller keeps all candidates (error by omission, not inaccuracy).
+`merge_and_dedup()` calls `run_hierarchical_dedup` after the exact-match passes (ID, name, OT name-resolve). The LLM
+identifies super/subtype pairs those passes miss (e.g. "ulcerative colitis" ⊂ "inflammatory bowel disease") and picks
+ONE survivor per pair by which level is most actionable for the drug's mechanism. On any failure it logs a WARNING and
+yields zero decisions, so the caller keeps all candidates (error by omission).
 """
 
 from __future__ import annotations
@@ -75,20 +73,15 @@ async def run_hierarchical_dedup(
 
     Args:
         drug_name: the drug under analysis (for MoA-aware survivor selection).
-        mechanism_targets: list of (gene, action_type) pairs from the mechanism agent.
-        candidates: full merged list of (canonical_name, source, efo_id_or_None);
-            source ∈ {"competitor", "mechanism", "both"}.
+        mechanism_targets: (gene, action_type) pairs from the mechanism agent.
+        candidates: merged list of (canonical_name, source, efo_id_or_None); source ∈ {"competitor", "mechanism", "both"}.
 
     Returns:
-        HierarchyDedupOutput. On any failure (LLM/parse error, missing fields), returns
-        `decisions=[]` with a WARNING logged; the caller then keeps every candidate.
+        HierarchyDedupOutput. On any failure, `decisions=[]` with a WARNING; the caller keeps every candidate.
 
-    Idempotence guards applied here (not the caller):
-        - Decisions naming a survivor not in `candidates` are dropped.
-        - In `dropped`, the survivor's own name and any unknown name are filtered out; the
-          decision is kept only if at least one valid drop remains.
-        - A name in `dropped` across multiple decisions is still removed once at apply time
-          (caller responsibility).
+    Guards applied here: decisions naming an unknown survivor are dropped; in `dropped`, the survivor's own name and
+    unknown names are filtered out, and the decision is kept only if a valid drop remains. A name dropped across
+    several decisions is removed once by the caller at apply time.
     """
     if len(candidates) < 2:
         return HierarchyDedupOutput(decisions=[])
@@ -276,17 +269,13 @@ def collapse_synonym_entries(
 ) -> list[tuple[str, str]]:
     """Collapse allowlist entries that are the same disease under two names.
 
-    Deterministic counterpart to `run_hierarchical_dedup`, driven by the hardcoded
-    `DISEASE_SYNONYM_CANONICAL` table rather than an LLM. Only exact synonyms collapse; parent/child pairs are
-    not in the table and are left alone.
+    Deterministic counterpart to `run_hierarchical_dedup`, driven by the hardcoded `DISEASE_SYNONYM_CANONICAL` table.
+    Only exact synonyms collapse; parent/child pairs are left alone. Acts only where a group has two or more entries,
+    so a lone entry is never renamed.
 
-    Acts only where a group has TWO OR MORE entries in the list. A group with one entry present is untouched,
-    so a lone entry is never renamed — the candidate name is what downstream literature and trial searches use.
-
-    Survivor is the entry carrying the group's canonical name if present, otherwise the earliest entry in
-    insertion order (competitor entries are inserted in score order, so this keeps the best-ranked spelling).
-    Sources merge to "both" when the collapsed entries came from different routes, matching the exact-match
-    passes. EFO IDs pointing at a dropped key are repointed at the survivor so later ID lookups still resolve.
+    Survivor is the entry carrying the group's canonical name, else the earliest entry (competitor entries are
+    inserted in score order, so this keeps the best-ranked spelling). Sources merge to "both" when the entries came
+    from different routes, and EFO IDs pointing at a dropped key are repointed at the survivor.
 
     Mutates both dicts in place. Returns (dropped_name, survivor_name) pairs in collapse order, for logging.
     """
@@ -323,20 +312,15 @@ async def merge_mechanism_entries(
 ) -> list[tuple[str, str]]:
     """Ask the merge LLM to fold mechanism-route names into an existing candidate under another name.
 
-    The competitor path already runs this merge over its own names, but the mechanism route's names reach the
-    allowlist afterwards and are matched only by ontology ID and exact name — so the same disease under a
-    second name survives as its own candidate. This runs the same merge over the full merged list.
+    The mechanism route's names reach the allowlist after the competitor merge and are matched only by ontology ID
+    and exact name, so the same disease under a second name survives as its own candidate. This runs the merge over
+    the full list.
 
-    Only groups containing at least one mechanism-sourced entry are applied: competitor names were already
-    decided upstream, and re-merging them here would re-litigate that decision on a different input list. The
-    survivor is the non-mechanism entry when the group has one, so a mechanism name folds into the established
-    candidate rather than renaming it.
+    Only groups with at least one mechanism-sourced entry are applied; competitor names were decided upstream. The
+    survivor is the non-mechanism entry when the group has one.
 
-    The merge result's `remove` list is ignored. It drops names matching the drug's approved indications, which
-    both routes already filter upstream; acting on it again here would drop candidates on a second opinion.
-
-    A merge failure leaves every candidate in place — the cost is a duplicate name, and `remove` is not used
-    here, so the hazard that makes `merge_duplicate_diseases` raise upstream does not apply.
+    The merge result's `remove` list is ignored (both routes already filter approved indications upstream). A merge
+    failure leaves every candidate in place, at the cost of a duplicate name.
     """
     mechanism_keys = {
         key for key, (_, source) in allowed_diseases.items() if source == "mechanism"

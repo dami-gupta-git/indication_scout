@@ -1,12 +1,8 @@
-"""Pure-function helpers for selecting mechanism-agent repurposing candidates.
+"""Pure-function helpers for selecting mechanism-agent repurposing candidates (no OT calls, async, or agent coupling).
 
-No OT calls, no async, no agent coupling. Operates on already-fetched Association + EvidenceRecord data
-and returns MechanismCandidate rows.
-
-Classifies each (target, disease) pair as POSITIVE when the drug's action direction aligns with the
-disease mechanism (derived from aggregated directionOnTarget + directionOnTrait across evidence records).
-Filters out FDA-approved disease names supplied by the caller. Returns the top N POSITIVE candidate
-diseases sorted by overall score descending — one row per disease, the highest-scoring target for it.
+Classifies each (target, disease) pair as POSITIVE when the drug's action direction aligns with the disease
+mechanism, aggregated from directionOnTarget + directionOnTrait across evidence records. Drops FDA-approved
+diseases supplied by the caller and returns the top N POSITIVE diseases by overall score, one row per disease.
 """
 
 import re
@@ -20,10 +16,8 @@ from indication_scout.constants import (
     LOF_ACTION_TYPES,
 )
 
-# Minimum fraction of direction-labeled evidence records that must agree on a (dirT, dirTrait) pair for
-# it to count as the consensus direction. OT evidence often contains one or two outlier records
-# contradicting a strong majority (e.g. 146 GoF/protect + 1 LoF/risk). Set-union treats these as
-# inconclusive; majority voting treats them as the majority.
+# Minimum fraction of direction-labeled evidence records that must agree on a (dirT, dirTrait) pair to count as the
+# consensus. Majority voting tolerates the outlier records OT often has (e.g. 146 GoF/protect + 1 LoF/risk).
 _MAJORITY_THRESHOLD: float = 0.8
 
 
@@ -33,12 +27,9 @@ def aggregate_directions(
 ) -> tuple[set[str], set[str]]:
     """Majority-vote aggregation of direction fields across evidence records.
 
-    Returns singleton sets (`{dirT}`, `{dirTrait}`) for the most common (directionOnTarget,
-    directionOnTrait) pair, **iff** that pair covers at least `min_fraction` of records where BOTH
-    direction fields are populated. Otherwise returns empty sets (treated as UNKNOWN downstream).
-
-    Records with missing direction fields are ignored — they can't vote. If no records carry both
-    fields, returns (set(), set()).
+    Returns singleton sets for the most common (directionOnTarget, directionOnTrait) pair iff it covers at least
+    `min_fraction` of records where BOTH fields are populated; otherwise empty sets (UNKNOWN downstream).
+    Records with a missing field can't vote.
 
     Accepts any iterable of objects with `direction_on_target` and `direction_on_trait` attributes.
     """
@@ -85,8 +76,8 @@ def classify_positive(
 def clean_function_description(text: str) -> str:
     """Strip UniProt citation/ECO noise from a function-description string.
 
-    Removes inline `(PubMed:…)` citations, `{ECO:…}` evidence blocks, and `(By similarity)` /
-    `(Probable)` qualifiers. Collapses leftover whitespace and fixes stranded punctuation.
+    Removes `(PubMed:…)` citations, `{ECO:…}` blocks and `(By similarity)` / `(Probable)` qualifiers, then tidies
+    whitespace and punctuation.
     """
     if not text:
         return ""
@@ -107,19 +98,14 @@ def select_top_candidates(
 ) -> list[MechanismCandidate]:
     """Filter, rank, and trim rows to the top `limit` repurposing candidate DISEASES.
 
-    Each row is expected to carry the fields below — assembled upstream by whichever code is doing the OT
-    fetching. Keeps only POSITIVE rows whose disease is not in `approved_diseases` (case-insensitive
-    exact match), sorts by `ranking_score` descending, collapses to one row per disease, takes `limit`,
-    and returns MechanismCandidate objects. No scores surfaced. `ranking_score` is OT's overall_score in
-    production and the leak-free recomputed score in holdout mode (set by build_candidate_rows).
+    Keeps POSITIVE rows whose disease is not in `approved_diseases` (case-insensitive exact match), sorts by
+    `ranking_score` descending, collapses to one row per disease, takes `limit`, and returns MechanismCandidate
+    objects. `ranking_score` is OT's overall_score in production and the leak-free recomputed score in holdout mode.
 
-    `limit` counts distinct diseases, not rows. OT lists the same disease once per target, so a drug
-    whose targets are related (metformin's 51 mitochondrial complex I subunits) would otherwise spend
-    the whole limit on repeats of a handful of diseases.
+    `limit` counts distinct diseases, not rows: OT lists a disease once per target, so a drug with many related
+    targets (metformin's 51 complex I subunits) would otherwise spend the limit on repeats.
 
-    Direction aggregation uses majority voting over the row's `evidences` list (see
-    `aggregate_directions`) — robust to a few outlier records contradicting a strong majority, which
-    happens routinely in OT.
+    Direction uses majority voting over the row's `evidences` (see `aggregate_directions`).
 
     Required row keys:
         target_symbol: str
@@ -178,10 +164,7 @@ def select_top_candidates(
 
 
 def _drug_direction(action_types: set[str]) -> str:
-    """Map drug action set to get 'LoF' / 'GoF' / 'unknown'.
-
-    Mixed sets (drug annotated as both INHIBITOR and AGONIST on the same target) resolve to 'unknown'
-    rather than guessing — these are genuinely ambiguous and a rare edge case.
+    """Map drug action set to 'LoF' / 'GoF' / 'unknown'; mixed sets (e.g. INHIBITOR and AGONIST) are 'unknown'.
 
     Examples:
         >>> _drug_direction({"INHIBITOR"})
@@ -210,21 +193,9 @@ def _disease_direction(
 ) -> str:
     """Infer what direction of target perturbation CAUSES the disease.
 
-    Returns 'LoF-driven' / 'GoF-driven' / 'inconclusive' / 'unknown'. Inconclusive when records disagree;
-    unknown when either field is empty.
-
-    Disease direction terminology
-    -----------------------------
-    `LoF-driven` and `GoF-driven` describe the direction of target perturbation that CAUSES the disease.
-
-      LoF-driven: the disease is caused by loss of function of the target — when the target's activity
-      goes down, the disease appears or gets worse. To treat it, you want to restore target activity →
-      use a GoF drug (agonist/activator). Example: a tumor suppressor gene that loses function → cancer.
-
-      GoF-driven: the disease is caused by gain of function of the target — when the target's activity
-      goes up, the disease appears or gets worse. To treat it, you want to suppress target activity →
-      use an LoF drug (inhibitor/antagonist). Example: a kinase that becomes hyperactive → drives cell
-      proliferation.
+    Returns 'LoF-driven' / 'GoF-driven' / 'inconclusive' (records disagree) / 'unknown' (either field empty).
+    LoF-driven: loss of target function causes the disease, so it needs a GoF drug (agonist/activator).
+    GoF-driven: gain of target function causes the disease, so it needs an LoF drug (inhibitor/antagonist).
 
     The label is derived from the two evidence-record fields:
 
@@ -235,12 +206,8 @@ def _disease_direction(
       LoF                 | protect            | losing protects ⇒ having it drives disease    | GoF-driven
       GoF                 | protect            | gaining protects ⇒ losing it drives disease   | LoF-driven
 
-    The `protect` rows flip the inference — if losing the target protects you from disease, then the
-    disease must be driven by the target being active (GoF-driven), and vice versa.
-
-    Why this matters for classify_positive: a drug is a good candidate only when its direction opposes
-    the disease-driving direction. LoF-driven disease → needs a GoF drug. GoF-driven disease → needs an
-    LoF drug.
+    `protect` rows flip the inference: if losing the target protects against disease, the disease is driven by the
+    target being active.
 
     Examples:
         >>> _disease_direction({"LoF"}, {"risk"})

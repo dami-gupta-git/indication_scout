@@ -41,11 +41,10 @@ def build_literature_agent(
     approved_indications: list[str] | None = None,
     drug_profile: DrugProfile | None = None,
 ) -> CompiledStateGraph:
-    """Return a compiled ReAct agent. No graph wiring required.
+    """Return a compiled ReAct agent.
 
-    `approved_indications` is the drug's FDA-approved indication list, forwarded to the synthesize
-    tool so the strength judge can exclude approved-sub-indication papers from a broad candidate.
-    `drug_profile` is an optional profile already built for the current supervisor run.
+    `approved_indications` is forwarded to synthesize so the strength judge can exclude approved-sub-indication
+    papers. `drug_profile` is an optional profile already built for this supervisor run.
     """
     tools = build_literature_tools(
         svc,
@@ -74,11 +73,7 @@ async def run_literature_agent(
         {"messages": [HumanMessage(content=f"Analyze {drug_name} in {disease_name}")]}
     )
 
-    # Per-turn LLM accounting. Each AIMessage is one round-trip to the model; its
-    # usage_metadata gives input tokens (context re-sent that turn) and output
-    # tokens (what it generated). Logged at WARNING so the round-trip breakdown
-    # surfaces — isolates whether loop overhead is many turns, large output, or
-    # context growth. Pure read of the returned history; no loop logic touched.
+    # Per-turn LLM accounting (read-only), logged at WARNING.
     # ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
     # total_out = 0
     # for i, msg in enumerate(ai_turns):

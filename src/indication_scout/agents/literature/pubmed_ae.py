@@ -1,19 +1,12 @@
-"""Adverse-event literature search for a drug — holdout-clean.
+"""Adverse-event literature search for a drug, holdout-clean. Both modes rank by Europe PMC citation count.
 
-Two query modes, both citation-ranked:
-  - DRUG-LEVEL (disease=None): the drug's MeSH "adverse effects" SUBHEADING as a MAJOR topic
-    ([Majr]) — PubMed's curated "this paper is primarily about this drug's harms" tag. Precise (no
-    500-cap saturation), catches specific-named signals (agranulocytosis, bladder cancer) without
-    knowing the event name. Falls back to a title/abstract query when MeSH indexing is sparse.
-    Answers "is this drug unsafe at all?"
-  - DISEASE-SCOPED (disease set): drug leg AND an adverse-event vocabulary leg AND a disease leg —
-    recovers indication-specific safety papers the drug-level pool misses (e.g. rofecoxib×colorectal
-    → APPROVe). Answers "is this drug unsafe FOR this candidate indication?"
+  - DRUG-LEVEL (disease=None): the drug's MeSH "adverse effects" subheading as a major topic ([Majr]), falling back
+    to a title/abstract query when MeSH indexing is sparse. Answers "is this drug unsafe at all?"
+  - DISEASE-SCOPED (disease set): drug AND adverse-event vocabulary AND disease. Answers "is this drug unsafe FOR
+    this candidate indication?"
 
-Both rank by Europe PMC citation count, NOT PubMed's term-frequency relevance sort — the latter
-buries landmark safety papers (APPROVe ranks outside PubMed's top 300 for a toxicity query despite
-1,600+ citations). Both use only the drug/disease names + generic MeSH tags (no future knowledge),
-so they are safe in a temporal-holdout (date_before) context.
+Citation ranking replaces PubMed's relevance sort, which buries landmark safety papers (APPROVe ranks outside the
+top 300). Queries use only drug/disease names and generic MeSH tags, so they are safe under date_before.
 """
 
 from __future__ import annotations
@@ -74,15 +67,13 @@ async def search_adverse_events(
     Args:
         drug_name: preferred drug name (e.g. "cerivastatin").
         cache_dir: cache directory for the PubMed client.
-        date_before: optional temporal-holdout cutoff (articles strictly before this date).
+        date_before: optional holdout cutoff (articles strictly before this date).
         top_cited: how many top-cited abstracts to return.
-        disease: when set, runs the DISEASE-SCOPED query (indication-specific safety); when None,
-            the DRUG-LEVEL [Majr] query (drug-wide safety).
-        disease_aliases: Equivalent disease names to OR into the disease-scoped query.
+        disease: when set, runs the disease-scoped query; when None, the drug-level [Majr] query.
+        disease_aliases: equivalent disease names to OR into the disease-scoped query.
 
     Returns:
-        Up to `top_cited` PubmedAbstract objects, most-cited first. Empty when there is no matching
-        adverse-event literature (no fabrication).
+        Up to `top_cited` PubmedAbstract objects, most-cited first; empty when nothing matches.
     """
     drug = drug_name.strip().lower()
 
@@ -112,11 +103,8 @@ async def search_adverse_events(
                     date_before=date_before,
                 )
 
-        # Holdout post-guard: PubMed's maxdate filter trusts the [pdat] field, which is UNRELIABLE
-        # for records whose original registration year differs from the publish year (e.g. a
-        # Cochrane review with pdat=1994 but sortpubdate=2004). esearch lets those leak past the
-        # cutoff; re-verify each PMID's sortpubdate and drop post-cutoff ones. Same guard the
-        # efficacy path (fetch_and_cache) already applies.
+        # Holdout post-guard: PubMed's maxdate trusts [pdat], which is unreliable when registration and publish
+        # years differ, so re-verify each PMID's sortpubdate and drop post-cutoff ones (as fetch_and_cache does).
         if date_before is not None and pmids:
             pmids = await pubmed._filter_pmids_by_date(pmids, date_before)
 

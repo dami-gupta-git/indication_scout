@@ -1,15 +1,7 @@
-"""Shared formatters for rendering Trial data into LLM-visible content strings.
+"""Shared formatters that render Trial data into the content strings the LLM sees.
 
-Both the clinical_trials sub-agent's tools and the supervisor's
-`analyze_clinical_trials` tool use these helpers. The point of centralizing them is
-to keep the prompt-side contract consistent across both layers — see
-`agent_data_contracts.md` at the project root for the spec.
-
-Background: the clinical-trials tools use
-`@tool(response_format="content_and_artifact")`. LangChain serializes only the
-`content` string into the API payload; the typed Pydantic artifact stays
-Python-side and is invisible to the model. So whatever the LLM is going to
-reason over has to be in the content string. These helpers build that string.
+Tools use `content_and_artifact`, so only the content string reaches the model; the typed artifact stays Python-side.
+Used by the clinical_trials tools and the supervisor's `analyze_clinical_trials`.
 """
 
 from collections.abc import Callable
@@ -21,10 +13,8 @@ from indication_scout.models.model_clinical_trials import ArmGroup, MeshTerm, Tr
 def _classify_stop_reason(why_stopped: str | None) -> str:
     """Keyword-based stop classification of a CT.gov why_stopped string.
 
-    Returns one of: safety, efficacy, business, enrollment, unknown — or, when
-    no keyword matches, the original why_stopped text verbatim.
-    Has a 20-char negation lookback so phrasings like "no safety concerns"
-    don't classify as safety.
+    Returns safety, efficacy, business, enrollment, unknown, or the original text if no keyword matches.
+    A 20-char negation lookback keeps "no safety concerns" from classifying as safety.
     """
     if not why_stopped:
         return "unknown"
@@ -46,13 +36,10 @@ def _classify_stop_reason(why_stopped: str | None) -> str:
     return why_stopped
 
 
-# Width of the phase column in rendered rows. Phase strings range from
-# "Not Applicable" (14 chars) to "Phase 1/Phase 2" (15 chars). Pad to 16 so
-# the trailing pipe lines up across rows for visual scanning.
+# Phase column width: fits "Phase 1/Phase 2" (15 chars) plus one for alignment.
 _PHASE_COL_WIDTH = 16
 
-# Phase ordering for distribution display — higher rank shown first. Matches
-# data_sources.clinical_trials.ClinicalTrialsClient._phase_rank.
+# Phase display order, higher rank first; matches ClinicalTrialsClient._phase_rank.
 _PHASE_RANK = {
     "Not Applicable": 0,
     "Early Phase 1": 1,
@@ -72,10 +59,7 @@ _BRIEF_SUMMARY_CAP = 500
 
 
 def _format_interventions(interventions: list, cap: int = _INTERVENTIONS_CAP) -> str:
-    """Render intervention types and names, capped at `cap`.
-
-    Empty list renders as "(none)" so the LLM sees the absence explicitly.
-    """
+    """Render intervention types and names, capped at `cap`; empty renders "(none)"."""
     if not interventions:
         return "(none)"
     rendered = [
@@ -118,11 +102,9 @@ def _truncate_brief_summary(summary: str | None, cap: int = _BRIEF_SUMMARY_CAP) 
 
 
 def _phase_distribution(trials: list[Trial]) -> str:
-    """Format a phase-count distribution string from a list of trials.
+    """Format phase counts like "Phase 3=2, Phase 2/Phase 3=1", sorted by phase rank descending.
 
-    Returns "Phase 3=2, Phase 2/Phase 3=1, Phase 4=1" — sorted by phase rank
-    descending, skipping zero counts. Empty/missing phases render as
-    "Unknown phase" and sort last.
+    Missing phases render as "Unknown phase" and sort last.
     """
     counts: dict[str, int] = {}
     for t in trials:
@@ -139,12 +121,7 @@ def _phase_distribution(trials: list[Trial]) -> str:
 
 
 def _format_mesh_list(mesh_terms: list[MeshTerm], cap: int = _MESH_CAP) -> str:
-    """Render mesh_conditions as "term1; term2; term3", capped at `cap`.
-
-    Preserves CT.gov ordering (first-listed = primary). Empty list renders
-    as "(none)" so the LLM sees the absence explicitly rather than a
-    missing column. Per project rules, no fabricated values.
-    """
+    """Render mesh_conditions as "term1; term2", capped at `cap`, in CT.gov order; empty renders "(none)"."""
     if not mesh_terms:
         return "(none)"
     terms = [m.term for m in mesh_terms[:cap] if m.term]
@@ -154,12 +131,7 @@ def _format_mesh_list(mesh_terms: list[MeshTerm], cap: int = _MESH_CAP) -> str:
 
 
 def _format_date(value: str | None) -> str:
-    """Render a date for the supervisor view.
-
-    CT.gov returns full ISO dates, year-month, or year-only depending on the
-    trial. Pass through whatever CT.gov gave us; render missing dates as "?"
-    rather than synthesizing a value.
-    """
+    """Render a CT.gov date as given (full, year-month, or year-only); missing renders "?"."""
     if not value:
         return "?"
     return value
@@ -172,14 +144,8 @@ def _format_trial_row(
 ) -> str:
     """Render one trial as a pipe-separated row.
 
-    Columns supported: nct_id, phase, status, start_date, completion_date,
-    stop_reason, mesh, interventions, arms, brief_summary, refs, title. The phase
-    column is padded for visual alignment; other columns render their value
-    verbatim.
-
-    `classified_stop_reason` is passed in (rather than computed here) so this
-    module stays free of the keyword-classification logic — the caller owns
-    the classifier.
+    Supported columns: nct_id, phase, status, start_date, completion_date, stop_reason, mesh, interventions, arms,
+    brief_summary, refs, title. `classified_stop_reason` is passed in so the caller owns the classifier.
     """
     parts: list[str] = []
     for col in columns:
@@ -195,11 +161,7 @@ def _format_trial_row(
         elif col == "completion_date":
             parts.append(f"end {_format_date(trial.completion_date)}")
         elif col == "stop_reason":
-            # When the keyword classifier produces a useful label, surface it
-            # so the LLM gets a deterministic hint. When the classifier punts
-            # ("other" / "unknown"), fall through to the raw why_stopped text
-            # — the LLM is the better classifier of last resort. If there's
-            # no text at all, render "(none)" parallel to the mesh column.
+            # Use the classifier's label when useful; otherwise the raw why_stopped, or "(none)".
             if classified_stop_reason and classified_stop_reason not in {
                 "unknown",
                 "other",
@@ -220,10 +182,7 @@ def _format_trial_row(
         elif col == "brief_summary":
             parts.append(f"summary: {_truncate_brief_summary(trial.brief_summary)}")
         elif col == "refs":
-            # PMIDs from CT.gov's referencesModule — papers the registry
-            # links to this trial. Used by the supervisor as a signal that a
-            # completed trial has a real published readout (not just a
-            # registry entry).
+            # PMIDs CT.gov links to the trial; a signal that a completed trial has a published readout.
             pmids = [p for p in trial.references if p]
             parts.append(f"refs: {', '.join(pmids) if pmids else '(none)'}")
         elif col == "title":
@@ -244,16 +203,10 @@ def _truncate_why_stopped(why_stopped: str | None) -> str:
 
 
 def _borda_rank_by_enrollment_and_recency(trials: list[Trial], k: int) -> list[Trial]:
-    """Return the top k trials ranked by enrollment desc and recency desc combined.
+    """Return the top k trials by combined enrollment-desc and completion-date-desc rank (Borda count).
 
-    Borda count: rank trials by enrollment descending and by completion_date
-    descending independently, then sum the two ranks per trial. Lower combined
-    rank = more interesting. Trials missing enrollment or completion_date get
-    the worst rank (len(trials)) in that dimension, so they aren't preferred
-    over trials with values. Ties broken by enrollment descending.
-
-    Rationale: surfaces both well-powered older trials and newer trials
-    without letting either dominate the supervisor's top-k slice.
+    Lower combined rank is better. Trials missing a value get the worst rank in that dimension. Ties break by
+    enrollment descending.
     """
     if not trials:
         return []
@@ -297,16 +250,10 @@ def _format_trial_table(
     include_why_stopped: bool = False,
     stop_classifier: Callable[[str | None], str] | None = None,
 ) -> str:
-    """Render a list of trials as a multi-line table.
+    """Render trials as a multi-line table, truncated to `cap` (callers pre-sort).
 
-    `cap` truncates the trials list (callers pre-sort if a specific ordering
-    is required — Borda for the supervisor, enrollment-desc for the sub-agent
-    via the existing artifact ordering).
-
-    `include_why_stopped` adds an indented "why_stopped: ..." line under each
-    row when True. `stop_classifier`, if provided, is a callable that maps a
-    `why_stopped` string to a classified category — used to populate the
-    `stop_reason` column without coupling this module to the classifier.
+    `include_why_stopped` adds a "why_stopped: ..." line under each row. `stop_classifier` maps why_stopped to a
+    category for the `stop_reason` column.
     """
     if not trials:
         return "  (none)"

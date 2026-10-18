@@ -60,8 +60,7 @@ def build_mechanism_agent(
 ) -> CompiledStateGraph:
     """Return a compiled ReAct agent.
 
-    `date_before` is forwarded to the tools so get_target_associations ranks leak-free in holdout
-    mode (clinical_precedence dropped from the recomputed overall score).
+    `date_before` is forwarded to the tools so get_target_associations ranks leak-free in holdout mode.
     """
     tools = build_mechanism_tools(date_before=date_before)
     return create_react_agent(
@@ -81,8 +80,8 @@ async def run_mechanism_agent(
 ) -> MechanismOutput:
     """Invoke the agent and assemble a MechanismOutput from the run.
 
-    `date_before` gates the FDA approval drop-filter so a holdout doesn't use post-cutoff approvals to discard
-    candidates that weren't yet approved at the cutoff. OpenTargets associations themselves have no date filter.
+    `date_before` gates the FDA approval drop-filter so a holdout doesn't discard candidates using post-cutoff
+    approvals. OpenTargets associations themselves have no date filter.
     """
     _agent_t0 = time.perf_counter()
     result = await agent.ainvoke(
@@ -90,11 +89,7 @@ async def run_mechanism_agent(
     )
     _agent_elapsed = time.perf_counter() - _agent_t0
 
-    # Per-turn LLM accounting (same as the literature agent). Each AIMessage is one
-    # round-trip; usage_metadata gives context size and output tokens. Logged at
-    # WARNING to isolate whether mechanism's time is round-trips (and how many
-    # get_target_associations calls the LLM actually made vs. the 3-target cap) or
-    # the post-agent _assemble_candidates fan-out. Read-only on result["messages"].
+    # Per-turn LLM accounting (same as the literature agent); read-only on result["messages"].
     # ai_turns = [m for m in result["messages"] if isinstance(m, AIMessage)]
     # total_out = 0
     # for i, msg in enumerate(ai_turns):
@@ -156,12 +151,8 @@ async def run_mechanism_agent(
         for symbol, target_id in zip(moa.target_symbols, moa.target_ids, strict=False)
     }
 
-    # Restrict the candidate fan-out to the targets the LLM actually chose
-    # (the symbols it called get_target_associations on). The agent is prompted to
-    # pick the 3 most consequential targets; honoring that here avoids fetching
-    # per-disease evidence for every target — the dominant OT-call cost. Fall back
-    # to all targets if the LLM selected none, so a degenerate run still produces
-    # candidates.
+    # Restrict the fan-out to the targets the LLM chose (per-disease evidence is the dominant OT-call cost). Fall
+    # back to all targets if it chose none, so a degenerate run still produces candidates.
     chosen_symbols = set(associations.keys())
     assemble_targets = {
         symbol: target_id
@@ -212,8 +203,7 @@ async def _assemble_candidates(
 ) -> list:
     """Fetch per-target rows, filter approved indications, classify.
 
-    Returns `[]` for any failure path (unresolvable drug, no MoAs, no targets) so the agent keeps
-    returning a valid MechanismOutput.
+    Returns `[]` on any failure path (unresolvable drug, no MoAs, no targets).
     """
     if not drug_targets or not mechanisms_of_action:
         return []
@@ -254,12 +244,9 @@ async def _assemble_candidates(
     if not rows:
         return []
 
-    # FDA approval filter. On any failure, fall back to an empty approved set so at least the biology
-    # filter runs — better than dropping candidates silently on a chembl / fda hiccup.
-    # Holdout swap: when date_before is set, the live openFDA labels would use post-cutoff approvals
-    # to drop candidates that weren't yet approved at the cutoff (e.g. dropping imatinib × systemic
-    # mastocytosis in a 2002 holdout on the strength of the 2006 approval). Use the hardcoded
-    # date-gated approvals table instead, mirroring the supervisor / clinical-trials call sites.
+    # FDA approval filter; on failure fall back to an empty approved set so the biology filter still runs.
+    # In holdout mode use the hardcoded date-gated approvals table: live openFDA labels would drop candidates
+    # on the strength of post-cutoff approvals (e.g. imatinib × systemic mastocytosis in a 2002 holdout).
     approved: set[str] = set()
     candidate_names = sorted({r["disease_name"] for r in rows if r.get("disease_name")})
     try:

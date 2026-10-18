@@ -1,21 +1,11 @@
-"""Deterministic trial FACTS derived from a ClinicalTrialsOutput artifact.
+"""Deterministic trial facts derived from a ClinicalTrialsOutput artifact.
 
-The supervisor's blurb rules hinge on one fact the model otherwise has to extract from a
-phase string buried in a text table: "what is the highest completed phase, and was a
-Phase 3 terminated for cause?". That extraction is deterministic and unambiguous — code
-does it perfectly. So code computes the facts and feeds them to the LLM as an
-authoritative block.
+Code computes facts such as the highest completed phase and whether a Phase 3 was terminated for cause, and feeds
+them to the LLM as an authoritative block. Closure of a hypothesis is an LLM judgment by the clinical_trials
+sub-agent; a pure-code closure trigger produced false closes.
 
-This module does NOT decide whether a hypothesis is CLOSED. Closure is a JUDGMENT made by
-the clinical_trials sub-agent in its focused per-pair context (fed first_approval and the
-relevance split). Code only surfaces the FACTS that judgment reads — including
-`phase3_terminated_for_cause`, the positive closure signal. A pure-code closure trigger
-was tried and produced FALSE-CLOSES; that is why the decision is an LLM judgment fed
-facts, not a code rule.
-
-Relevance filter: when `relevant_nct_ids` is supplied, the facts are computed over
-RELEVANT trials only, so a contaminating Phase 3 pulled in by the recall-first search does
-not inflate the phase or trip the termination-for-cause signal.
+When `relevant_nct_ids` is supplied, facts are computed over relevant trials only, so a contaminating Phase 3
+cannot inflate the phase or trip the termination signal.
 """
 
 from indication_scout.agents._trial_formatting import (
@@ -32,25 +22,15 @@ from indication_scout.constants import (
 )
 from indication_scout.models.model_clinical_trials import Trial
 
-# Stop categories that constitute a genuine cause-termination: an explicit safety or
-# efficacy stop is the ONLY evidence of cause. A blank/unknown/operational/administrative
-# reason is NOT evidence of a safety/efficacy stop and must not set the flag — absence of a
-# stated reason is not a negative signal.
+# Only an explicit safety or efficacy stop counts as cause-termination; a blank or operational reason does not.
 _CAUSE_STOP_CATEGORIES = {"safety", "efficacy"}
 
 
 def is_non_therapeutic_study(trial: Trial) -> bool:
-    """True when EVERY typed intervention is non-therapeutic (diagnostic test, device, tracer,
-    procedure).
+    """True when EVERY typed intervention is non-therapeutic (diagnostic test, device, tracer, procedure).
 
-    Such a trial studies that object, not the drug: the drug may be administered, but no arm
-    delivers it as treatment and no clinical outcome is registered. The judgment is
-    disease-independent — the answer is the same for every candidate indication — so it is settled
-    once in code rather than re-asked per candidate, which is how the same trial came out relevant
-    under one indication and contaminated under another.
-
-    A trial with no interventions, or none carrying a type, returns False: absence of a type is not
-    evidence of a non-therapeutic study, so the trial stays in and the relevance gate judges it.
+    Such a trial studies that object, not the drug. The judgment is disease-independent, so it is settled once here
+    rather than per candidate. A trial with no typed interventions returns False and is left to the relevance gate.
     """
     typed = [i.intervention_type for i in trial.interventions if i.intervention_type]
     if not typed:
@@ -58,13 +38,10 @@ def is_non_therapeutic_study(trial: Trial) -> bool:
     return all(t in NON_THERAPEUTIC_INTERVENTION_TYPES for t in typed)
 
 
-# Statuses that count an active/ongoing program. overall_status carries display-cased strings
-# ("Recruiting", "Active, not recruiting") as well as the API enum form; normalize
-# (upper, non-alnum -> "_") before compare so both shapes match. Matched by EXACT set
-# membership (not substring) — substring matching wrongly admitted "NOT_YET_RECRUITING" via
-# "RECRUITING". "Not yet recruiting" IS included as a real (planned) program; "Enrolling by
-# invitation" is an open program too. "Suspended" is a PAUSE, not a dead end, so it counts as
-# ongoing development rather than a dead/unknown trial.
+# Statuses counting as an active program. overall_status may be display-cased ("Active, not recruiting") or the API
+# enum, so normalize (upper, non-alnum -> "_") and match by exact set membership (substring matching admitted
+# "NOT_YET_RECRUITING" via "RECRUITING"). Planned and invitation-only programs count; "Suspended" is a pause, so it
+# counts as ongoing.
 _ACTIVE_STATUSES = frozenset(CLINICAL_TRIALS_ACTIVE_STATUSES)
 
 
@@ -85,22 +62,18 @@ def _is_active(trial: Trial) -> bool:
 
 
 def _is_pivotal_phase3(trial: Trial) -> bool:
-    """True only for the pivotal Phase 3 band: "Phase 2/Phase 3" or "Phase 3".
+    """True only for the pivotal band "Phase 2/Phase 3" or "Phase 3", used for the cause-termination signal.
 
-    Used for the cause-termination signal. Excludes pure "Phase 4" (post-approval — a
-    Phase 4 event must not render as a "Phase 3 terminated for cause") and "Phase 3/Phase 4"
-    (ambiguous combined designation). A contaminating sub-Phase-2/3 trial is also excluded.
+    Excludes pure "Phase 4" (post-approval) and the ambiguous "Phase 3/Phase 4".
     """
     rank = _PHASE_RANK.get(trial.phase or "", -1)
     return _PHASE_RANK["Phase 2/Phase 3"] <= rank <= _PHASE_RANK["Phase 3"]
 
 
 def _is_pure_completed_phase3(trial: Trial) -> bool:
-    """True for a true completed pivotal Phase 3: "Phase 3" or "Phase 3/Phase 4".
+    """True for a completed pivotal Phase 3: "Phase 3" or "Phase 3/Phase 4".
 
-    EXCLUDES "Phase 2/Phase 3" — a completed combined Phase 2/3 trial is not, on its own, a
-    completed pivotal Phase 3 readout (it often resolves at the Phase 2 stage). Used to keep the
-    dev-stage judge from calling a candidate "Phase 3 completed" off a Phase 2/3 trial alone.
+    Excludes "Phase 2/Phase 3", which often resolves at the Phase 2 stage.
     """
     rank = _PHASE_RANK.get(trial.phase or "", -1)
     return _PHASE_RANK["Phase 3"] <= rank <= _PHASE_RANK["Phase 3/Phase 4"]
@@ -109,11 +82,7 @@ def _is_pure_completed_phase3(trial: Trial) -> bool:
 def _is_active_pivotal_phase3(trial: Trial) -> bool:
     """True for the active-program band: "Phase 2/Phase 3", "Phase 3", or "Phase 3/Phase 4".
 
-    Distinct from both other phase predicates. Used for the has_active_phase3 signal: a
-    recruiting trial in this band is genuine pivotal development. Excludes pure "Phase 4"
-    (post-approval / off-label activity — the very thing a "no dedicated development program,
-    Phase 4 only" verdict correctly describes, so it must NOT trip this signal). "Phase
-    3/Phase 4" has a Phase-3 arm and counts as pivotal activity.
+    Excludes pure "Phase 4" (post-approval / off-label activity).
     """
     rank = _PHASE_RANK.get(trial.phase or "", -1)
     return _PHASE_RANK["Phase 2/Phase 3"] <= rank <= _PHASE_RANK["Phase 3/Phase 4"]
@@ -147,16 +116,9 @@ def derive_trial_signals(
 ) -> TrialSignals:
     """Compute deterministic trial facts from a clinical-trials artifact.
 
-    When `relevant_nct_ids` is given, only those trials contribute to the
-    completed/terminated facts — they reflect RELEVANT trials, not the recall-first
-    contaminated set.
-
-    The active-Phase-3 fact is computed from the all-status `ct.search` set, which is
-    NOT relevance-classified (only completed+terminated trials are). Contamination drop
-    is therefore best-effort: trials whose nct is in `contaminated_nct_ids` are excluded,
-    but an active trial the agent never saw in the completed/terminated lists is never
-    flagged and can still slip in. Acceptable for a "yes, an active Phase 3 exists"
-    boolean.
+    When `relevant_nct_ids` is given, only those trials contribute to the completed/terminated facts.
+    The active-Phase-3 fact comes from the all-status `ct.search` set, which is not relevance-classified, so
+    contamination dropping is best-effort there.
     """
     if ct is None:
         return TrialSignals()
@@ -168,23 +130,15 @@ def derive_trial_signals(
     completed_trials = _filter_relevant(all_completed, relevant_nct_ids)
     terminated_trials = _filter_relevant(all_terminated, relevant_nct_ids)
 
-    # Search-set exclusion set for the active/unknown reads. The search set is NOT
-    # relevance-classified, so we drop two kinds of irrelevant trials:
-    #   1. explicitly contaminated ncts (best-effort, as before), and
-    #   2. ncts the agent DID classify (they appear in completed/terminated) but judged
-    #      NOT relevant — i.e. in the completed/terminated population yet absent from
-    #      relevant_nct_ids. Without this, a relevant=False Phase 3 dropped from the
-    #      completed signal would be re-admitted via the unfiltered search read (E4).
+    # Exclusions for the active/unknown reads (the search set is not relevance-classified): contaminated ncts, and
+    # ncts classified as not relevant, which would otherwise be re-admitted via the unfiltered search read.
     search_excluded = set(contaminated)
     if relevant_nct_ids is not None:
         classified = {t.nct_id for t in all_completed + all_terminated if t.nct_id}
         search_excluded |= {n for n in classified if n not in relevant_nct_ids}
 
-    # Active/ongoing Phase 3 from the all-status search set. Uses the bounded
-    # {Phase 2/3, Phase 3, Phase 3/4} band (_is_active_pivotal_phase3) — NOT the >= floor:
-    # a recruiting Phase 4 is post-approval/off-label activity, exactly the case the "no
-    # dedicated development program, Phase 4 only" verdict describes, so it must not fire
-    # this signal.
+    # Active Phase 3 from the search set, using the bounded pivotal band, not the >= floor (a recruiting Phase 4
+    # is post-approval activity).
     search_trials = ct.search.trials if ct.search else []
     active_phase3 = [
         t
@@ -195,21 +149,13 @@ def derive_trial_signals(
     ]
     active_phase3_nct_ids = [t.nct_id for t in active_phase3 if t.nct_id]
 
-    # Use the pivotal band {Phase 2/3, Phase 3, Phase 3/4} (_is_active_pivotal_phase3) — the SAME
-    # band as the active/unknown Phase-3 signals — NOT the >= floor (which counts a completed
-    # Phase 4 as "completed Phase 3", since Phase 4 ranks above Phase 3) and NOT the stricter
-    # termination band (_is_pivotal_phase3, 5-6) which excludes Phase 3/4. A completed Phase 3/4
-    # trial has a Phase 3 arm and IS a completed Phase 3; a completed pure Phase 4 is post-approval
-    # activity and is NOT. (The termination band is deliberately stricter — Phase 3/4 is ambiguous
-    # for a cause-termination — but that strictness is wrong for the completed-evidence signal.)
+    # Use the same pivotal band as the active signals, not the >= floor (counts a completed Phase 4) and not the
+    # stricter termination band (excludes Phase 3/4, which has a Phase 3 arm).
     completed_phase3 = [t for t in completed_trials if _is_active_pivotal_phase3(t)]
     completed_phase3_nct_ids = [t.nct_id for t in completed_phase3 if t.nct_id]
 
-    # A completed "Phase 2/Phase 3" trial is NOT a completed pivotal Phase 3 readout — the
-    # combined designation often resolves at the Phase 2 stage. Track the PURE-Phase-3 completions
-    # ("Phase 3" / "Phase 3/Phase 4", excluding "Phase 2/Phase 3") separately so the dev-stage
-    # judge does not read a completed Phase 2/3 as "Phase 3 completed" — especially when the only
-    # real Phase 3 trials are still recruiting (active_phase3). See _is_pure_completed_phase3.
+    # Track pure-Phase-3 completions separately: a completed Phase 2/3 is not a Phase 3 readout, and the
+    # dev-stage judge must not read it as one. See _is_pure_completed_phase3.
     completed_pure_phase3 = [
         t for t in completed_phase3 if _is_pure_completed_phase3(t)
     ]
@@ -229,12 +175,8 @@ def derive_trial_signals(
 
     highest = _highest_completed_phase(completed_trials + terminated_phase3_for_cause)
 
-    # NOTE: dev_stage is NOT set here. It is an LLM judgment (services/dev_stage.judge_dev_stage)
-    # made over the relevant trials in run_clinical_trials_agent, which overwrites the field's
-    # "untested" default on TrialSignals. The deterministic phase-rank ladder was removed: it
-    # kept mis-encoding edge cases (Phase 4 ranks above Phase 3, etc.). The boolean signals
-    # below (has_completed_phase3, has_active_phase3, …) are still computed deterministically —
-    # they feed the supervisor's fact critic and report counts, not the stage tier.
+    # dev_stage is not set here; it is an LLM judgment (judge_dev_stage) that overwrites the "untested" default.
+    # The boolean signals below feed the supervisor's fact critic and report counts.
     return TrialSignals(
         highest_completed_phase=highest,
         has_completed_phase3=bool(completed_phase3),
@@ -249,12 +191,7 @@ def derive_trial_signals(
 
 
 def format_derived_signals(sig: TrialSignals) -> str:
-    """Render the relevance-filtered facts as an authoritative block for the LLM.
-
-    Facts only — no closure verdict and no closure hint. Closure is judged by the
-    clinical_trials sub-agent; the supervisor reads these facts and the sub-agent's
-    verdict, never re-deriving the decision here.
-    """
+    """Render the relevance-filtered facts as an authoritative block for the LLM; facts only, no closure verdict."""
     lines = [
         "DERIVED SIGNALS (authoritative facts — relevant trials only; do not re-derive "
         "the phase):",

@@ -1,11 +1,8 @@
-"""Local recomputation of Open Targets' overall association score.
+"""Local recomputation of Open Targets' overall association score (pure functions, no I/O).
 
-Pure functions, no I/O, no OT client import. OT's overall score is a weighted harmonic sum over
-per-datasource scores, normalized by the harmonic sum of a fixed number of ones. We reproduce it so
-we can drop the `clinical_precedence` datasource in holdout mode — that channel encodes current
-trials/approvals and would leak post-cutoff information into the mechanism ranking.
-
-Reproduces the published overall_score to ~0.01 mean abs error (verified against JAK1/JAK2).
+OT's overall score is a weighted harmonic sum over per-datasource scores, normalized by the harmonic sum of a fixed
+number of ones. Reproducing it lets holdout mode drop `clinical_precedence`, which encodes current trials/approvals.
+Matches the published overall_score to ~0.01 mean abs error (verified against JAK1/JAK2).
 """
 
 from indication_scout.constants import (
@@ -27,9 +24,8 @@ def recompute_overall(
 ) -> float:
     """Recompute OT's overall association score from per-datasource scores, dropping `exclude` ids.
 
-    Weights each datasource by OT_DATASOURCE_WEIGHTS (default OT_DEFAULT_DATASOURCE_WEIGHT), takes the
-    harmonic sum, and normalizes by the harmonic sum of OT_PLATFORM_DATASOURCE_COUNT ones. Returns 0.0
-    when no datasources remain after exclusion.
+    Weights each datasource by OT_DATASOURCE_WEIGHTS (default OT_DEFAULT_DATASOURCE_WEIGHT) and normalizes the
+    harmonic sum by that of OT_PLATFORM_DATASOURCE_COUNT ones. Returns 0.0 when no datasources remain.
     """
     weighted = [
         OT_DATASOURCE_WEIGHTS.get(ds_id, OT_DEFAULT_DATASOURCE_WEIGHT) * score
