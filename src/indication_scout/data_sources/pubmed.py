@@ -48,22 +48,17 @@ logger = logging.getLogger(__name__)
 class PubMedClient(BaseClient):
     """Client for querying PubMed/NCBI APIs."""
 
-    # NCBI eutils is a hard dependency for literature analysis. If retries
-    # exhaust, exit the program (logged to data_source_failures.log) instead
-    # of raising a DataSourceError that downstream code may swallow into
-    # silently degraded results.
+    # NCBI eutils is a hard dependency for literature analysis: if retries exhaust, exit (logged to
+    # data_source_failures.log) rather than raise a DataSourceError that downstream code may swallow into degraded results.
     exit_on_retry_exhausted = True
 
     SEARCH_URL = PUBMED_SEARCH_URL
     FETCH_URL = PUBMED_FETCH_URL
     SUMMARY_URL = PUBMED_SUMMARY_URL
 
-    # Process-wide concurrency cap on NCBI eutils requests. Class-level so the
-    # bound holds across the multiple PubMedClient instances the supervisor
-    # spins up in parallel (each RetrievalService call creates a new client).
-    # Created lazily and rebound when the running event loop changes — an
-    # asyncio.Semaphore binds to the loop it is created on, so a cached one
-    # would raise "bound to a different event loop" on a second asyncio.run().
+    # Process-wide concurrency cap on NCBI eutils requests. Class-level so it holds across the multiple PubMedClient
+    # instances the supervisor creates in parallel. Created lazily and rebound when the running event loop changes,
+    # since an asyncio.Semaphore binds to its creating loop and would raise on a second asyncio.run().
     _request_semaphore: asyncio.Semaphore | None = None
     _semaphore_loop: asyncio.AbstractEventLoop | None = None
 
@@ -101,10 +96,8 @@ class PubMedClient(BaseClient):
     async def _rest_get_json_tolerant(self, url: str, params: dict[str, Any]) -> Any:
         """GET JSON, tolerating raw control characters in the response body.
 
-        NCBI eutils occasionally echoes user-supplied query terms back inside
-        ``querytranslation`` / ``translationstack`` with stray control bytes,
-        which strict ``json.loads`` rejects. Fetch as text and parse with
-        ``strict=False`` so those responses don't crash the supervisor.
+        NCBI eutils sometimes echoes query terms back in ``querytranslation`` / ``translationstack`` with stray control
+        bytes, which strict ``json.loads`` rejects. Fetch as text and parse with ``strict=False``.
         """
         text = await self._request("GET", url, params=params, as_text=True)
         return json.loads(text, strict=False)
@@ -147,12 +140,8 @@ class PubMedClient(BaseClient):
             )
         pmids: list[str] = data.get("esearchresult", {}).get("idlist", [])
 
-        # NOTE: the post-search esummary date guard used to live here. It
-        # was moved into RetrievalService.fetch_and_cache so it can read
-        # pub_date from pgvector for known PMIDs and only call esummary
-        # for unknowns — a major NCBI traffic reduction on re-runs.
-        # Callers that need a standalone date filter can still invoke
-        # PubMedClient._filter_pmids_by_date directly (used by some tests).
+        # NOTE: the post-search esummary date guard moved to RetrievalService.fetch_and_cache, which reads pub_date from
+        # pgvector for known PMIDs and calls esummary only for unknowns. _filter_pmids_by_date is still callable directly.
 
         cache_set("pubmed_search", cache_params, pmids, self.cache_dir)
         return pmids
@@ -264,16 +253,14 @@ class PubMedClient(BaseClient):
     ) -> list[str]:
         """Remove PMIDs whose sortpubdate is on or after date_before.
 
-        Uses esummary to fetch publication dates cheaply (no abstract text).
-        PubMed's maxdate filter is not strictly respected, so this is a
-        post-search guard.
+        Uses esummary for cheap date lookup (no abstract text), as a post-search guard since PubMed's maxdate filter is
+        not strictly respected.
         """
         if batch_size is None:
             batch_size = get_settings().pubmed_esummary_batch_size
 
-        # Per-PMID sortpubdate cache. A real date is immutable; an empty string
-        # (abstract-less / unindexed PMID) is persisted too so those PMIDs aren't
-        # re-fetched from esummary every run — the residual holdout date cost.
+        # Per-PMID sortpubdate cache. A real date is immutable; an empty string (abstract-less / unindexed PMID) is also
+        # persisted so those PMIDs aren't re-fetched from esummary every run.
         dates: dict[str, str] = {}
         missing: list[str] = []
         for pmid in pmids:
@@ -326,13 +313,11 @@ class PubMedClient(BaseClient):
     ) -> dict[str, list[str]]:
         """Fetch publication types from esummary for the given PMIDs.
 
-        Returns a dict mapping pmid → list of pubtype strings (e.g.
-        ["Journal Article", "Randomized Controlled Trial"]). PMIDs with
-        no esummary record or no pubtype field are absent from the result.
+        Returns pmid → list of pubtype strings (e.g. ["Journal Article", "Randomized Controlled Trial"]). PMIDs with no
+        esummary record or no pubtype field are absent.
 
-        Per-PMID file cache so re-runs across different candidate sets
-        reuse prior fetches. Cache misses are batched into single
-        esummary requests (pubmed_esummary_batch_size, default 200).
+        Cached per PMID so re-runs across candidate sets reuse prior fetches; misses are batched into single esummary
+        requests (pubmed_esummary_batch_size, default 200).
         """
         if not pmids:
             return {}
@@ -368,8 +353,7 @@ class PubMedClient(BaseClient):
             for pmid in batch:
                 summary = summaries.get(pmid, {})
                 pubtypes = summary.get("pubtype", []) or []
-                # Persist even empty lists so we don't refetch records
-                # that genuinely have no pubtype field.
+                # Persist even empty lists so records with no pubtype field aren't refetched.
                 cache_set("pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir)
                 if pubtypes:
                     result[pmid] = pubtypes
@@ -393,12 +377,10 @@ class PubMedClient(BaseClient):
                 "retmode": "xml",
                 "rettype": "abstract",
             }
-            # NCBI efetch intermittently returns a truncated/error body under an HTTP 200 (so the
-            # base-client retry doesn't fire); the body then fails XML parsing. Re-fetch the batch
-            # with backoff before surfacing the error.
+            # NCBI efetch intermittently returns a truncated/error body under HTTP 200 (so the base-client retry doesn't
+            # fire) that then fails XML parsing; re-fetch the batch with backoff before surfacing the error.
             for attempt in range(PUBMED_EFETCH_PARSE_RETRIES + 1):
-                # Semaphore (PUBMED_MAX_CONCURRENT_REQUESTS) bounds concurrency
-                # against NCBI's per-IP rate ceiling.
+                # Semaphore (PUBMED_MAX_CONCURRENT_REQUESTS) bounds concurrency against NCBI's per-IP rate ceiling.
                 async with self._get_semaphore():
                     xml_text = await self._rest_get_xml(
                         self.FETCH_URL, self._inject_api_key(params)
@@ -406,8 +388,7 @@ class PubMedClient(BaseClient):
                 try:
                     return self._parse_pubmed_xml(xml_text)
                 except DataSourceError as e:
-                    # Only malformed-XML failures are retryable (a well-formed but empty body is a
-                    # real result, not a transient error).
+                    # Only malformed-XML failures are retryable (a well-formed but empty body is a real result).
                     if not isinstance(e.__cause__, ET.ParseError):
                         raise
                     if attempt >= PUBMED_EFETCH_PARSE_RETRIES:
@@ -442,8 +423,7 @@ class PubMedClient(BaseClient):
         """Parse PubMed XML response into PubmedAbstract objects."""
         articles = []
 
-        # Strip control characters that are invalid in XML 1.0 (U+0000–U+001F,
-        # excluding the three characters XML permits: tab, newline, carriage-return).
+        # Strip characters invalid in XML 1.0 (U+0000–U+001F except tab, newline, carriage-return).
         xml_text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", "", xml_text)
 
         try:
@@ -502,10 +482,8 @@ class PubMedClient(BaseClient):
 
             keywords = [kw.text for kw in article_elem.findall(".//Keyword") if kw.text]
 
-            # Warm the pubtypes cache from the efetch XML so semantic_search's
-            # later fetch_pubtypes() call hits the cache instead of a second
-            # esummary round-trip. efetch PublicationType text matches esummary
-            # pubtype strings exactly (verified), so the boost lookup is unaffected.
+            # Warm the pubtypes cache from the efetch XML so semantic_search's fetch_pubtypes() skips a second esummary
+            # round-trip (efetch PublicationType text matches esummary pubtype strings exactly).
             pubtypes = [
                 pt.text for pt in article_elem.findall(".//PublicationType") if pt.text
             ]
@@ -576,9 +554,8 @@ class PubMedClient(BaseClient):
 
             keywords = [kw.text for kw in doc.findall(".//Keyword") if kw.text]
 
-            # Book articles carry PublicationType too; warm the cache to avoid
-            # a later esummary refetch. Empty list is persisted (no pubtype field
-            # is a real answer, not a miss) — same policy as fetch_pubtypes.
+            # Book articles carry PublicationType too; warm the cache. An empty list is persisted (no pubtype is a real
+            # answer, not a miss), as in fetch_pubtypes.
             pubtypes = [pt.text for pt in doc.findall(".//PublicationType") if pt.text]
             cache_set("pubmed_pubtypes", {"pmid": pmid}, pubtypes, self.cache_dir)
 

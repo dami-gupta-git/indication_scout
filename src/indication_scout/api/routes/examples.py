@@ -1,9 +1,7 @@
-"""Landing-page example routes.
+"""Landing-page example routes: serve a cached SupervisorOutput per example drug.
 
-Serves a cached SupervisorOutput for each example drug. A cached run is kept on
-the persistent volume for EXAMPLE_CACHE_TTL_SECONDS; once it lapses (or is
-absent) the next request runs one real analysis, persists it, and serves it.
-The analysis is run only once per TTL window — repeat clicks hit the cache.
+A cached run lives on the persistent volume for EXAMPLE_CACHE_TTL_SECONDS. Once it lapses (or is absent), the next
+request runs one real analysis, persists it and serves it, so repeat clicks hit the cache.
 """
 
 import asyncio
@@ -31,8 +29,7 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/examples", tags=["examples"])
 
-# Guards against two concurrent requests for the same expired example both
-# kicking off a (costly) analysis. One key per drug.
+# Guards against two concurrent requests for the same expired example each starting a costly analysis (one key per drug).
 _locks: dict[str, asyncio.Lock] = {drug: asyncio.Lock() for drug in EXAMPLE_DRUGS}
 
 
@@ -41,9 +38,9 @@ def _cache_path(drug: str) -> Path:
 
 
 def seed_example_cache() -> None:
-    """Copy committed seed snapshots into the volume cache for any example that
-    is missing there. Sets each file's mtime to its capture date so the TTL
-    counts from capture, not deploy. Existing cache entries are left untouched.
+    """Copy committed seed snapshots into the volume cache for any example missing there.
+
+    Each file's mtime is set to its capture date so the TTL counts from capture, not deploy. Existing entries are untouched.
     """
     captured_path = EXAMPLE_SEED_DIR / "captured_at.json"
     if not captured_path.exists():

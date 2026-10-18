@@ -64,10 +64,8 @@ _geo_cache: dict[str, tuple[str, bool]] = {}
 async def _geolocate(ip: str) -> tuple[str, bool]:
     """Return ("City, Region, Country", is_datacenter) for an IP via ip-api.com.
 
-    `is_datacenter` is True when the IP belongs to a hosting provider or proxy/VPN —
-    a strong signal the request is automated rather than a human browser. Cached per IP.
-    Returns ("", False) on private/local IPs or any lookup failure — geolocation is
-    best-effort and must never break a request.
+    `is_datacenter` is True for hosting-provider or proxy/VPN IPs, a signal the request is automated. Cached per IP.
+    Returns ("", False) on private/local IPs or lookup failure; geolocation is best-effort and never breaks a request.
     """
     if ip in _geo_cache:
         return _geo_cache[ip]
@@ -196,7 +194,6 @@ async def health_check() -> dict[str, str]:
     return {"status": "healthy", "version": __version__}
 
 
-# Serve the built React bundle in prod. Mounted last so it doesn't shadow /api or /health.
-# Absent in dev (Vite serves the frontend) — skip the mount so the app still boots.
+# Serve the built React bundle in prod, mounted last so it doesn't shadow /api or /health. Skipped in dev (Vite serves it).
 if FRONTEND_DIST_DIR.is_dir():
     app.mount("/", StaticFiles(directory=FRONTEND_DIST_DIR, html=True), name="frontend")

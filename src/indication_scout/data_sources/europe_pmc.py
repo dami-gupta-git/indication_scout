@@ -1,8 +1,8 @@
 """Europe PMC API client.
 
-Two uses: citation counts for ranking adverse-event literature (PubMed's term-frequency relevance
-sort buries landmark safety papers — see AE_TOP_CITED / pubmed_ae.py), and drug-scoped literature
-retrieval for candidate-indication sourcing (see design_europe_pmc.md).
+Two uses: citation counts for ranking adverse-event literature (PubMed's relevance sort buries landmark safety papers;
+see AE_TOP_CITED / pubmed_ae.py), and drug-scoped literature retrieval for candidate-indication sourcing (see
+design_europe_pmc.md).
 """
 
 from __future__ import annotations
@@ -39,8 +39,7 @@ from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
-# Europe PMC SciLite annotation types this client fetches in one request. "Pathway" is a legacy
-# annotation type Europe PMC's current text-mining pipeline no longer produces — omitted.
+# Europe PMC SciLite annotation types fetched in one request. "Pathway" is omitted: the current pipeline no longer produces it.
 _ANNOTATION_TYPES = "Diseases,Chemicals,Gene_Proteins"
 
 
@@ -60,9 +59,8 @@ class EuropePMCClient(BaseClient):
     def _build_drug_query(self, drug_name: str, date_before: date | None) -> str:
         """Compose the drug-scoped search query, with an optional publication-date upper bound.
 
-        ``date_before`` is exclusive, matching `PubMedClient.search`: a holdout cut at an approval
-        date must not see papers published on that date. Europe PMC's FIRST_PDATE range is
-        inclusive at both ends, so the bound sent is the preceding day.
+        ``date_before`` is exclusive, matching `PubMedClient.search`. Europe PMC's FIRST_PDATE range is inclusive at both
+        ends, so the bound sent is the preceding day.
         """
         year_clause = ""
         if date_before:
@@ -77,9 +75,8 @@ class EuropePMCClient(BaseClient):
     ) -> list[EuropePMCArticle]:
         """Return every Europe PMC article mentioning the drug in its title or abstract.
 
-        Paginated by cursor until exhausted — no result cap, no relevance filtering. A failure at
-        any page raises rather than returning what was collected so far: a partial pool understates
-        the literature and is indistinguishable downstream from a drug with little written about it.
+        Paginated by cursor until exhausted, with no result cap or relevance filtering. A failure at any page raises:
+        a partial pool understates the literature and looks like a drug with little written about it.
         """
         query = self._build_drug_query(drug_name, date_before)
         cache_params = {"query": query}
@@ -112,8 +109,7 @@ class EuropePMCClient(BaseClient):
                     ) from e
 
             next_cursor = data.get("nextCursorMark")
-            # Europe PMC repeats the cursor on the final page rather than omitting it; without this
-            # check the loop would re-request the last page forever.
+            # Europe PMC repeats the cursor on the final page instead of omitting it; check, or the loop re-requests it forever.
             if not next_cursor or next_cursor == cursor or not page:
                 break
             if next_cursor in seen_cursors:
@@ -142,17 +138,15 @@ class EuropePMCClient(BaseClient):
     ) -> dict[str, int]:
         """Return {pmid: citedByCount} for the given PMIDs.
 
-        Europe PMC's ``citedByCount`` draws on a broader citation graph than NCBI esummary's
-        pmcrefcount (which is blank for exactly the high-impact papers we want ranked highly).
-        A PMID absent from the result maps to nothing (caller treats missing as 0); ranking is a
-        best-effort enhancement, so a failed batch is logged and skipped, never raised.
+        ``citedByCount`` draws on a broader citation graph than NCBI esummary's pmcrefcount (blank for exactly the
+        high-impact papers we want ranked highly). Missing PMIDs map to nothing (caller treats as 0). Ranking is
+        best-effort, so a failed batch is logged and skipped, never raised.
         """
         if not pmids:
             return {}
 
-        # Per-PMID cache. A PMID Europe PMC has no record for is cached as {"count": None} rather
-        # than left absent, so those PMIDs aren't re-queried every run — otherwise a single
-        # unindexed PMID keeps the whole batch request alive and re-pays its timeout cost.
+        # Per-PMID cache. A PMID Europe PMC has no record for is cached as {"count": None}, so it isn't re-queried every
+        # run (one unindexed PMID otherwise keeps the whole batch alive and re-pays its timeout).
         counts: dict[str, int] = {}
         missing: list[str] = []
         for pmid in pmids:
@@ -200,16 +194,13 @@ class EuropePMCClient(BaseClient):
     ) -> list[EuropePMCArticle]:
         """Return articles where ``drug`` appears in the title or abstract.
 
-        ``pub_types`` are OR-ed together and AND-ed onto the query (Europe PMC ``PUB_TYPE`` values,
-        e.g. "Case Reports", "Randomized Controlled Trial", "Review"). ``year_from``/``year_to``
-        bound ``PUB_YEAR``; either end may be given alone, and the open end becomes a wildcard.
-        ``sort`` takes ``EUROPE_PMC_SORT_CITED`` or ``EUROPE_PMC_SORT_RECENT``; leaving it None
-        gives Europe PMC's relevance order (the API rejects a literal "RELEVANCE" value).
+        ``pub_types`` are OR-ed together and AND-ed onto the query (Europe PMC ``PUB_TYPE`` values, e.g. "Case Reports",
+        "Randomized Controlled Trial", "Review"). ``year_from``/``year_to`` bound ``PUB_YEAR``; either may be given
+        alone, and the open end becomes a wildcard. ``sort`` takes ``EUROPE_PMC_SORT_CITED`` or
+        ``EUROPE_PMC_SORT_RECENT``; None gives relevance order (the API rejects a literal "RELEVANCE").
 
-        Returns at most ``page_size`` articles — this is a single page, not a full crawl of the
-        result set. Unlike the citation/annotation lookups, a failure here is raised, not
-        swallowed: the caller asked for this pool and an empty list would be indistinguishable
-        from a drug with no literature.
+        Returns at most ``page_size`` articles (a single page). A failure is raised, not swallowed: an empty list would
+        look like a drug with no literature.
         """
         if not drug:
             return []
@@ -254,16 +245,12 @@ class EuropePMCClient(BaseClient):
     async def fetch_disease_annotations(
         self, pmids: list[str], batch_size: int = EUROPE_PMC_ANNOTATIONS_BATCH
     ) -> dict[str, ArticleAnnotations]:
-        """Return {pmid: ArticleAnnotations} of pre-tagged disease, chemical, and gene/protein
-        mentions per article.
+        """Return {pmid: ArticleAnnotations} of pre-tagged disease, chemical, and gene/protein mentions per article.
 
-        Uses Europe PMC's Annotations API (SciLite text-mining), not an LLM — every entity name
-        returned was tagged by Europe PMC's own pipeline against a specific article section, and
-        linked to its ontology (UMLS for diseases, CHEBI for chemicals, UniProt for gene/proteins).
-        Only articles Europe PMC has text-mined are covered; a PMID with no mined terms of any of
-        these types (or not indexed at all) is simply absent from the result. A failed batch is
-        logged and skipped, never raised — this is a best-effort literature signal, not a hard
-        dependency.
+        Uses Europe PMC's Annotations API (SciLite text-mining), not an LLM: each entity was tagged by Europe PMC's own
+        pipeline and linked to its ontology (UMLS diseases, CHEBI chemicals, UniProt gene/proteins). Only text-mined
+        articles are covered; a PMID with no mined terms is absent. A failed batch is logged and skipped, never raised,
+        since this is a best-effort signal.
         """
         if not pmids:
             return {}

@@ -36,19 +36,14 @@ class FDAClient(BaseClient):
     async def get_label_indications(self, drug_name: str) -> list[str]:
         """Fetch indications_and_usage text from openFDA for a given drug name.
 
-        Queries the drug label endpoint, matching either openfda.brand_name OR
-        openfda.generic_name. This catches labels where the name is registered
-        only under generic_name (e.g. ~5% of metformin labels).
-        Returns a flat list of indication text strings across all matching labels.
-        A 404 (no label for this alias) or empty result is cached with a short
-        TTL (OPENFDA_EMPTY_LABEL_TTL) — long enough to kill the per-run/per-week
-        re-fetch of obscure aliases that don't resolve, short enough that an
-        absence flipping to a real approval is re-checked within a week. Found
-        labels are cached with the full CACHE_TTL.
+        Matches either openfda.brand_name OR openfda.generic_name, which catches labels registered only under
+        generic_name (~5% of metformin labels). Returns a flat list of indication text strings across matching labels.
+        A 404 or empty result is cached with a short TTL (OPENFDA_EMPTY_LABEL_TTL), long enough to stop re-fetching
+        obscure aliases yet short enough that a new approval is re-checked within a week. Found labels use the full
+        CACHE_TTL.
 
         Args:
-            drug_name: Any drug name — trade name, generic/INN, USAN, etc.
-                       (e.g. "Wegovy", "metformin").
+            drug_name: Any drug name — trade name, generic/INN, USAN, etc. (e.g. "Wegovy", "metformin").
 
         Returns:
             List of indications_and_usage text strings, possibly empty.
@@ -72,8 +67,7 @@ class FDAClient(BaseClient):
             data = await self._rest_get(OPENFDA_BASE_URL, params=params)
         except DataSourceError as e:
             if e.status_code == 404:
-                # Cache the absence (short TTL) so the same un-indexed alias isn't
-                # re-queried for every disease this run / for the next week.
+                # Cache the absence (short TTL) so an un-indexed alias isn't re-queried for every disease or next week.
                 cache_set(
                     "fda_label",
                     cache_params,
@@ -89,30 +83,20 @@ class FDAClient(BaseClient):
         for result in results:
             indications.extend(result.get("indications_and_usage", []))
 
-        # Found labels are stable → full TTL; empty results get the short TTL so a
-        # later approval is picked up within a week.
+        # Found labels are stable (full TTL); empty results get the short TTL so a later approval is picked up within a week.
         ttl = CACHE_TTL if indications else OPENFDA_EMPTY_LABEL_TTL
         cache_set("fda_label", cache_params, indications, self.cache_dir, ttl=ttl)
         return indications
 
     async def get_all_label_indications(self, drug_names: list[str]) -> list[str]:
-        """Fetch indications from openFDA for all drug names concurrently.
+        """Fetch indications from openFDA for all drug names concurrently, deduplicated across names.
 
-        Fans out get_label_indications for each name (trade or generic/INN)
-        and deduplicates results.
-
-        Failure handling:
-          - 404 from a single name (no label exists for that alias) returns []
-            for that name and is tolerated — alias expansion routinely produces
-            obscure synonyms that openFDA doesn't index.
-          - Any other DataSourceError (e.g. HTTP 429 rate limit, 5xx server
-            error) on any alias is RE-RAISED so the caller can fail loud.
-            A partial result under rate limiting would silently undercount
-            real approvals and give the LLM bad data.
+        Failure handling: a 404 for one name (no label for that alias) returns [] and is tolerated, since alias
+        expansion routinely produces synonyms openFDA doesn't index. Any other DataSourceError (e.g. 429, 5xx) on any
+        alias is RE-RAISED so the caller fails loudly; a partial result would silently undercount real approvals.
 
         Args:
-            drug_names: List of any drug names — trade, generic/INN, USAN, etc.
-                        (e.g. ["Ozempic", "Wegovy", "semaglutide"]).
+            drug_names: Any drug names — trade, generic/INN, USAN, etc. (e.g. ["Ozempic", "Wegovy", "semaglutide"]).
 
         Returns:
             Deduplicated list of indication text strings across all names.
@@ -132,9 +116,7 @@ class FDAClient(BaseClient):
                 logger.warning(
                     "openFDA label fetch failed for %r: %s", drug_names[i], result
                 )
-                # Re-raise so the caller knows the result is incomplete.
-                # Individual 404s are already turned into [] in
-                # get_label_indications and never reach here as exceptions.
+                # Re-raise so the caller knows the result is incomplete (404s are already [] in get_label_indications).
                 raise result
             all_indications.extend(cast(list[str], result))
 

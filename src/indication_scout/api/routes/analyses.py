@@ -1,7 +1,5 @@
-"""Analyses routes.
-
-The runner remains inside an asyncio background task, while Postgres owns lifecycle state,
-progress, errors, and validated results for the polling and report routes.
+"""Analyses routes. The runner stays in an asyncio background task; Postgres owns lifecycle state, progress, errors and
+validated results for the polling and report routes.
 """
 
 import asyncio
@@ -151,8 +149,7 @@ async def _execute(job: Job) -> None:
     logger.info("Analysis started", extra={"event_name": "analysis.started"})
     cost_tracker = CostTracker()
     cost_token = bind_cost_tracker(cost_tracker)
-    # Bind this attempt's durable progress feed for the duration of the run. Reset in finally
-    # so the context variable does not leak into other analyses.
+    # Bind this attempt's durable progress feed for the run; reset in finally so the context variable doesn't leak.
     emitter_token = set_emitter(
         lambda phase, message: _persist_progress(
             job, attempt.attempt_id, phase, message
@@ -244,8 +241,7 @@ async def _execute(job: Job) -> None:
 async def create_analysis(req: AnalysisRequest) -> AnalysisCreatedResponse:
     """Launch a background analysis; return its job id immediately."""
     drug = normalize_drug_name(req.drug_name)
-    # Fail fast: one quick Open Targets search confirms the drug exists before we spin up
-    # a job. Seed-report drugs skip the check (they don't need OT resolution).
+    # Fail fast: a quick Open Targets search confirms the drug exists before starting a job (seed-report drugs skip it).
     seed = load_fresh_seed_report(drug)
     if seed is None:
         try:

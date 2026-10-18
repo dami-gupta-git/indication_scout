@@ -22,13 +22,9 @@ from indication_scout.utils.cache import cache_get, cache_set
 
 logger = logging.getLogger(__name__)
 
-# Combined per-ChEMBL-ID cache. One file per parent ChEMBL ID holds
-# {"chembl_id", "names", "cached_at", "ttl"}. Replaces the prior
-# `chembl_drug_names` (chembl_id → names) and `drug_name_to_chembl`
-# (name → chembl_id) namespaces, which together produced one tiny file
-# per alias. Forward lookup is a direct file read; reverse lookup is a
-# directory scan of all per-drug files (cheap at the tens-to-hundreds
-# scale this cache reaches in practice).
+# Combined per-ChEMBL-ID cache: one file per parent ChEMBL ID holding {"chembl_id", "names", "cached_at", "ttl"}.
+# Forward lookup is a direct file read; reverse lookup (name → chembl_id) scans the per-drug files, which is cheap at
+# the tens-to-hundreds scale this cache reaches.
 _CHEMBL_NAMES_NS = "chembl_id_to_names"
 _CHEMBL_MOLECULE_NS = "chembl_molecule"
 
@@ -79,11 +75,8 @@ def _save_chembl_names(
 def _lookup_chembl_id_by_name(name: str, cache_dir: Path) -> str | None:
     """Reverse-index lookup: scan per-drug files for a name match.
 
-    Returns the parent ChEMBL ID whose cached names list contains `name`
-    (case-insensitive), or None if no cached drug owns that alias.
-    Expired files are skipped (handled by _load_chembl_names) but not
-    pruned here — they'll be overwritten on the next get_all_drug_names
-    call for that ChEMBL ID.
+    Returns the parent ChEMBL ID whose cached names contain `name` (case-insensitive), or None. Expired files are
+    skipped but not pruned; they are overwritten on the next get_all_drug_names call for that ID.
     """
     ns_dir = cache_dir / _CHEMBL_NAMES_NS
     if not ns_dir.exists():
@@ -122,11 +115,10 @@ class ChEMBLClient(BaseClient):
         return "chembl"
 
     async def get_atc_description(self, atc_code: str) -> ATCDescription:
-        """Fetch ATC classification hierarchy for a single ATC code.
+        """Fetch the ATC classification hierarchy for a single ATC code (GET /atc_class/{atc_code}.json).
 
-        Hits GET /atc_class/{atc_code}.json and returns an ATCDescription instance.
-        Results are cached under namespace "atc_description" for CACHE_TTL seconds.
-        Raises DataSourceError if the code is not found or the response is malformed.
+        Cached under namespace "atc_description" for CACHE_TTL seconds. Raises DataSourceError if the code is not found
+        or the response is malformed.
         """
         cached = cache_get("atc_description", {"atc_code": atc_code}, self.cache_dir)
         if cached is not None:
@@ -170,14 +162,10 @@ class ChEMBLClient(BaseClient):
         return result
 
     async def get_molecule(self, chembl_id: str) -> MoleculeData:
-        """Fetch molecule data by ChEMBL ID.
+        """Fetch molecule data by ChEMBL ID (GET /molecule/{chembl_id}.json) as a MoleculeData instance.
 
-        Hits GET /molecule/{chembl_id}.json and returns a MoleculeData instance.
-        Raises DataSourceError if the molecule is not found or the response is malformed.
-
-        The raw response is file-cached under `chembl_molecule` (molecule facts like
-        first_approval are immutable), so repeat runs skip the network — and the EBI
-        timeout — entirely.
+        Raises DataSourceError if the molecule is not found or the response is malformed. The raw response is cached
+        under `chembl_molecule` (molecule facts like first_approval are immutable), so repeat runs skip the network.
         """
         cache_params = {"chembl_id": chembl_id}
         raw = cache_get(_CHEMBL_MOLECULE_NS, cache_params, self.cache_dir)
@@ -245,15 +233,12 @@ query($q: String!) {
 async def resolve_drug_name(drug_name: str, cache_dir: Path = DEFAULT_CACHE_DIR) -> str:
     """Resolve a free-text drug name to a canonical (parent) ChEMBL ID.
 
-    1. Checks the `resolve_drug_name` cache (previously-resolved inputs).
-    2. Scans the `chembl_id_to_names` per-drug cache files for a name match
-       (covers any synonym of a drug we've fetched before).
-    3. Searches Open Targets GraphQL for the drug name → some ChEMBL ID.
-    4. Fetches the molecule from ChEMBL to read parent_chembl_id.
-    5. If the result is a salt (parent differs), follows to the parent.
+    1. Check the `resolve_drug_name` cache (previously-resolved inputs).
+    2. Scan the `chembl_id_to_names` per-drug cache files for a name match (any synonym of a drug fetched before).
+    3. Search Open Targets GraphQL for the name to get some ChEMBL ID.
+    4. Fetch the molecule from ChEMBL and follow parent_chembl_id if the result is a salt.
 
-    Results are cached under namespace "resolve_drug_name".
-    Raises DataSourceError if the drug is not found.
+    Cached under namespace "resolve_drug_name". Raises DataSourceError if the drug is not found.
 
     Args:
         drug_name: Free-text drug name (e.g. "metformin", "Glucophage").
@@ -322,21 +307,12 @@ async def get_all_drug_names(
 ) -> list[str]:
     """Fetch all known names for a drug from ChEMBL.
 
-    Returns a list where the first element is always pref_name (the
-    generic/preferred name), followed by every other synonym from the
-    parent molecule and its salt forms, regardless of syn_type
-    (TRADE_NAME, RESEARCH_CODE, OTHER, USAN, INN, INN_FRENCH, BAN, FDA,
-    JAN, etc.). All names are lowercased.
+    Returns a deduplicated, lowercased list with pref_name first, followed by every other synonym (any syn_type) from
+    the parent molecule and its salt forms. Trade names often live on salt forms (HCl, HBr), which are found via the
+    molecule_hierarchy endpoint. "component of" entries (combination products) are filtered out.
 
-    For small molecules, trade names often live on salt forms (e.g. HCl,
-    HBr) rather than the parent molecule. Fetches the parent molecule's
-    synonyms and discovers salt forms via the molecule_hierarchy
-    endpoint, collecting all synonyms from both.
-
-    Filters out "component of" entries (combination products).
-    Results are cached under namespace "chembl_id_to_names" — one file
-    per parent ChEMBL ID containing the names list. The same file also
-    serves as the reverse index used by resolve_drug_name.
+    Cached under namespace "chembl_id_to_names", one file per parent ChEMBL ID; the same file is the reverse index
+    used by resolve_drug_name.
 
     Args:
         chembl_id: ChEMBL ID of the parent molecule (e.g. "CHEMBL894").
@@ -386,9 +362,7 @@ async def get_all_drug_names(
 
     logger.debug("ChEMBL drug names for %s: %d found", chembl_id, len(result))
 
-    # Single per-ChEMBL-ID file. Forward lookup (chembl_id → names) is a
-    # direct read; reverse lookup (name → chembl_id) is a scan over all
-    # files in this namespace, performed by _lookup_chembl_id_by_name.
+    # Single per-ChEMBL-ID file: forward lookup is a direct read; reverse lookup is a scan in _lookup_chembl_id_by_name.
     _save_chembl_names(chembl_id, result, cache_dir, ttl=CACHE_TTL)
 
     return result

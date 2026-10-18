@@ -52,13 +52,9 @@ _settings = get_settings()
 
 def _mesh_cond(mesh_term: str) -> str:
     """Format a MeSH preferred term as a CT.gov server-side condition filter."""
-    # KNOWN BUG (not yet fixed): AREA[ConditionMeshTerm] matches a trial when the
-    # term appears in EITHER its direct condition meshes OR its mesh ancestors.
-    # So "Hypertension" (D006973) also pulls in Pulmonary Hypertension trials
-    # (D006976), whose tree rolls up under Hypertension — exactly the mixing the
-    # design intends to avoid. Fix belongs here at the source: after fetching,
-    # require the resolved descriptor to appear in the trial's direct
-    # mesh_conditions (drop ancestor-only matches), keyed on MeSH ID not term.
+    # KNOWN BUG (not yet fixed): AREA[ConditionMeshTerm] matches a term in EITHER a trial's direct condition meshes OR its
+    # mesh ancestors, so "Hypertension" (D006973) also pulls in Pulmonary Hypertension trials (D006976). The fix belongs
+    # here: after fetching, require the resolved descriptor in the trial's direct mesh_conditions, keyed on MeSH ID.
     return f'AREA[ConditionMeshTerm]"{mesh_term}"'
 
 
@@ -103,8 +99,7 @@ class ClinicalTrialsClient(BaseClient):
             raise DataSourceError(self._source_name, f"No trial found for '{nct_id}'")
 
         trial = self._parse_trial(data)
-        # Only the success path is cached: a missing NCT ID must re-raise on every call rather
-        # than remembering an absence that may be temporary upstream.
+        # Only the success path is cached: a missing NCT ID must re-raise each call, since the absence may be temporary.
         cache_set(
             "ct_trial",
             cache_params,
@@ -126,19 +121,15 @@ class ClinicalTrialsClient(BaseClient):
     ) -> SearchTrialsResult:
         """All-status trials for a drug × indication pair.
 
-        Indication is filtered server-side via CT.gov's
-        `AREA[ConditionMeshTerm]"<mesh_term>"` syntax (precise descriptor
-        match — no ancestor/descendant fuzziness, no free-text noise).
-        Drug side stays free-text via `query.intr` so trials whose
-        intervention isn't MeSH-tagged are still caught.
+        Indication is filtered server-side via `AREA[ConditionMeshTerm]"<mesh_term>"` (precise descriptor match, no
+        ancestor/descendant fuzziness). The drug side stays free-text via `query.intr` so trials whose intervention
+        isn't MeSH-tagged are still caught.
 
-        Issues status count calls, fetches up to CLINICAL_TRIALS_FETCH_MAX records sorted by
-        enrollment, and separately fetches every ongoing record. The returned trial list is the
-        deduplicated union, so small active studies cannot fall outside the relevance review.
+        Issues status count calls, fetches up to CLINICAL_TRIALS_FETCH_MAX records sorted by enrollment, and separately
+        fetches every ongoing record. The returned list is the deduplicated union, so small active studies cannot fall
+        outside the relevance review.
 
-        TERMINATED and COMPLETED counts are NOT reported here — those live
-        on get_terminated_trials and get_completed_trials respectively to
-        avoid surfacing the same number from two places.
+        TERMINATED and COMPLETED counts live on get_terminated_trials and get_completed_trials, not here.
         """
         cache_params = {
             "drug": drug,
@@ -174,10 +165,8 @@ class ClinicalTrialsClient(BaseClient):
             date_before=date_before,
             status_filter="WITHDRAWN",
         )
-        # UNKNOWN: CT.gov auto-assigns when a record hasn't been updated in
-        # ~2 years. The trial ran but outcome is unknowable from CT.gov status.
-        # Critical for repurposing analysis — these must NOT be confused with
-        # "trial never happened."
+        # UNKNOWN: CT.gov auto-assigns it when a record hasn't been updated in ~2 years. The trial ran but its outcome is
+        # unknowable from status; it must NOT be confused with "trial never happened."
         unknown_task = self._count_trials_total(
             drug=drug,
             indication=cond,
@@ -265,15 +254,10 @@ class ClinicalTrialsClient(BaseClient):
     ) -> IndicationLandscape:
         """Competitive landscape for an indication — drug/biologic trials, grouped by sponsor + drug.
 
-        Indication is filtered server-side via `AREA[ConditionMeshTerm]"<mesh_term>"`
-        — same precise descriptor match as the pair-scoped query methods.
-        Fetches trials for the indication sorted by most recent start date,
-        capped at clinical_trials_landscape_max_trials. Then filters
-        client-side to Drug/Biological interventions (vaccines excluded).
-        Ranks competitors by max phase, then most recent start date.
-        Returns top_n competitors after filtering.
-
-        Total count comes from a single `countTotal` call — exact, no page cap.
+        Indication is filtered server-side via `AREA[ConditionMeshTerm]"<mesh_term>"`. Fetches trials sorted by most
+        recent start date, capped at clinical_trials_landscape_max_trials, then filters client-side to Drug/Biological
+        interventions (vaccines excluded). Ranks competitors by max phase, then most recent start date, and returns
+        top_n. Total count comes from a single exact `countTotal` call.
         """
         cache_params = {
             "mesh_term": mesh_term,
@@ -324,11 +308,9 @@ class ClinicalTrialsClient(BaseClient):
     ) -> TerminatedTrialsResult:
         """TERMINATED trials for a drug × indication pair.
 
-        Indication is filtered server-side via `AREA[ConditionMeshTerm]`.
-        One count call (total terminated) plus one fetch of up to
-        CLINICAL_TRIALS_FETCH_MAX TERMINATED records sorted by enrollment
-        desc. Each returned Trial carries `why_stopped`; stop-category
-        classification happens at the tool layer (no separate model field).
+        Indication is filtered server-side via `AREA[ConditionMeshTerm]`. One count call (total terminated) plus one
+        fetch of up to CLINICAL_TRIALS_FETCH_MAX TERMINATED records sorted by enrollment desc. Each Trial carries
+        `why_stopped`; stop-category classification happens at the tool layer.
         """
         cache_params = {
             "drug": drug,
@@ -380,16 +362,11 @@ class ClinicalTrialsClient(BaseClient):
     ) -> None:
         """Backfill empty `Trial.references` via PubMed NCT-id search.
 
-        CT.gov's `referencesModule.references` is incomplete — many trials
-        have a real published readout in PubMed that CT.gov never linked.
-        PubMed's `[si]` (Secondary Source ID) field tag matches NCT numbers
-        cited in abstracts, so a query like `NCT01490632[si]` recovers the
-        readout paper directly.
+        CT.gov's `referencesModule.references` is incomplete: many trials have a published readout it never linked.
+        PubMed's `[si]` (Secondary Source ID) tag matches NCT numbers cited in abstracts (e.g. `NCT01490632[si]`).
 
-        Mutates `trials` in-place. Only fills `references` when it's empty;
-        never overwrites a CT.gov-provided PMID list. Failures (PubMed
-        errors, timeouts) log a warning and leave references untouched.
-        Honors `date_before` for holdout correctness.
+        Mutates `trials` in place and only fills empty `references`, never overwriting a CT.gov PMID list. Failures log a
+        warning and leave references untouched. Honors `date_before` for holdout correctness.
         """
         targets = [t for t in trials if not t.references and t.nct_id]
         if not targets:
@@ -432,10 +409,8 @@ class ClinicalTrialsClient(BaseClient):
     ) -> CompletedTrialsResult:
         """COMPLETED trials for a drug × indication pair.
 
-        Indication is filtered server-side via `AREA[ConditionMeshTerm]`.
-        One count call (total completed) plus one fetch of up to
-        CLINICAL_TRIALS_FETCH_MAX COMPLETED records sorted by enrollment desc.
-        Phase information is read off each returned Trial.
+        Indication is filtered server-side via `AREA[ConditionMeshTerm]`. One count call (total completed) plus one
+        fetch of up to CLINICAL_TRIALS_FETCH_MAX COMPLETED records sorted by enrollment desc. Phase is read off each Trial.
         """
         cache_params = {
             "drug": drug,
@@ -628,11 +603,8 @@ class ClinicalTrialsClient(BaseClient):
     ) -> int:
         """Single-call exact count via CT.gov v2 `countTotal=true&pageSize=1`.
 
-        Used by the new pair-scoped query methods. Free-text condition match
-        (no MeSH filtering) — counts are slightly noisier than a MeSH-precise
-        walk would be, but the cost is one HTTP call instead of up to 1000
-        record fetches, and the noise is acceptable for "how busy is this
-        space" framing.
+        Free-text condition match (no MeSH filtering), so counts are slightly noisier than a MeSH-precise walk, but cost
+        one HTTP call instead of up to 1000 record fetches, which is acceptable for "how busy is this space".
         """
         params = self._build_search_params(
             drug=drug,
@@ -746,10 +718,8 @@ class ClinicalTrialsClient(BaseClient):
     ) -> IndicationLandscape:
         """Group trials by sponsor + drug into a competitive landscape.
 
-        Filters to Drug/Biological interventions only; excludes vaccines
-        (detected by name keywords — they are not mechanism competitors).
-        Ranks by max phase (descending), then most recent start date
-        (descending) as tiebreaker. Applies top_n cap after filtering.
+        Keeps Drug/Biological interventions only and excludes vaccines (detected by name keywords). Ranks by max phase
+        descending, then most recent start date descending; applies the top_n cap after filtering.
         """
         phase_dist: dict[str, int] = {}
         recent_starts: list[RecentStart] = []
@@ -809,9 +779,8 @@ class ClinicalTrialsClient(BaseClient):
             ):
                 entry.most_recent_start = t.start_date
 
-        # Rank: highest phase first, then most recent start date (later = better).
-        # most_recent_start may be None — treat as earliest possible date so
-        # competitors with no start date sort last within a phase tier.
+        # Rank: highest phase first, then most recent start date. A None most_recent_start counts as earliest, so those
+        # competitors sort last within a phase tier.
         ranked = sorted(
             competitors.values(),
             key=lambda c: (
@@ -870,11 +839,7 @@ class ClinicalTrialsClient(BaseClient):
 
     @staticmethod
     def _is_vaccine(drug_name: str) -> bool:
-        """Return True if the drug name matches known vaccine name keywords.
-
-        Used to exclude vaccine biologics from the competitive landscape —
-        they are prevention-focused and not mechanism competitors for drugs.
-        """
+        """Return True if the drug name matches known vaccine keywords (excluded from the landscape as non-competitors)."""
         name_lower = drug_name.lower()
         return any(kw in name_lower for kw in VACCINE_NAME_KEYWORDS)
 

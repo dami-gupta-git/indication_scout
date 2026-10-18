@@ -1,8 +1,6 @@
-"""On-demand drill-down routes.
+"""On-demand drill-down routes: thin wrappers over data-source clients, fetched when the user clicks into something.
 
-Thin wrappers over existing data-source clients, fetched when the user clicks into something.
-INTEGRITY: these only enrich entities the analysis already surfaced — they introduce no new
-candidate diseases/targets/edges.
+They only enrich entities the analysis already surfaced and introduce no new candidate diseases/targets/edges.
 """
 
 import logging

@@ -23,18 +23,15 @@ PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 DEFAULT_OUT_DIR = PROJECT_ROOT / "snapshots"
 TEST_REPORTS_DIR = PROJECT_ROOT / "test_reports"
 
-# Default constants profile for CLI runs. Production values — the CLI writes into the
-# shared production cache, so it must not populate it with test-profile data. Override
-# per-invocation with the CONSTANTS_FILE env var (e.g. ".env.constants.experiment").
-# Path is resolved relative to PROJECT_ROOT.
+# Default constants profile for CLI runs: production values, since the CLI writes into the shared production cache and
+# must not populate it with test-profile data. Override per invocation with CONSTANTS_FILE (resolved from PROJECT_ROOT).
 CONSTANTS_FILE = ".env.constants"
 
 
 def _load_env() -> None:
     """Load .env files before importing modules that read settings at import time."""
     load_dotenv(PROJECT_ROOT / ".env")
-    # Shell-level CONSTANTS_FILE wins over the module-level default so the CLI
-    # and the regression test can be pointed at the same constants.
+    # Shell-level CONSTANTS_FILE wins over the module default so the CLI and regression test can share constants.
     constants_file = os.environ.get("CONSTANTS_FILE", CONSTANTS_FILE)
     constants_path = PROJECT_ROOT / constants_file
     load_dotenv(constants_path)
@@ -45,8 +42,7 @@ def _load_env() -> None:
 async def _run_for_drug(
     drug: str, out_dir: Path, write: bool, date_before: date | None = None
 ) -> None:
-    # Imports are deferred until after _load_env() runs in main(), because
-    # base_client.py calls get_settings() at import time.
+    # Imports are deferred until after _load_env() runs in main(), because base_client.py calls get_settings() at import.
     from indication_scout.db.session import make_session_factory
     from indication_scout.helpers.drug_helpers import normalize_drug_name
     from indication_scout.observability import bind_log_context, reset_log_context
@@ -67,8 +63,7 @@ async def _run_for_drug(
     cost_tracker: CostTracker | None = None
     setup_tracing()
     try:
-        # Normalize at the entry point so filenames/logs below see the same lowercased form
-        # run_analysis derives internally (normalize_drug_name is idempotent).
+        # Normalize at the entry point so filenames/logs match what run_analysis derives (normalize_drug_name is idempotent).
         drug = normalize_drug_name(drug)
 
         logger.info("Starting %s (date_before=%s)", drug, date_before)
@@ -149,9 +144,8 @@ async def _run_for_drug(
 
         timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
 
-        # Persist the SupervisorOutput payload so the report can be re-rendered later
-        # via `scout render` without re-running the pipeline. Holdout runs carry a
-        # _holdout_<cutoff> filename tag and a populated date_before field.
+        # Persist the SupervisorOutput payload so `scout render` can re-render the report without re-running the pipeline.
+        # Holdout runs get a _holdout_<cutoff> filename tag and a populated date_before field.
         TEST_REPORTS_DIR.mkdir(parents=True, exist_ok=True)
         payload_tag = f"_holdout_{date_before.isoformat()}" if date_before else ""
         payload_path = TEST_REPORTS_DIR / f"{drug}{payload_tag}_{timestamp}.json"
@@ -299,9 +293,8 @@ async def _run_for_pair(
             click.echo(report_md)
             return
 
-        # Pair (drug+disease) runs write under snapshots/with_disease/, or
-        # snapshots/holdouts/with_disease/ for holdout runs, tagging the filename and
-        # prepending a banner for holdouts.
+        # Pair runs write under snapshots/with_disease/ (snapshots/holdouts/with_disease/ for holdouts), tagging the
+        # filename and prepending a banner for holdouts.
         write_dir = (
             out_dir / "holdouts" / "with_disease"
             if date_before

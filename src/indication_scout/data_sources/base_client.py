@@ -31,10 +31,8 @@ logger = logging.getLogger("indication_scout.data_sources")
 
 _settings = get_settings()
 
-# Cumulative external-API timing, keyed by source name → [call_count, total_seconds].
-# Measures wall-clock spent awaiting HTTP responses (network + server), summed across
-# all clients. Read/reset via api_timing_snapshot() / reset_api_timing() to attribute
-# how much of a run is external API calls vs. agent/LLM work.
+# Cumulative external-API timing, source name → [call_count, total_seconds]: wall-clock spent awaiting HTTP responses
+# across all clients. Read/reset via api_timing_snapshot() / reset_api_timing() to separate API time from agent/LLM work.
 _API_TIMING: dict[str, list[float]] = {}
 
 _SENSITIVE_QUERY_PARAMETER_RE = re.compile(
@@ -77,9 +75,8 @@ def log_data_source_failure(
 ) -> None:
     """Append a tab-separated failure record to data_source_failures.log.
 
-    One line per failure: <iso-timestamp>\\t<source>\\t<url>\\t<context>\\t<error>.
-    Best-effort: a write failure logs a warning but does not raise, so the
-    caller can continue (or exit) without being blocked on the log itself.
+    One line per failure: <iso-timestamp>\\t<source>\\t<url>\\t<context>\\t<error>. Best-effort: a write failure logs a
+    warning but does not raise.
     """
     log_path = cache_dir / "data_source_failures.log"
     try:
@@ -97,10 +94,8 @@ def log_data_source_failure(
         logger.warning("Could not write to data_source_failures.log: %s", log_err)
 
 
-# Keys searched, in order, when building a request-context summary string.
-# The first match wins. Covers the common identifying fields across our
-# data sources: NCBI eutils (term, id), GraphQL (variables), generic
-# search/query params.
+# Keys searched, in order, when building a request-context summary; the first match wins. Covers NCBI eutils (term, id),
+# GraphQL (variables) and generic search/query params.
 _CONTEXT_PRIORITY_KEYS: tuple[str, ...] = (
     "term",
     "query",
@@ -133,23 +128,16 @@ def _build_context_string(
     params: dict[str, Any] | None,
     json_body: dict[str, Any] | None,
 ) -> str:
-    """Return a short, human-readable summary of the most identifying request field.
+    """Return a short summary of the most identifying request field, for retry warnings and the failure log.
 
-    Used to enrich both retry-warning log lines and the persistent fatal
-    failure log so a reader can tell *which* call failed (e.g.
-    `term='metformin AND obesity'` vs `id='12345'`) without losing the
-    URL+source signal that was already there.
-
-    Strategy: walk `_CONTEXT_PRIORITY_KEYS` against params and json_body's
-    `variables` (GraphQL convention); return the first hit as `key=repr(value)`,
-    truncated. If nothing matches, fall back to a repr of the merged dict.
+    Walks `_CONTEXT_PRIORITY_KEYS` against params and json_body's `variables` (GraphQL) and returns the first hit as
+    `key=repr(value)`, truncated. If nothing matches, falls back to a repr of the merged dict.
     """
     candidates: list[dict[str, Any]] = []
     if params:
         candidates.append(params)
     if json_body:
-        # GraphQL: identifying args live under `variables`. Body itself
-        # also gets searched as a fallback for non-GraphQL POSTs.
+        # GraphQL: identifying args live under `variables`; the body is also searched as a fallback for other POSTs.
         if isinstance(json_body.get("variables"), dict):
             candidates.append(json_body["variables"])
         candidates.append(json_body)
@@ -201,23 +189,19 @@ class DataSourceError(Exception):
 
 
 class BaseClient(ABC):
-    """
-    Abstract base for data source clients.
+    """Abstract base for data source clients.
 
     Subclasses set `_source_name` and use `_rest_get()` or `_graphql()`.
 
-    If `exit_on_retry_exhausted` is True, a request that fails all retries
-    will append a record to data_source_failures.log and call sys.exit
-    instead of raising DataSourceError. Use this for hard dependencies
-    where downstream analysis cannot proceed correctly without the source
+    If `exit_on_retry_exhausted` is True, a request that fails all retries appends a record to
+    data_source_failures.log and calls sys.exit instead of raising DataSourceError. Use it for hard dependencies
     (e.g. NCBI for MeSH resolution / PubMed efetch).
     """
 
     exit_on_retry_exhausted: bool = False
 
-    # Per-attempt backoff (seconds) for timeout / connection-error retries.
-    # Subclasses may override (e.g. ChEMBL backs off harder). Attempts beyond
-    # the list reuse the last (largest) value.
+    # Per-attempt backoff (seconds) for timeout / connection-error retries; subclasses may override. Attempts beyond
+    # the list reuse the last value.
     retry_backoff_schedule: list[int] = RETRY_BACKOFF_SCHEDULE
 
     def __init__(self) -> None:
@@ -272,9 +256,7 @@ class BaseClient(ABC):
     ) -> Any:
         """Make HTTP request with retry. Returns parsed JSON, raw text, or raises DataSourceError."""
         last_error: Exception | None = None
-        # Build once: identifying field summary used in retry warnings and
-        # in the persistent failure log so a reader can tell which call
-        # failed without losing the URL+source signal.
+        # Build once: the identifying-field summary used in retry warnings and the failure log.
         context = _build_context_string(params, json_body)
         safe_url = redact_sensitive_log_value(url)
 
@@ -294,8 +276,7 @@ class BaseClient(ABC):
                 acc[0] += 1
                 acc[1] += _elapsed
 
-                # Retry on 429/5xx, and on any other error status a subclass recognises as a
-                # transient upstream failure from the response body.
+                # Retry on 429/5xx, and on any status a subclass recognises as transient from the response body.
                 retryable = resp.status in {429, 500, 502, 503, 504}
                 detail = ""
                 if not retryable and resp.status >= 400:
@@ -307,9 +288,8 @@ class BaseClient(ABC):
                         self._source_name, method, "retryable_status", _elapsed
                     )
                     if attempt < self.max_retries:
-                        # Short exponential backoff starting at 2s (2s/4s/8s). These are
-                        # per-second rate limits (e.g. NCBI 10 req/s), so a 429 clears within
-                        # ~1s — no long floor needed.
+                        # Short exponential backoff from 2s (2s/4s/8s): these are per-second rate limits (e.g. NCBI
+                        # 10 req/s), so a 429 clears within ~1s.
                         delay = min(2 ** (attempt + 1), 90)
                         ctx_suffix = f" ({context})" if context else ""
                         logger.debug(

@@ -61,12 +61,9 @@ logger = logging.getLogger(__name__)
 
 _settings = get_settings()
 
-# Per-target evidences cache. One file per target_id holds
-# {efo_id: {records, cached_at, ttl}}. Replaces the prior `target_evidences`
-# namespace which fanned out one file per (target_id, efo_id) pair.
-# TTL is per-pair so adding a new efo_id later does not reset existing
-# entries' freshness. Reads are concurrent-safe; writes are serialized
-# in get_target_evidences (one merge+write after all fetches gather).
+# Per-target evidences cache: one file per target_id holding {efo_id: {records, cached_at, ttl}}. TTL is per pair so a
+# newly added efo_id doesn't reset existing entries. Reads are concurrent-safe; writes are serialized in
+# get_target_evidences (one merge+write after all fetches gather).
 _TARGET_EVIDENCES_NS = "target_evidences"
 
 
@@ -80,9 +77,8 @@ def _load_target_evidences(
 ) -> dict[str, dict[str, Any]]:
     """Load the per-target evidences file as {efo_id: {records, cached_at, ttl}}.
 
-    Returns an empty dict if the file is missing or unparseable. Expired
-    entries are dropped lazily; the file is rewritten only when a caller
-    invokes _save_target_evidences.
+    Returns an empty dict if the file is missing or unparseable. Expired entries are dropped lazily; the file is only
+    rewritten by _save_target_evidences.
     """
     path = _target_evidences_path(target_id, cache_dir)
     if not path.exists():
@@ -197,8 +193,7 @@ class OpenTargetsClient(BaseClient):
     async def get_drug(self, chembl_id: str) -> DrugData:
         """Fetch drug data by ChEMBL ID, enriched with ATC codes from ChEMBL.
 
-        Also warms the chembl_id_to_names cache (which doubles as the reverse
-        index for resolve_drug_name) so downstream lookups via get_all_drug_names
+        Also warms the chembl_id_to_names cache (the reverse index for resolve_drug_name) so get_all_drug_names lookups
         don't re-hit the API.
         """
         cached = cache_get("drug", {"chembl_id": chembl_id}, self.cache_dir)
@@ -247,18 +242,15 @@ class OpenTargetsClient(BaseClient):
     ) -> CompetitorRanking:
         """Rank sibling diseases by how many competitor drugs share this drug's targets.
 
-        The full ranking before `open_targets_competitor_prefetch_max` truncation.
-        `get_drug_competitors` calls this and then truncates; validation probes call it to see
-        where a disease fell when it did not survive the cut. `date_before` behaves as documented
-        on `get_drug_competitors`.
+        This is the full ranking before `open_targets_competitor_prefetch_max` truncation. `get_drug_competitors` truncates
+        it; validation probes call it to see where a disease fell. `date_before` behaves as on `get_drug_competitors`.
         """
         min_rank = CLINICAL_STAGE_RANK.get(min_stage, 0)
 
         drug = await self.get_drug(chembl_id)
         targets = drug.targets
 
-        # Build set of approved indication names to exclude from repurposing
-        # candidates. Skipped under date_before — see method docstring.
+        # Approved indication names to exclude from repurposing candidates (skipped under date_before; see method docstring).
         if date_before is None:
             approved_indications: set[str] = {
                 i.disease_name.lower()
@@ -330,8 +322,7 @@ class OpenTargetsClient(BaseClient):
             disease: set(drugs.keys()) for disease, drugs in siblings_with_stage.items()
         }
 
-        # Remove overly broad disease terms (e.g. "cancer", "carcinoma") that
-        # produce noisy, unfocused PubMed queries.
+        # Remove overly broad disease terms (e.g. "cancer", "carcinoma") that produce noisy PubMed queries.
         for key in list(siblings):
             words = {w.lower() for w in key.split()}
             if words <= BROADENING_BLOCKLIST:
@@ -357,12 +348,9 @@ class OpenTargetsClient(BaseClient):
     ) -> CompetitorRawData:
         """Fetch competitor drugs for a given drug, grouped by disease.
 
-        When `date_before` is set (temporal holdout mode), the OT-derived
-        approved-indications strip is suppressed: OT's `drug.indications`
-        reflects today's approval state and would leak post-cutoff
-        approvals into a holdout. The caller is expected to apply its own
-        cutoff-aware approval filter (the hardcoded approvals table) on the
-        returned competitor list.
+        When `date_before` is set (temporal holdout), the OT-derived approved-indications strip is suppressed: OT's
+        `drug.indications` reflects today's approvals and would leak post-cutoff ones. The caller applies its own
+        cutoff-aware approval filter (the hardcoded approvals table) to the returned list.
         """
         cache_params = {
             "chembl_id": chembl_id,
@@ -506,21 +494,16 @@ class OpenTargetsClient(BaseClient):
     ) -> dict[str, list[EvidenceRecord]]:
         """Fetch per-(target, disease) evidence records.
 
-        Returns a dict keyed by disease_id mapping to a list of evidence
-        records. Each record carries directionality fields used to classify
-        whether the drug's action aligns with or opposes the disease
-        mechanism. Empty list for any efo_id with no evidence.
+        Returns a dict keyed by disease_id mapping to a list of evidence records, each carrying the directionality fields
+        used to classify whether the drug's action aligns with or opposes the disease mechanism. Empty list for any efo_id
+        with no evidence.
 
-        Fans out per-efo so each (target, disease) pair gets its own
-        200-record budget from OT. Batched queries share that budget
-        across all efoIds, which starves rare diseases when they're
-        batched with common ones. Per-efo fetches run in parallel via
-        asyncio.gather.
+        Fans out per efo so each (target, disease) pair gets its own 200-record budget from OT; a batched query shares one
+        budget and starves rare diseases. Fetches run in parallel via asyncio.gather.
 
-        Cache is one file per target_id (`target_evidences/<target_id>.json`)
-        holding {efo_id: records}. Reads happen once at the top; writes are
-        batched into a single merge+rewrite after all fresh fetches complete,
-        so concurrent EFO fetches for the same target cannot stomp the file.
+        Cache is one file per target_id (`target_evidences/<target_id>.json`) holding {efo_id: records}. Reads happen
+        once at the top; writes are batched into one merge+rewrite after all fresh fetches complete, so concurrent EFO
+        fetches for the same target cannot stomp the file.
         """
         if not efo_ids:
             return {}
@@ -565,8 +548,7 @@ class OpenTargetsClient(BaseClient):
         rows = (raw_target.get("evidences") or {}).get("rows") or []
 
         records = [self._parse_evidence(r) for r in rows]
-        # Only keep records whose disease_id matches what we asked for —
-        # defends against the API returning cross-linked disease rows.
+        # Keep only records whose disease_id matches the request (guards against cross-linked disease rows).
         records = [r for r in records if r.disease_id == efo_id]
         return records
 
@@ -741,9 +723,8 @@ class OpenTargetsClient(BaseClient):
     def _parse_drug_data(self, raw: dict) -> DrugData:
         targets: list[DrugTarget] = []
         mechanisms_of_action: list[MechanismOfAction] = []
-        # Open Targets aggregates MoA rows across source databases (ChEMBL, DrugBank, etc.),
-        # which yields rows with identical (mechanism, action_type, targets). Dedupe on that key
-        # so the same MoA isn't reported multiple times downstream.
+        # OT aggregates MoA rows across source databases (ChEMBL, DrugBank, etc.), yielding rows with identical
+        # (mechanism, action_type, targets); dedupe on that key so a MoA isn't reported multiple times.
         seen_moa: set[tuple] = set()
         seen_target: set[tuple] = set()
         for row in (raw.get("mechanismsOfAction") or {}).get("rows", []):

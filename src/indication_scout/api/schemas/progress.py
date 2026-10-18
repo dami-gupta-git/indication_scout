@@ -1,8 +1,7 @@
-"""Progress event schema for the live run feed.
+"""Progress event schema for the live run feed: one emitted milestone for one pipeline phase.
 
-One emitted milestone for one pipeline phase. Returned in the analyses poll response and
-rendered by the frontend's LoadingState as a live checklist line. Phase values are the
-constants in `services/progress.py` (PHASES).
+Returned in the analyses poll response and rendered by the frontend's LoadingState as a checklist line. Phase values
+are the PHASES constants in `services/progress.py`.
 """
 
 from pydantic import BaseModel
