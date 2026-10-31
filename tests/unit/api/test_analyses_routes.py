@@ -445,6 +445,7 @@ def test_structured_result_round_trips_through_post_and_get(client, fresh_store)
     assert len(result["disease_findings"]) == 2
     assert result["disease_findings"][0] == {
         "disease": "alcohol dependence",
+        "disease_id": None,
         "source": "mechanism",
         "approval_relationship": "none",
         "literature": None,
