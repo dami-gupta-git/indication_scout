@@ -6,6 +6,7 @@ Usage:
     scout find -d <drug> [--out-dir DIR] [--no-write]
     scout investigate -d <drug> -i <indication> [--out-dir DIR] [--no-write]
     scout render -i <payload.json> [--out-dir DIR] [--no-write]
+    scout graph (--run-id ID | --from-file <payload.json>) [--out-dir DIR]
 """
 
 import asyncio
@@ -474,6 +475,89 @@ def render(input_path: Path, out_dir: Path, no_write: bool) -> None:
     md_path.write_text(report_md, encoding="utf-8")
     logger.info("Rendered %s -> %s", input_path, md_path)
     click.echo(f"Report:    {md_path}")
+
+
+@cli.command()
+@click.option(
+    "--run-id",
+    default=None,
+    help="ID of a saved run in the analysis_runs table.",
+)
+@click.option(
+    "--from-file",
+    "from_file",
+    default=None,
+    type=click.Path(exists=True, dir_okay=False, path_type=Path),
+    help="Path to a SupervisorOutput JSON payload saved by `scout find`.",
+)
+@click.option(
+    "--out-dir",
+    type=click.Path(file_okay=False, path_type=Path),
+    default=DEFAULT_OUT_DIR,
+    show_default=True,
+    help="Directory to write <drug>_graph.json, .md and .html into.",
+)
+def graph(run_id: str | None, from_file: Path | None, out_dir: Path) -> None:
+    """Write the mechanism graph saved with a run as JSON, markdown, and an HTML drawing. Makes no network calls."""
+    import json
+
+    from indication_scout.agents.supervisor.supervisor_output import SupervisorOutput
+    from indication_scout.graph.render import (
+        graph_to_html,
+        graph_to_json,
+        graph_to_markdown,
+    )
+
+    if (run_id is None) == (from_file is None):
+        raise click.UsageError("Pass exactly one of --run-id or --from-file.")
+
+    if from_file is not None:
+        output = SupervisorOutput.model_validate_json(
+            from_file.read_text(encoding="utf-8")
+        )
+        source = str(from_file)
+    else:
+        from indication_scout.db.session import make_session_factory
+        from indication_scout.services.run_repository import AnalysisRunRepository
+
+        session_factory = make_session_factory()
+        try:
+            with session_factory() as db:
+                run = AnalysisRunRepository(db).get_run(run_id)
+                if run is None:
+                    raise click.ClickException(f"No run with id {run_id}.")
+                if run.result is None:
+                    raise click.ClickException(f"Run {run_id} has no saved result.")
+                output = SupervisorOutput.model_validate(run.result)
+        finally:
+            session_factory.kw["bind"].dispose()
+        source = f"run {run_id}"
+
+    if output.mechanism_graph is None:
+        if output.date_before is not None:
+            raise click.ClickException(
+                f"{source} is a temporal holdout dated {output.date_before}. Mechanism graphs are unavailable because "
+                "Open Targets does not provide historical snapshots."
+            )
+        raise click.ClickException(
+            f"{source} has no mechanism graph. It was saved before graphs existed, had no mechanism block, or the "
+            "graph build failed; rerun the drug to get one."
+        )
+
+    out_dir.mkdir(parents=True, exist_ok=True)
+    stem = output.drug_name.replace(" ", "_")
+    json_path = out_dir / f"{stem}_graph.json"
+    md_path = out_dir / f"{stem}_graph.md"
+    html_path = out_dir / f"{stem}_graph.html"
+    json_path.write_text(
+        json.dumps(graph_to_json(output.mechanism_graph), indent=2), encoding="utf-8"
+    )
+    md_path.write_text(graph_to_markdown(output.mechanism_graph), encoding="utf-8")
+    html_path.write_text(graph_to_html(output.mechanism_graph), encoding="utf-8")
+    logger.info("Wrote mechanism graph for %s -> %s, %s", source, json_path, md_path)
+    click.echo(f"Graph:     {json_path}")
+    click.echo(f"Explainer: {md_path}")
+    click.echo(f"Drawing:   {html_path}")
 
 
 @cli.command("diff-report")

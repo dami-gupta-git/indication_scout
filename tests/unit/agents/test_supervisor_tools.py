@@ -20,6 +20,7 @@ from indication_scout.agents.mechanism.mechanism_output import (
     MechanismCandidate,
 )
 from indication_scout.agents.supervisor.supervisor_tools import (
+    _allowlist_with_verified_ids,
     _closure_text,
     _get_shared_drug_intake,
     build_supervisor_tools,
@@ -33,6 +34,25 @@ from indication_scout.models.model_clinical_trials import (
 )
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
+
+
+def test_allowlist_with_verified_ids_fails_closed_on_conflicts():
+    allowed_diseases = {
+        "disease one": ("disease one", "both"),
+        "disease two": ("disease two", "mechanism"),
+        "disease three": ("disease three", "competitor"),
+    }
+    allowed_efo_ids = {
+        "EFO_1": "disease one",
+        "MONDO_1": "disease one",
+        "EFO_2": "disease two",
+    }
+
+    assert _allowlist_with_verified_ids(allowed_diseases, allowed_efo_ids) == {
+        "disease one": ("disease one", "both", None),
+        "disease two": ("disease two", "mechanism", "EFO_2"),
+        "disease three": ("disease three", "competitor", None),
+    }
 
 
 @pytest.fixture(autouse=True)

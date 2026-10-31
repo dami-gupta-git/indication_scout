@@ -40,6 +40,37 @@ from indication_scout.services.retrieval import RetrievalService
 logger = logging.getLogger(__name__)
 
 
+async def attach_mechanism_graph(
+    output: SupervisorOutput, cache_dir: Path = DEFAULT_CACHE_DIR
+) -> SupervisorOutput:
+    """Set ``output.mechanism_graph`` from Open Targets; leave it None if the build fails.
+
+    Runs after ranking is final, so it never changes candidates or report text. Temporal holdouts are skipped because
+    Open Targets has no historical snapshot. A data-source failure is logged and the run still completes.
+    """
+    if output.date_before is not None:
+        logger.info(
+            "[GRAPH] not building mechanism graph for %s holdout dated %s: Open Targets has no historical snapshot",
+            output.drug_name,
+            output.date_before,
+        )
+        output.mechanism_graph = None
+        return output
+
+    from indication_scout.data_sources.base_client import DataSourceError
+    from indication_scout.data_sources.open_targets import OpenTargetsClient
+    from indication_scout.graph.build import build_graph
+
+    try:
+        async with OpenTargetsClient(cache_dir=cache_dir) as client:
+            output.mechanism_graph = await build_graph(output, client)
+    except DataSourceError as e:
+        logger.warning(
+            "[GRAPH] mechanism graph build failed for %s: %s", output.drug_name, e
+        )
+    return output
+
+
 def build_agent(
     db: Session,
     session_factory: sessionmaker[Session] | None = None,
@@ -287,6 +318,7 @@ async def run_pair_analysis(
             disease_findings=[findings],
             top_diseases=[disease_name],
             summary="",
+            date_before=date_before,
             is_investigate=True,
             drug_safety_summary=(
                 literature.evidence_summary.safety_summary
@@ -319,6 +351,7 @@ async def run_pair_analysis(
                 else []
             ),
         )
+        await attach_mechanism_graph(output)
         return output, format_report(output)
     finally:
         if not _warmup_task.done():
@@ -391,6 +424,7 @@ async def run_analysis(
             get_approval_labels=get_approval_labels,
             date_before=date_before,
         )
+        await attach_mechanism_graph(output)
         total = time.perf_counter() - _t0
         # External-API breakdown: how much of the run was spent awaiting HTTP responses
         # (PubMed, ClinicalTrials.gov, OpenTargets, FDA, ChEMBL), per source.

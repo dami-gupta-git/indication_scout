@@ -83,6 +83,37 @@ from indication_scout.services.retrieval import RetrievalService
 
 logger = logging.getLogger(__name__)
 
+
+def _allowlist_with_verified_ids(
+    allowed_diseases: dict[str, tuple[str, Literal["competitor", "mechanism", "both"]]],
+    allowed_efo_ids: dict[str, str],
+) -> dict[
+    str,
+    tuple[
+        str,
+        Literal["competitor", "mechanism", "both"],
+        str | None,
+    ],
+]:
+    """Attach one verified ontology ID to each allowlist entry, failing closed on conflicting IDs."""
+    ids_by_key: dict[str, set[str]] = {}
+    for disease_id, disease_key in allowed_efo_ids.items():
+        if disease_key in allowed_diseases:
+            ids_by_key.setdefault(disease_key, set()).add(disease_id)
+    return {
+        key: (
+            canonical,
+            source,
+            (
+                next(iter(ids_by_key[key]))
+                if len(ids_by_key.get(key, set())) == 1
+                else None
+            ),
+        )
+        for key, (canonical, source) in allowed_diseases.items()
+    }
+
+
 _EmptyOutputT = TypeVar("_EmptyOutputT")
 
 
@@ -356,7 +387,17 @@ def build_supervisor_tools(
     date_before: date | None = None,
 ) -> tuple[
     list,
-    Callable[[], dict[str, tuple[str, Literal["competitor", "mechanism", "both"]]]],
+    Callable[
+        [],
+        dict[
+            str,
+            tuple[
+                str,
+                Literal["competitor", "mechanism", "both"],
+                str | None,
+            ],
+        ],
+    ],
     Callable[[], dict[str, dict]],
     Callable[[], dict[str, str]],
 ]:
@@ -372,7 +413,8 @@ def build_supervisor_tools(
     mechanism sub-agent doesn't accept it (OpenTargets has no date-filtering API).
 
     Returns (tools, get_merged_allowlist, get_auto_findings, get_approval_labels). get_merged_allowlist() snapshots the
-    post-merge disease allowlist (lowercase name → (canonical_name, source)) and is read after the agent loop finishes.
+    post-merge disease allowlist (lowercase name → (canonical_name, source, disease_id)) and is read after the agent
+    loop finishes. disease_id is None when a merged survivor has zero or multiple ontology IDs.
     """
     # Reuse the run db's engine when no shared factory was passed (db.get_bind() creates no new engine/pool).
     if session_factory is None:
@@ -2133,15 +2175,20 @@ def build_supervisor_tools(
         artifact = {"summary": filtered_summary, "blurbs": validated}
         return "Supervisor analysis complete.", artifact
 
-    def get_merged_allowlist() -> (
-        dict[str, tuple[str, Literal["competitor", "mechanism", "both"]]]
-    ):
+    def get_merged_allowlist() -> dict[
+        str,
+        tuple[
+            str,
+            Literal["competitor", "mechanism", "both"],
+            str | None,
+        ],
+    ]:
         """Snapshot the post-merge competitor + mechanism disease allowlist.
 
-        Returns a copy keyed by lowercase disease name → (canonical_name, source), source being "competitor", "mechanism"
-        or "both".
+        Returns a copy keyed by lowercase disease name → (canonical_name, source, disease_id). A survivor receives an
+        ID only when exactly one ontology ID points to it; conflicting IDs fail closed as None.
         """
-        return dict(allowed_diseases)
+        return _allowlist_with_verified_ids(allowed_diseases, allowed_efo_ids)
 
     def get_auto_findings() -> dict[str, dict]:
         """Snapshot artifacts produced by investigate_top_candidates (fan-out only).

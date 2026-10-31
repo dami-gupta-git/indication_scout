@@ -80,13 +80,23 @@ def build_supervisor_agent(
     date_before: date | None = None,
 ) -> tuple[
     Any,
-    Callable[[], dict[str, tuple[str, Literal["competitor", "mechanism", "both"]]]],
+    Callable[
+        [],
+        dict[
+            str,
+            tuple[
+                str,
+                Literal["competitor", "mechanism", "both"],
+                str | None,
+            ],
+        ],
+    ],
     Callable[[], dict[str, dict]],
     Callable[[], dict[str, str]],
 ]:
     """Return (agent, get_merged_allowlist, get_auto_findings, get_approval_labels).
 
-    - get_merged_allowlist: snapshots the competitor + mechanism disease allowlist after the run.
+    - get_merged_allowlist: snapshots the competitor + mechanism disease allowlist and verified disease IDs after the run.
     - get_auto_findings: snapshots fan-out artifacts (empty when fan-out is off).
     - get_approval_labels: snapshots FDA approval-relationship labels for kept candidates.
 
@@ -115,7 +125,15 @@ def build_supervisor_agent(
 async def run_supervisor_agent(
     agent: Any,
     get_merged_allowlist: Callable[
-        [], dict[str, tuple[str, Literal["competitor", "mechanism", "both"]]]
+        [],
+        dict[
+            str,
+            tuple[
+                str,
+                Literal["competitor", "mechanism", "both"],
+                str | None,
+            ],
+        ],
     ],
     drug_name: str,
     get_auto_findings: Callable[[], dict[str, dict]] | None = None,
@@ -196,13 +214,13 @@ async def run_supervisor_agent(
             summary = artifact.get("summary", "") or ""
             blurbs = artifact.get("blurbs", []) or []
 
-    # Merged allowlist enforced by the runtime tools: lowercase name → (canonical_name, source).
+    # Merged allowlist enforced by the runtime tools: lowercase name → (canonical_name, source, disease_id).
     allowed_lower = get_merged_allowlist()
 
     def _canonical(
         disease_raw: str,
-    ) -> tuple[str, Literal["competitor", "mechanism", "both"]] | None:
-        """Return (canonical_name, source) for disease_raw, or None if not allowed."""
+    ) -> tuple[str, Literal["competitor", "mechanism", "both"], str | None] | None:
+        """Return (canonical_name, source, disease_id) for disease_raw, or None if not allowed."""
         key = disease_raw.lower().strip()
         return allowed_lower.get(key)
 
@@ -225,7 +243,7 @@ async def run_supervisor_agent(
             )
             continue
 
-        canonical, source = match
+        canonical, source, disease_id = match
         # None artifact = sub-agent errored; skip so an uninvestigated disease gets no empty finding.
         if msg.artifact is None:
             logger.warning(
@@ -236,7 +254,8 @@ async def run_supervisor_agent(
             continue
 
         findings = findings_by_disease.setdefault(
-            canonical, CandidateFindings(disease=canonical, source=source)
+            canonical,
+            CandidateFindings(disease=canonical, disease_id=disease_id, source=source),
         )
 
         if msg.name == "analyze_literature":
@@ -251,9 +270,12 @@ async def run_supervisor_agent(
             match = _canonical(disease_lower)
             if match is None:
                 continue
-            canonical, source = match
+            canonical, source, disease_id = match
             findings = findings_by_disease.setdefault(
-                canonical, CandidateFindings(disease=canonical, source=source)
+                canonical,
+                CandidateFindings(
+                    disease=canonical, disease_id=disease_id, source=source
+                ),
             )
             if findings.literature is None and artifacts.get("literature") is not None:
                 findings.literature = artifacts["literature"]
@@ -300,7 +322,7 @@ async def run_supervisor_agent(
                 "Skipping blurb for disease=%r (not in allowlist)", disease_raw
             )
             continue
-        canonical, _ = match
+        canonical, _, _ = match
         finding = findings_by_disease.get(canonical)
         if finding is None:
             logger.warning(
@@ -311,7 +333,7 @@ async def run_supervisor_agent(
         finding.blurb = CandidateBlurb(prose=prose, **fields)
 
     # Every allowlist disease by canonical name, including mechanism-promoted.
-    candidate_diseases = [canonical for (canonical, _) in allowed_lower.values()]
+    candidate_diseases = [canonical for (canonical, _, _) in allowed_lower.values()]
 
     # top_diseases from rank-ordered blurbs, dropping uninvestigated ones, then capped.
     top_diseases: list[str] = []
@@ -323,7 +345,7 @@ async def run_supervisor_agent(
         match = _canonical(disease_raw)
         if match is None:
             continue
-        canonical, _ = match
+        canonical, _, _ = match
         if canonical not in findings_by_disease:
             logger.warning(
                 "Skipping top_diseases entry for disease=%r (not investigated this run)",

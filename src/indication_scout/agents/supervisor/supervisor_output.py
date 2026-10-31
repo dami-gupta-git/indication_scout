@@ -10,6 +10,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
 from indication_scout.agents.mechanism.mechanism_output import MechanismOutput
+from indication_scout.graph.model_graph import MechanismGraph
 
 
 class CandidateBlurb(BaseModel):
@@ -92,6 +93,13 @@ class CandidateFindings(BaseModel):
     """Per-candidate findings aggregated by the supervisor."""
 
     disease: str
+    disease_id: str | None = Field(
+        default=None,
+        description=(
+            "Open Targets disease ID preserved from candidate discovery. None when the candidate has no verified "
+            "single ontology identity."
+        ),
+    )
     # "" is the CLI pair-runner's value (a user-specified pair has no source); the supervisor path always assigns one.
     source: Literal["", "competitor", "mechanism", "both"] = "competitor"
     approval_relationship: Literal["contaminated", "combination_only", "none"] = Field(
@@ -169,3 +177,10 @@ class SupervisorOutput(BaseModel):
     drug_pharmacovigilance_summary: str = ""
     drug_literature_safety_summary: str = ""
     drug_safety_pmids: list[str] = Field(default_factory=list)
+    mechanism_graph: MechanismGraph | None = Field(
+        default=None,
+        description=(
+            "Drug → target → candidate graph built from Open Targets after ranking; rendered by `scout graph`. None for "
+            "temporal holdouts, runs saved before it existed, runs without a mechanism block, or when the build failed."
+        ),
+    )
