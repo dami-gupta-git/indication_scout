@@ -517,6 +517,7 @@ def graph(run_id: str | None, from_file: Path | None, out_dir: Path) -> None:
         )
         source = str(from_file)
     else:
+        assert run_id is not None
         from indication_scout.db.session import make_session_factory
         from indication_scout.services.run_repository import AnalysisRunRepository
 
