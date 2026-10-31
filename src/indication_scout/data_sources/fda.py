@@ -21,6 +21,24 @@ logger = logging.getLogger(__name__)
 
 _settings = get_settings()
 
+# Bumped when the label search changes, so labels cached under the old search are refetched.
+_LABEL_SEARCH_VERSION = "name_or_product_v1"
+
+
+def _label_search(drug_name: str) -> str:
+    """openFDA search matching a drug's labels by indexed brand/generic name or by the label's own product data.
+
+    The openfda.* name fields are filled by openFDA's harmonization, which some current labels lack: in October 2026 the
+    Olumiant, Spravato and Thalomid labels had an empty openfda block, so the name-only search found no baricitinib,
+    esketamine or thalidomide label with an indications section. spl_product_data_elements is the label's own product
+    name and ingredient list and does not depend on harmonization.
+    """
+    return (
+        f'(openfda.brand_name:"{drug_name}"'
+        f' OR openfda.generic_name:"{drug_name}"'
+        f' OR spl_product_data_elements:"{drug_name}")'
+    )
+
 
 class FDAClient(BaseClient):
     """Client for querying openFDA drug labels."""
@@ -36,8 +54,8 @@ class FDAClient(BaseClient):
     async def get_label_indications(self, drug_name: str) -> list[str]:
         """Fetch indications_and_usage text from openFDA for a given drug name.
 
-        Matches either openfda.brand_name OR openfda.generic_name, which catches labels registered only under
-        generic_name (~5% of metformin labels). Returns a flat list of indication text strings across matching labels.
+        Matches openfda.brand_name, openfda.generic_name, or the label's own product data (see `_label_search`); the
+        generic_name clause catches labels registered only under generic_name (~5% of metformin labels). Returns a flat list of indication text strings across matching labels.
         A 404 or empty result is cached with a short TTL (OPENFDA_EMPTY_LABEL_TTL), long enough to stop re-fetching
         obscure aliases yet short enough that a new approval is re-checked within a week. Found labels use the full
         CACHE_TTL.
@@ -48,16 +66,17 @@ class FDAClient(BaseClient):
         Returns:
             List of indications_and_usage text strings, possibly empty.
         """
-        cache_params = {"drug_name": drug_name.lower(), "limit": OPENFDA_LABEL_LIMIT}
+        cache_params = {
+            "drug_name": drug_name.lower(),
+            "limit": OPENFDA_LABEL_LIMIT,
+            "search": _LABEL_SEARCH_VERSION,
+        }
         cached = cache_get("fda_label", cache_params, self.cache_dir)
         if cached is not None:
             return cached
 
         params: dict[str, str | int] = {
-            "search": (
-                f'(openfda.brand_name:"{drug_name}"'
-                f' OR openfda.generic_name:"{drug_name}")'
-            ),
+            "search": _label_search(drug_name),
             "limit": OPENFDA_LABEL_LIMIT,
         }
         if _settings.openfda_api_key:
@@ -128,16 +147,14 @@ class FDAClient(BaseClient):
             "drug_name": drug_name.lower(),
             "limit": OPENFDA_LABEL_LIMIT,
             "shape": "label_safety_v1",
+            "search": _LABEL_SEARCH_VERSION,
         }
         cached = cache_get("fda_label_safety", cache_params, self.cache_dir)
         if cached is not None:
             return [FDALabelSafetyRecord(**record) for record in cached]
 
         params: dict[str, str | int] = {
-            "search": (
-                f'(openfda.brand_name:"{drug_name}"'
-                f' OR openfda.generic_name:"{drug_name}")'
-            ),
+            "search": _label_search(drug_name),
             "limit": OPENFDA_LABEL_LIMIT,
         }
         if _settings.openfda_api_key:

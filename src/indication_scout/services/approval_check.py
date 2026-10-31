@@ -307,8 +307,7 @@ async def get_approved_indications(
     entries = table.get(drug_name.lower().strip())
     if entries is None:
         logger.warning(
-            "get_approved_indications: %r not in hardcoded approvals table; "
-            "returning empty set (approval reasoning disabled for this holdout run)",
+            "get_approved_indications: %r not in hardcoded approvals table; returning empty set",
             drug_name,
         )
         return set()
@@ -542,10 +541,13 @@ async def get_fda_approved_disease_mapping(
 ) -> dict[str, ApprovalLabel]:
     """Classify each candidate's relationship to the drug's approved indications.
 
-    Two-tier lookup:
+    Three-tier lookup:
       1. Curated short-circuit: exact (case-sensitive) match against the drug's curated approved / contaminated /
          rejected lists; skips the LLM.
-      2. LLM fallback: the drug_name is expanded to all known aliases via ChEMBL, all matching openFDA labels are
+      2. Hardcoded approvals table: a candidate the table records as approved before today is "approved". openFDA can
+         drop a current label from its name index (baricitinib's Olumiant label, October 2026), which would otherwise
+         leave every approved indication labelled "none".
+      3. LLM fallback: the drug_name is expanded to all known aliases via ChEMBL, all matching openFDA labels are
          fetched, and the remaining candidates go into one LLM call. Each structured decision includes an
          ApprovalLabel; contaminated decisions must also name an exact item from approved_indications.
 
@@ -583,6 +585,16 @@ async def get_fda_approved_disease_mapping(
             result[c] = "none"
         else:
             uncurated.append(c)
+
+    if not uncurated:
+        return result
+
+    table_approved = await get_approved_indications(
+        drug_name, uncurated, as_of=date.today()
+    )
+    for c in table_approved:
+        result[c] = "approved"
+    uncurated = [c for c in uncurated if c not in table_approved]
 
     if not uncurated:
         return result

@@ -119,10 +119,16 @@ async def seed_drug_intake(
         else:
             async with FDAClient(cache_dir=cache_dir) as fda_client:
                 label_texts = await fda_client.get_all_label_indications(seed_aliases)
-            approved_indications = await list_approved_indications_from_labels(
+            label_indications = await list_approved_indications_from_labels(
                 label_texts=label_texts,
                 cache_dir=cache_dir,
             )
+            # The hardcoded table backs up the label: openFDA can drop a current label from its name index.
+            table_indications = list_approved_indications_at(drug_name, date.today())
+            seen = {i.lower().strip() for i in label_indications}
+            approved_indications = label_indications + [
+                i for i in table_indications if i.lower().strip() not in seen
+            ]
     except Exception as e:
         logger.warning(
             "seed_drug_intake: approved-indication seed failed for %s: %s", drug_name, e

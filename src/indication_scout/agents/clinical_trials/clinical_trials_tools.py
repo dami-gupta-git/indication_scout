@@ -535,6 +535,20 @@ def build_clinical_trials_tools(
             )
             return content, result
 
+        # The hardcoded table backs up the live label: openFDA can drop a current label from its name index.
+        if await get_approved_indications(
+            drug_name=drug, candidate_diseases=[indication], as_of=date.today()
+        ):
+            return (
+                f"FDA approval check for {drug} × {indication}: APPROVED (hardcoded approvals table)",
+                ApprovalCheck(
+                    is_approved=True,
+                    label_found=True,
+                    matched_indication=indication,
+                    drug_names_checked=[drug],
+                ),
+            )
+
         try:
             chembl_id = await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
         except DataSourceError:

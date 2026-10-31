@@ -96,6 +96,44 @@ async def test_sildenafil_hypertension_uses_curated_contamination(tmp_path):
     mock_llm.assert_not_awaited()
 
 
+async def test_hardcoded_table_marks_approved_before_label_lookup(tmp_path):
+    """Baricitinib, October 2026: openFDA's name index lost the Olumiant label, so the table must mark alopecia areata
+    approved; only the remaining candidate goes on to the label lookup."""
+    table_mock = AsyncMock(return_value={"alopecia areata"})
+    with (
+        patch(
+            "indication_scout.services.approval_check.get_approved_indications",
+            new=table_mock,
+        ),
+        patch(
+            "indication_scout.services.approval_check.resolve_drug_name",
+            new=AsyncMock(return_value="CHEMBL2105759"),
+        ),
+        patch(
+            "indication_scout.services.approval_check.get_all_drug_names",
+            new=AsyncMock(return_value=["baricitinib"]),
+        ),
+        patch(
+            "indication_scout.services.approval_check.FDAClient.get_all_label_indications",
+            new=AsyncMock(return_value=[]),
+        ),
+    ):
+        result = await get_fda_approved_disease_mapping(
+            drug_name="baricitinib",
+            candidate_diseases=["alopecia areata", "psoriasis"],
+            approved_indications=[],
+            cache_dir=tmp_path,
+        )
+
+    assert result == {"alopecia areata": "approved", "psoriasis": "none"}
+    table_mock.assert_awaited_once()
+    assert table_mock.await_args.args[:2] == (
+        "baricitinib",
+        ["alopecia areata", "psoriasis"],
+    )
+    assert table_mock.await_args.kwargs == {"as_of": date.today()}
+
+
 # --- extract_approved_from_labels ---
 
 

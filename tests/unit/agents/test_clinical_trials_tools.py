@@ -768,6 +768,49 @@ async def test_get_landscape_returns_empty_when_resolver_returns_none():
 # ------------------------------------------------------------------
 
 
+@pytest.fixture(autouse=True)
+def _empty_approvals_table():
+    """Keep the live label-path tests off the hardcoded approvals table (and the LLM matcher behind it)."""
+    with patch(
+        "indication_scout.agents.clinical_trials.clinical_trials_tools.get_approved_indications",
+        new=AsyncMock(return_value=set()),
+    ) as table_mock:
+        yield table_mock
+
+
+async def test_check_fda_approval_hardcoded_table_approves_without_label(
+    _empty_approvals_table,
+):
+    """The hardcoded table answers approved before openFDA is queried (baricitinib's label left the name index)."""
+    _empty_approvals_table.return_value = {"alopecia areata"}
+    fda_factory = MagicMock()
+    tools = build_clinical_trials_tools(date_before=None)
+
+    with patch(
+        "indication_scout.agents.clinical_trials.clinical_trials_tools.FDAClient",
+        new=fda_factory,
+    ):
+        msg = await _get_tool(tools, "check_fda_approval").ainvoke(
+            LCToolCall(
+                name="check_fda_approval",
+                args={"drug": "baricitinib", "indication": "alopecia areata"},
+                id="tc_fda_table",
+                type="tool_call",
+            )
+        )
+
+    fda_factory.assert_not_called()
+    assert msg.artifact == ApprovalCheck(
+        is_approved=True,
+        label_found=True,
+        matched_indication="alopecia areata",
+        drug_names_checked=["baricitinib"],
+    )
+    assert msg.content == (
+        "FDA approval check for baricitinib × alopecia areata: APPROVED (hardcoded approvals table)"
+    )
+
+
 def _fda_client_mock(label_texts: list[str]) -> AsyncMock:
     """AsyncMock FDAClient that works as an async context manager."""
     client = AsyncMock()
