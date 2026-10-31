@@ -315,7 +315,8 @@ async def _judge_pmid_directions(
     hepatic steatosis: a comparator's benefit read as supporting for metformin). The same call answers whether each study
     is in humans and itself controlled (sildenafil × ischemic stroke: an uncontrolled human safety study whose background
     described placebo-controlled rat experiments certified the pair as RCT-backed). Returns a {pmid: judgment} map; a PMID
-    the sub-call omits or labels unrecognizably is left out (the caller keeps the synthesize verdict for it)."""
+    the sub-call omits or labels unrecognizably is left out (the caller keeps the synthesize verdict for it).
+    """
     if not relevant_abstracts:
         return {}
     formatted = "\n\n".join(
