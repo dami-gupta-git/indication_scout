@@ -1,11 +1,17 @@
 """Unit tests for services/retrieval — no network, no LLM calls."""
 
 import json
+from collections.abc import Callable
 from datetime import date
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
+from indication_scout.constants import (
+    LITERATURE_SCREEN_BATCH,
+    LITERATURE_SCREEN_MAX_DEPTH,
+    LITERATURE_SCREEN_TARGET_PASSERS,
+)
 from indication_scout.models.model_chembl import ATCDescription
 from indication_scout.models.model_clinical_trials import SearchTrialsResult, Trial
 from indication_scout.models.model_drug_profile import DrugProfile
@@ -1109,11 +1115,43 @@ def mock_trial_lane_discovery():
         yield
 
 
-async def test_semantic_search_returns_ranked_dicts(svc, mock_pubtypes_empty):
+@pytest.fixture
+def mock_gates_none():
+    """Both screening gates reject every paper, so semantic_search reads to the full depth with no model call."""
+    with (
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(return_value={}),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_treats_disease",
+            new=AsyncMock(return_value={}),
+        ),
+    ):
+        yield
+
+
+def _passing_gates(passes: Callable[[str], bool]) -> tuple[AsyncMock, AsyncMock]:
+    """Gate mocks where a paper passes both gates iff `passes(pmid)`; the treats-disease mock records its inputs."""
+
+    async def identity(chembl_id, drug_names, results, cache_dir):
+        return {
+            r.pmid: ("studied" if passes(r.pmid) else "other_drug") for r in results
+        }
+
+    async def treats(chembl_id, pref_name, disease, results, cache_dir):
+        return {r.pmid: True for r in results}
+
+    return AsyncMock(side_effect=identity), AsyncMock(side_effect=treats)
+
+
+async def test_semantic_search_returns_ranked_dicts(
+    svc, mock_pubtypes_empty, mock_gates_none
+):
     """Returns list of dicts with pmid, title, abstract, similarity for each DB row."""
     db_rows = [
-        ("111", "Title A", "Abstract A", 0.92),
-        ("222", "Title B", "Abstract B", 0.85),
+        ("111", "Metformin in colorectal cancer", "Abstract A", 0.92),
+        ("222", "Title B", "A Glucophage cohort, abstract B", 0.85),
     ]
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
@@ -1134,13 +1172,80 @@ async def test_semantic_search_returns_ranked_dicts(svc, mock_pubtypes_empty):
 
     assert len(result) == 2
     assert result[0].pmid == "111"
-    assert result[0].title == "Title A"
+    assert result[0].title == "Metformin in colorectal cancer"
     assert result[0].abstract == "Abstract A"
     assert result[0].similarity == 0.92
     assert result[1].pmid == "222"
     assert result[1].title == "Title B"
-    assert result[1].abstract == "Abstract B"
+    assert result[1].abstract == "A Glucophage cohort, abstract B"
     assert result[1].similarity == 0.85
+
+
+@pytest.mark.parametrize(
+    "title, abstract, kept",
+    [
+        ("Smoking cessation trial", "Patients received Wellbutrin SR daily.", True),
+        ("Bupropion for ADHD", "Open-label pilot.", True),
+        ("Buprenorphine maintenance", "Opioid use disorder cohort.", False),
+        ("Antidepressant class review", "SSRIs and SNRIs compared.", False),
+    ],
+)
+async def test_semantic_search_filters_pool_by_drug_name(
+    svc, mock_pubtypes_empty, mock_gates_none, title, abstract, kept
+):
+    """Only papers naming the drug (any accepted name, whole token, title or abstract) are ranked."""
+    mock_db = _make_db_with_rows([("111", title, abstract, 0.9)])
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["bupropion", "wellbutrin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[[0.1] * 768],
+        ),
+    ):
+        result = await svc.semantic_search("adhd", "CHEMBL894", ["111"], mock_db)
+
+    assert [paper.pmid for paper in result] == (["111"] if kept else [])
+
+
+async def test_semantic_search_filter_frees_slots_from_other_drug_papers(
+    svc, mock_pubtypes_empty, mock_gates_none
+):
+    """Higher-similarity papers about other drugs no longer displace the drug's own papers.
+
+    60 sertraline papers outrank 20 bupropion papers. Before the filter the shortlist was the top 15 of the
+    pool, all sertraline; now it is exactly the 20 bupropion papers, in similarity order.
+    """
+    other = [
+        (f"o{i}", f"Sertraline study {i}", "Sertraline arm.", 0.99 - i / 1000)
+        for i in range(60)
+    ]
+    own = [
+        (f"b{i}", f"Bupropion study {i}", "Bupropion arm.", 0.80 - i / 1000)
+        for i in range(20)
+    ]
+    mock_db = _make_db_with_rows(other + own)
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["bupropion"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[[0.1] * 768],
+        ),
+    ):
+        result = await svc.semantic_search(
+            "depression", "CHEMBL894", [row[0] for row in other + own], mock_db
+        )
+
+    assert [paper.pmid for paper in result] == [f"b{i}" for i in range(20)]
+    assert result[0].similarity == 0.80
+    assert result[-1].similarity == 0.80 - 19 / 1000
 
 
 async def test_semantic_search_embeds_therapeutic_query(svc, mock_pubtypes_empty):
@@ -1223,15 +1328,14 @@ async def test_semantic_search_passes_pmids_to_query(svc, mock_pubtypes_empty):
     assert params["pmids"] == pmids
 
 
-async def test_semantic_search_respects_top_k_from_settings(svc, mock_pubtypes_empty):
-    """Returned list length is capped at settings.semantic_search_top_k after rerank."""
-    from indication_scout.config import get_settings
-
-    top_k = get_settings().semantic_search_top_k
-    assert top_k == 15
-    # Build more rows than top_k so the slice has work to do.
+async def test_semantic_search_returns_screen_depth_papers(
+    svc, mock_pubtypes_empty, mock_gates_none
+):
+    """With no paper passing the gates, the window is read to LITERATURE_SCREEN_MAX_DEPTH and no further."""
+    top_k = LITERATURE_SCREEN_MAX_DEPTH
+    # Build more rows than the depth so the slice has work to do.
     db_rows = [
-        (f"{i}", f"Title {i}", f"Abstract {i}", 0.9 - 0.01 * i)
+        (f"{i}", f"Metformin study {i}", f"Abstract {i}", 0.9 - 0.001 * i)
         for i in range(top_k + 3)
     ]
     mock_db = _make_db_with_rows(db_rows)
@@ -1252,18 +1356,98 @@ async def test_semantic_search_respects_top_k_from_settings(svc, mock_pubtypes_e
     assert len(result) == top_k
 
 
-@pytest.mark.parametrize(
-    "passes_disease_gate, expected_first, expected_last",
-    [(True, "1", "16"), (False, "1", "15")],
-)
-async def test_semantic_search_trial_lane_requires_both_relevance_gates(
-    svc, mock_pubtypes_empty, passes_disease_gate, expected_first, expected_last
-):
-    from indication_scout.config import get_settings
+def _metformin_rows(count: int) -> list[tuple]:
+    return [
+        (f"{i}", f"Metformin study {i}", f"Abstract {i}", 0.9 - 0.001 * i)
+        for i in range(count)
+    ]
 
-    top_k = get_settings().semantic_search_top_k
+
+async def _search_with_gates(
+    svc, rows: list[tuple], passes: Callable[[str], bool], **kwargs
+) -> tuple[list, AsyncMock]:
+    identity, treats = _passing_gates(passes)
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.embed_async",
+            return_value=[[0.1] * 768],
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=identity,
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_treats_disease", new=treats
+        ),
+    ):
+        result = await svc.semantic_search(
+            "diabetes",
+            "CHEMBL1431",
+            [row[0] for row in rows],
+            _make_db_with_rows(rows),
+            **kwargs,
+        )
+    return result, treats
+
+
+async def test_semantic_search_stops_at_batch_where_target_passers_reached(
+    svc, mock_pubtypes_empty
+):
+    """Every paper passes: reading stops at the first batch boundary at or past the target, and papers past it are
+    never sent to the gates."""
+    rows = _metformin_rows(LITERATURE_SCREEN_MAX_DEPTH)
+    result, treats = await _search_with_gates(svc, rows, lambda pmid: True)
+
+    batches = -(-LITERATURE_SCREEN_TARGET_PASSERS // LITERATURE_SCREEN_BATCH)
+    expected = batches * LITERATURE_SCREEN_BATCH
+    assert [paper.pmid for paper in result] == [str(i) for i in range(expected)]
+    judged = {r.pmid for call in treats.await_args_list for r in call.args[3]}
+    assert judged == {str(i) for i in range(expected)}
+
+
+async def test_semantic_search_counts_only_papers_passing_both_gates(
+    svc, mock_pubtypes_empty
+):
+    """Half the papers fail the drug-identity gate, so twice as many batches are read to reach the target."""
+    rows = _metformin_rows(LITERATURE_SCREEN_MAX_DEPTH)
+    result, _ = await _search_with_gates(svc, rows, lambda pmid: int(pmid) % 2 == 0)
+
+    batches = -(-(2 * LITERATURE_SCREEN_TARGET_PASSERS) // LITERATURE_SCREEN_BATCH)
+    assert len(result) == batches * LITERATURE_SCREEN_BATCH
+
+
+async def test_semantic_search_target_none_skips_gates_and_reads_full_depth(
+    svc, mock_pubtypes_empty
+):
+    """target_passers=None (the depth sweep) returns `depth` papers without calling either gate."""
+    rows = _metformin_rows(40)
+    result, treats = await _search_with_gates(
+        svc, rows, lambda pmid: True, depth=25, target_passers=None
+    )
+
+    assert len(result) == 25
+    treats.assert_not_awaited()
+
+
+@pytest.mark.parametrize("passes_disease_gate", [True, False])
+async def test_semantic_search_trial_lane_requires_both_relevance_gates(
+    svc, mock_pubtypes_empty, passes_disease_gate
+):
+    """A trial-linked paper outside the depth takes the reserved last slot only if it passes both gates."""
+    top_k = LITERATURE_SCREEN_MAX_DEPTH
+    expected_first = "1"
+    expected_last = str(top_k + 1) if passes_disease_gate else str(top_k)
     db_rows = [
-        (str(index), f"Title {index}", f"Abstract {index}", 1.0 - index / 100)
+        (
+            str(index),
+            f"Bupropion trial {index}",
+            f"Abstract {index}",
+            1.0 - index / 1000,
+        )
         for index in range(1, top_k + 3)
     ]
     mock_db = _make_db_with_rows(db_rows)
@@ -1320,11 +1504,13 @@ async def test_semantic_search_trial_lane_requires_both_relevance_gates(
     assert str(top_k + 2) not in {paper.pmid for paper in result}
 
 
-async def test_semantic_search_similarity_is_float(svc, mock_pubtypes_empty):
+async def test_semantic_search_similarity_is_float(
+    svc, mock_pubtypes_empty, mock_gates_none
+):
     """similarity values in returned dicts are plain Python floats."""
     from decimal import Decimal
 
-    db_rows = [("111", "Title", "Abstract", Decimal("0.8765"))]
+    db_rows = [("111", "Metformin", "Abstract", Decimal("0.8765"))]
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
@@ -1344,9 +1530,11 @@ async def test_semantic_search_similarity_is_float(svc, mock_pubtypes_empty):
     assert result[0].similarity == float(Decimal("0.8765"))
 
 
-async def test_semantic_search_releases_db_before_fetching_pubtypes(svc):
+async def test_semantic_search_releases_db_before_fetching_pubtypes(
+    svc, mock_gates_none
+):
     """The pgvector read transaction ends before the PubMed request starts."""
-    db_rows = [("111", "Title", "Abstract", 0.9)]
+    db_rows = [("111", "Metformin", "Abstract", 0.9)]
     mock_db = _make_db_with_rows(db_rows)
     mock_vector = [0.1] * 768
 
@@ -1379,7 +1567,7 @@ async def test_semantic_search_releases_db_before_fetching_pubtypes(svc):
     assert result == [
         AbstractResult(
             pmid="111",
-            title="Title",
+            title="Metformin",
             abstract="Abstract",
             similarity=0.9,
             pubtype=[],

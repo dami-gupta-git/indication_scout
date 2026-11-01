@@ -138,6 +138,19 @@ CLINICAL_TRIALS_FETCH_MAX: int = 50
 # Number of literature shortlist positions reserved for publications linked from a relevant
 # ClinicalTrials.gov record after the publication passes the exact-drug and disease-treatment gates.
 LITERATURE_TRIAL_REFERENCE_RESERVE: int = 1
+# The literature step screens the drug-named pool in relevance order (query similarity x publication-type
+# boost), LITERATURE_SCREEN_BATCH papers at a time through the exact-drug and disease-treatment gates, and
+# stops once LITERATURE_SCREEN_TARGET_PASSERS papers have passed both or LITERATURE_SCREEN_MAX_DEPTH papers
+# have been read. The depth sweeps in scripts/validation/compare_literature_shortlist.py (bupropion,
+# semaglutide) showed lightly studied pairs stop gaining passers by 30-50 while heavily studied pairs keep
+# gaining to 120, so no fixed depth fits both (PLAN_literature_screening, Phase 1).
+LITERATURE_SCREEN_MAX_DEPTH: int = 120
+LITERATURE_SCREEN_BATCH: int = 20
+# PROVISIONAL: set to the synthesis cap (LITERATURE_SYNTHESIS_MAX) once Phase 4 measures it.
+LITERATURE_SCREEN_TARGET_PASSERS: int = 30
+# Over-fetch multiplier for the publication-type rerank: this many times the depth are pulled by
+# similarity before the boost reorders them, so a 2x RCT boost deep in the list can still reach the top.
+LITERATURE_RERANK_HEADROOM: int = 10
 # Operational chunk size for batched PubMed Secondary Source ID queries. This limits URL length;
 # results from every chunk still form one evidence lane.
 PUBMED_NCT_QUERY_BATCH_SIZE: int = 50

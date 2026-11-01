@@ -7,6 +7,7 @@ import pytest
 from sqlalchemy import text
 
 from indication_scout.config import get_settings
+from indication_scout.constants import LITERATURE_SCREEN_MAX_DEPTH
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
@@ -82,8 +83,12 @@ async def test_semantic_search_promotes_trial_paper_absent_from_the_query_pool(
 
     shortlist = [result.pmid for result in results]
     assert "40487775" in shortlist
-    assert len(shortlist) == get_settings().semantic_search_top_k
+    assert len(shortlist) <= LITERATURE_SCREEN_MAX_DEPTH
     assert len(shortlist) == len(set(shortlist))
+    # The pre-ranking drug-name filter: every shortlisted paper names the drug in its own text.
+    assert all(
+        "bupropion" in f"{result.title} {result.abstract}".lower() for result in results
+    )
 
     promoted = next(result for result in results if result.pmid == "40487775")
     assert promoted.pubtype == ["Journal Article"]
@@ -681,7 +686,7 @@ async def test_semantic_search_returns_relevant_results(svc, db_session_truncati
         "myocardial infarction", "CHEMBL2107830", pmids, db_session_truncating
     )
 
-    assert len(results) == get_settings().semantic_search_top_k
+    assert len(results) <= LITERATURE_SCREEN_MAX_DEPTH
     # All results should have reasonable similarity
     assert all(r.similarity > 0.5 for r in results)
     # At least one title should mention empagliflozin or SGLT2
@@ -700,7 +705,7 @@ async def test_semantic_search_sema_nash(svc, db_session_truncating):
         "NASH", "CHEMBL2108724", pmids, db_session_truncating
     )
 
-    assert len(results) == get_settings().semantic_search_top_k
+    assert len(results) <= LITERATURE_SCREEN_MAX_DEPTH
     assert all(hasattr(r, "pmid") for r in results)
     assert all(hasattr(r, "similarity") for r in results)
     # Ranked by similarity x publication-type boost, not raw similarity.

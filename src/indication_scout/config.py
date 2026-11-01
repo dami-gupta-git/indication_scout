@@ -98,7 +98,6 @@ class Settings(BaseSettings):
 
     # Literature / RAG
     literature_top_k: int
-    semantic_search_top_k: int
     pubmed_max_results: int
     pubmed_search_default_max_results: int
     pubmed_esummary_batch_size: int

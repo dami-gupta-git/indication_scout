@@ -15,7 +15,7 @@ from datetime import date
 from langchain_core.messages.tool import ToolCall
 
 from indication_scout.agents.literature.literature_tools import build_literature_tools
-from indication_scout.config import get_settings
+from indication_scout.constants import LITERATURE_SCREEN_MAX_DEPTH
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.drug_safety import DrugSafetyService
@@ -54,9 +54,10 @@ _EXPECTED_TOP5 = [
     ("36934740", "Semaglutide 2"),
     ("37328931", "Improved health-related quality of life with semaglutide"),
     ("33185364", "A Placebo-Controlled Trial of Subcutaneous Semaglutide"),
-    ("38847460", "A Phase 2 Randomized Trial of Survodutide"),
     ("37646192", "Comparison of clinical efficacy and safety of weekly glucagon"),
 ]
+# 38847460 (survodutide phase 2 in MASH) was pinned here until 2026-10-31. Its title and abstract never
+# name semaglutide, so the drug-name filter now drops it before ranking; the drug-identity gate rejected it anyway.
 # Core NASH RCTs that must be CITED by synthesize (supporting OR contradicting — which list a
 # trial lands in is LLM judgment that varies run-to-run; e.g. 36934740 is the cirrhosis trial
 # that FAILED its endpoint). 33185364 (the positive NEJM RCT) is the one unambiguous supporter.
@@ -216,7 +217,7 @@ async def test_semantic_search(db_session_truncating, test_cache_dir):
     results: list[AbstractResult] = msg.artifact
     # The shortlist is capped at the configured top-k (raised 5 -> 15 on 2026-09-08) but can be
     # shorter under a cutoff, since only pre-cutoff pool papers are eligible.
-    assert len(_EXPECTED_TOP5) <= len(results) <= get_settings().semantic_search_top_k
+    assert len(_EXPECTED_TOP5) <= len(results) <= LITERATURE_SCREEN_MAX_DEPTH
     assert all(isinstance(r, AbstractResult) for r in results)
 
     # No raw-similarity ordering assertion: results are ranked by similarity times a

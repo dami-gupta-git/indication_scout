@@ -14,7 +14,7 @@ from indication_scout.agents.literature.literature_agent import (
     run_literature_agent,
 )
 from indication_scout.agents.literature.literature_output import LiteratureOutput
-from indication_scout.config import get_settings
+from indication_scout.constants import LITERATURE_SCREEN_MAX_DEPTH
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.drug_safety import DrugSafetyService
 from indication_scout.services.retrieval import RetrievalService
@@ -107,7 +107,7 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
     assert (
         len(_EXPECTED_TOP5)
         <= len(output.semantic_search_results)
-        <= get_settings().semantic_search_top_k
+        <= LITERATURE_SCREEN_MAX_DEPTH
     )
     result_pmids = [r.pmid for r in output.semantic_search_results]
     for expected_pmid, expected_title_fragment in _EXPECTED_TOP5:

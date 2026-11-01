@@ -19,6 +19,10 @@ from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
+    LITERATURE_RERANK_HEADROOM,
+    LITERATURE_SCREEN_BATCH,
+    LITERATURE_SCREEN_MAX_DEPTH,
+    LITERATURE_SCREEN_TARGET_PASSERS,
     LITERATURE_TRIAL_REFERENCE_RESERVE,
     OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
     PUBMED_NCT_QUERY_BATCH_SIZE,
@@ -122,18 +126,29 @@ _CONTROLLED_DESIGN_PATTERN = re.compile(
 _CONTROLLED_PUBTYPES = {"Randomized Controlled Trial", "Controlled Clinical Trial"}
 
 
-def _mentions_exact_drug(drug_names: list[str], result: "AbstractResult") -> bool:
-    """Return whether the title or abstract contains a supplied name for the exact drug."""
+def _names_in_text(drug_names: list[str], title: str, abstract: str | None) -> bool:
+    """Return whether the title or abstract contains a supplied name for the exact drug.
+
+    Whole-token match after lowercasing and splitting on non-alphanumerics, so "bupropion" does not match
+    "bupropion-SR" differently from "bupropion SR", and a different drug sharing a prefix does not match.
+    This is the one name rule: the pre-ranking pool filter and the drug-identity gate both call it, so a paper
+    the filter drops is exactly a paper the gate would have rejected without a model call.
+    """
 
     def normalize(value: str) -> str:
         return " ".join(re.findall(r"[a-z0-9]+", value.casefold()))
 
-    text = f" {normalize(f'{result.title} {result.abstract}')} "
+    text = f" {normalize(f'{title} {abstract or ''}')} "
     return any(
         normalized_name and f" {normalized_name} " in text
         for name in drug_names
         if (normalized_name := normalize(name))
     )
+
+
+def _mentions_exact_drug(drug_names: list[str], result: "AbstractResult") -> bool:
+    """Return whether the title or abstract contains a supplied name for the exact drug."""
+    return _names_in_text(drug_names, result.title, result.abstract)
 
 
 async def _judge_pmid_drug_identity(
@@ -1036,11 +1051,20 @@ class RetrievalService:
         pmids: list[str],
         db: Session,
         date_before: date | None = None,
+        depth: int = LITERATURE_SCREEN_MAX_DEPTH,
+        target_passers: int | None = LITERATURE_SCREEN_TARGET_PASSERS,
     ) -> list[AbstractResult]:
-        """For a given drug, disease, and list of PMIDs, return top-k most similar abstracts from pgvector.
+        """For a given drug, disease, and list of PMIDs, return the screening window of drug-named abstracts.
 
         Builds a natural-language query from drug and disease (e.g. "Evidence for metformin as a treatment for colorectal
-        cancer..."), embeds it with BioLORD-2023, and runs a cosine similarity search restricted to the given PMIDs.
+        cancer..."), embeds it with BioLORD-2023, and runs a cosine similarity search restricted to the given PMIDs. Papers
+        whose title and abstract name none of the drug's accepted names are dropped BEFORE ranking: the drug-identity gate
+        rejects them without a model call anyway, so left in they only displace readable papers from the shortlist (for
+        bupropion they are over 80% of most pools).
+
+        The window is read in relevance order, LITERATURE_SCREEN_BATCH papers at a time, through the exact-drug and
+        disease-treatment gates, and stops at the first batch boundary where `target_passers` papers have passed both, or
+        at `depth`. Both gates are cached per paper, so `synthesize` re-running them over the window costs nothing.
 
         Args:
             disease: e.g. "colorectal cancer"
@@ -1048,10 +1072,12 @@ class RetrievalService:
             pmids: e.g. ["29734553", "31245678", "30198432"]
             date_before: Optional leak-free cutoff. pgvector is a shared cache that may hold abstracts fetched without a
                 cutoff, so the date post-guard is re-applied before re-ranking.
+            depth: The most papers the window can hold. Production uses LITERATURE_SCREEN_MAX_DEPTH.
+            target_passers: Stop reading once this many papers have passed both gates. None reads to `depth` without
+                running the gates; the depth sweep in scripts/validation/compare_literature_shortlist.py uses that.
 
         Returns:
-            List of dicts ranked by descending similarity, e.g.:
-            [{"pmid": "29734553", "title": "Metformin suppresses colorectal...", "abstract": "...", "similarity": 0.89}, ...]
+            List of AbstractResult ranked by descending similarity x publication-type boost.
         """
         # Holdout post-guard: drop PMIDs published on/after the cutoff that leaked in via the shared pgvector cache, using
         # the same filter as fetch_and_cache.
@@ -1080,10 +1106,11 @@ class RetrievalService:
         #     time.perf_counter() - _t_embed,
         # )
 
-        # Over-fetch cap: pull top-N by similarity from pgvector, then rerank by pubtype in Python. The cap gives the boost
-        # headroom to reorder (a 2x RCT boost at rank 50 can beat a review at rank 5) without an unbounded scan.
-        top_k = _settings.semantic_search_top_k
-        rerank_cap = max(top_k * 10, 100)
+        # Over-fetch cap: keep this many drug-named papers by similarity, then rerank by pubtype in Python. The cap gives
+        # the boost headroom to reorder (a 2x RCT boost at rank 50 can beat a review at rank 5) without fetching pubtypes
+        # for the whole pool. It is applied AFTER the drug-name filter, so it never truncates below `depth` on its own.
+        top_k = depth
+        rerank_cap = max(top_k * LITERATURE_RERANK_HEADROOM, 100)
 
         # Relevance audit: how many fetched PMIDs have an embedding row (competed in the rerank), independent of the
         # rerank_cap LIMIT below; compared with len(pmids) it exposes abstracts embedded but never surfaced. Read-only COUNT.
@@ -1102,24 +1129,33 @@ class RetrievalService:
         # )
 
         _t_scan = time.perf_counter()
-        rows = db.execute(
+        # No LIMIT here: the drug-name filter runs on the returned rows, so the cap has to apply after it or a pool that
+        # is mostly other-drug papers would be cut before the drug's own papers are reached.
+        pool_rows = db.execute(
             text("""
-                SELECT pmid, title, abstract, similarity
-                FROM (
-                    SELECT pmid, title, abstract,
-                           1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
-                    FROM pubmed_abstracts
-                    WHERE pmid = ANY(:pmids)
-                ) sub
+                SELECT pmid, title, abstract,
+                       1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
+                FROM pubmed_abstracts
+                WHERE pmid = ANY(:pmids)
                 ORDER BY similarity DESC
-                LIMIT :rerank_cap
             """),
             {
                 "query_vec": "[" + ",".join(str(x) for x in query_vector) + "]",
                 "pmids": pmids,
-                "rerank_cap": rerank_cap,
             },
         ).fetchall()
+        named_rows = [
+            row for row in pool_rows if _names_in_text(drug_names, row[1], row[2])
+        ]
+        rows = named_rows[:rerank_cap]
+        logger.info(
+            "[LIT] drug-name filter %s / %s: %d stored -> %d name the drug -> %d kept for rerank",
+            chembl_id,
+            disease,
+            len(pool_rows),
+            len(named_rows),
+            len(rows),
+        )
         baseline_pmids = {str(row[0]) for row in rows}
         rows_by_pmid = {str(row[0]): row for row in rows}
         # No explicit Row[...] annotation on the linked rows: SQLAlchemy 2.1 made Row variadic, so Row[Any] means a
@@ -1194,6 +1230,15 @@ class RetrievalService:
         scored.sort(key=lambda x: x[2], reverse=True)
         baseline_scored = [item for item in scored if item[0].pmid in baseline_pmids]
 
+        if target_passers is not None:
+            top_k = await self._screen_depth(
+                chembl_id,
+                drug_names,
+                disease,
+                [item[0] for item in baseline_scored[:top_k]],
+                target_passers,
+            )
+
         if linked_pmids:
             trial_reference_set = set(linked_pmids)
             linked = [
@@ -1220,8 +1265,13 @@ class RetrievalService:
             if reserved_pmids and not reserved_pmids.intersection(
                 item[0].pmid for item in baseline_scored[:top_k]
             ):
-                baseline_scored = baseline_scored[: top_k - len(reserved)] + reserved
+                # The reserved papers take the window's last slots. A window the gates emptied (top_k 0) still carries
+                # them, so a trial-linked passer is never lost to an unproductive pool.
+                baseline_scored = (
+                    baseline_scored[: max(top_k - len(reserved), 0)] + reserved
+                )
                 baseline_scored.sort(key=lambda item: item[2], reverse=True)
+                top_k = max(top_k, len(reserved))
 
         # logger.info(
         #     "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
@@ -1243,6 +1293,44 @@ class RetrievalService:
         #     )
 
         return [item[0] for item in baseline_scored[:top_k]]
+
+    async def _screen_depth(
+        self,
+        chembl_id: str,
+        drug_names: list[str],
+        disease: str,
+        ranked: list[AbstractResult],
+        target_passers: int,
+    ) -> int:
+        """Return how many of `ranked` to keep: read LITERATURE_SCREEN_BATCH papers at a time through the exact-drug and
+        disease-treatment gates and stop at the first batch boundary where `target_passers` have passed both, or at the
+        end of the list. Lightly studied pairs stop early and heavily studied pairs stop once synthesis has enough.
+        """
+        passers = 0
+        reached = 0
+        for start in range(0, len(ranked), LITERATURE_SCREEN_BATCH):
+            batch = ranked[start : start + LITERATURE_SCREEN_BATCH]
+            drug_identity = await _judge_pmid_drug_identity(
+                chembl_id, drug_names, batch, self.cache_dir
+            )
+            studied = [r for r in batch if drug_identity.get(r.pmid) == "studied"]
+            on_topic = await _judge_pmid_treats_disease(
+                chembl_id, drug_names[0], disease, studied, self.cache_dir
+            )
+            passers += sum(1 for r in studied if on_topic.get(r.pmid, False))
+            reached = start + len(batch)
+            if passers >= target_passers:
+                break
+        logger.info(
+            "[LIT] screen %s / %s: read %d of %d ranked papers, %d passed both gates (target %d)",
+            chembl_id,
+            disease,
+            reached,
+            len(ranked),
+            passers,
+            target_passers,
+        )
+        return reached
 
     async def synthesize(
         self,
