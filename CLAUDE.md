@@ -3,7 +3,7 @@
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 
-Note: I am on a time crunch. Do not examine or suggest minute items. But main functionality should work.
+Note: Do not examine or suggest minute items. But main functionality should work.
 
 ## Design
 When asked to propose a design for a task, make sure that the design should be as simple as appropriate. For writing or editing any markdown document, follow `.claude/skills/writedocs/SKILL.md`.
