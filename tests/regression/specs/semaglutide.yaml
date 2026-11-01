@@ -46,6 +46,9 @@ aliases:
     - alcohol dependence
   cardiovascular disorder:
     - cardiovascular disease
+  # Open Targets renamed MONDO_0005098 from "stroke" to "stroke disorder" (seen 2026-10-26).
+  stroke:
+    - stroke disorder
 
 # No ranked_order: MASH and type 1 diabetes swap ranks 1-2, and stroke / nicotine dependence /
 # alcohol abuse permute across ranks 3-5 (2026-09-10 17:49, 19:38, 19:57, 19:58). Membership only.
@@ -126,6 +129,9 @@ required_pmids_cited:
   - bucket: literature_coverage
     indication: stroke
     mode: cited
+    # Since the Open Targets rename to "stroke disorder" (2026-10), the name-driven literature query no
+    # longer shortlists 31465784, though it is still retrieved. Either citation is enough.
+    min_present: 1
     pmids:
       - "31465784"
       - "35582947"

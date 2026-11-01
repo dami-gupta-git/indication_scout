@@ -318,6 +318,11 @@ async def test_investigate_top_candidates_bounds_concurrency_and_preserves_order
             "indication_scout.agents.supervisor.supervisor_tools.random.uniform",
             return_value=0.0,
         ),
+        # No candidate is contaminated, so all four are investigated without a live openFDA/LLM approval check.
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_fda_approved_disease_mapping",
+            new=AsyncMock(return_value={}),
+        ),
     ):
         task = asyncio.create_task(investigate.coroutine("metformin"))
         await asyncio.wait_for(first_batch_started.wait(), timeout=1)

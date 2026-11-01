@@ -26,6 +26,11 @@
 # contaminated. The bipolar signal now surfaces under "bipolar disorder", which is not an approved
 # use — STEP-BD is pinned there instead.
 #
+# Binge eating disorder is no longer pinned in the ranking or evidence sections (2026-10-31). Open
+# Targets' competitor counts changed around 2026-10-26 and it now sits about 19th in the competitor
+# order, past the 16-slot investigation cap, so it is surfaced (candidate_set_contains) but not
+# investigated.
+#
 # Bucket values must match `tests/regression/failure_buckets.Bucket`.
 
 drug: bupropion
@@ -54,8 +59,6 @@ required_in_ranked:
     indication: alcohol dependence
   - bucket: ranking
     indication: bipolar disorder
-  - bucket: ranking
-    indication: binge eating disorder
   - bucket: ranking
     indication: neuropathic pain
   - bucket: ranking
@@ -93,11 +96,6 @@ candidate_set_contains:
 # stable across both 2026-09-10 runs.
 required_ncts_surfaced:
   - bucket: literature_coverage
-    indication: binge eating disorder
-    section: relevant
-    ncts:
-      - NCT00414167   # bupropion monotherapy; the only BED trial that is not a naltrexone combination
-  - bucket: literature_coverage
     indication: attention deficit-hyperactivity disorder
     section: relevant
     ncts:
@@ -121,11 +119,6 @@ required_ncts_surfaced:
 # Cited PMIDs (evidence_summary supporting + contradicting). Anchors are the citations stable across
 # both 2026-09-10 runs.
 required_pmids_cited:
-  - bucket: literature_coverage
-    indication: binge eating disorder
-    mode: cited
-    pmids:
-      - "23656848"
   - bucket: literature_coverage
     indication: attention deficit-hyperactivity disorder
     mode: cited
@@ -154,8 +147,6 @@ required_pmids_cited:
 # black_box from OT warnings; holdout (OT suppressed) would pick serious from pre-cutoff literature,
 # hence the allowed set.
 safety_severity:
-  - indication: binge eating disorder
-    allowed: [black_box, serious]
   - indication: attention deficit-hyperactivity disorder
     allowed: [black_box, serious]
   - indication: cocaine use disorder

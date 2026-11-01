@@ -36,7 +36,7 @@
     {
       "drug": "semaglutide",
       "disease": "stroke",
-      "aliases": [],
+      "aliases": ["stroke disorder"],
       "decision": "valid",
       "rationale": "Registered acute-stroke treatment trials make this a legitimate candidate."
     },
@@ -142,7 +142,7 @@
     {
       "drug": "sildenafil",
       "disease": "stroke",
-      "aliases": [],
+      "aliases": ["stroke disorder"],
       "decision": "valid",
       "rationale": "A dedicated registered treatment study supports an unapproved candidate."
     },
@@ -268,7 +268,7 @@
     {
       "drug": "bupropion",
       "disease": "stroke",
-      "aliases": [],
+      "aliases": ["stroke disorder"],
       "decision": "unstable",
       "rationale": "Ranking-position instability, not a validated repurposing candidate: only intermittently reaches the top 5 across otherwise-unchanged runs."
     },
