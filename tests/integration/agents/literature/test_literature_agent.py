@@ -136,7 +136,7 @@ async def test_semaglutide_nash_literature_agent(db_session_truncating, test_cac
     assert output.evidence_summary.study_count >= 2
     # The core NASH RCTs must be CITED — in supporting, contradicting, OR neutral (list membership
     # is LLM-variable; see _EXPECTED_CITED_PMIDS; e.g. 37328931 is a quality-of-life readout that
-    # pmid_direction may set neutral). 33185364 (positive NEJM RCT) must support.
+    # the per-paper grade may set neutral). 33185364 (positive NEJM RCT) must support.
     cited = (
         set(output.evidence_summary.supporting_pmids)
         | set(output.evidence_summary.contradicting_pmids)

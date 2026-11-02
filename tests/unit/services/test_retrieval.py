@@ -34,13 +34,18 @@ _FIND_TRIAL_LINKED_PMIDS = RetrievalService.find_trial_linked_pmids
 
 
 def _judgments(*rows: tuple[str, str, bool, bool]) -> dict[str, PmidJudgment]:
-    """Build a per-PMID sub-call result from (pmid, verdict, is_human, is_controlled) rows."""
+    """Build a per-paper grade result from (pmid, verdict, is_human, is_controlled) rows."""
     return {
         pmid: PmidJudgment(
-            verdict=verdict, is_human=is_human, is_controlled=is_controlled
+            verdict=verdict, is_human=is_human, is_controlled=is_controlled, relevance=8
         )
         for pmid, verdict, is_human, is_controlled in rows
     }
+
+
+def _grades(*rows: tuple[str, str, bool, bool]) -> AsyncMock:
+    """Patch value for _judge_pmid_grades returning fixed grades."""
+    return AsyncMock(return_value=_judgments(*rows))
 
 
 @pytest.fixture
@@ -1626,7 +1631,7 @@ async def test_synthesize_calls_llm_with_correct_prompt(svc):
         ),
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
         patch(
-            "indication_scout.services.retrieval._judge_pmid_directions",
+            "indication_scout.services.retrieval._judge_pmid_grades",
             new=AsyncMock(
                 return_value=_judgments(
                     ("11111111", "supporting", True, True),
@@ -1663,7 +1668,7 @@ async def test_synthesize_prompt_uses_pref_name(svc):
         ),
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
         patch(
-            "indication_scout.services.retrieval._judge_pmid_directions",
+            "indication_scout.services.retrieval._judge_pmid_grades",
             new=AsyncMock(
                 return_value=_judgments(
                     ("11111111", "supporting", True, True),
@@ -1695,8 +1700,11 @@ async def test_synthesize_strips_markdown_fences(svc):
             new=AsyncMock(return_value=fenced),
         ),
         patch(
-            "indication_scout.services.retrieval.query_small_llm",
-            new=AsyncMock(return_value="{}"),
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "supporting", True, True),
+                ("22222222", "supporting", False, False),
+            ),
         ),
     ):
         result = await svc.synthesize(
@@ -1720,8 +1728,11 @@ async def test_synthesize_parses_llm_response(svc):
             new=AsyncMock(return_value=_SAMPLE_LLM_RESPONSE),
         ),
         patch(
-            "indication_scout.services.retrieval.query_small_llm",
-            new=AsyncMock(return_value="{}"),
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "supporting", True, True),
+                ("22222222", "supporting", False, False),
+            ),
         ),
     ):
         result = await svc.synthesize(
@@ -1781,7 +1792,7 @@ async def test_synthesize_downgrades_unsupported_controlled_design_claim(svc):
             new=AsyncMock(return_value=response),
         ),
         patch(
-            "indication_scout.services.retrieval._judge_pmid_directions",
+            "indication_scout.services.retrieval._judge_pmid_grades",
             new=AsyncMock(
                 return_value=_judgments(("6431314", "supporting", True, False))
             ),
@@ -1871,7 +1882,7 @@ async def test_synthesize_neutral_paper_cannot_certify_controlled_design(svc):
             new=AsyncMock(return_value=response),
         ),
         patch(
-            "indication_scout.services.retrieval._judge_pmid_directions",
+            "indication_scout.services.retrieval._judge_pmid_grades",
             new=AsyncMock(
                 return_value=_judgments(
                     ("12411660", "supporting", False, False),
@@ -1906,6 +1917,13 @@ async def test_synthesize_degrades_to_safe_floor_on_invalid_json(svc):
         patch(
             "indication_scout.services.retrieval.query_llm",
             new=AsyncMock(return_value="not valid json at all"),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "supporting", True, True),
+                ("22222222", "supporting", False, False),
+            ),
         ),
     ):
         result = await svc.synthesize(
@@ -1943,6 +1961,13 @@ async def test_synthesize_strength_cap_forces_none_for_class_level(svc):
         patch(
             "indication_scout.services.retrieval.query_llm",
             new=AsyncMock(return_value=leaky_response),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "supporting", True, True),
+                ("22222222", "supporting", False, False),
+            ),
         ),
     ):
         result = await svc.synthesize(
@@ -2071,7 +2096,7 @@ async def test_synthesize_class_level_paper_never_counts_as_drug_specific_eviden
         ),
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
         patch(
-            "indication_scout.services.retrieval._judge_pmid_directions",
+            "indication_scout.services.retrieval._judge_pmid_grades",
             new=AsyncMock(
                 return_value=_judgments(("11111111", "supporting", False, True))
             ),
@@ -2186,7 +2211,7 @@ async def test_synthesize_target_gate_excludes_disease_observed_but_not_treated(
         ),
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
         patch(
-            "indication_scout.services.retrieval._judge_pmid_directions",
+            "indication_scout.services.retrieval._judge_pmid_grades",
             new=AsyncMock(
                 return_value=_judgments(("11111111", "supporting", False, True))
             ),
@@ -2320,7 +2345,7 @@ async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(sv
         ),
         patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
         patch(
-            "indication_scout.services.retrieval._judge_pmid_directions",
+            "indication_scout.services.retrieval._judge_pmid_grades",
             new=AsyncMock(
                 return_value=_judgments(("11111111", "supporting", True, True))
             ),
@@ -2359,50 +2384,145 @@ async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(sv
     }
 
 
-# --- _judge_pmid_directions sub-call (the per-PMID direction authority) ---
+# --- _judge_pmid_grades (the per-paper direction and design authority) ---
 
 
-async def test_judge_pmid_directions_parses_and_validates():
-    """The sub-call returns a {pmid: judgment} map carrying the verdict and the study's own design, keeping only valid
-    judgments for PMIDs that were actually sent (an out-of-set or unrecognized verdict is dropped, not trusted).
-    """
-    from indication_scout.services.retrieval import _judge_pmid_directions
-
-    abstracts = [
-        AbstractResult(pmid="1", title="t1", abstract="a1", similarity=0.9),
-        AbstractResult(pmid="2", title="t2", abstract="a2", similarity=0.9),
-    ]
-    resp = json.dumps(
+def _grade_json(verdict: str, relevance: int | str) -> str:
+    return json.dumps(
         {
-            "1": {"verdict": "supporting", "is_human": True, "is_controlled": True},
-            "2": {"verdict": "neutral", "is_human": True, "is_controlled": False},
-            "999": {"verdict": "supporting", "is_human": True, "is_controlled": True},
-            "3": {"verdict": "bogus", "is_human": True, "is_controlled": True},
+            "verdict": verdict,
+            "is_human": True,
+            "is_controlled": True,
+            "relevance": relevance,
         }
     )
-    with patch(
-        "indication_scout.services.retrieval.query_small_llm",
-        new=AsyncMock(return_value=resp),
-    ):
-        out = await _judge_pmid_directions("metformin", "colorectal cancer", abstracts)
-    # neutral is a valid verdict and kept; out-of-set (999) and unrecognized (bogus) dropped.
-    assert out == _judgments(
-        ("1", "supporting", True, True), ("2", "neutral", True, False)
+
+
+async def test_pmid_grade_isolated_and_cached_per_pmid(tmp_path):
+    """Each grade sees one abstract only, is made once per paper, and is served from cache on a later batch."""
+    from indication_scout.services.retrieval import _judge_pmid_grades
+
+    trial = AbstractResult(
+        pmid="1",
+        title="Trial",
+        abstract="ALPHA-TRIAL-ABSTRACT",
+        similarity=0.9,
+    )
+    null = AbstractResult(
+        pmid="2",
+        title="Null",
+        abstract="BETA-NULL-ABSTRACT",
+        similarity=0.9,
+    )
+    prompts: list[str] = []
+
+    async def grade_llm(prompt: str) -> str:
+        prompts.append(prompt)
+        if "PMID: 1\n" in prompt:
+            return _grade_json("supporting", 9)
+        return _grade_json("contradicting", 9)
+
+    with patch("indication_scout.services.retrieval.query_small_llm", new=grade_llm):
+        first = await _judge_pmid_grades(
+            "CHEMBL1431", "metformin", "miscarriage", [trial, null], tmp_path
+        )
+        second = await _judge_pmid_grades(
+            "CHEMBL1431", "metformin", "miscarriage", [null, trial], tmp_path
+        )
+
+    expected = {
+        "1": PmidJudgment(
+            verdict="supporting", is_human=True, is_controlled=True, relevance=9
+        ),
+        "2": PmidJudgment(
+            verdict="contradicting", is_human=True, is_controlled=True, relevance=9
+        ),
+    }
+    assert first == expected
+    assert second == expected
+    assert len(prompts) == 2
+    assert all(
+        ("ALPHA-TRIAL-ABSTRACT" in prompt) != ("BETA-NULL-ABSTRACT" in prompt)
+        for prompt in prompts
     )
 
 
-async def test_judge_pmid_directions_missing_design_fields_are_not_controlled():
-    """A judgment that omits the design fields must not certify controlled human evidence: both default to False so an
-    incomplete answer can never render as RCT-backed."""
-    from indication_scout.services.retrieval import _judge_pmid_directions
+@pytest.mark.parametrize(
+    "response",
+    [
+        "not json",
+        _grade_json("bogus", 5),
+        _grade_json("supporting", 0),
+        _grade_json("supporting", 11),
+        _grade_json("supporting", "7"),
+        json.dumps({"verdict": "supporting", "is_human": True, "is_controlled": True}),
+    ],
+)
+async def test_pmid_grade_unusable_response_drops_paper_and_is_not_cached(
+    tmp_path, response
+):
+    """An unparseable response, an unknown verdict, or a relevance missing or outside 1-10 drops the paper, and nothing is
+    cached, so the next call asks again."""
+    from indication_scout.services.retrieval import _judge_pmid_grades
 
-    abstracts = [AbstractResult(pmid="1", title="t1", abstract="a1", similarity=0.9)]
-    with patch(
-        "indication_scout.services.retrieval.query_small_llm",
-        new=AsyncMock(return_value=json.dumps({"1": {"verdict": "supporting"}})),
+    paper = AbstractResult(pmid="1", title="t", abstract="a", similarity=0.9)
+    llm = AsyncMock(return_value=response)
+    with patch("indication_scout.services.retrieval.query_small_llm", new=llm):
+        first = await _judge_pmid_grades(
+            "CHEMBL1431", "metformin", "x", [paper], tmp_path
+        )
+        second = await _judge_pmid_grades(
+            "CHEMBL1431", "metformin", "x", [paper], tmp_path
+        )
+
+    assert first == {}
+    assert second == {}
+    assert llm.await_count == 2
+
+
+async def test_synthesize_drops_ungraded_paper_and_does_not_cache(svc):
+    """A paper the grader could not grade never reaches the synthesis prompt or the evidence lists, and the summary is
+    not cached, so the next run grades it again instead of reusing evidence with that paper missing.
+    """
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Metformin reduced CRC incidence (PMID: 11111111).",
+            "strength": "moderate",
+            "direction": "supports",
+            "is_observational": False,
+            "is_animal_only": False,
+            "key_findings": [],
+        }
+    )
+    captured: list[str] = []
+
+    async def capture_llm(prompt: str) -> str:
+        captured.append(prompt)
+        return main
+
+    grades = _grades(("11111111", "supporting", True, True))
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+        patch("indication_scout.services.retrieval._judge_pmid_grades", new=grades),
     ):
-        out = await _judge_pmid_directions("metformin", "colorectal cancer", abstracts)
-    assert out == _judgments(("1", "supporting", False, False))
+        first = await svc.synthesize(
+            "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
+        )
+        await svc.synthesize("CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS)
+
+    assert "PMID: 11111111" in captured[0]
+    assert "22222222" not in captured[0]
+    assert first.relevant_pmids == ["11111111"]
+    assert first.supporting_pmids == ["11111111"]
+    assert first.contaminated_pmids == ["22222222"]
+    assert len(captured) == 2
+    assert grades.await_count == 2
 
 
 async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
@@ -2419,20 +2539,6 @@ async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
             "key_findings": [],
         }
     )
-    sub = json.dumps(
-        {
-            "11111111": {
-                "verdict": "supporting",
-                "is_human": True,
-                "is_controlled": True,
-            },
-            "22222222": {
-                "verdict": "neutral",
-                "is_human": True,
-                "is_controlled": False,
-            },
-        }
-    )
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -2443,8 +2549,11 @@ async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
             new=AsyncMock(return_value=main),
         ),
         patch(
-            "indication_scout.services.retrieval.query_small_llm",
-            new=AsyncMock(return_value=sub),
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "supporting", True, True),
+                ("22222222", "neutral", True, False),
+            ),
         ),
     ):
         result = await svc.synthesize(
@@ -2479,20 +2588,6 @@ async def test_synthesize_focuses_final_judgment_when_papers_disagree(svc):
             "key_findings": ["The controlled trial found no benefit (PMID: 22222222)."],
         }
     )
-    sub = json.dumps(
-        {
-            "11111111": {
-                "verdict": "supporting",
-                "is_human": True,
-                "is_controlled": True,
-            },
-            "22222222": {
-                "verdict": "contradicting",
-                "is_human": True,
-                "is_controlled": True,
-            },
-        }
-    )
     query_llm = AsyncMock(side_effect=[main, focused])
     with (
         patch(
@@ -2505,8 +2600,11 @@ async def test_synthesize_focuses_final_judgment_when_papers_disagree(svc):
         ),
         patch("indication_scout.services.retrieval.query_llm", new=query_llm),
         patch(
-            "indication_scout.services.retrieval.query_small_llm",
-            new=AsyncMock(return_value=sub),
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "supporting", True, True),
+                ("22222222", "contradicting", True, True),
+            ),
         ),
     ):
         result = await svc.synthesize("CHEMBL894", "ptsd", _SAMPLE_ABSTRACTS)
@@ -2549,20 +2647,6 @@ async def test_all_neutral_abstracts_force_direction_none(svc):
             "key_findings": [],
         }
     )
-    sub = json.dumps(
-        {
-            "11111111": {
-                "verdict": "neutral",
-                "is_human": True,
-                "is_controlled": False,
-            },
-            "22222222": {
-                "verdict": "neutral",
-                "is_human": True,
-                "is_controlled": False,
-            },
-        }
-    )
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -2573,8 +2657,11 @@ async def test_all_neutral_abstracts_force_direction_none(svc):
             new=AsyncMock(return_value=main),
         ),
         patch(
-            "indication_scout.services.retrieval.query_small_llm",
-            new=AsyncMock(return_value=sub),
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "neutral", True, False),
+                ("22222222", "neutral", True, False),
+            ),
         ),
     ):
         result = await svc.synthesize(
@@ -2587,30 +2674,7 @@ async def test_all_neutral_abstracts_force_direction_none(svc):
     assert result.direction == "none"  # overwrites the LLM's "supports"
 
 
-async def test_judge_pmid_directions_empty_on_unparseable():
-    from indication_scout.services.retrieval import _judge_pmid_directions
-
-    abstracts = [AbstractResult(pmid="1", title="t", abstract="a", similarity=0.9)]
-    with patch(
-        "indication_scout.services.retrieval.query_small_llm",
-        new=AsyncMock(return_value="not json"),
-    ):
-        out = await _judge_pmid_directions("metformin", "x", abstracts)
-    assert out == {}
-
-
-async def test_judge_pmid_directions_no_relevant_skips_call():
-    """No relevant abstracts → no sub-call made (empty map)."""
-    from indication_scout.services.retrieval import _judge_pmid_directions
-
-    mock = AsyncMock(return_value="{}")
-    with patch("indication_scout.services.retrieval.query_small_llm", new=mock):
-        out = await _judge_pmid_directions("metformin", "x", [])
-    assert out == {}
-    mock.assert_not_awaited()
-
-
-async def test_synthesize_pmid_direction_overrides_verdict(svc):
+async def test_synthesize_pmid_grade_overrides_verdict(svc):
     """The sub-call is authoritative: a PMID synthesize labeled 'supporting' is moved to
     contradicting when the direction sub-call says so (metformin × steatosis: a comparator's
     benefit must not read as supporting for metformin)."""
@@ -2624,20 +2688,6 @@ async def test_synthesize_pmid_direction_overrides_verdict(svc):
             "key_findings": [],
         }
     )
-    sub = json.dumps(
-        {
-            "11111111": {
-                "verdict": "contradicting",
-                "is_human": True,
-                "is_controlled": True,
-            },
-            "22222222": {
-                "verdict": "contradicting",
-                "is_human": True,
-                "is_controlled": True,
-            },
-        }
-    )
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
@@ -2648,8 +2698,11 @@ async def test_synthesize_pmid_direction_overrides_verdict(svc):
             new=AsyncMock(return_value=main),
         ),
         patch(
-            "indication_scout.services.retrieval.query_small_llm",
-            new=AsyncMock(return_value=sub),
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "contradicting", True, True),
+                ("22222222", "contradicting", True, True),
+            ),
         ),
     ):
         result = await svc.synthesize(
@@ -2681,6 +2734,13 @@ async def test_synthesize_missing_verdicts_treats_all_contaminated(svc):
         patch(
             "indication_scout.services.retrieval.query_llm",
             new=AsyncMock(return_value=no_verdicts),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "supporting", True, True),
+                ("22222222", "supporting", False, False),
+            ),
         ),
     ):
         result = await svc.synthesize(

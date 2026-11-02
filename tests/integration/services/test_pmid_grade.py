@@ -1,32 +1,32 @@
-"""Integration test for the per-PMID direction sub-call — the LIVE LLM that grades each relevant
-abstract as supporting / contradicting / mixed / neutral for one drug-disease pair. Hits real
+"""Integration test for the per-paper grade — the LIVE LLM that grades each relevant abstract as supporting /
+contradicting / mixed / neutral for one drug-disease pair, with the design of the study it reports. Hits real
 Anthropic; abstracts are REAL PubMed text embedded inline so the test is self-contained.
 
-Guards the "mixed" definition and the own-result rule in prompts/pmid_direction.txt against the
-metformin x miscarriage regression. PregMet2 MISSED its primary endpoint (OR 0.50, p=0.08) while
-the post-hoc pooled analysis reported in the SAME abstract was significant (OR 0.43, p=0.004). It
-was graded "contradicting"; that was the only non-negative literature vote for miscarriage, so the
-deterministic aggregation in retrieval.py produced a "contradicts" card and closed the candidate.
+Guards the "mixed" definition and the own-result rule in prompts/pmid_grade.txt against the metformin x miscarriage
+regression. PregMet2 MISSED its primary endpoint (OR 0.50, p=0.08) while the post-hoc pooled analysis reported in the
+SAME abstract was significant (OR 0.43, p=0.004). It was graded "contradicting"; that was the only non-negative
+literature vote for miscarriage, so the deterministic aggregation in retrieval.py produced a "contradicts" card and
+closed the candidate.
 
-The whole batch must be graded in ONE call, as production does. The verdict is sensitive to batch
-composition: graded alone, or paired with only EMPOWaR, PregMet2 returns a different verdict than
-it does in the real three-abstract batch, so a per-abstract test does not reproduce the bug.
+ACCELERATE is the counterweight: an adequately powered trial that showed no effect must stay "contradicting", so
+neither the "mixed" definition nor the own-result rule pulls well-powered nulls out of the contradicting bucket.
 
-ACCELERATE is the counterweight: an adequately powered trial that showed no effect must stay
-"contradicting", so neither the broadened "mixed" definition nor the narrowed own-result rule pulls
-well-powered nulls out of the contradicting bucket.
-
-Verdicts are LLM judgment, so each PMID asserts an allowed set rather than one string. PregMet2's
-set excludes "contradicting", which is the regression being guarded.
+Verdicts are LLM judgment, so each PMID asserts an allowed set rather than one string. PregMet2's set excludes
+"contradicting", which is the regression being guarded.
 """
 
 import logging
+from pathlib import Path
 
 import pytest
 
-from indication_scout.services.retrieval import AbstractResult, _judge_pmid_directions
+from indication_scout.services.retrieval import AbstractResult, _judge_pmid_grades
 
 logger = logging.getLogger(__name__)
+
+# The grader fans out concurrent calls on the module-level Anthropic client, whose pooled connections are bound to the
+# event loop that opened them. One loop for the module keeps a later test from reusing a connection from a closed loop.
+pytestmark = pytest.mark.asyncio(loop_scope="module")
 
 _PREGMET2 = {
     "pmid": "30792154",
@@ -237,7 +237,7 @@ _SILDENAFIL_SAFETY = {
 
 
 def _to_abstracts(dicts: list[dict[str, str]]) -> list[AbstractResult]:
-    """Wrap the inline {pmid,title,abstract} dicts as AbstractResults the sub-call accepts."""
+    """Wrap the inline {pmid,title,abstract} dicts as AbstractResults the grader accepts."""
     return [
         AbstractResult(
             pmid=d["pmid"], title=d["title"], abstract=d["abstract"], similarity=0.9
@@ -267,14 +267,17 @@ def _to_abstracts(dicts: list[dict[str, str]]) -> list[AbstractResult]:
         ),
     ],
 )
-async def test_pmid_direction(
+async def test_pmid_grade_direction(
     drug: str,
     disease: str,
     abstracts: list[dict[str, str]],
     expected: dict[str, set[str]],
+    tmp_path: Path,
 ) -> None:
-    """Grade one real batch for one drug-disease pair against the live sub-call."""
-    judgments = await _judge_pmid_directions(drug, disease, _to_abstracts(abstracts))
+    """Grade each real abstract for one drug-disease pair against the live grader."""
+    judgments = await _judge_pmid_grades(
+        "CHEMBL_TEST", drug, disease, _to_abstracts(abstracts), tmp_path
+    )
 
     assert set(judgments) == set(expected)
     for pmid, allowed in expected.items():
@@ -306,11 +309,12 @@ async def test_pmid_direction(
         ),
     ],
 )
-async def test_pmid_design(
+async def test_pmid_grade_design(
     drug: str,
     disease: str,
     abstracts: list[dict[str, str]],
     expected: dict[str, tuple[bool, bool | None]],
+    tmp_path: Path,
 ) -> None:
     """The design fields must describe the study each abstract REPORTS, not one it cites. The sildenafil safety abstract
     opens by describing placebo-controlled RAT experiments; the study it reports is a single-arm 12-patient safety study,
@@ -319,7 +323,9 @@ async def test_pmid_design(
     must still read human and controlled.
     """
 
-    judgments = await _judge_pmid_directions(drug, disease, _to_abstracts(abstracts))
+    judgments = await _judge_pmid_grades(
+        "CHEMBL_TEST", drug, disease, _to_abstracts(abstracts), tmp_path
+    )
 
     assert set(judgments) == set(expected)
     for pmid, (is_human, is_controlled) in expected.items():

@@ -2,12 +2,12 @@
 
 from typing import Any, Literal
 
-from pydantic import BaseModel, field_validator, model_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class PmidJudgment(BaseModel):
-    """One abstract's judgment from the isolated per-PMID sub-call: its efficacy verdict for the pair, plus the design of
-    the study THAT abstract reports."""
+    """One abstract's grade from the isolated per-paper call: its efficacy verdict for the pair, the design of the study
+    THAT abstract reports, and how directly its own result answers whether the drug works for the disease."""
 
     # "neutral" = a relevant abstract with NO efficacy result (PK / safety-only / mechanism). It stays RELEVANT (counts in
     # study_count) but is kept OUT of supporting AND contradicting, so a PK paper can't flip a clean "supports" to "mixed"
@@ -18,6 +18,9 @@ class PmidJudgment(BaseModel):
     # or unparseable field can never certify the pair as controlled human evidence.
     is_human: bool = False
     is_controlled: bool = False
+    # Directness of the abstract's own result for the pair (1-10), judged independently of design or quality. Required:
+    # a grade without it is unusable and the paper is dropped.
+    relevance: int = Field(ge=1, le=10, strict=True)
 
     @model_validator(mode="before")
     @classmethod

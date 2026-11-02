@@ -43,7 +43,7 @@ indication_scout/
 │   │   ├── model_chembl.py
 │   │   ├── model_drug_profile.py
 │   │   └── model_evidence_summary.py
-│   ├── prompts/                   # LLM prompt templates (.txt files; incl. pmid_direction, extract_fda_approval_single, synthesize)
+│   ├── prompts/                   # LLM prompt templates (.txt files; incl. pmid_grade, extract_fda_approval_single, synthesize)
 │   ├── regression/                # Snapshot regression harness (diff.py, harness.py) — backs `scout diff-report`
 │   ├── report/                    # `format_report` — SupervisorOutput → markdown
 │   ├── runners/                   # Standalone runner scripts (pubmed_runner, rag_runner)
@@ -431,7 +431,7 @@ ChEMBL IDs and drug-name lists are persisted in dedicated per-drug JSON files un
 | `embeddings.py` | `embed`, `embed_async` (BioLORD-2023 via SentenceTransformer) |
 | `disease_helper.py` | `llm_normalize_disease`, `llm_normalize_disease_batch`, `merge_duplicate_diseases`, `pubmed_count`, `normalize_for_pubmed`, `normalize_batch`, `resolve_mesh_id` |
 | `pubmed_query.py` | `get_pubmed_query(drug_name, disease_name)` |
-| `retrieval.py` | `RetrievalService` — `build_drug_profile`, `get_drug_competitors`, `fetch_new_abstracts`, `embed_abstracts`, `fetch_and_cache`, `semantic_search`, `synthesize` (takes `approved_indications`; per-PMID directions via `_judge_pmid_directions`), `extract_organ_term`, `expand_search_terms` |
+| `retrieval.py` | `RetrievalService` — `build_drug_profile`, `get_drug_competitors`, `fetch_new_abstracts`, `embed_abstracts`, `fetch_and_cache`, `semantic_search`, `synthesize` (takes `approved_indications`; per-paper direction and design via `_judge_pmid_grades`), `extract_organ_term`, `expand_search_terms` |
 | `drug_safety.py` | `DrugSafetyService` — `safety_search` (drug-level + disease-scoped AE pools), `summarize_safety` (regulatory / pharmacovigilance / literature, source-separated), `classify_indication_harm` (per-paper adjudication). Built once per run and passed to the literature agent, because the in-flight openFDA label dedup must span the concurrent candidate fan-out. |
 | `condition_extraction.py` | `build_prompt`, `parse_response`, `extract_conditions` — one small-LLM call per Europe PMC abstract, cached per article, failures counted in `ExtractionResult.skipped` rather than recorded as NONE |
 | `condition_grouping.py` | `group_conditions` — one `merge_duplicate_diseases` call over all extracted names, returning `GroupedCondition` (canonical name, aliases, article keys) sorted by paper count, with already-approved conditions removed |

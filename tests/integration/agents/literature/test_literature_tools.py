@@ -267,7 +267,7 @@ async def test_synthesize(db_session_truncating, test_cache_dir):
     assert evidence.study_count >= _EXPECTED_MIN_STUDY_COUNT
     # The core NASH RCTs must be CITED — supporting, contradicting, OR neutral; which list a given
     # trial lands in is LLM judgment that varies run-to-run (e.g. 36934740 is the cirrhosis trial
-    # that FAILED its endpoint; 37328931 is a quality-of-life readout that pmid_direction may set
+    # that FAILED its endpoint; 37328931 is a quality-of-life readout that the per-paper grade may set
     # neutral). Only assert they were surfaced, not their list membership.
     cited = (
         set(evidence.supporting_pmids)

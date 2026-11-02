@@ -222,10 +222,11 @@ non-contaminated) — the literature analogue of the per-trial gate.
 - `approved` — the only relevant evidence is for an approved sub-indication.
 - `none` — no relevant abstracts retrieved.
 
-**Per-PMID direction sub-call (`_judge_pmid_directions`, the authority for direction).** A small
-isolated `query_small_llm` call over the RELEVANT abstracts asks ONE narrow question per abstract:
-"did THIS drug benefit THIS disease in THIS abstract? (supporting | contradicting | mixed)". Its
-verdict OVERRIDES synthesize's direction for any relevant PMID. This replaced earlier
+**Per-paper grade (`_judge_pmid_grades`, the authority for direction).** Before synthesis, each
+paper that passed both gates gets its own cached `query_small_llm` call that asks ONE narrow
+question: "did THIS drug benefit THIS disease in THIS abstract? (supporting | contradicting | mixed
+| neutral)", plus the study's own design and a 1-10 relevance score. Its verdict OVERRIDES
+synthesize's direction for every relevant PMID; a paper it cannot grade is dropped. This replaced earlier
 phrase-matching guards, which could not attribute a benefit to the right drug-arm — e.g. metformin
 × hepatic steatosis, where a *comparator's* benefit ("ipragliflozin significantly improved …
 metformin showed minimal change") or a side metabolic-marker improvement read as "supporting" for

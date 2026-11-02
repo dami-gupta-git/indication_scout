@@ -97,7 +97,7 @@ PUBTYPE_BOOSTS: dict[str, float] = {
 PUBTYPE_BOOST_DEFAULT: float = 1.0
 
 
-_PMID_DIRECTION_PROMPT = (_PROMPTS_DIR / "pmid_direction.txt").read_text()
+_PMID_GRADE_PROMPT = (_PROMPTS_DIR / "pmid_grade.txt").read_text()
 _EVIDENCE_DIRECTION_PROMPT = (_PROMPTS_DIR / "judge_evidence_direction.txt").read_text()
 _PMID_DRUG_IDENTITY_PROMPT = (_PROMPTS_DIR / "pmid_drug_identity.txt").read_text()
 # "class_level" = the abstract's result belongs to the drug's mechanistic class, not the drug alone (a pooled
@@ -321,54 +321,88 @@ async def _judge_pmid_treats_disease(
     return dict(decisions)
 
 
-async def _judge_pmid_directions(
-    drug: str, disease: str, relevant_abstracts: list["AbstractResult"]
+async def _judge_pmid_grades(
+    chembl_id: str,
+    drug: str,
+    disease: str,
+    abstracts: list["AbstractResult"],
+    cache_dir: Path,
 ) -> dict[str, PmidJudgment]:
-    """Per-PMID direction (supporting | contradicting | mixed | neutral) AND study design over the RELEVANT abstracts, via
-    a small isolated sub-call. This is the AUTHORITATIVE direction for each relevant abstract; it replaces the in-prompt
-    verdict-direction and the old regex guards, which couldn't attribute a benefit to the right drug arm (metformin ×
-    hepatic steatosis: a comparator's benefit read as supporting for metformin). The same call answers whether each study
-    is in humans and itself controlled (sildenafil × ischemic stroke: an uncontrolled human safety study whose background
-    described placebo-controlled rat experiments certified the pair as RCT-backed). Returns a {pmid: judgment} map; a PMID
-    the sub-call omits or labels unrecognizably is left out (the caller keeps the synthesize verdict for it).
+    """Grade each abstract in an isolated call: efficacy direction (supporting | contradicting | mixed | neutral), the
+    design of the study it reports (human, controlled), and a 1-10 relevance score. This is the AUTHORITATIVE direction
+    and design for each paper. One call per paper, cached by ChEMBL ID, PMID and disease, so a paper's grade cannot move
+    with the papers around it: graded in one batch, about one label in ten changed when the batch was split in two, and
+    the batch overused "mixed" for failed trials and inconclusive reviews. A missing or unusable response leaves the PMID
+    out of the result and is not cached; the caller drops that paper.
     """
-    if not relevant_abstracts:
+    if not abstracts:
         return {}
-    formatted = "\n\n".join(
-        f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
-        for r in relevant_abstracts
-    )
-    prompt = _PMID_DIRECTION_PROMPT.format(
-        drug=drug, disease=disease, abstracts=formatted
-    )
-    response = await query_small_llm(prompt)
-    data = parse_last_json_object(response)
-    if not isinstance(data, dict):
-        logger.warning(
-            "pmid_direction: unparseable sub-call response for %s / %s: %s",
-            drug,
-            disease,
-            response,
+
+    semaphore = asyncio.Semaphore(_settings.rag_llm_concurrency)
+
+    async def grade_one(result: "AbstractResult") -> tuple[str, PmidJudgment | None]:
+        cache_params = {
+            "chembl_id": chembl_id,
+            "pmid": result.pmid,
+            "disease": disease,
+            "small_llm_model": _settings.small_llm_model,
+            "logic_version": "pmid_grade_v1",
+        }
+        cached = cache_get("pmid_grade", cache_params, cache_dir)
+        if isinstance(cached, dict):
+            try:
+                return result.pmid, PmidJudgment(**cached)
+            except ValidationError:
+                logger.warning(
+                    "pmid_grade: discarding invalid cached grade for PMID %s",
+                    result.pmid,
+                )
+
+        prompt = _PMID_GRADE_PROMPT.format(
+            drug=drug,
+            disease=disease,
+            pmid=result.pmid,
+            title=result.title,
+            abstract=result.abstract,
         )
-        return {}
-    out: dict[str, PmidJudgment] = {}
-    valid_pmids = {r.pmid for r in relevant_abstracts}
-    for pmid, payload in data.items():
-        if str(pmid) not in valid_pmids or not isinstance(payload, dict):
-            continue
+        async with semaphore:
+            try:
+                response = await query_small_llm(prompt)
+            except DataSourceError as exc:
+                logger.warning(
+                    "pmid_grade: LLM call failed for %s / %s / PMID %s; dropping paper: %s",
+                    chembl_id,
+                    disease,
+                    result.pmid,
+                    exc,
+                )
+                return result.pmid, None
+        data = parse_last_json_object(response)
         try:
-            out[str(pmid)] = PmidJudgment(**payload)
+            judgment = PmidJudgment(**data) if isinstance(data, dict) else None
         except ValidationError:
-            # An unrecognized verdict drops the whole abstract; the caller keeps the synthesize verdict, and it can never
-            # certify the pair as controlled human evidence.
+            judgment = None
+        if judgment is None:
             logger.warning(
-                "pmid_direction: unusable judgment for PMID %s (%s / %s): %s",
-                pmid,
-                drug,
+                "pmid_grade: unusable grade for %s / %s / PMID %s; dropping paper. Response was: %s",
+                chembl_id,
                 disease,
-                payload,
+                result.pmid,
+                response,
             )
-    return out
+            return result.pmid, None
+
+        cache_set(
+            "pmid_grade",
+            cache_params,
+            judgment.model_dump(mode="json"),
+            cache_dir,
+            ttl=CACHE_TTL,
+        )
+        return result.pmid, judgment
+
+    graded = await asyncio.gather(*(grade_one(result) for result in abstracts))
+    return {pmid: judgment for pmid, judgment in graded if judgment is not None}
 
 
 async def _judge_overall_evidence_direction(
@@ -1365,7 +1399,7 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or derived fields (direction rollup, strength cap) change, so stale judgments
             # cannot preserve behavior the new rules reject.
-            "logic_version": "per_pmid_class_and_target_gates_v6_animal_only_from_judgments",
+            "logic_version": "per_pmid_class_and_target_gates_v7_isolated_pmid_grade",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -1393,12 +1427,22 @@ class RetrievalService:
             ],
             self.cache_dir,
         )
-        synthesis_abstracts = [
+        gated_abstracts = [
             result
             for result in top_abstracts
             if drug_identity.get(result.pmid) == "studied"
             and on_topic.get(result.pmid, False)
         ]
+        # Every paper that passed both gates is graded on its own before synthesis; the grade is authoritative for its
+        # direction and design. A paper the grader could not grade is dropped (fail closed), and the summary is then not
+        # cached, so a transient grader failure is retried on the next run instead of persisting as missing evidence.
+        pmid_grades = await _judge_pmid_grades(
+            chembl_id, pref_name, disease, gated_abstracts, self.cache_dir
+        )
+        synthesis_abstracts = [
+            result for result in gated_abstracts if result.pmid in pmid_grades
+        ]
+        grading_complete = len(synthesis_abstracts) == len(gated_abstracts)
         # Class-level papers never enter the supporting/contradicting lists; they only distinguish "no evidence at all"
         # from "evidence exists, but only for the class".
         class_level_pmids = [
@@ -1423,13 +1467,14 @@ class RetrievalService:
                 contaminated_pmids=[result.pmid for result in top_abstracts],
                 neutral_pmids=[],
             )
-            cache_set(
-                "synthesize",
-                cache_params,
-                summary.model_dump(mode="json"),
-                self.cache_dir,
-                ttl=CACHE_TTL,
-            )
+            if grading_complete:
+                cache_set(
+                    "synthesize",
+                    cache_params,
+                    summary.model_dump(mode="json"),
+                    self.cache_dir,
+                    ttl=CACHE_TTL,
+                )
             return summary
 
         logger.info(
@@ -1518,7 +1563,7 @@ class RetrievalService:
         verdicts = data.get("verdicts")
         input_pmids = [r.pmid for r in top_abstracts]
         synthesis_pmids = {r.pmid for r in synthesis_abstracts}
-        # Relevant = anything not contaminated. "neutral" (PK/safety/mechanism, set by the direction sub-call) is relevant
+        # Relevant = anything not contaminated. "neutral" (PK/safety/mechanism, set by the per-paper grade) is relevant
         # and counts toward study_count but is excluded from supporting AND contradicting below. synthesize never emits it.
         _RELEVANT_VERDICTS = {"supporting", "contradicting", "mixed", "neutral"}
         if isinstance(verdicts, dict):
@@ -1540,32 +1585,25 @@ class RetrievalService:
             )
             verdict_of = dict.fromkeys(input_pmids, "contaminated")
 
-        # AUTHORITATIVE per-PMID DIRECTION via an isolated sub-call over the relevant abstracts. synthesize's verdict map
-        # decides relevant-vs-contaminated; this sub-call decides supporting/contradicting/mixed, replacing phrase-matching
-        # guards that couldn't attribute a benefit to the right drug arm (metformin × hepatic steatosis). It OVERRIDES the
-        # synthesize direction for any relevant PMID it returns; omitted PMIDs keep the synthesize direction.
+        # AUTHORITATIVE per-paper DIRECTION from the grades made before synthesis. synthesize's verdict map decides
+        # relevant-vs-contaminated; the grade decides supporting/contradicting/mixed/neutral for every relevant paper,
+        # replacing phrase-matching guards that couldn't attribute a benefit to the right drug arm (metformin x hepatic
+        # steatosis). Every synthesis paper carries a grade, since ungraded papers were dropped before the call.
         relevant_for_direction = [
             r for r in synthesis_abstracts if verdict_of[r.pmid] in _RELEVANT_VERDICTS
         ]
-        logger.info(
-            "[LIT] judging %s: %d relevant abstracts",
-            disease,
-            len(relevant_for_direction),
-        )
-        pmid_judgments = await _judge_pmid_directions(
-            pref_name, disease, relevant_for_direction
-        )
-        for p, pmid_judgment in pmid_judgments.items():
-            if verdict_of.get(p) != pmid_judgment.verdict:
+        for result in relevant_for_direction:
+            graded_verdict = pmid_grades[result.pmid].verdict
+            if verdict_of[result.pmid] != graded_verdict:
                 logger.debug(
-                    "synthesize: pmid_direction set PMID %s %s->%s for %s / %s",
-                    p,
-                    verdict_of.get(p),
-                    pmid_judgment.verdict,
+                    "synthesize: pmid_grade set PMID %s %s->%s for %s / %s",
+                    result.pmid,
+                    verdict_of[result.pmid],
+                    graded_verdict,
                     chembl_id,
                     disease,
                 )
-                verdict_of[p] = pmid_judgment.verdict
+                verdict_of[result.pmid] = graded_verdict
 
         relevant_pmids = [p for p in input_pmids if verdict_of[p] in _RELEVANT_VERDICTS]
         contaminated_pmids = [
@@ -1596,12 +1634,12 @@ class RetrievalService:
         # grade, so they must not set the design word). The judgment is per abstract because a document-wide phrase match
         # can't tell a study's own design from one it cites (sildenafil × ischemic stroke: an uncontrolled 12-patient safety
         # study describing placebo-controlled rat experiments supplied the "RCT-backed" claim). The guard is one-way: it
-        # withdraws an unsupported controlled claim and never upgrades. With no judgments (sub-call failure), the synthesis
-        # value stands.
+        # withdraws an unsupported controlled claim and never upgrades. With no efficacy-verdict paper, the synthesis value
+        # stands.
         directional_judgments = [
-            pmid_judgment
-            for pmid, pmid_judgment in pmid_judgments.items()
-            if verdict_of[pmid] in ("supporting", "contradicting", "mixed")
+            pmid_grades[result.pmid]
+            for result in relevant_for_direction
+            if verdict_of[result.pmid] in ("supporting", "contradicting", "mixed")
         ]
         if (
             summary.evidence_basis == "drug_specific"
@@ -1618,7 +1656,7 @@ class RetrievalService:
         # neutral safety study, as human evidence (sildenafil x ischemic stroke read "moderate, supports" on two rodent
         # studies plus a 12-patient safety study). Only efficacy-verdict papers count. If none is human the pair is
         # animal-only and strength is capped at "weak"; if at least one is human it is not. Both are one-way (a grade is
-        # never raised), and with no judgments the synthesis values stand.
+        # never raised), and with no efficacy-verdict paper the synthesis values stand.
         if summary.evidence_basis == "drug_specific" and directional_judgments:
             any_human = any(
                 pmid_judgment.is_human for pmid_judgment in directional_judgments
@@ -1677,13 +1715,14 @@ class RetrievalService:
             summary.strength = "none"
             summary.direction = "none"
 
-        cache_set(
-            "synthesize",
-            cache_params,
-            summary.model_dump(mode="json"),
-            self.cache_dir,
-            ttl=CACHE_TTL,
-        )
+        if grading_complete:
+            cache_set(
+                "synthesize",
+                cache_params,
+                summary.model_dump(mode="json"),
+                self.cache_dir,
+                ttl=CACHE_TTL,
+            )
 
         return summary
 
