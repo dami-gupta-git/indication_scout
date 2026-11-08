@@ -48,6 +48,11 @@ ANALYSIS_DURATION_BUCKETS_SECONDS: tuple[float, ...] = (
 # encode compute is unchanged — this only removes head-of-line blocking.
 EMBED_LOCK_CHUNK_SIZE: int = 64
 
+# Memory monitor cadence (memory_monitor.py): seconds between process-memory log samples while an analysis job is
+# pending/running, and while the API is idle.
+MEMORY_SAMPLE_ACTIVE_SECONDS: float = 5.0
+MEMORY_SAMPLE_IDLE_SECONDS: float = 300.0
+
 # -- Cache ------------------------------------------------------------------
 # (cache dir resolution below; see SCOUT_CACHE_DIR override note)
 # Anchored to the project root (two levels above this package's src/ dir) so
