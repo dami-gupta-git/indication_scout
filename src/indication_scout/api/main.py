@@ -183,6 +183,22 @@ async def close_run_persistence() -> None:
 
 
 @app.on_event("startup")
+async def start_memory_monitor_thread() -> None:
+    """Start periodic process-memory logging (RSS and glibc allocator totals)."""
+    from indication_scout.memory_monitor import start_memory_monitor
+
+    start_memory_monitor()
+
+
+@app.on_event("shutdown")
+async def stop_memory_monitor_thread() -> None:
+    """Stop the memory-logging thread."""
+    from indication_scout.memory_monitor import stop_memory_monitor
+
+    stop_memory_monitor()
+
+
+@app.on_event("startup")
 async def seed_examples() -> None:
     """Seed the example cache from committed snapshots when the volume is empty."""
     seed_example_cache()
