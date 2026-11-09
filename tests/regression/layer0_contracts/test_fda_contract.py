@@ -16,7 +16,8 @@ async def test_get_label_indications_returns_one_string_per_label(
     async with contract_client(FDAClient, "fda_labels") as client:
         indications = await client.get_label_indications("pioglitazone")
 
-    assert len(indications) == 5
+    # 5 labels recorded; one (set_id 008c5659-...) has no indications_and_usage section.
+    assert len(indications) == 4
     assert all(
         "INDICATIONS AND USAGE" in text and "type 2 diabetes mellitus" in text
         for text in indications
@@ -30,8 +31,8 @@ async def test_get_label_safety_parses_boxed_warnings(
         records = await client.get_label_safety("pioglitazone")
 
     assert len(records) == 5
-    record = records[0]
-    assert record.set_id == "0331400c-b163-4856-bfb0-965470247cb3"
+    by_set_id = {r.set_id: r for r in records}
+    record = by_set_id["0331400c-b163-4856-bfb0-965470247cb3"]
     assert record.effective_time == "20250517"
     assert record.brand_names == ["PIOGLITAZONE HYDROCHLORIDE"]
     assert record.generic_names == ["PIOGLITAZONE HYDROCHLORIDE"]
