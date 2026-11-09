@@ -31,6 +31,9 @@ WORKDIR /app
 
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    # Cap glibc malloc arenas. The default cap is 8 x host cores (384 on Railway's 48-core hosts); each thread that gets
+    # its own arena keeps the memory it freed, so threaded work leaves RSS far above the live heap.
+    MALLOC_ARENA_MAX=2 \
     # NOTE: PIP_NO_CACHE_DIR is intentionally NOT set. It disables pip's wheel
     # cache, which nullifies the BuildKit `--mount=type=cache` on the pip steps
     # below — pip would re-download every wheel on every build. The cache lives

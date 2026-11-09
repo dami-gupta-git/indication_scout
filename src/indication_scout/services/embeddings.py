@@ -20,9 +20,11 @@ scripts/prefetch_embedding_model.py.
 """
 
 import asyncio
+import contextvars
 import logging
 import os
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from sentence_transformers import SentenceTransformer
@@ -34,6 +36,12 @@ logger = logging.getLogger(__name__)
 
 # Module-level singleton. None until the first call to embed().
 _model: SentenceTransformer | None = None
+
+# The one thread that runs every model load and encode(). Encodes are already serialized by _model_lock, so a single
+# thread costs no throughput. Running them on the shared default pool instead spread chunks across up to 32 threads (the
+# pool is sized from the host's core count, 48 on Railway); glibc gives each thread its own malloc arena, and each arena
+# kept the few hundred MB of freed encode buffers, so RSS climbed to 8-17 GB while live heap stayed ~1.5 GB.
+_EMBED_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="embed")
 
 
 def _cgroup_cpu_quota() -> int | None:
@@ -191,11 +199,13 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
     Acquires _model_lock so that concurrent callers (e.g. parallel disease
     iterations in run_rag) do not race during model initialisation or encode().
 
-    embed() is CPU-bound (model.encode blocks for the full batch), so it runs in
-    a worker thread via asyncio.to_thread — otherwise it would freeze the event
-    loop for the whole encode, stalling every other request (health checks,
-    polling, concurrent analyses). The lock still serializes encodes (the model
-    is not safe to run concurrently), but the loop stays free while waiting.
+    embed() is CPU-bound (model.encode blocks for the full batch), so it runs on
+    the dedicated single embedding thread (_EMBED_EXECUTOR) — otherwise it would
+    freeze the event loop for the whole encode, stalling every other request
+    (health checks, polling, concurrent analyses). The lock still serializes
+    encodes (the model is not safe to run concurrently), but the loop stays free
+    while waiting. See _EMBED_EXECUTOR for why it is one fixed thread and not
+    the shared default pool.
 
     Head-of-line fairness: a large batch is embedded in chunks of
     EMBED_LOCK_CHUNK_SIZE, releasing and re-acquiring the lock between chunks.
@@ -235,7 +245,10 @@ async def embed_async(texts: list[str]) -> list[list[float]]:
         async with _model_lock():
             total_wait += time.perf_counter() - _t_wait
             _t_enc = time.perf_counter()
-            chunk_vectors = await asyncio.to_thread(embed, chunk)
+            ctx = contextvars.copy_context()
+            chunk_vectors = await asyncio.get_running_loop().run_in_executor(
+                _EMBED_EXECUTOR, ctx.run, embed, chunk
+            )
             total_enc += time.perf_counter() - _t_enc
         vectors.extend(chunk_vectors)
         n_chunks += 1
