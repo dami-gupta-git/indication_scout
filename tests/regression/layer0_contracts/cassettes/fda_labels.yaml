@@ -11,7 +11,7 @@ interactions:
         data is accurate, you should assume all results are unvalidated. We may limit
         or otherwise restrict your access to the API in line with our Terms of Service.\",\n
         \   \"terms\": \"https://open.fda.gov/terms/\",\n    \"license\": \"https://open.fda.gov/license/\",\n
-        \   \"last_updated\": \"2026-10-30\",\n    \"results\": {\n      \"skip\":
+        \   \"last_updated\": \"2026-11-06\",\n    \"results\": {\n      \"skip\":
         0,\n      \"limit\": 5,\n      \"total\": 176\n    }\n  },\n  \"results\":
         [\n    {\n      \"spl_product_data_elements\": [\n        \"pioglitazone pioglitazone
         PIOGLITAZONE HYDROCHLORIDE PIOGLITAZONE CARBOXYMETHYLCELLULOSE CALCIUM LACTOSE
@@ -12606,9 +12606,9 @@ interactions:
       Content-Type:
       - application/json; charset=utf-8
       Date:
-      - Sat, 31 Oct 2026 23:32:30 GMT
+      - Mon, 09 Nov 2026 19:36:44 GMT
       Etag:
-      - W/"ea00e-Nh1GH+8os3KrVkVDkTYRnam6tR8"
+      - W/"ea00e-UkiYt2MAF+S2APmkWxOn+tcGlrk"
       Link:
       - <https://api.fda.gov/drug/label.json?search=%28openfda.brand_name%3A%22pioglitazone%22%20OR%20openfda.generic_name%3A%22pioglitazone%22%20OR%20spl_product_data_elements%3A%22pioglitazone%22%29&limit=5&skip=0&search_after=0%3D0478f0e7-87fb-4adb-ae9b-6624555ccbe4>;
         rel="next"
@@ -12622,7 +12622,7 @@ interactions:
       Via:
       - https/1.1 api-umbrella (ApacheTrafficServer [cMsSf ])
       X-Api-Umbrella-Request-Id:
-      - d1ih7bldp56nf5b3hrsg
+      - d1o781v3sj50v20qpemg
       X-Cache:
       - MISS
       X-Content-Type-Options:
@@ -12634,7 +12634,7 @@ interactions:
       X-Ratelimit-Remaining:
       - '238'
       X-Vcap-Request-Id:
-      - 3d444792-8441-4f34-5c11-47b02960ac3a
+      - 1bc63dba-73d8-4c17-4924-09e29a7c3b92
       X-Xss-Protection:
       - 1; mode=block
       content-length:
