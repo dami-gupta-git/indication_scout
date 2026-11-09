@@ -8,9 +8,12 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from indication_scout.constants import (
+    LITERATURE_RECENT_BUDGET,
     LITERATURE_SCREEN_BATCH,
     LITERATURE_SCREEN_MAX_DEPTH,
     LITERATURE_SCREEN_TARGET_PASSERS,
+    LITERATURE_SHALLOW_DEPTH,
+    SYNTHESIS_MAX_TOKENS,
 )
 from indication_scout.models.model_chembl import ATCDescription
 from indication_scout.models.model_clinical_trials import SearchTrialsResult, Trial
@@ -23,9 +26,13 @@ from indication_scout.models.model_open_targets import (
     TargetData,
 )
 from indication_scout.models.model_pubmed_abstract import PubmedAbstract
+from indication_scout.services import retrieval
 from indication_scout.services.retrieval import (
     AbstractResult,
     RetrievalService,
+    _recent_pass,
+    _union_tagged,
+    pub_year,
 )
 
 _FIND_TRIAL_LINKED_PMIDS = RetrievalService.find_trial_linked_pmids
@@ -1083,9 +1090,12 @@ async def test_cache_trial_reference_abstracts_applies_holdout_post_guard(svc):
 
 
 def _make_db_with_rows(rows: list[tuple]) -> MagicMock:
-    """Return a mock Session whose execute().fetchall() yields the given rows."""
+    """Return a mock Session whose execute().fetchall() yields the given rows. A (pmid, title, abstract, similarity) row
+    is given a None pub_date, so it is undated and the recent pass skips it."""
     mock_result = MagicMock()
-    mock_result.fetchall.return_value = rows
+    mock_result.fetchall.return_value = [
+        row + (None,) if len(row) == 4 else row for row in rows
+    ]
     mock_db = MagicMock()
     mock_db.execute.return_value = mock_result
     return mock_db
@@ -1425,17 +1435,77 @@ async def test_semantic_search_counts_only_papers_passing_both_gates(
     assert len(result) == batches * LITERATURE_SCREEN_BATCH
 
 
-async def test_semantic_search_target_none_skips_gates_and_reads_full_depth(
+async def test_semantic_search_non_adaptive_skips_gates_and_reads_full_depth(
     svc, mock_pubtypes_empty
 ):
-    """target_passers=None (the depth sweep) returns `depth` papers without calling either gate."""
+    """adaptive=False (the depth sweep) returns `depth` papers without calling either gate."""
     rows = _metformin_rows(40)
     result, treats = await _search_with_gates(
-        svc, rows, lambda pmid: True, depth=25, target_passers=None
+        svc, rows, lambda pmid: True, depth=25, adaptive=False, recent_pass=False
     )
 
     assert len(result) == 25
     treats.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    "deep, recent, expected_pmids, gates_called",
+    [
+        # Deep screening off: the fixed shallow window, no gate calls, then the recent pass.
+        (
+            False,
+            True,
+            [str(i) for i in range(LITERATURE_SHALLOW_DEPTH)]
+            + [
+                str(i)
+                for i in range(
+                    LITERATURE_SHALLOW_DEPTH,
+                    LITERATURE_SHALLOW_DEPTH + LITERATURE_RECENT_BUDGET,
+                )
+            ],
+            False,
+        ),
+        # Both off: the fixed shallow window only.
+        (False, False, [str(i) for i in range(LITERATURE_SHALLOW_DEPTH)], False),
+        # Recent pass off: the adaptive window only (every paper passes, so it stops at the target's batch).
+        (
+            True,
+            False,
+            [
+                str(i)
+                for i in range(
+                    -(-LITERATURE_SCREEN_TARGET_PASSERS // LITERATURE_SCREEN_BATCH)
+                    * LITERATURE_SCREEN_BATCH
+                )
+            ],
+            True,
+        ),
+    ],
+)
+async def test_semantic_search_follows_screening_settings(
+    svc, mock_pubtypes_empty, deep, recent, expected_pmids, gates_called
+):
+    """The literature_deep_screening and literature_recent_pass settings pick the window when the caller passes
+    neither `adaptive` nor `recent_pass`. Every row has a NULL pub_date except the recent ones.
+    """
+    rows = [
+        (
+            row[0],
+            row[1],
+            row[2],
+            row[3],
+            "2025-Mar" if int(row[0]) >= LITERATURE_SHALLOW_DEPTH else None,
+        )
+        for row in _metformin_rows(LITERATURE_SCREEN_MAX_DEPTH)
+    ]
+    settings = retrieval._settings.model_copy(
+        update={"literature_deep_screening": deep, "literature_recent_pass": recent}
+    )
+    with patch.object(retrieval, "_settings", settings):
+        result, treats = await _search_with_gates(svc, rows, lambda pmid: True)
+
+    assert [paper.pmid for paper in result] == expected_pmids
+    assert treats.await_count > 0 if gates_called else treats.await_count == 0
 
 
 @pytest.mark.parametrize("passes_disease_gate", [True, False])
@@ -1509,6 +1579,111 @@ async def test_semantic_search_trial_lane_requires_both_relevance_gates(
     assert str(top_k + 2) not in {paper.pmid for paper in result}
 
 
+@pytest.mark.parametrize(
+    "pub_date, expected",
+    [
+        ("2021", 2021),
+        ("2021-Nov", 2021),
+        ("2021-11-03", 2021),
+        (None, None),
+        ("Spring 2002", None),
+    ],
+)
+def test_pub_year(pub_date, expected):
+    assert pub_year(pub_date) == expected
+
+
+def test_recent_pass_respects_budget_window_and_dates():
+    """Papers are taken in ranked order from the reference year minus LITERATURE_RECENT_YEARS on, skipping window
+    papers, undated and older papers, up to LITERATURE_RECENT_BUDGET."""
+    ranked = [
+        AbstractResult(pmid=str(i), title=f"T{i}", abstract="A", similarity=0.5)
+        for i in range(40)
+    ]
+    years = {str(i): 2024 for i in range(30)}
+    years["1"] = 2022
+    years.pop("2")
+
+    result = _recent_pass(ranked, years, 2026, exclude={"0"})
+
+    expected = [str(i) for i in range(3, 30)][:LITERATURE_RECENT_BUDGET]
+    assert [r.pmid for r in result] == expected
+
+
+def test_union_tagged_keeps_one_copy_with_both_tags():
+    window = [
+        AbstractResult(
+            pmid="1",
+            title="T1",
+            abstract="A1",
+            similarity=0.9,
+            selected_by=["relevance"],
+        )
+    ]
+    extra = [
+        AbstractResult(pmid="1", title="T1", abstract="A1", similarity=0.9),
+        AbstractResult(pmid="2", title="T2", abstract="A2", similarity=0.4),
+    ]
+
+    result = _union_tagged(window, extra, "recent")
+
+    assert len(result) == 2
+    assert result[0].pmid == "1"
+    assert result[0].title == "T1"
+    assert result[0].abstract == "A1"
+    assert result[0].similarity == 0.9
+    assert result[0].selected_by == ["relevance", "recent"]
+    assert result[1].pmid == "2"
+    assert result[1].selected_by == ["recent"]
+
+
+@pytest.mark.parametrize(
+    "date_before, expected_recent",
+    [
+        (None, [str(i) for i in range(40, 50)]),
+        (date(2020, 6, 1), [str(i) for i in range(40, 55)]),
+    ],
+)
+async def test_semantic_search_appends_recent_papers_after_window(
+    svc, mock_pubtypes_empty, date_before, expected_recent
+):
+    """Every paper passes, so the window stops at two batches; the recent pass then adds the later papers dated within
+    LITERATURE_RECENT_YEARS of the run year, or of date_before's year when set. Undated papers are skipped.
+    """
+    rows = [
+        (
+            str(i),
+            f"Metformin study {i}",
+            f"Abstract {i}",
+            0.9 - 0.001 * i,
+            "2025-Mar" if i < 50 else ("2018" if i < 55 else None),
+        )
+        for i in range(60)
+    ]
+    with patch.object(
+        svc, "_filter_pmids_by_date", new=AsyncMock(side_effect=lambda p, *a: p)
+    ):
+        result, _ = await _search_with_gates(
+            svc, rows, lambda pmid: True, date_before=date_before
+        )
+
+    window_size = (
+        -(-LITERATURE_SCREEN_TARGET_PASSERS // LITERATURE_SCREEN_BATCH)
+        * LITERATURE_SCREEN_BATCH
+    )
+    assert [r.pmid for r in result] == [str(i) for i in range(window_size)] + (
+        expected_recent
+    )
+    assert result[0].selected_by == ["relevance"]
+    extra = result[window_size]
+    assert extra.pmid == "40"
+    assert extra.title == "Metformin study 40"
+    assert extra.abstract == "Abstract 40"
+    assert extra.similarity == 0.9 - 0.001 * 40
+    assert extra.pubtype == []
+    assert extra.selected_by == ["recent"]
+
+
 async def test_semantic_search_similarity_is_float(
     svc, mock_pubtypes_empty, mock_gates_none
 ):
@@ -1576,6 +1751,7 @@ async def test_semantic_search_releases_db_before_fetching_pubtypes(
             abstract="Abstract",
             similarity=0.9,
             pubtype=[],
+            selected_by=["relevance"],
         )
     ]
     mock_client.fetch_pubtypes.assert_awaited_once_with(["111"])
@@ -1620,7 +1796,7 @@ async def test_synthesize_calls_llm_with_correct_prompt(svc):
     """query_llm is called with a prompt containing drug, disease, and abstract content."""
     captured = {}
 
-    async def capture_llm(prompt: str) -> str:
+    async def capture_llm(prompt: str, max_tokens: int | None = None) -> str:
         captured["prompt"] = prompt
         return _SAMPLE_LLM_RESPONSE
 
@@ -1657,7 +1833,7 @@ async def test_synthesize_prompt_uses_pref_name(svc):
     """
     captured = {}
 
-    async def capture_llm(prompt: str) -> str:
+    async def capture_llm(prompt: str, max_tokens: int | None = None) -> str:
         captured["prompt"] = prompt
         return _SAMPLE_LLM_RESPONSE
 
@@ -1907,17 +2083,16 @@ async def test_synthesize_neutral_paper_cannot_certify_controlled_design(svc):
 
 async def test_synthesize_degrades_to_safe_floor_on_invalid_json(svc):
     """Unparseable LLM JSON degrades to a safe untested floor (no raise): basis none, strength
-    none, all abstracts contaminated. The tolerant parse + floor keeps the pipeline alive.
+    none, all abstracts contaminated. The tolerant parse + floor keeps the pipeline alive. The floor is not cached, so
+    a second call asks the LLM again instead of reading the floor back.
     """
+    llm_mock = AsyncMock(return_value="not valid json at all")
     with (
         patch(
             "indication_scout.services.retrieval.get_all_drug_names",
             new=AsyncMock(return_value=["metformin"]),
         ),
-        patch(
-            "indication_scout.services.retrieval.query_llm",
-            new=AsyncMock(return_value="not valid json at all"),
-        ),
+        patch("indication_scout.services.retrieval.query_llm", new=llm_mock),
         patch(
             "indication_scout.services.retrieval._judge_pmid_grades",
             new=_grades(
@@ -1929,6 +2104,10 @@ async def test_synthesize_degrades_to_safe_floor_on_invalid_json(svc):
         result = await svc.synthesize(
             "CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS
         )
+        assert llm_mock.await_count == 1
+        await svc.synthesize("CHEMBL1431", "colorectal cancer", _SAMPLE_ABSTRACTS)
+        assert llm_mock.await_count == 2
+    assert llm_mock.await_args.kwargs["max_tokens"] == SYNTHESIS_MAX_TOKENS
     assert result.evidence_basis == "none"
     assert result.strength == "none"
     assert result.direction == "none"
@@ -2079,7 +2258,7 @@ async def test_synthesize_class_level_paper_never_counts_as_drug_specific_eviden
     )
     captured: dict[str, str] = {}
 
-    async def capture_llm(prompt: str) -> str:
+    async def capture_llm(prompt: str, max_tokens: int | None = None) -> str:
         captured["prompt"] = prompt
         return main
 
@@ -2192,7 +2371,7 @@ async def test_synthesize_target_gate_excludes_disease_observed_but_not_treated(
     )
     captured: dict[str, str] = {}
 
-    async def capture_llm(prompt: str) -> str:
+    async def capture_llm(prompt: str, max_tokens: int | None = None) -> str:
         captured["prompt"] = prompt
         return main
 
@@ -2328,7 +2507,7 @@ async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(sv
     )
     captured: dict[str, str] = {}
 
-    async def capture_llm(prompt: str) -> str:
+    async def capture_llm(prompt: str, max_tokens: int | None = None) -> str:
         captured["prompt"] = prompt
         return main
 
@@ -2498,7 +2677,7 @@ async def test_synthesize_drops_ungraded_paper_and_does_not_cache(svc):
     )
     captured: list[str] = []
 
-    async def capture_llm(prompt: str) -> str:
+    async def capture_llm(prompt: str, max_tokens: int | None = None) -> str:
         captured.append(prompt)
         return main
 

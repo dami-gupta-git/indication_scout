@@ -145,12 +145,24 @@ LITERATURE_TRIAL_REFERENCE_RESERVE: int = 1
 # semaglutide) showed lightly studied pairs stop gaining passers by 30-50 while heavily studied pairs keep
 # gaining to 120, so no fixed depth fits both (PLAN_literature_screening, Phase 1).
 LITERATURE_SCREEN_MAX_DEPTH: int = 120
+# Fixed window read when the LITERATURE_DEEP_SCREENING setting is off: the top-15 cutoff used before the adaptive screen.
+LITERATURE_SHALLOW_DEPTH: int = 15
 LITERATURE_SCREEN_BATCH: int = 20
 # PROVISIONAL: set to the synthesis cap (LITERATURE_SYNTHESIS_MAX) once Phase 4 measures it.
 LITERATURE_SCREEN_TARGET_PASSERS: int = 30
 # Over-fetch multiplier for the publication-type rerank: this many times the depth are pulled by
 # similarity before the boost reorders them, so a 2x RCT boost deep in the list can still reach the top.
 LITERATURE_RERANK_HEADROOM: int = 10
+# Recent pass: after the adaptive window, add up to this many rerank candidates published in the last
+# LITERATURE_RECENT_YEARS (of the run year, or of date_before's year in holdout runs) that the window missed, in
+# relevance order. Kept by the PLAN_literature_screening Phase 3 ablation; the other passes tested were rejected.
+LITERATURE_RECENT_BUDGET: int = 20
+LITERATURE_RECENT_YEARS: int = 3
+# Output-token limit for the literature synthesis call. The model writes a per-abstract classification before its JSON
+# (about 150 output tokens per abstract: semaglutide x heart failure, 54 abstracts, 8,207 tokens), so the output grows
+# with the window, which can reach LITERATURE_SCREEN_MAX_DEPTH + LITERATURE_TRIAL_REFERENCE_RESERVE +
+# LITERATURE_RECENT_BUDGET abstracts (about 21k tokens). At the shared 8,192 limit that pair was cut off mid-JSON.
+SYNTHESIS_MAX_TOKENS: int = 32000
 # Operational chunk size for batched PubMed Secondary Source ID queries. This limits URL length;
 # results from every chunk still form one evidence lane.
 PUBMED_NCT_QUERY_BATCH_SIZE: int = 50

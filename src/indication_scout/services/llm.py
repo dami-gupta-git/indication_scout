@@ -114,16 +114,26 @@ def parse_last_json_object(response: str) -> dict | None:
     return None
 
 
-async def query_llm(prompt: str, system: str = "") -> str:
-    response = await client.messages.create(
+async def query_llm(
+    prompt: str, system: str = "", max_tokens: int | None = None
+) -> str:
+    # Streamed so a caller can raise max_tokens past the SDK's non-streaming ceiling (the synthesis call does).
+    async with client.messages.stream(
         model=_model,
-        max_tokens=_settings.llm_max_tokens,
+        max_tokens=max_tokens or _settings.llm_max_tokens,
         system=system or omit,
         messages=[{"role": "user", "content": prompt}],
         # The 1.x SDK dropped temperature from the create signature; the API still accepts it in the body.
         extra_body={"temperature": 0},
-    )
+    ) as stream:
+        response = await stream.get_final_message()
     record_anthropic_response(response)
+    if response.stop_reason == "max_tokens":
+        # The text is returned as is; the caller's parse decides what a cut-off response is worth.
+        logger.error(
+            "query_llm: response cut off at max_tokens=%d",
+            max_tokens or _settings.llm_max_tokens,
+        )
     if not response.content:
         raise DataSourceError(
             "llm", f"Empty content in LLM response (stop_reason={response.stop_reason})"

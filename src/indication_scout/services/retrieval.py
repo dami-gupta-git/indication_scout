@@ -19,13 +19,17 @@ from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
+    LITERATURE_RECENT_BUDGET,
+    LITERATURE_RECENT_YEARS,
     LITERATURE_RERANK_HEADROOM,
     LITERATURE_SCREEN_BATCH,
     LITERATURE_SCREEN_MAX_DEPTH,
     LITERATURE_SCREEN_TARGET_PASSERS,
+    LITERATURE_SHALLOW_DEPTH,
     LITERATURE_TRIAL_REFERENCE_RESERVE,
     OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
     PUBMED_NCT_QUERY_BATCH_SIZE,
+    SYNTHESIS_MAX_TOKENS,
 )
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import ChEMBLClient, get_all_drug_names
@@ -144,6 +148,55 @@ def _names_in_text(drug_names: list[str], title: str, abstract: str | None) -> b
         for name in drug_names
         if (normalized_name := normalize(name))
     )
+
+
+def pub_year(pub_date: str | None) -> int | None:
+    """Year of a `pubmed_abstracts.pub_date` ("2021", "2021-Nov", "2021-Nov-03", "2021-11", "2021-11-03"); None when the
+    value does not start with a four-digit year."""
+    match = re.match(r"^(\d{4})(?:-|$)", pub_date or "")
+    return int(match.group(1)) if match else None
+
+
+def _recent_pass(
+    ranked: list["AbstractResult"],
+    pub_years: dict[str, int],
+    reference_year: int,
+    exclude: set[str],
+) -> list["AbstractResult"]:
+    """The first LITERATURE_RECENT_BUDGET papers of `ranked` (relevance order) published in or after
+    `reference_year - LITERATURE_RECENT_YEARS` and not in `exclude`. An undated paper is skipped here only.
+    """
+    start_year = reference_year - LITERATURE_RECENT_YEARS
+    return [
+        result
+        for result in ranked
+        if result.pmid not in exclude
+        and (year := pub_years.get(result.pmid)) is not None
+        and year >= start_year
+    ][:LITERATURE_RECENT_BUDGET]
+
+
+def _union_tagged(
+    window: list["AbstractResult"], extra: list["AbstractResult"], tag: str
+) -> list["AbstractResult"]:
+    """`window` followed by the papers of `extra` it lacks, one copy per PMID. A paper in both keeps its window position
+    and gains `tag` in `selected_by`."""
+    in_window = {result.pmid for result in window}
+    extra_pmids = {result.pmid for result in extra}
+    merged = [
+        (
+            result.model_copy(update={"selected_by": [*result.selected_by, tag]})
+            if result.pmid in extra_pmids and tag not in result.selected_by
+            else result
+        )
+        for result in window
+    ]
+    merged += [
+        result.model_copy(update={"selected_by": [tag]})
+        for result in extra
+        if result.pmid not in in_window
+    ]
+    return merged
 
 
 def _mentions_exact_drug(drug_names: list[str], result: "AbstractResult") -> bool:
@@ -499,6 +552,10 @@ class AbstractResult(BaseModel):
     abstract: str
     similarity: float
     pubtype: list[str] = []
+    # What put the paper in the screening window: "relevance" (the adaptive relevance cut), "trial_reference" (a
+    # gate-passing publication linked from a ClinicalTrials.gov record), "recent" (the recent pass). Empty outside
+    # semantic_search.
+    selected_by: list[str] = []
 
 
 class RetrievalService:
@@ -1085,8 +1142,10 @@ class RetrievalService:
         pmids: list[str],
         db: Session,
         date_before: date | None = None,
-        depth: int = LITERATURE_SCREEN_MAX_DEPTH,
-        target_passers: int | None = LITERATURE_SCREEN_TARGET_PASSERS,
+        depth: int | None = None,
+        target_passers: int = LITERATURE_SCREEN_TARGET_PASSERS,
+        adaptive: bool | None = None,
+        recent_pass: bool | None = None,
     ) -> list[AbstractResult]:
         """For a given drug, disease, and list of PMIDs, return the screening window of drug-named abstracts.
 
@@ -1106,12 +1165,20 @@ class RetrievalService:
             pmids: e.g. ["29734553", "31245678", "30198432"]
             date_before: Optional leak-free cutoff. pgvector is a shared cache that may hold abstracts fetched without a
                 cutoff, so the date post-guard is re-applied before re-ranking.
-            depth: The most papers the window can hold. Production uses LITERATURE_SCREEN_MAX_DEPTH.
-            target_passers: Stop reading once this many papers have passed both gates. None reads to `depth` without
-                running the gates; the depth sweep in scripts/validation/compare_literature_shortlist.py uses that.
+            depth: The most papers the window can hold. None takes LITERATURE_SCREEN_MAX_DEPTH when the window is
+                adaptive and LITERATURE_SHALLOW_DEPTH when it is not.
+            target_passers: With an adaptive window, stop reading once this many papers have passed both gates.
+            adaptive: Screen the window through the gates and stop at `target_passers`. False reads a fixed `depth`
+                papers without running the gates (the depth sweep in scripts/validation/compare_literature_shortlist.py
+                uses that). None takes the literature_deep_screening setting.
+            recent_pass: Append the recent pass. None takes the literature_recent_pass setting.
+
+        After the window, the recent pass appends up to LITERATURE_RECENT_BUDGET rerank candidates published in
+        the last LITERATURE_RECENT_YEARS that the window missed.
 
         Returns:
-            List of AbstractResult ranked by descending similarity x publication-type boost.
+            The window ranked by descending similarity x publication-type boost, then the recent-pass papers in the same
+            order. Each paper's `selected_by` says which step selected it.
         """
         # Holdout post-guard: drop PMIDs published on/after the cutoff that leaked in via the shared pgvector cache, using
         # the same filter as fetch_and_cache.
@@ -1143,6 +1210,14 @@ class RetrievalService:
         # Over-fetch cap: keep this many drug-named papers by similarity, then rerank by pubtype in Python. The cap gives
         # the boost headroom to reorder (a 2x RCT boost at rank 50 can beat a review at rank 5) without fetching pubtypes
         # for the whole pool. It is applied AFTER the drug-name filter, so it never truncates below `depth` on its own.
+        if adaptive is None:
+            adaptive = _settings.literature_deep_screening
+        if recent_pass is None:
+            recent_pass = _settings.literature_recent_pass
+        if depth is None:
+            depth = (
+                LITERATURE_SCREEN_MAX_DEPTH if adaptive else LITERATURE_SHALLOW_DEPTH
+            )
         top_k = depth
         rerank_cap = max(top_k * LITERATURE_RERANK_HEADROOM, 100)
 
@@ -1168,7 +1243,8 @@ class RetrievalService:
         pool_rows = db.execute(
             text("""
                 SELECT pmid, title, abstract,
-                       1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
+                       1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity,
+                       pub_date
                 FROM pubmed_abstracts
                 WHERE pmid = ANY(:pmids)
                 ORDER BY similarity DESC
@@ -1198,7 +1274,8 @@ class RetrievalService:
             linked_rows = db.execute(
                 text("""
                     SELECT pmid, title, abstract,
-                           1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity
+                           1 - (embedding <=> CAST(:query_vec AS vector)) AS similarity,
+                           pub_date
                     FROM pubmed_abstracts
                     WHERE pmid = ANY(:pmids)
                     ORDER BY similarity DESC
@@ -1243,6 +1320,11 @@ class RetrievalService:
                 disease,
             )
 
+        pub_years = {
+            str(row[0]): year
+            for row in all_rows
+            if (year := pub_year(row[4])) is not None
+        }
         scored: list[tuple[AbstractResult, float, float]] = []
         for row in all_rows:
             pmid, title, abstract, similarity = row[0], row[1], row[2], float(row[3])
@@ -1264,7 +1346,7 @@ class RetrievalService:
         scored.sort(key=lambda x: x[2], reverse=True)
         baseline_scored = [item for item in scored if item[0].pmid in baseline_pmids]
 
-        if target_passers is not None:
+        if adaptive:
             top_k = await self._screen_depth(
                 chembl_id,
                 drug_names,
@@ -1273,6 +1355,9 @@ class RetrievalService:
                 target_passers,
             )
 
+        # The recent pass ranks the full rerank set; the trial reserve below may truncate baseline_scored to the window.
+        rerank_candidates = [item[0] for item in baseline_scored]
+        trial_reserved: set[str] = set()
         if linked_pmids:
             trial_reference_set = set(linked_pmids)
             linked = [
@@ -1306,6 +1391,7 @@ class RetrievalService:
                 )
                 baseline_scored.sort(key=lambda item: item[2], reverse=True)
                 top_k = max(top_k, len(reserved))
+                trial_reserved = reserved_pmids
 
         # logger.info(
         #     "semantic_search rerank top-20 for %s / %s (%d candidates, cap=%d):",
@@ -1326,7 +1412,39 @@ class RetrievalService:
         #         final_score,
         #     )
 
-        return [item[0] for item in baseline_scored[:top_k]]
+        window = [
+            item[0].model_copy(
+                update={
+                    "selected_by": [
+                        (
+                            "trial_reference"
+                            if item[0].pmid in trial_reserved
+                            else "relevance"
+                        )
+                    ]
+                }
+            )
+            for item in baseline_scored[:top_k]
+        ]
+        if not recent_pass:
+            return window
+        # Recent pass: the relevance cut under-reads recent papers on heavily studied pairs (metformin: 124 vs 71 recent
+        # passers against the same number of extra papers read down the ranking). Measured from date_before in
+        # holdout runs, whose pool is already cut off there.
+        recent = _recent_pass(
+            rerank_candidates,
+            pub_years,
+            (date_before or date.today()).year,
+            {result.pmid for result in window},
+        )
+        logger.info(
+            "[LIT] recent pass %s / %s: %d papers added to a window of %d",
+            chembl_id,
+            disease,
+            len(recent),
+            len(window),
+        )
+        return _union_tagged(window, recent, "recent")
 
     async def _screen_depth(
         self,
@@ -1500,7 +1618,8 @@ class RetrievalService:
         data = None
         for attempt in (1, 2):
             response = await query_llm(
-                prompt if attempt == 1 else prompt + _PMID_RETRY_NOTE
+                prompt if attempt == 1 else prompt + _PMID_RETRY_NOTE,
+                max_tokens=SYNTHESIS_MAX_TOKENS,
             )
             # Tolerant parse: the merged prompt is long, so the model sometimes emits prose before the JSON or an
             # empty/overflowed response. parse_last_json_object scans for the last balanced {...} block. On a genuine
@@ -1533,6 +1652,9 @@ class RetrievalService:
                 context=prose_context,
             )
 
+        # The floor is never cached: an unparseable response (e.g. one cut off at max_tokens) would otherwise persist as
+        # "no evidence" for the cache TTL (semaglutide x heart failure, strong/supports read as none/none).
+        synthesis_parsed = data is not None
         if data is None:
             logger.error(
                 "synthesize: could not parse a JSON object for %s / %s; returning a safe "
@@ -1715,7 +1837,7 @@ class RetrievalService:
             summary.strength = "none"
             summary.direction = "none"
 
-        if grading_complete:
+        if grading_complete and synthesis_parsed:
             cache_set(
                 "synthesize",
                 cache_params,

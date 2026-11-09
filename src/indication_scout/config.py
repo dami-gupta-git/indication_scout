@@ -98,6 +98,10 @@ class Settings(BaseSettings):
 
     # Literature / RAG
     literature_top_k: int
+    # Literature screening switches. Deep screening off reads a fixed window of LITERATURE_SHALLOW_DEPTH papers instead
+    # of the adaptive screen to LITERATURE_SCREEN_MAX_DEPTH; recent pass off appends no recent papers.
+    literature_deep_screening: bool
+    literature_recent_pass: bool
     pubmed_max_results: int
     pubmed_search_default_max_results: int
     pubmed_esummary_batch_size: int
