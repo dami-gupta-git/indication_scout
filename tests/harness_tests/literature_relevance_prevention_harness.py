@@ -128,6 +128,7 @@ async def _evaluate_once(abstracts: list[HarnessAbstract]) -> PreventionOutcome 
         disease_name="Preeclampsia",
         approved_indications="Type 2 diabetes mellitus",
         abstracts=formatted,
+        screened_counts="(not provided)",
     )
     try:
         response = await query_llm(prompt)

@@ -19,6 +19,8 @@ from indication_scout.config import get_settings
 from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     CACHE_TTL,
+    LITERATURE_DIRECTION_FLOOR,
+    LITERATURE_EXTRA_PASS_TAGS,
     LITERATURE_RECENT_BUDGET,
     LITERATURE_RECENT_YEARS,
     LITERATURE_RERANK_HEADROOM,
@@ -26,6 +28,7 @@ from indication_scout.constants import (
     LITERATURE_SCREEN_MAX_DEPTH,
     LITERATURE_SCREEN_TARGET_PASSERS,
     LITERATURE_SHALLOW_DEPTH,
+    LITERATURE_SYNTHESIS_MAX,
     LITERATURE_TRIAL_REFERENCE_RESERVE,
     OPEN_TARGETS_COMPETITOR_LOGIC_VERSION,
     PUBMED_NCT_QUERY_BATCH_SIZE,
@@ -197,6 +200,156 @@ def _union_tagged(
         if result.pmid not in in_window
     ]
     return merged
+
+
+# "NCT 02062190" is matched too: 24 of about 3,500 NCT-citing abstracts in the local store write the space.
+_NCT_PATTERN = re.compile(r"\bNCT\s?(\d{8})\b")
+
+
+def nct_ids(result: "AbstractResult") -> frozenset[str]:
+    """ClinicalTrials.gov numbers cited in the title or abstract, normalized to NCT plus eight digits."""
+    return frozenset(
+        f"NCT{digits}"
+        for digits in _NCT_PATTERN.findall(f"{result.title} {result.abstract}")
+    )
+
+
+def _graded_rank_key(
+    result: "AbstractResult", grades: dict[str, PmidJudgment]
+) -> tuple[int, float, bool, int, str]:
+    """Sort key: graded relevance, then embedding similarity, then the more recent paper (undated last), then PMID."""
+    return (
+        -grades[result.pmid].relevance,
+        -result.similarity,
+        result.pub_year is None,
+        -(result.pub_year or 0),
+        result.pmid,
+    )
+
+
+def merge_same_trial(
+    passers: list["AbstractResult"], grades: dict[str, PmidJudgment]
+) -> tuple[list["AbstractResult"], dict[str, list[str]]]:
+    """Collapse papers that report one registered trial in the same graded direction into one study.
+
+    Papers are grouped when they cite exactly the same set of NCT numbers and carry the same graded verdict. The paper
+    with the highest graded relevance leads the group and is kept; the others are returned under its PMID as secondary
+    reports. Grouping on any shared NCT number would chain a pooled analysis of trials A and B to the primary reports of
+    both, merging two independent trials (431 stored abstracts cite more than one NCT number). Papers without an NCT
+    number, and papers on one trial with different verdicts, are never merged. Every paper in `passers` must be graded.
+
+    Returns:
+        The kept papers in input order, and a map from each lead PMID to its secondary report PMIDs.
+    """
+    groups: dict[tuple[frozenset[str], str], list[AbstractResult]] = {}
+    for result in passers:
+        ids = nct_ids(result)
+        if ids:
+            groups.setdefault((ids, grades[result.pmid].verdict), []).append(result)
+    secondary: dict[str, list[str]] = {}
+    for members in groups.values():
+        if len(members) < 2:
+            continue
+        ranked = sorted(members, key=lambda result: _graded_rank_key(result, grades))
+        secondary[ranked[0].pmid] = [result.pmid for result in ranked[1:]]
+    merged_away = {pmid for pmids in secondary.values() for pmid in pmids}
+    return [result for result in passers if result.pmid not in merged_away], secondary
+
+
+def _direction_slots(counts: dict[str, int], cap: int) -> dict[str, int]:
+    """Split `cap` slots across directions in proportion to `counts` (every count > 0, total > cap), with a floor of
+    LITERATURE_DIRECTION_FLOOR (or the direction's count, if smaller) per direction. Rounding remainders go to the
+    largest directions."""
+    total = sum(counts.values())
+    floors = {d: min(LITERATURE_DIRECTION_FLOOR, n) for d, n in counts.items()}
+    if sum(floors.values()) > cap:
+        raise ValueError(f"synthesis cap {cap} is below the direction floors {floors}")
+    slots = {d: min(n, max(floors[d], cap * n // total)) for d, n in counts.items()}
+    # Floors can push the total over the cap: take the excess from the directions with the most slots above their floor.
+    while sum(slots.values()) > cap:
+        largest = max(
+            (d for d in slots if slots[d] > floors[d]), key=lambda d: (slots[d], d)
+        )
+        slots[largest] -= 1
+    # Rounding down leaves slots unused: give them to the largest directions that still have unread papers.
+    while sum(slots.values()) < cap:
+        largest = max(
+            (d for d in slots if slots[d] < counts[d]), key=lambda d: (counts[d], d)
+        )
+        slots[largest] += 1
+    return slots
+
+
+def select_synthesis_set(
+    passers: list["AbstractResult"], grades: dict[str, PmidJudgment], cap: int
+) -> list["AbstractResult"]:
+    """Pick the papers whose abstracts synthesis reads, at most `cap`, from the graded, same-trial-merged passers.
+
+    When everything fits, everything is sent. Otherwise slots are split across graded verdicts in proportion to their
+    counts (see _direction_slots), so the sample keeps the shape of the whole set. Within a verdict, controlled human
+    studies come first, then the best paper from each kept extra pass (LITERATURE_EXTRA_PASS_TAGS), then the rest; each
+    tier is ordered by graded relevance, with similarity and recency breaking ties. Returns papers in input order.
+    """
+    if len(passers) <= cap:
+        return list(passers)
+    by_verdict: dict[str, list[AbstractResult]] = {}
+    for result in passers:
+        by_verdict.setdefault(grades[result.pmid].verdict, []).append(result)
+    slots = _direction_slots(
+        {verdict: len(members) for verdict, members in by_verdict.items()}, cap
+    )
+    chosen: set[str] = set()
+    for verdict, members in by_verdict.items():
+        ranked = sorted(members, key=lambda result: _graded_rank_key(result, grades))
+        ordered = [
+            result.pmid
+            for result in ranked
+            if grades[result.pmid].is_human and grades[result.pmid].is_controlled
+        ]
+        for tag in LITERATURE_EXTRA_PASS_TAGS:
+            best = next(
+                (
+                    result.pmid
+                    for result in ranked
+                    if tag in result.selected_by and result.pmid not in ordered
+                ),
+                None,
+            )
+            if best is not None:
+                ordered.append(best)
+        ordered += [result.pmid for result in ranked if result.pmid not in ordered]
+        chosen.update(ordered[: slots[verdict]])
+    return [result for result in passers if result.pmid in chosen]
+
+
+def _design_label(grade: PmidJudgment) -> str:
+    if not grade.is_human:
+        return "non-human (animal or in vitro)"
+    return "controlled human" if grade.is_controlled else "uncontrolled human"
+
+
+def _screened_counts_text(
+    merged: list["AbstractResult"], grades: dict[str, PmidJudgment], selected: int
+) -> str:
+    """The direction and design tally of every graded, merged paper, for the synthesis prompt."""
+    directions: dict[str, int] = {}
+    designs: dict[str, int] = {}
+    for result in merged:
+        grade = grades[result.pmid]
+        directions[grade.verdict] = directions.get(grade.verdict, 0) + 1
+        designs[_design_label(grade)] = designs.get(_design_label(grade), 0) + 1
+    if selected == len(merged):
+        scope = f"The {selected} abstracts above are every paper that passed screening."
+    else:
+        scope = (
+            f"The {selected} abstracts above are a sample of the {len(merged)} papers that passed screening. The counts "
+            f"below describe all {len(merged)}; judge strength and direction from them as well as from the abstracts."
+        )
+    direction_text = ", ".join(
+        f"{verdict} {n}" for verdict, n in sorted(directions.items())
+    )
+    design_text = ", ".join(f"{design} {n}" for design, n in sorted(designs.items()))
+    return f"{scope}\nGraded direction counts: {direction_text}\nStudy design counts: {design_text}"
 
 
 def _mentions_exact_drug(drug_names: list[str], result: "AbstractResult") -> bool:
@@ -556,6 +709,8 @@ class AbstractResult(BaseModel):
     # gate-passing publication linked from a ClinicalTrials.gov record), "recent" (the recent pass). Empty outside
     # semantic_search.
     selected_by: list[str] = []
+    # Publication year from the stored pub_date; None when undated or outside semantic_search.
+    pub_year: int | None = None
 
 
 class RetrievalService:
@@ -1340,6 +1495,7 @@ class RetrievalService:
                 abstract=abstract,
                 similarity=similarity,
                 pubtype=pubtypes,
+                pub_year=pub_years.get(str(pmid)),
             )
             scored.append((result, boost, final_score))
 
@@ -1514,10 +1670,12 @@ class RetrievalService:
             "disease": disease,
             "pmids": sorted(r.pmid for r in top_abstracts),
             "approved_indications": approved,
+            # The cap decides which of the same PMIDs synthesis reads.
+            "synthesis_max": LITERATURE_SYNTHESIS_MAX,
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or derived fields (direction rollup, strength cap) change, so stale judgments
             # cannot preserve behavior the new rules reject.
-            "logic_version": "per_pmid_class_and_target_gates_v7_isolated_pmid_grade",
+            "logic_version": "per_pmid_class_and_target_gates_v8_same_trial_merge_and_selection",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -1557,10 +1715,36 @@ class RetrievalService:
         pmid_grades = await _judge_pmid_grades(
             chembl_id, pref_name, disease, gated_abstracts, self.cache_dir
         )
-        synthesis_abstracts = [
+        graded_abstracts = [
             result for result in gated_abstracts if result.pmid in pmid_grades
         ]
-        grading_complete = len(synthesis_abstracts) == len(gated_abstracts)
+        grading_complete = len(graded_abstracts) == len(gated_abstracts)
+        # Same-trial reports in one direction count once; past the cap, code samples the rest by direction. Secondary
+        # reports and unselected passers are evidence that exists but was not read, so neither is listed as contaminated.
+        merged_abstracts, secondary_reports = merge_same_trial(
+            graded_abstracts, pmid_grades
+        )
+        synthesis_abstracts = select_synthesis_set(
+            merged_abstracts, pmid_grades, LITERATURE_SYNTHESIS_MAX
+        )
+        selected_pmids = {result.pmid for result in synthesis_abstracts}
+        screened_not_selected = [
+            result.pmid
+            for result in merged_abstracts
+            if result.pmid not in selected_pmids
+        ]
+        unread_pmids = set(screened_not_selected).union(
+            pmid for pmids in secondary_reports.values() for pmid in pmids
+        )
+        if secondary_reports or screened_not_selected:
+            logger.info(
+                "[LIT] %s / %s: %d graded, %d after same-trial merge, %d selected for synthesis",
+                pref_name,
+                disease,
+                len(graded_abstracts),
+                len(merged_abstracts),
+                len(synthesis_abstracts),
+            )
         # Class-level papers never enter the supporting/contradicting lists; they only distinguish "no evidence at all"
         # from "evidence exists, but only for the class".
         class_level_pmids = [
@@ -1599,7 +1783,11 @@ class RetrievalService:
             "[LIT] synthesizing %s: %d abstracts", disease, len(synthesis_abstracts)
         )
         formatted = "\n\n".join(
-            f"PMID: {r.pmid}\nTitle: {r.title}\nAbstract: {r.abstract}"
+            f"PMID: {r.pmid}\n"
+            f"Year: {r.pub_year if r.pub_year is not None else 'unknown'}\n"
+            f"Graded direction: {pmid_grades[r.pmid].verdict}\n"
+            f"Design: {_design_label(pmid_grades[r.pmid])}\n"
+            f"Title: {r.title}\nAbstract: {r.abstract}"
             for r in synthesis_abstracts
         )
 
@@ -1608,6 +1796,9 @@ class RetrievalService:
             drug_name=pref_name,
             disease_name=disease,
             abstracts=formatted,
+            screened_counts=_screened_counts_text(
+                merged_abstracts, pmid_grades, len(synthesis_abstracts)
+            ),
             approved_indications=", ".join(approved) if approved else "(none)",
         )
 
@@ -1683,7 +1874,7 @@ class RetrievalService:
         # are built here from this map, not emitted by the LLM, which removed a bucketing error that mis-placed a positive
         # trial as contradicting (BRAVE-I).
         verdicts = data.get("verdicts")
-        input_pmids = [r.pmid for r in top_abstracts]
+        input_pmids = [r.pmid for r in top_abstracts if r.pmid not in unread_pmids]
         synthesis_pmids = {r.pmid for r in synthesis_abstracts}
         # Relevant = anything not contaminated. "neutral" (PK/safety/mechanism, set by the per-paper grade) is relevant
         # and counts toward study_count but is excluded from supporting AND contradicting below. synthesize never emits it.
@@ -1747,6 +1938,8 @@ class RetrievalService:
         data["supporting_pmids"] = supporting_pmids
         data["contradicting_pmids"] = contradicting_pmids
         data["neutral_pmids"] = neutral_pmids
+        data["secondary_report_pmids"] = secondary_reports
+        data["screened_not_selected_pmids"] = screened_not_selected
         data["study_count"] = len(relevant_pmids)
         summary = EvidenceSummary(**data)
 

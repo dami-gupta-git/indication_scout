@@ -148,8 +148,17 @@ LITERATURE_SCREEN_MAX_DEPTH: int = 120
 # Fixed window read when the LITERATURE_DEEP_SCREENING setting is off: the top-15 cutoff used before the adaptive screen.
 LITERATURE_SHALLOW_DEPTH: int = 15
 LITERATURE_SCREEN_BATCH: int = 20
-# PROVISIONAL: set to the synthesis cap (LITERATURE_SYNTHESIS_MAX) once Phase 4 measures it.
-LITERATURE_SCREEN_TARGET_PASSERS: int = 30
+# Most graded, same-trial-merged papers whose abstracts are sent to the synthesis call; above it, select_synthesis_set
+# samples by direction. Set from the Phase 4 cap measurement (caps 15/25/40); table in for_me/findings.md.
+LITERATURE_SYNTHESIS_MAX: int = 40
+# The adaptive screen stops once synthesis can be filled.
+LITERATURE_SCREEN_TARGET_PASSERS: int = LITERATURE_SYNTHESIS_MAX
+# Slots each direction that has papers keeps when the synthesis sample is cut to LITERATURE_SYNTHESIS_MAX, so a minority
+# direction (e.g. 5 supporting against 30 contradicting) is still read.
+LITERATURE_DIRECTION_FLOOR: int = 2
+# selected_by tags of the extra passes kept in the screening window; select_synthesis_set keeps at least one passer from
+# each per direction when it has to cut.
+LITERATURE_EXTRA_PASS_TAGS: tuple[str, ...] = ("recent",)
 # Over-fetch multiplier for the publication-type rerank: this many times the depth are pulled by
 # similarity before the boost reorders them, so a 2x RCT boost deep in the list can still reach the top.
 LITERATURE_RERANK_HEADROOM: int = 10

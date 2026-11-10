@@ -4,8 +4,11 @@ Drug: {drug_name}
 Candidate Disease: {disease_name}
 Drug's FDA-approved indications: {approved_indications}
 
-Abstracts:
+Abstracts (each carries its publication year and the direction and design an earlier per-paper review assigned it):
 {abstracts}
+
+Screened evidence:
+{screened_counts}
 
 GROUNDING RULES — these are non-negotiable:
 1. Use ONLY information from the abstracts provided above. Do not introduce facts, trial names, mechanisms, or findings from your training that are not explicitly in these abstracts.
@@ -116,6 +119,11 @@ STEP 2 — GRADE over the RELEVANT abstracts ONLY. Return a JSON object with the
     The presence of any dissenting paper does not automatically make the direction "mixed"; a weak
     case series does not offset consistent controlled evidence. You may return "supports" or
     "contradicts" even when individual PMID verdicts include both directions.
+  - When older trial or functional evidence and a newer commentary, review, or reanalysis disagree,
+    compare their study designs and state in the summary which carries more weight and why. Do not
+    adopt the newer paper's position because it is newer.
+  - When the abstracts are a sample of the screened papers, weigh the screened evidence counts as
+    well as the abstracts you read; the sample was drawn to keep each direction's share.
 - "is_observational": true if the relevant drug-specific clinical evidence is exclusively observational (cohort, case-control, case series/reports) with NO RCT/controlled trial; false if at least one relevant drug-specific RCT/controlled trial; null if no relevant drug-specific clinical evidence (e.g. preclinical-only, or strength "none"). This MUST agree with your own summary/key_findings: if any describe a randomized, double-blind, placebo-controlled, controlled, or crossover trial, set this to false — null is NOT allowed then. Reserve null for genuinely indeterminate designs, not as a default.
 - "is_animal_only": true if EVERY relevant drug-specific study is a non-human model — animal (mouse/rat/etc.) or in-vitro/cell — with NO human clinical or observational data; false if at least one relevant drug-specific study is in humans (RCT, cohort, case series, or other observational human data); null if there is no relevant drug-specific evidence to grade (evidence_basis != "drug_specific"). A mouse MODEL of a human disease is still animal — do NOT infer humans from the disease name. A single relevant human study makes this false even if animal studies are also present.
 - "summary": a 2-3 sentence summary of the overall evidence, citing ONLY PMIDs marked "relevant". State clearly whether the evidence supports, contradicts, or is irrelevant to using this drug for this disease; note a contraindication if present. Every claim must include a PMID reference, e.g. "Drug X reduced tumor growth in mouse models (PMID: 12345678)." Do NOT grade the AMOUNT of evidence in this prose — no "strongly"/"moderately"/"weakly"/"robustly" qualifying the verb (write "the evidence supports", not "strongly supports"); strength is the separate field. The direction your prose conveys MUST match the "direction" field. If you want to mention class-level or approved-indication context, do so explicitly as context, citing those PMIDs is allowed in the summary prose ONLY to explain why they were excluded — never as support.

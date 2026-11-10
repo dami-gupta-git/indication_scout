@@ -32,7 +32,10 @@ from indication_scout.services.retrieval import (
     RetrievalService,
     _recent_pass,
     _union_tagged,
+    merge_same_trial,
+    nct_ids,
     pub_year,
+    select_synthesis_set,
 )
 
 _FIND_TRIAL_LINKED_PMIDS = RetrievalService.find_trial_linked_pmids
@@ -1990,6 +1993,8 @@ async def test_synthesize_downgrades_unsupported_controlled_design_claim(svc):
         "relevant_pmids": ["6431314"],
         "contaminated_pmids": [],
         "neutral_pmids": [],
+        "secondary_report_pmids": {},
+        "screened_not_selected_pmids": [],
         "safety_summary": "",
         "regulatory_safety_summary": "",
         "regulatory_safety_full_labels": "",
@@ -2549,6 +2554,8 @@ async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(sv
         "relevant_pmids": ["11111111"],
         "contaminated_pmids": ["27113485"],
         "neutral_pmids": [],
+        "secondary_report_pmids": {},
+        "screened_not_selected_pmids": [],
         "safety_summary": "",
         "regulatory_safety_summary": "",
         "regulatory_safety_full_labels": "",
@@ -3110,3 +3117,215 @@ async def test_get_drug_competitors_returns_cached_empty_result(tmp_path):
 
     assert result == {}
     mock_client.__aenter__.assert_not_called()
+
+
+# --- same-trial merge and synthesis selection ---
+
+
+def _paper(
+    pmid: str,
+    abstract: str = "",
+    similarity: float = 0.5,
+    selected_by: list[str] | None = None,
+) -> AbstractResult:
+    return AbstractResult(
+        pmid=pmid,
+        title=f"Paper {pmid}",
+        abstract=abstract,
+        similarity=similarity,
+        selected_by=selected_by or ["relevance"],
+    )
+
+
+def _grade(verdict: str, relevance: int = 5, trial: bool = False) -> PmidJudgment:
+    return PmidJudgment(
+        verdict=verdict, is_human=trial, is_controlled=trial, relevance=relevance
+    )
+
+
+def test_nct_ids_normalizes_spaced_number_and_ignores_nine_digits():
+    paper = _paper("1", "Registered as NCT 02062190 and NCT01234567; not NCT012345678.")
+    assert nct_ids(paper) == frozenset({"NCT02062190", "NCT01234567"})
+
+
+def test_merge_same_trial_groups_same_direction_under_highest_score():
+    papers = [
+        _paper("1", "Primary report (NCT01234567)."),
+        _paper("2", "Follow-up of NCT01234567."),
+        _paper("3", "Unregistered study."),
+    ]
+    grades = {
+        "1": _grade("supporting", relevance=6),
+        "2": _grade("supporting", relevance=9),
+        "3": _grade("supporting", relevance=7),
+    }
+
+    kept, secondary = merge_same_trial(papers, grades)
+
+    assert [paper.pmid for paper in kept] == ["2", "3"]
+    assert secondary == {"2": ["1"]}
+
+
+@pytest.mark.parametrize(
+    "abstracts, verdicts",
+    [
+        # Same trial, different directions: a negative secondary analysis reaches synthesis next to the primary.
+        (
+            ["Primary (NCT01234567).", "Post hoc of NCT01234567."],
+            ["supporting", "contradicting"],
+        ),
+        # Two independent trials with the same direction and near-identical wording.
+        (
+            ["Met its endpoint (NCT01234567).", "Met its endpoint (NCT07654321)."],
+            ["supporting", "supporting"],
+        ),
+    ],
+)
+def test_merge_same_trial_keeps_separate_studies(abstracts, verdicts):
+    papers = [_paper(str(i), text) for i, text in enumerate(abstracts)]
+    grades = {str(i): _grade(verdict) for i, verdict in enumerate(verdicts)}
+
+    kept, secondary = merge_same_trial(papers, grades)
+
+    assert [paper.pmid for paper in kept] == ["0", "1"]
+    assert secondary == {}
+
+
+def test_merge_same_trial_pooled_paper_does_not_chain_two_trials():
+    """A pooled analysis citing two trials is not merged with either primary report, so the two trials stay apart."""
+    papers = [
+        _paper("a", "Trial A (NCT01234567)."),
+        _paper("b", "Trial B (NCT07654321)."),
+        _paper("pooled", "Pooled NCT01234567 and NCT07654321."),
+    ]
+    grades = {pmid: _grade("supporting") for pmid in ("a", "b", "pooled")}
+
+    kept, secondary = merge_same_trial(papers, grades)
+
+    assert [paper.pmid for paper in kept] == ["a", "b", "pooled"]
+    assert secondary == {}
+
+
+def test_select_synthesis_set_returns_everything_that_fits():
+    papers = [_paper("1"), _paper("2")]
+    grades = {"1": _grade("supporting"), "2": _grade("contradicting")}
+    assert select_synthesis_set(papers, grades, 2) == papers
+    assert select_synthesis_set([], {}, 20) == []
+
+
+def test_select_synthesis_set_keeps_direction_shares_and_puts_trials_first():
+    """30 contradicting (10 of them trials, all scored below the non-trials) and 5 supporting, cap 20: proportional
+    slots are 17 and 2, the spare slot goes to the larger direction, and every trial is read before any non-trial.
+    """
+    contradicting = [_paper(f"c{i}") for i in range(30)]
+    supporting = [_paper(f"s{i}") for i in range(5)]
+    grades = {
+        **{
+            f"c{i}": _grade("contradicting", relevance=3, trial=True) for i in range(10)
+        },
+        **{f"c{i}": _grade("contradicting", relevance=9) for i in range(10, 30)},
+        "s0": _grade("supporting", relevance=2, trial=True),
+        **{f"s{i}": _grade("supporting", relevance=8) for i in range(1, 5)},
+    }
+
+    selected = [
+        paper.pmid
+        for paper in select_synthesis_set(contradicting + supporting, grades, 20)
+    ]
+
+    assert len(selected) == 20
+    assert [pmid for pmid in selected if pmid.startswith("c")] == [
+        f"c{i}" for i in range(18)
+    ]
+    assert [pmid for pmid in selected if pmid.startswith("s")] == ["s0", "s1"]
+
+
+def test_select_synthesis_set_reads_single_paper_direction_and_kept_pass():
+    """A direction with one paper keeps it, and the best recent-pass paper is read ahead of higher-scored ones."""
+    supporting = [_paper(f"s{i}", similarity=0.9) for i in range(10)]
+    recent = _paper("r", similarity=0.1, selected_by=["recent"])
+    mixed = _paper("m")
+    grades = {
+        **{f"s{i}": _grade("supporting", relevance=9) for i in range(10)},
+        "r": _grade("supporting", relevance=4),
+        "m": _grade("mixed"),
+    }
+
+    selected = [
+        paper.pmid
+        for paper in select_synthesis_set([*supporting, recent, mixed], grades, 5)
+    ]
+
+    assert selected == ["s0", "s1", "s2", "r", "m"]
+
+
+async def test_synthesize_merges_same_trial_and_samples_past_the_cap(svc):
+    """Secondary reports and passers left out by the cap reach neither the prompt nor the contaminated list, and the
+    prompt's counts describe the whole merged set, not the sample."""
+    papers = [
+        _paper("10000001", "Primary report of NCT01234567."),
+        _paper("10000002", "Secondary report of NCT01234567."),
+        _paper("10000003", "Uncontrolled case series."),
+        _paper("10000004", "Second case series."),
+    ]
+    grades = {
+        "10000001": _grade("supporting", relevance=9, trial=True),
+        "10000002": _grade("supporting", relevance=5, trial=True),
+        "10000003": _grade("supporting", relevance=7),
+        "10000004": _grade("supporting", relevance=6),
+    }
+    response = json.dumps(
+        {
+            "verdicts": {"10000001": "supporting", "10000003": "supporting"},
+            "evidence_basis": "drug_specific",
+            "summary": "A trial supports it (PMID: 10000001).",
+            "strength": "moderate",
+            "direction": "supports",
+            "is_observational": False,
+            "is_animal_only": False,
+            "key_findings": [],
+        }
+    )
+    captured: list[str] = []
+
+    async def capture_llm(prompt: str, max_tokens: int | None = None) -> str:
+        captured.append(prompt)
+        return response
+
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=capture_llm),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=AsyncMock(return_value=grades),
+        ),
+        patch("indication_scout.services.retrieval.LITERATURE_SYNTHESIS_MAX", 2),
+    ):
+        result = await svc.synthesize("CHEMBL1431", "colorectal cancer", papers)
+
+    prompt = captured[0]
+    assert (
+        "PMID: 10000001\nYear: unknown\nGraded direction: supporting\nDesign: controlled human"
+        in prompt
+    )
+    assert "PMID: 10000003" in prompt
+    assert "PMID: 10000002" not in prompt
+    assert "PMID: 10000004" not in prompt
+    assert (
+        "The 2 abstracts above are a sample of the 3 papers that passed screening."
+        in prompt
+    )
+    assert "Graded direction counts: supporting 3" in prompt
+    assert (
+        "Study design counts: controlled human 1, non-human (animal or in vitro) 2"
+        in prompt
+    )
+    assert result.secondary_report_pmids == {"10000001": ["10000002"]}
+    assert result.screened_not_selected_pmids == ["10000004"]
+    assert result.relevant_pmids == ["10000001", "10000003"]
+    assert result.supporting_pmids == ["10000001", "10000003"]
+    assert result.contaminated_pmids == []
+    assert result.study_count == 2

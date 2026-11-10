@@ -285,6 +285,7 @@ async def _evaluate_once(
         disease_name=case.disease,
         approved_indications=", ".join(case.approved) if case.approved else "(none)",
         abstracts=_format_abstracts(case, abstracts),
+        screened_counts="(not provided)",
     )
     try:
         response = await query_llm(prompt)

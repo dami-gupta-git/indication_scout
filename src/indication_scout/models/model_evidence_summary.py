@@ -7,7 +7,8 @@ from pydantic import BaseModel, Field, field_validator, model_validator
 
 class PmidJudgment(BaseModel):
     """One abstract's grade from the isolated per-paper call: its efficacy verdict for the pair, the design of the study
-    THAT abstract reports, and how directly its own result answers whether the drug works for the disease."""
+    THAT abstract reports, and how directly its own result answers whether the drug works for the disease.
+    """
 
     # "neutral" = a relevant abstract with NO efficacy result (PK / safety-only / mechanism). It stays RELEVANT (counts in
     # study_count) but is kept OUT of supporting AND contradicting, so a PK paper can't flip a clean "supports" to "mixed"
@@ -90,6 +91,12 @@ class EvidenceSummary(BaseModel):
     # the narrative as context, but are in NEITHER supporting nor contradicting. Surfaced so a reader
     # can see why a cited PMID is in neither list (rather than appearing dropped).
     neutral_pmids: list[str] = []
+    # Same-trial merge: lead PMID -> other papers citing the same NCT numbers with the same graded direction. The
+    # secondary reports were not sent to synthesis and appear in no other list; the group counts once in study_count.
+    secondary_report_pmids: dict[str, list[str]] = {}
+    # Papers that passed both gates and were graded but were left out of the synthesis sample by the cap. They appear in
+    # no other list.
+    screened_not_selected_pmids: list[str] = []
     # Populated by a SEPARATE safety-focused search+summarize pass (services/retrieval.py
     # RetrievalService.safety_search / summarize_safety) — reranks the SAME PMID pool by
     # relevance to adverse events/safety rather than efficacy. "" / [] means no abstract in the
@@ -124,6 +131,7 @@ class EvidenceSummary(BaseModel):
         "relevant_pmids",
         "contaminated_pmids",
         "neutral_pmids",
+        "screened_not_selected_pmids",
         "safety_pmids",
         "indication_harm_pmids",
         mode="before",

@@ -116,6 +116,27 @@ def _fmt_literature(lit: LiteratureOutput) -> str:
                 for pmid in es.neutral_pmids
             )
             lines.append(f"\n**Context (non-efficacy) PMIDs:** {pmid_links}")
+        # Same-trial secondary reports and passers left out by the synthesis cap: evidence that exists but was not read.
+        if es.secondary_report_pmids:
+            groups = "; ".join(
+                f"[{lead}](https://pubmed.ncbi.nlm.nih.gov/{lead}/) ← "
+                + ", ".join(
+                    f"[{pmid}](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)"
+                    for pmid in secondaries
+                )
+                for lead, secondaries in es.secondary_report_pmids.items()
+            )
+            lines.append(
+                f"\n**Secondary reports of the same trial (not read):** {groups}"
+            )
+        if es.screened_not_selected_pmids:
+            pmid_links = ", ".join(
+                f"[{pmid}](https://pubmed.ncbi.nlm.nih.gov/{pmid}/)"
+                for pmid in es.screened_not_selected_pmids
+            )
+            lines.append(
+                f"\n**Passed screening, not read (synthesis cap):** {pmid_links}"
+            )
         # DISEASE-SPECIFIC safety only (the drug-wide blurb is rendered ONCE at the top of the
         # report — see format_report). This flags a harm reported for THIS drug IN THIS
         # indication's context (validated concrete question). Absent when the indication's safety
