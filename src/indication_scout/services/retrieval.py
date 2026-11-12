@@ -471,7 +471,7 @@ async def _judge_pmid_treats_disease(
             "pmid": result.pmid,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "treats_disease_v5",
+            "logic_version": "treats_disease_v6_genetic_proxy",
         }
         cached = cache_get("pmid_treats_disease", cache_params, cache_dir)
         if isinstance(cached, str) and cached in _PMID_TREATS_DISEASE_VERDICTS:
@@ -552,7 +552,7 @@ async def _judge_pmid_grades(
             "pmid": result.pmid,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "pmid_grade_v1",
+            "logic_version": "pmid_grade_v2_interventional_pilot",
         }
         cached = cache_get("pmid_grade", cache_params, cache_dir)
         if isinstance(cached, dict):
@@ -1675,7 +1675,7 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or derived fields (direction rollup, strength cap) change, so stale judgments
             # cannot preserve behavior the new rules reject.
-            "logic_version": "per_pmid_class_and_target_gates_v8_same_trial_merge_and_selection",
+            "logic_version": "per_pmid_class_and_target_gates_v9_contradicting_trials",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -1932,12 +1932,23 @@ class RetrievalService:
         # neutral = relevant but non-efficacy (PK/safety/mechanism): in neither directional list, surfaced separately so a
         # cited-as-context PMID doesn't look dropped.
         neutral_pmids = [p for p in input_pmids if verdict_of[p] == "neutral"]
+        # Contradicting papers whose study gave the drug to people and is not a pilot: the only evidence that may close a
+        # signal on literature. Mixed papers are excluded (they report a benefit as well).
+        contradicting_trial_pmids = [
+            p
+            for p in input_pmids
+            if verdict_of[p] == "contradicting"
+            and pmid_grades[p].is_human
+            and pmid_grades[p].is_interventional
+            and not pmid_grades[p].is_pilot
+        ]
 
         data["relevant_pmids"] = relevant_pmids
         data["contaminated_pmids"] = contaminated_pmids
         data["supporting_pmids"] = supporting_pmids
         data["contradicting_pmids"] = contradicting_pmids
         data["neutral_pmids"] = neutral_pmids
+        data["contradicting_trial_pmids"] = contradicting_trial_pmids
         data["secondary_report_pmids"] = secondary_reports
         data["screened_not_selected_pmids"] = screened_not_selected
         data["study_count"] = len(relevant_pmids)

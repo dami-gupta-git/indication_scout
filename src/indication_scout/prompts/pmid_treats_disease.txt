@@ -14,7 +14,8 @@ Apply these checks IN ORDER:
    patients did not have the disease at baseline, were selected for a different disease or risk
    state, and the drug failed to prevent the disease or increased its rate. A biomarker or surrogate
    that merely tracks disease risk does not. A safety or causation study asking whether drug exposure
-   CAUSES the candidate disease does not.
+   CAUSES the candidate disease does not. A Mendelian randomization or other genetic-proxy study does
+   not: it uses gene variants as a stand-in for drug exposure and gives no one the drug.
 2. TREATMENT: Otherwise, NAME the condition the drug was given to treat, then ask whether that named
    target IS the candidate disease. Do not infer the target from the patient population.
 

@@ -654,32 +654,40 @@ async def test_analyze_mechanism_merges_by_efo_id(
 
 
 @pytest.mark.parametrize(
-    "is_observational, is_animal_only, closes",
+    "strength, direction, contradicting_trial_pmids, closes",
     [
-        (False, False, True),  # controlled human trial
         (
-            None,
-            False,
+            "moderate",
+            "contradicts",
+            ["31514200"],
             True,
-        ),  # single-arm / open-label human trial (design undetermined)
-        (True, False, False),  # observational-only human body
-        (None, True, False),  # animal / in-vitro only
-        (False, None, False),  # no per-abstract judgments: no human-evidence proof
+        ),  # a non-pilot human trial that gave the drug failed
+        # No contradicting trial: observational records, genetic proxies and pilots only (metformin x Parkinson, which
+        # the pair-level is_observational=False flag used to close).
+        ("strong", "contradicts", [], False),
+        ("weak", "contradicts", ["31514200"], False),  # too little evidence
+        (
+            "strong",
+            "mixed",
+            ["31514200"],
+            False,
+        ),  # the body does not point against the drug
     ],
 )
-def test_contradicting_literature_closes_card_signal_on_human_clinical_evidence(
-    is_observational, is_animal_only, closes
+def test_contradicting_literature_closes_card_signal_on_a_contradicting_trial(
+    strength, direction, contradicting_trial_pmids, closes
 ):
     clinical_trials = ClinicalTrialsOutput(
         closure="live",
         closure_reason="No registry termination",
     )
     negative = EvidenceSummary(
-        strength="moderate",
-        direction="contradicts",
+        strength=strength,
+        direction=direction,
         evidence_basis="drug_specific",
-        is_observational=is_observational,
-        is_animal_only=is_animal_only,
+        is_observational=False,
+        is_animal_only=False,
+        contradicting_trial_pmids=contradicting_trial_pmids,
     )
     expected = (
         "CLOSED — human clinical literature contradicts efficacy for this indication"
@@ -986,6 +994,7 @@ async def test_fact_critic_places_controlled_efficacy_failure_after_live_signal(
                 evidence_basis="drug_specific",
                 is_observational=False,
                 is_animal_only=False,
+                contradicting_trial_pmids=["31514200"],
             )
         ),
         "clinical_trials": ClinicalTrialsOutput(closure="live"),

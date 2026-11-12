@@ -320,19 +320,19 @@ def _closure_text(
     """Render the overall live/closed verdict as a sentence for the interpretive writer.
 
     A moderate-or-strong contradictory literature body closes the overall signal even when the registry-only verdict
-    is live or unknown, provided the evidence is human clinical data and not graded observational-only.
-    `is_animal_only is False` means at least one paper carrying the efficacy verdict studied people; a controlled
-    design is not required, since a single-arm Phase 2 showing no activity is legitimate negative evidence (imatinib
-    x glioblastoma, ovarian, prostate all read "live" while every trial had failed). A body graded observational-only
-    (`is_observational is True`) cannot close.
+    is live or unknown, provided at least one paper graded "contradicting" is a non-pilot human study that gave the
+    drug (`contradicting_trial_pmids`). A controlled design is not required, since a single-arm Phase 2 showing no
+    activity is legitimate negative evidence (imatinib x glioblastoma, ovarian, prostate all read "live" while every
+    trial had failed). The check reads the contradicting papers themselves, not a pair-level design flag: metformin x
+    Parkinson closed on retrospective cohorts and a genetic-proxy study because an unrelated 60-patient pilot trial
+    marked the pair as not observational-only.
     """
     if (
         literature is not None
         and literature.evidence_basis == "drug_specific"
         and literature.strength in {"moderate", "strong"}
         and literature.direction == "contradicts"
-        and literature.is_animal_only is False
-        and literature.is_observational is not True
+        and literature.contradicting_trial_pmids
     ):
         return "CLOSED — human clinical literature contradicts efficacy for this indication"
     if ct is None or ct.closure == "unknown":

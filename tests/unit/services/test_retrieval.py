@@ -1993,6 +1993,7 @@ async def test_synthesize_downgrades_unsupported_controlled_design_claim(svc):
         "relevant_pmids": ["6431314"],
         "contaminated_pmids": [],
         "neutral_pmids": [],
+        "contradicting_trial_pmids": [],
         "secondary_report_pmids": {},
         "screened_not_selected_pmids": [],
         "safety_summary": "",
@@ -2554,6 +2555,7 @@ async def test_synthesize_drug_identity_gate_excludes_wrong_drug_before_batch(sv
         "relevant_pmids": ["11111111"],
         "contaminated_pmids": ["27113485"],
         "neutral_pmids": [],
+        "contradicting_trial_pmids": [],
         "secondary_report_pmids": {},
         "screened_not_selected_pmids": [],
         "safety_summary": "",
@@ -2896,6 +2898,93 @@ async def test_synthesize_pmid_grade_overrides_verdict(svc):
         )
     assert result.supporting_pmids == []
     assert set(result.contradicting_pmids) == {"11111111", "22222222"}
+    assert result.direction == "contradicts"
+
+
+async def test_synthesize_lists_only_non_pilot_human_trials_as_contradicting_trials(
+    svc,
+):
+    """contradicting_trial_pmids holds the contradicting papers that may close a signal: a human study that gave the drug
+    and is not a pilot. A pilot trial, a cohort of people already taking the drug and an animal study are contradicting
+    papers but not contradicting trials (metformin x Parkinson closed on such papers).
+    """
+    abstracts = [
+        AbstractResult(
+            pmid=pmid, title=f"Paper {pmid}", abstract="Results.", similarity=0.9
+        )
+        for pmid in ("11111111", "22222222", "33333333", "44444444")
+    ]
+    main = json.dumps(
+        {
+            "verdicts": dict.fromkeys(
+                ("11111111", "22222222", "33333333", "44444444"), "contradicting"
+            ),
+            "evidence_basis": "drug_specific",
+            "summary": "No benefit (PMID: 11111111).",
+            "strength": "strong",
+            "direction": "contradicts",
+            "is_observational": False,
+            "key_findings": [],
+        }
+    )
+    grades = {
+        "11111111": PmidJudgment(
+            verdict="contradicting",
+            is_human=True,
+            is_controlled=False,
+            is_interventional=True,
+            is_pilot=False,
+            relevance=9,
+        ),
+        "22222222": PmidJudgment(
+            verdict="contradicting",
+            is_human=True,
+            is_controlled=True,
+            is_interventional=True,
+            is_pilot=True,
+            relevance=9,
+        ),
+        "33333333": PmidJudgment(
+            verdict="contradicting",
+            is_human=True,
+            is_controlled=False,
+            is_interventional=False,
+            is_pilot=False,
+            relevance=9,
+        ),
+        "44444444": PmidJudgment(
+            verdict="contradicting",
+            is_human=False,
+            is_controlled=True,
+            is_interventional=True,
+            is_pilot=False,
+            relevance=9,
+        ),
+    }
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_llm",
+            new=AsyncMock(return_value=main),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=AsyncMock(return_value=grades),
+        ),
+    ):
+        result = await svc.synthesize("CHEMBL1431", "parkinson disease", abstracts)
+
+    assert result.contradicting_trial_pmids == ["11111111"]
+    assert result.contradicting_pmids == [
+        "11111111",
+        "22222222",
+        "33333333",
+        "44444444",
+    ]
+    assert result.supporting_pmids == []
     assert result.direction == "contradicts"
 
 

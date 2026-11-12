@@ -19,6 +19,12 @@ class PmidJudgment(BaseModel):
     # or unparseable field can never certify the pair as controlled human evidence.
     is_human: bool = False
     is_controlled: bool = False
+    # Whether the investigators gave the drug to participants under the study's own protocol (controlled or single-arm),
+    # as opposed to analysing records of people already taking it, and whether the abstract calls the study a pilot.
+    # Only a non-pilot interventional human paper may close a signal on literature. Default False: an omitted field can
+    # never close one.
+    is_interventional: bool = False
+    is_pilot: bool = False
     # Directness of the abstract's own result for the pair (1-10), judged independently of design or quality. Required:
     # a grade without it is unusable and the paper is dropped.
     relevance: int = Field(ge=1, le=10, strict=True)
@@ -91,6 +97,10 @@ class EvidenceSummary(BaseModel):
     # the narrative as context, but are in NEITHER supporting nor contradicting. Surfaced so a reader
     # can see why a cited PMID is in neither list (rather than appearing dropped).
     neutral_pmids: list[str] = []
+    # Relevant papers graded "contradicting" whose study gave the drug to people and is not a pilot (per-paper grade:
+    # is_human, is_interventional, not is_pilot). Built in code. Only these may close a signal on literature: the
+    # metformin x Parkinson pair closed on retrospective cohorts, a genetic-proxy study and a 60-patient pilot.
+    contradicting_trial_pmids: list[str] = []
     # Same-trial merge: lead PMID -> other papers citing the same NCT numbers with the same graded direction. The
     # secondary reports were not sent to synthesis and appear in no other list; the group counts once in study_count.
     secondary_report_pmids: dict[str, list[str]] = {}

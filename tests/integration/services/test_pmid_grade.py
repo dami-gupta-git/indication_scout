@@ -22,6 +22,15 @@ import pytest
 
 from indication_scout.services.retrieval import AbstractResult, _judge_pmid_grades
 
+from ._metformin_parkinson_abstracts import (
+    DPP4_COHORT,
+    GLP1_VS_METFORMIN,
+    IMATINIB_GBM,
+    MENDELIAN,
+    PILOT_RCT,
+    SGLT2_VS_METFORMIN,
+)
+
 logger = logging.getLogger(__name__)
 
 # The grader fans out concurrent calls on the module-level Anthropic client, whose pooled connections are bound to the
@@ -265,6 +274,20 @@ def _to_abstracts(dicts: list[dict[str, str]]) -> list[AbstractResult]:
             [_ACCELERATE],
             {"28514624": {"contradicting"}},
         ),
+        # Metformin is the REFERENCE drug in both cohorts; each reports only how the other drug compared with it, which
+        # says nothing about whether metformin itself helps. Both were graded contradicting and helped close the pair.
+        (
+            "metformin",
+            "Parkinson disease",
+            [SGLT2_VS_METFORMIN, GLP1_VS_METFORMIN],
+            {"40671477": {"neutral"}, "41582696": {"neutral"}},
+        ),
+        (
+            "imatinib",
+            "Glioblastoma",
+            [IMATINIB_GBM],
+            {"31514200": {"contradicting"}},
+        ),
     ],
 )
 async def test_pmid_grade_direction(
@@ -341,3 +364,63 @@ async def test_pmid_grade_design(
         judgment.is_human and judgment.is_controlled for judgment in judgments.values()
     )
     assert certifies_controlled is (drug == "metformin")
+
+
+@pytest.mark.parametrize(
+    "drug, disease, abstracts, expected",
+    [
+        (
+            "metformin",
+            "Parkinson disease",
+            [PILOT_RCT, DPP4_COHORT, MENDELIAN],
+            {
+                "40385486": (True, True, True, True),
+                "42216231": (True, False, False, False),
+                "42627515": (True, False, False, False),
+            },
+        ),
+        (
+            "imatinib",
+            "Glioblastoma",
+            [IMATINIB_GBM],
+            {"31514200": (True, False, True, False)},
+        ),
+        (
+            "metformin",
+            "Miscarriage",
+            [_PREGMET2],
+            {"30792154": (True, True, True, False)},
+        ),
+    ],
+)
+async def test_pmid_grade_trial_design(
+    drug: str,
+    disease: str,
+    abstracts: list[dict[str, str]],
+    expected: dict[str, tuple[bool, bool, bool, bool]],
+    tmp_path: Path,
+) -> None:
+    """is_interventional separates a study in which the investigators gave the drug from records of people who took it,
+    and is_pilot marks a study the abstract itself calls a pilot. Only a non-pilot interventional human paper may close a
+    signal. The metformin x Parkinson pair was closed on a retrospective cohort, a Mendelian randomization study and a
+    60-patient pilot; the imatinib single-arm phase II (not controlled, but the drug was given) and PregMet2 must still
+    read interventional and not pilot. Tuples are (is_human, is_controlled, is_interventional, is_pilot).
+    """
+    judgments = await _judge_pmid_grades(
+        "CHEMBL_TEST", drug, disease, _to_abstracts(abstracts), tmp_path
+    )
+
+    assert set(judgments) == set(expected)
+    for pmid, (
+        is_human,
+        is_controlled,
+        is_interventional,
+        is_pilot,
+    ) in expected.items():
+        judgment = judgments[pmid]
+        assert judgment.is_human is is_human, f"{pmid} is_human"
+        assert judgment.is_controlled is is_controlled, f"{pmid} is_controlled"
+        assert (
+            judgment.is_interventional is is_interventional
+        ), f"{pmid} is_interventional"
+        assert judgment.is_pilot is is_pilot, f"{pmid} is_pilot"

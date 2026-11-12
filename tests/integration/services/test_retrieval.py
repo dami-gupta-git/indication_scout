@@ -6,6 +6,10 @@ from datetime import date
 import pytest
 from sqlalchemy import text
 
+from indication_scout.agents.clinical_trials.clinical_trials_output import (
+    ClinicalTrialsOutput,
+)
+from indication_scout.agents.supervisor.supervisor_tools import _closure_text
 from indication_scout.config import get_settings
 from indication_scout.constants import LITERATURE_SCREEN_MAX_DEPTH
 from indication_scout.data_sources.pubmed import PubMedClient
@@ -14,7 +18,17 @@ from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.retrieval import (
     PUBTYPE_BOOST_DEFAULT,
     PUBTYPE_BOOSTS,
+    AbstractResult,
     RetrievalService,
+)
+
+from ._metformin_parkinson_abstracts import (
+    DPP4_COHORT,
+    GLP1_VS_METFORMIN,
+    IMATINIB_GBM,
+    MENDELIAN,
+    PILOT_RCT,
+    SGLT2_VS_METFORMIN,
 )
 
 logger = logging.getLogger(__name__)
@@ -248,6 +262,57 @@ async def test_synthesize_evidence_summary_is_self_consistent(
         assert (
             summary.direction == "none"
         ), f"basis={summary.evidence_basis} but direction={summary.direction}"
+
+
+@pytest.mark.parametrize(
+    "chembl_id, disease, approved, abstracts, trial_pmids, closure",
+    [
+        # Every paper against metformin is observational or a genetic proxy, and the one trial is a 60-patient pilot:
+        # the pair must not close, though two Phase 3 trials are active (2026-11-11 metformin report).
+        (
+            "CHEMBL1431",
+            "Parkinson disease",
+            ["type 2 diabetes mellitus"],
+            [PILOT_RCT, DPP4_COHORT, MENDELIAN, SGLT2_VS_METFORMIN, GLP1_VS_METFORMIN],
+            [],
+            "LIVE — not closed (No registry termination)",
+        ),
+        # A failed single-arm phase II in which the drug was given must still close (imatinib x glioblastoma).
+        (
+            "CHEMBL941",
+            "glioblastoma",
+            ["chronic myeloid leukemia"],
+            [IMATINIB_GBM],
+            ["31514200"],
+            "CLOSED — human clinical literature contradicts efficacy for this indication",
+        ),
+    ],
+)
+async def test_synthesize_closes_only_on_a_contradicting_trial(
+    svc, chembl_id, disease, approved, abstracts, trial_pmids, closure
+):
+    """A signal closes on literature only when a non-pilot human study that gave the drug contradicts it. Observational
+    records, genetic-proxy studies and pilot trials can still set the direction, but cannot close the signal.
+    """
+    window = [
+        AbstractResult(
+            pmid=d["pmid"], title=d["title"], abstract=d["abstract"], similarity=0.9
+        )
+        for d in abstracts
+    ]
+
+    summary = await svc.synthesize(
+        chembl_id=chembl_id,
+        disease=disease,
+        top_abstracts=window,
+        approved_indications=approved,
+    )
+
+    assert summary.contradicting_trial_pmids == trial_pmids
+    clinical_trials = ClinicalTrialsOutput(
+        closure="live", closure_reason="No registry termination"
+    )
+    assert _closure_text(clinical_trials, summary) == closure
 
 
 async def test_extract_organ_term_returns_string(svc):
