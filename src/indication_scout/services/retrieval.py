@@ -471,7 +471,7 @@ async def _judge_pmid_treats_disease(
             "pmid": result.pmid,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "treats_disease_v6_genetic_proxy",
+            "logic_version": "treats_disease_v7_simplified_safety_endpoint",
         }
         cached = cache_get("pmid_treats_disease", cache_params, cache_dir)
         if isinstance(cached, str) and cached in _PMID_TREATS_DISEASE_VERDICTS:
@@ -552,7 +552,7 @@ async def _judge_pmid_grades(
             "pmid": result.pmid,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "pmid_grade_v2_interventional_pilot",
+            "logic_version": "pmid_grade_v3_plain_pilot",
         }
         cached = cache_get("pmid_grade", cache_params, cache_dir)
         if isinstance(cached, dict):
@@ -1675,7 +1675,7 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or derived fields (direction rollup, strength cap) change, so stale judgments
             # cannot preserve behavior the new rules reject.
-            "logic_version": "per_pmid_class_and_target_gates_v9_contradicting_trials",
+            "logic_version": "per_pmid_class_and_target_gates_v10_simplified_gate",
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
