@@ -1888,6 +1888,7 @@ def build_supervisor_tools(
                     "stage": stage_phrase,
                     "active_programs": fields["active_programs"],
                     "literature": fields["literature"],
+                    "literature_summary": es.summary if es is not None else "",
                     # Authoritative upstream FDA label relationship (NOT the LLM blurb value).
                     "relationship": approval_labels.get(
                         disease.lower().strip(), "none"

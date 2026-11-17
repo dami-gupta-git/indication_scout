@@ -1,6 +1,7 @@
 # Semaglutide regression spec.
 #
-# Authored against gold_standard/semaglutide_2026-09-14_16-14-46.json. Each assertion encodes a
+# Authored against gold_standard/semaglutide_2026-09-14_16-14-46.json (golden re-pinned to 2026-11-16_20-51-08; the
+# spec still passes against it). Each assertion encodes a
 # domain-meaningful invariant a regression must NOT flip.
 #
 # Anchors are pinned only where they held across ALL THREE post-fix 2026-09-10 runs (20:15, 20:22,

@@ -103,6 +103,8 @@ async def test_judge_interpretive_no_contradiction_live(label, facts, test_cache
                 "NOT DECIDED — no closure verdict was reached; do NOT describe the signal as closed"
             ),
             "terminations": "none reported",
+            # These cases check consistency with the stage and approval facts; no literature summary is supplied.
+            "literature_summary": "",
             **facts,
         },
         cache_dir=test_cache_dir,
@@ -131,3 +133,37 @@ async def test_judge_interpretive_no_contradiction_live(label, facts, test_cache
 
     # (3) All four fields populated.
     assert j.blocker and j.key_risk and j.verdict and j.prose
+
+
+async def test_judge_interpretive_does_not_call_null_trials_supportive(test_cache_dir):
+    """bupropion x cocaine dependence, 2026-11-16: the card called the hypothesis "RCT-supported" above a literature
+    section saying the controlled trials were null. Given the summary text and a registry-only closure sentence, the card
+    must not describe the efficacy evidence as supported or say that no efficacy failure was found."""
+    j = await judge_interpretive(
+        stage="Phase 2/Phase 3 completed for this indication (no standalone Phase 3)",
+        active_programs="None active",
+        literature="strong, mixed, RCT-backed / controlled, ⚠️ safety signal reported for this indication",
+        literature_summary=(
+            "The evidence for bupropion in cocaine dependence is mixed, with controlled clinical trials generally "
+            "failing to show a significant overall benefit versus placebo (PMID: 18551884; PMID: 36920397), while some "
+            "subgroup and contingency-management combination analyses suggest potential benefit in specific "
+            "populations (PMID: 16461866; PMID: 36920397). Supporting evidence comes primarily from a small "
+            "uncontrolled case series (PMID: 11916368) and preclinical rat data (PMID: 39881654), which are "
+            "insufficient to offset the null findings from the higher-quality randomized controlled trials."
+        ),
+        relationship="none",
+        approved_indication=None,
+        trial_evidence="2 relevant trial(s), complete review of 6 registry query match(es)",
+        closure=(
+            "LIVE — not closed (No relevant Phase 3 trial was terminated for safety or benefit:risk reasons.)"
+        ),
+        terminations="none reported",
+        cache_dir=test_cache_dir,
+        drug="bupropion",
+        indication="cocaine dependence",
+    )
+    assert j is not None
+    blob = " ".join([j.blocker, j.key_risk, j.verdict, j.prose]).lower()
+    assert "rct-supported" not in blob
+    assert "no efficacy failure" not in blob
+    assert "no literature" not in blob

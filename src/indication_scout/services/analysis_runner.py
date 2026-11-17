@@ -284,6 +284,7 @@ async def run_pair_analysis(
                     stage=stage_phrase,
                     active_programs=active_programs,
                     literature=lit_oneliner,
+                    literature_summary=es.summary if es is not None else "",
                     relationship=approval_relationship,
                     approved_indication=approved_ind,
                     trial_evidence=trial_evidence,

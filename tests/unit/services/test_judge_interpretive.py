@@ -20,6 +20,7 @@ _FACTS = {
     "stage": "Phase 3 completed for this indication",
     "active_programs": "Phase 3 recruiting (NCT_A)",
     "literature": "Moderate, supports, RCT-backed",
+    "literature_summary": "Two placebo-controlled trials met their primary endpoints.",
     "relationship": "related_family",
     "approved_indication": "Type 2 Diabetes",
     "trial_evidence": "4 relevant trials, complete review of 4 registry query matches",
@@ -134,6 +135,23 @@ async def test_judge_cache_key_varies_by_trial_evidence(tmp_path):
         }
         await judge_interpretive(**other, cache_dir=tmp_path, drug="d", indication="i")
     assert mock.await_count == 2
+
+
+async def test_judge_passes_literature_summary_and_keys_cache_on_it(tmp_path):
+    """The literature summary text reaches the prompt, and a different summary is a different cache entry."""
+    mock = AsyncMock(return_value=_OK)
+    with patch("indication_scout.services.judge_interpretive.query_llm", new=mock):
+        await judge_interpretive(**_FACTS, cache_dir=tmp_path, drug="d", indication="i")
+        other = {
+            **_FACTS,
+            "literature_summary": "Both placebo-controlled trials missed their primary endpoints.",
+        }
+        await judge_interpretive(**other, cache_dir=tmp_path, drug="d", indication="i")
+    assert mock.await_count == 2
+    first_prompt = mock.await_args_list[0].args[0]
+    second_prompt = mock.await_args_list[1].args[0]
+    assert "Literature summary: Two placebo-controlled trials met their primary endpoints." in first_prompt
+    assert "Literature summary: Both placebo-controlled trials missed their primary endpoints." in second_prompt
 
 
 async def test_judge_none_approved_indication_ok(tmp_path):
