@@ -114,6 +114,12 @@ _PMID_DRUG_IDENTITY_PROMPT = (_PROMPTS_DIR / "pmid_drug_identity.txt").read_text
 _PMID_DRUG_IDENTITY_VERDICTS = {"studied", "class_level", "not_studied"}
 _PMID_TREATS_DISEASE_PROMPT = (_PROMPTS_DIR / "pmid_treats_disease.txt").read_text()
 _PMID_TREATS_DISEASE_VERDICTS = {"treats", "not_treats"}
+# Cache versions of the three per-paper judgments. The synthesize cache key includes all three: a synthesis is built from
+# the papers these judgments admit, so a cached synthesis for the same PMIDs must miss when any of them changes. Without
+# this, a gate bump left eye disorder's synthesis cached with a paper the new gate rejects (semaglutide, 2026-11-16).
+_PMID_DRUG_IDENTITY_LOGIC_VERSION = "drug_identity_v2"
+_PMID_TREATS_DISEASE_LOGIC_VERSION = "treats_disease_v9_benefit_or_harm"
+_PMID_GRADE_LOGIC_VERSION = "pmid_grade_v3_plain_pilot"
 # Appended on the retry after a prose field cited a PMID that was not in the supplied abstracts.
 _PMID_RETRY_NOTE = """
 
@@ -393,7 +399,7 @@ async def _judge_pmid_drug_identity(
             "pmid": result.pmid,
             "drug_names": sorted(names),
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "drug_identity_v2",
+            "logic_version": _PMID_DRUG_IDENTITY_LOGIC_VERSION,
         }
         cached = cache_get("pmid_drug_identity", cache_params, cache_dir)
         if isinstance(cached, str) and cached in _PMID_DRUG_IDENTITY_VERDICTS:
@@ -471,7 +477,7 @@ async def _judge_pmid_treats_disease(
             "pmid": result.pmid,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "treats_disease_v7_simplified_safety_endpoint",
+            "logic_version": _PMID_TREATS_DISEASE_LOGIC_VERSION,
         }
         cached = cache_get("pmid_treats_disease", cache_params, cache_dir)
         if isinstance(cached, str) and cached in _PMID_TREATS_DISEASE_VERDICTS:
@@ -552,7 +558,7 @@ async def _judge_pmid_grades(
             "pmid": result.pmid,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "pmid_grade_v3_plain_pilot",
+            "logic_version": _PMID_GRADE_LOGIC_VERSION,
         }
         cached = cache_get("pmid_grade", cache_params, cache_dir)
         if isinstance(cached, dict):
@@ -1676,6 +1682,11 @@ class RetrievalService:
             # Bump when the relevance prompt or derived fields (direction rollup, strength cap) change, so stale judgments
             # cannot preserve behavior the new rules reject.
             "logic_version": "per_pmid_class_and_target_gates_v10_simplified_gate",
+            "paper_judgment_versions": [
+                _PMID_DRUG_IDENTITY_LOGIC_VERSION,
+                _PMID_TREATS_DISEASE_LOGIC_VERSION,
+                _PMID_GRADE_LOGIC_VERSION,
+            ],
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:

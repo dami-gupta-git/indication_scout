@@ -3,7 +3,11 @@
 Runs the production prompt by default, or a candidate prompt file given as the second argument, so a simplified prompt
 can be compared case by case. Cases are papers with settled answers from earlier gate work, plus the semaglutide SUSTAIN
 11 trial (35546450): a type 2 diabetes trial that recorded severe hypoglycaemia as a safety endpoint, which the gate
-admitted for semaglutide x hypoglycemia and which then closed that signal on 2026-11-11. Abstracts come from pgvector.
+admitted for semaglutide x hypoglycemia and which then closed that signal on 2026-11-11. The semaglutide reject cases
+after it are papers the shortened gate of 84e3333 admitted on 2026-11-16: adverse-event studies read as prevention, a
+result for a different disease, an abstract with no result, and weight trials in a schizophrenia population. The type 1
+diabetes case guards the population rule against rejecting a trial whose outcome measures the candidate disease.
+Examples written into the prompt are kept different from these cases. Abstracts come from pgvector.
 Run with:
 
     .venv/bin/python tests/harness_tests/pmid_treats_disease_harness.py [runs] [prompt_path]
@@ -144,6 +148,69 @@ _CASES: tuple[GateCase, ...] = (
         disease="Parkinson disease",
         treats=True,
         note="RCT treating Parkinson's",
+    ),
+    GateCase(
+        pmid="40810985",
+        drug="semaglutide",
+        disease="eye disorder",
+        treats=False,
+        note="meta-analysis of ocular adverse events",
+    ),
+    GateCase(
+        pmid="39151204",
+        drug="semaglutide",
+        disease="eye disorder",
+        treats=False,
+        note="review of diabetes drugs worsening retinopathy",
+    ),
+    GateCase(
+        pmid="36596264",
+        drug="semaglutide",
+        disease="eye disorder",
+        treats=False,
+        note="GLP-1RA trials and retinopathy worsening",
+    ),
+    GateCase(
+        pmid="41192935",
+        drug="semaglutide",
+        disease="eye disorder",
+        treats=False,
+        note="cohort asking whether semaglutide raises retinopathy risk",
+    ),
+    GateCase(
+        pmid="38806481",
+        drug="semaglutide",
+        disease="nicotine dependence",
+        treats=False,
+        note="alcohol use disorder incidence, a different disease",
+    ),
+    GateCase(
+        pmid="36502289",
+        drug="semaglutide",
+        disease="heart failure",
+        treats=False,
+        note="SELECT baseline characteristics, no outcome",
+    ),
+    GateCase(
+        pmid="42418179",
+        drug="semaglutide",
+        disease="schizophrenia",
+        treats=False,
+        note="antipsychotic-induced weight gain in schizophrenia patients",
+    ),
+    GateCase(
+        pmid="42179170",
+        drug="semaglutide",
+        disease="schizophrenia",
+        treats=False,
+        note="weight and glycaemia in schizophrenia patients",
+    ),
+    GateCase(
+        pmid="38444317",
+        drug="semaglutide",
+        disease="type 1 diabetes mellitus",
+        treats=True,
+        note="adjunct semaglutide for glycaemic control in T1D",
     ),
 )
 
