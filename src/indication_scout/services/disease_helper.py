@@ -10,7 +10,7 @@ import logging
 import random
 import sys
 from pathlib import Path
-from typing import Any, TypedDict
+from typing import Any, Literal, TypedDict
 
 import aiohttp
 
@@ -19,6 +19,7 @@ from indication_scout.constants import (
     BROADENING_BLOCKLIST,
     DEFAULT_CACHE_DIR,
     DISEASE_SYNONYM_CANONICAL,
+    MESH_FALLBACK_SKIP_SUFFIX,
     MESH_RESOLVER_MAX_CONCURRENT,
     MESH_RESOLVER_TTL_SECONDS,
     NCBI_ESEARCH_URL,
@@ -29,6 +30,7 @@ from indication_scout.data_sources.base_client import (
     log_data_source_failure,
     summarize_http_exception,
 )
+from indication_scout.data_sources.open_targets import OpenTargetsClient
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.services.llm import (
     parse_last_json_object,
@@ -444,28 +446,77 @@ def _mesh_semaphore() -> asyncio.Semaphore:
     return _MESH_RESOLVER_SEMAPHORE
 
 
-async def resolve_mesh_id(indication: str) -> tuple[str, str] | None:
-    """Resolve an indication to (descriptor_id, preferred_term), retrying on its canonical synonym.
+# Which step of resolve_mesh_id produced the descriptor.
+MeshRoute = Literal["label", "canonical", "ot_synonym"]
 
-    MeSH registers one vocabulary; candidate names arrive in another. "cocaine use disorder" (DSM-5) has no MeSH entry,
-    while its synonym "cocaine dependence" resolves to Cocaine-Related Disorders (D019970), so a direct miss would
-    silently yield zero trials. On a miss, retry once with the name `DISEASE_SYNONYM_CANONICAL` maps this one to. Misses
-    are not cached, so the retry costs nothing on the hit path.
+
+async def resolve_mesh_id(indication: str) -> tuple[str, str, MeshRoute] | None:
+    """Resolve an indication to (descriptor_id, preferred_term, route), trying three routes in order.
+
+    - label: the indication itself against MeSH.
+    - canonical: the name DISEASE_SYNONYM_CANONICAL maps it to. "cocaine use disorder" (DSM-5) has no MeSH entry,
+      while "cocaine dependence" resolves to Cocaine-Related Disorders (D019970).
+    - ot_synonym: each exact Open Targets synonym of the disease, in order; the first descriptor hit wins.
+      "methamphetamine dependence" has no MeSH entry and no canonical mapping, and resolves through its exact synonym
+      "amphetamine-related disorders" to D019969. Related, narrow and broad synonyms and parent terms change the
+      disease's scope and are never tried. Skipped for labels ending in MESH_FALLBACK_SKIP_SUFFIX, which are Open
+      Targets measurement traits rather than diseases.
+
+    Returns None when every route misses. Misses are not cached, so the extra routes cost nothing on the hit path.
     """
     direct = await _resolve_mesh_id_direct(indication)
     if direct is not None:
-        return direct
+        return direct[0], direct[1], "label"
 
-    canonical = DISEASE_SYNONYM_CANONICAL.get(indication.strip().lower())
-    if canonical is None or canonical.strip().lower() == indication.strip().lower():
+    key = indication.strip().lower()
+    canonical = DISEASE_SYNONYM_CANONICAL.get(key)
+    if canonical is not None and canonical.strip().lower() != key:
+        logger.debug(
+            "MeSH resolver: '%s' unresolved; retrying as canonical synonym '%s'",
+            indication,
+            canonical,
+        )
+        via_canonical = await _resolve_mesh_id_direct(canonical)
+        if via_canonical is not None:
+            return via_canonical[0], via_canonical[1], "canonical"
+
+    if key.endswith(MESH_FALLBACK_SKIP_SUFFIX):
+        logger.debug(
+            "MeSH resolver: '%s' is a measurement trait; not resolving through Open Targets synonyms",
+            indication,
+        )
         return None
 
-    logger.debug(
-        "MeSH resolver: '%s' unresolved; retrying as canonical synonym '%s'",
-        indication,
-        canonical,
-    )
-    return await _resolve_mesh_id_direct(canonical)
+    return await _resolve_mesh_id_via_ot_synonyms(indication)
+
+
+async def _resolve_mesh_id_via_ot_synonyms(
+    indication: str,
+) -> tuple[str, str, MeshRoute] | None:
+    """Try each exact Open Targets synonym of the indication against MeSH; the first descriptor hit wins."""
+    try:
+        async with OpenTargetsClient(cache_dir=DEFAULT_CACHE_DIR) as ot_client:
+            synonyms = await ot_client.get_disease_synonyms(indication)
+    except DataSourceError as exc:
+        logger.warning(
+            "MeSH resolver: Open Targets synonym lookup failed for '%s'; leaving it unresolved: %s",
+            indication,
+            exc,
+        )
+        return None
+
+    for synonym in synonyms.exact:
+        hit = await _resolve_mesh_id_direct(synonym)
+        if hit is not None:
+            logger.info(
+                "MeSH resolver: '%s' resolved through Open Targets exact synonym '%s' -> %s %r",
+                indication,
+                synonym,
+                hit[0],
+                hit[1],
+            )
+            return hit[0], hit[1], "ot_synonym"
+    return None
 
 
 async def _resolve_mesh_id_direct(indication: str) -> tuple[str, str] | None:

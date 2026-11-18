@@ -291,6 +291,7 @@ async def test_search_trials_assembles_counts_and_fetch(tmp_path):
             },
         ],
         "resolution_status": "resolved",
+        "resolution_route": None,
     }
 
     # 5 counts: total + recruiting + active + withdrawn + unknown

@@ -24,7 +24,7 @@ async def test_resolve_mesh_id_covid_picks_disease_not_testing():
     "[MeSH Terms]" qualifier must return the disease descriptor "COVID-19" (D000086382).
     """
     result = await resolve_mesh_id("covid-19")
-    assert result == ("D000086382", "COVID-19")
+    assert result == ("D000086382", "COVID-19", "label")
 
 
 @pytest.mark.parametrize(
@@ -301,9 +301,9 @@ async def test_normalize_batch_returns_pubmed_friendly_term(test_cache_dir):
 async def test_resolve_mesh_id_real_ncbi(
     indication, expected_mesh_id, expected_preferred_term
 ):
-    """Real NCBI esearch+esummary resolves common indications to (D-number, preferred term)."""
+    """Real NCBI esearch+esummary resolves common indications to (D-number, preferred term) on the label route."""
     result = await resolve_mesh_id(indication)
-    assert result == (expected_mesh_id, expected_preferred_term)
+    assert result == (expected_mesh_id, expected_preferred_term, "label")
 
 
 @pytest.mark.parametrize(
@@ -324,4 +324,35 @@ async def test_resolve_mesh_id_atm_fallback(
     """Descriptive phrases with no exact MeSH heading resolve via NCBI ATM fallback."""
     with patch("indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path):
         result = await resolve_mesh_id(indication)
-    assert result == (expected_mesh_id, expected_preferred_term)
+    assert result == (expected_mesh_id, expected_preferred_term, "label")
+
+
+@pytest.mark.parametrize(
+    "indication, expected",
+    [
+        # No MeSH entry and no canonical mapping; resolves through the exact Open Targets synonym
+        # "Amphetamine-Related Disorders" (design_mesh_fallback.md).
+        (
+            "methamphetamine dependence",
+            ("D019969", "Amphetamine-Related Disorders", "ot_synonym"),
+        ),
+        # Resolves through the exact synonym "disorder of lipid metabolism".
+        (
+            "inherited lipid metabolism disorder",
+            ("D052439", "Lipid Metabolism Disorders", "ot_synonym"),
+        ),
+        # Open Targets EFO_1001461 has no exact synonyms and MeSH has no descriptor for the concept.
+        ("endothelial dysfunction", None),
+        # Measurement trait: not resolved through its synonyms.
+        ("multiple sclerosis symptom measurement", None),
+        ("bipolar disorder", ("D001714", "Bipolar Disorder", "label")),
+    ],
+)
+async def test_resolve_mesh_id_open_targets_synonym_route(
+    tmp_path, indication, expected
+):
+    """Live NCBI and Open Targets: the exact-synonym route recovers labels with no MeSH entry, and skips
+    measurement traits."""
+    with patch("indication_scout.services.disease_helper.DEFAULT_CACHE_DIR", tmp_path):
+        result = await resolve_mesh_id(indication)
+    assert result == expected

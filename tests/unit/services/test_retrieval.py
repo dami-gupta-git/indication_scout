@@ -270,6 +270,50 @@ async def test_expand_search_terms_returns_list(tmp_path, metformin_profile):
     ]
 
 
+@pytest.mark.parametrize(
+    "resolved, expected_query",
+    [
+        # label route: the MeSH preferred heading is the disease term
+        (
+            ("D019969", "Amphetamine-Related Disorders", "label"),
+            'metformin AND "Amphetamine-Related Disorders"',
+        ),
+        # ot_synonym route: the heading came from an Open Targets synonym and can be broader, so the raw name is kept
+        (
+            ("D019969", "Amphetamine-Related Disorders", "ot_synonym"),
+            'metformin AND "methamphetamine dependence"',
+        ),
+    ],
+)
+async def test_expand_search_terms_disease_term_by_route(
+    tmp_path, metformin_profile, resolved, expected_query
+):
+    """PubMed queries use the MeSH heading on the label route and the raw disease name on the ot_synonym route."""
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
+            new=AsyncMock(return_value="brain"),
+        ),
+        patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=resolved),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_small_llm",
+            new=AsyncMock(return_value='["metformin AND <DISEASE>"]'),
+        ),
+    ):
+        result = await RetrievalService(tmp_path).expand_search_terms(
+            "CHEMBL1431", "methamphetamine dependence", metformin_profile
+        )
+
+    assert result == [expected_query]
+
+
 async def test_expand_search_terms_prompt_contains_drug_name(
     tmp_path, metformin_profile
 ):
@@ -1012,7 +1056,7 @@ async def test_find_trial_linked_pmids_batches_nct_secondary_source_query(tmp_pa
     with (
         patch(
             "indication_scout.services.retrieval.resolve_mesh_id",
-            new=AsyncMock(return_value=("D000437", "Alcoholism")),
+            new=AsyncMock(return_value=("D000437", "Alcoholism", "label")),
         ),
         patch(
             "indication_scout.services.retrieval.ClinicalTrialsClient",

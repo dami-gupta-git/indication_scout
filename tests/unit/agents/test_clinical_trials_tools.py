@@ -87,7 +87,7 @@ async def test_search_trials_returns_search_trials_result_artifact(tmp_path):
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -138,6 +138,51 @@ async def test_search_trials_returns_search_trials_result_artifact(tmp_path):
     assert "1 registry query matches" in msg.content
 
 
+async def test_search_trials_records_ot_synonym_route(tmp_path):
+    """A descriptor found through an Open Targets synonym is searched as usual, and the route is recorded on the
+    result so the report can say the indication was searched under a broader term."""
+    mock_result = SearchTrialsResult(
+        total_count=0,
+        by_status={"RECRUITING": 0, "ACTIVE_NOT_RECRUITING": 0, "WITHDRAWN": 0},
+        trials=[],
+        resolution_status="resolved",
+    )
+    mock_client = _mock_client(search_trials=mock_result)
+    tools = build_clinical_trials_tools(date_before=None, cache_dir=tmp_path)
+
+    with (
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+            new=AsyncMock(
+                return_value=("D019969", "Amphetamine-Related Disorders", "ot_synonym")
+            ),
+        ),
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+            return_value=mock_client,
+        ),
+    ):
+        msg = await _get_tool(tools, "search_trials").ainvoke(
+            LCToolCall(
+                name="search_trials",
+                args={"drug": "bupropion", "indication": "methamphetamine dependence"},
+                id="tc_route",
+                type="tool_call",
+            )
+        )
+
+    mock_client.search_trials.assert_awaited_once_with(
+        "bupropion",
+        "Amphetamine-Related Disorders",
+        date_before=None,
+    )
+    assert isinstance(msg.artifact, SearchTrialsResult)
+    assert msg.artifact.resolution_status == "resolved"
+    assert msg.artifact.resolution_route == "ot_synonym"
+    assert msg.artifact.total_count == 0
+    assert msg.artifact.trials == []
+
+
 async def test_search_trials_passes_date_before():
     """search_trials forwards date_before from closure into the client call."""
     cutoff = date(2018, 1, 1)
@@ -147,7 +192,7 @@ async def test_search_trials_passes_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D000505", "Alopecia Areata")),
+            new=AsyncMock(return_value=("D000505", "Alopecia Areata", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -227,7 +272,7 @@ async def test_search_trials_content_notes_top_50_when_total_exceeds_shown():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D003866", "Depressive Disorder")),
+            new=AsyncMock(return_value=("D003866", "Depressive Disorder", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -272,7 +317,7 @@ async def test_search_trials_renders_every_trial_it_records_for_classification()
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D011236", "Prediabetic State")),
+            new=AsyncMock(return_value=("D011236", "Prediabetic State", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -322,7 +367,9 @@ async def test_get_completed_returns_completed_trials_result_artifact():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D003924", "Diabetes Mellitus, Type 2")),
+            new=AsyncMock(
+                return_value=("D003924", "Diabetes Mellitus, Type 2", "label")
+            ),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -366,7 +413,7 @@ async def test_get_completed_passes_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D000001", "Test Term")),
+            new=AsyncMock(return_value=("D000001", "Test Term", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -462,7 +509,7 @@ async def test_get_terminated_returns_terminated_trials_result_artifact():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D050177", "Overweight")),
+            new=AsyncMock(return_value=("D050177", "Overweight", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -518,7 +565,7 @@ async def test_get_terminated_classification_view_uncapped_with_rich_columns():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D050177", "Overweight")),
+            new=AsyncMock(return_value=("D050177", "Overweight", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -553,7 +600,7 @@ async def test_get_terminated_passes_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D000001", "Test Term")),
+            new=AsyncMock(return_value=("D000001", "Test Term", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -644,7 +691,7 @@ async def test_get_landscape_returns_landscape_artifact():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D018589", "Gastroparesis")),
+            new=AsyncMock(return_value=("D018589", "Gastroparesis", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -705,7 +752,7 @@ async def test_get_landscape_does_not_call_client_when_date_before_set():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D018589", "Gastroparesis")),
+            new=AsyncMock(return_value=("D018589", "Gastroparesis", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1139,7 +1186,7 @@ async def _populate_shown(tools: list, *, completed=(), terminated=()) -> None:
         with (
             patch(
                 "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-                new=AsyncMock(return_value=("D006973", "Hypertension")),
+                new=AsyncMock(return_value=("D006973", "Hypertension", "label")),
             ),
             patch(
                 "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1163,7 +1210,7 @@ async def _populate_shown(tools: list, *, completed=(), terminated=()) -> None:
         with (
             patch(
                 "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-                new=AsyncMock(return_value=("D006973", "Hypertension")),
+                new=AsyncMock(return_value=("D006973", "Hypertension", "label")),
             ),
             patch(
                 "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1493,7 +1540,7 @@ async def _run_pair(tools, drug: str, indication: str, mesh_term: str, ncts: lis
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("DXXXXXX", mesh_term)),
+            new=AsyncMock(return_value=("DXXXXXX", mesh_term, "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1571,7 +1618,7 @@ async def test_shared_instance_across_pairs_raises_not_leaks():
         with (
             patch(
                 "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-                new=AsyncMock(return_value=("DXXXXXX", mesh)),
+                new=AsyncMock(return_value=("DXXXXXX", mesh, "label")),
             ),
             patch(
                 "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1760,7 +1807,7 @@ async def test_search_trials_scrubs_post_cutoff_outcomes_under_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1824,7 +1871,7 @@ async def test_get_completed_drops_post_cutoff_trials_under_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1875,7 +1922,7 @@ async def test_get_terminated_drops_post_cutoff_trials_under_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1927,7 +1974,7 @@ async def test_get_landscape_runs_normally_without_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -2000,7 +2047,7 @@ async def test_assigned_indication_match_is_case_insensitive():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D014029", "Tobacco Use Disorder")),
+            new=AsyncMock(return_value=("D014029", "Tobacco Use Disorder", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -2029,7 +2076,7 @@ async def test_no_assigned_indication_disables_the_check():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D016540", "Smoking Cessation")),
+            new=AsyncMock(return_value=("D016540", "Smoking Cessation", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",

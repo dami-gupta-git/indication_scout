@@ -172,7 +172,7 @@ def build_clinical_trials_tools(
                 f"Search for {drug} × {indication}: MeSH unresolved, skipped.",
                 SearchTrialsResult(resolution_status="unresolved"),
             )
-        mesh_id, mesh_term = resolved
+        mesh_id, mesh_term, route = resolved
 
         async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.search_trials(
@@ -180,6 +180,7 @@ def build_clinical_trials_tools(
                 mesh_term,
                 date_before=date_before,
             )
+        result.resolution_route = route
         result.trials = _drop_non_therapeutic(
             result.trials, "search_trials", drug, indication
         )
@@ -277,7 +278,7 @@ def build_clinical_trials_tools(
                 f"Completed for {drug} × {indication}: MeSH unresolved, skipped.",
                 CompletedTrialsResult(),
             )
-        _mesh_id, mesh_term = resolved
+        _mesh_id, mesh_term, _route = resolved
 
         async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.get_completed_trials(
@@ -373,7 +374,7 @@ def build_clinical_trials_tools(
                 f"Terminated for {drug} × {indication}: MeSH unresolved, skipped.",
                 TerminatedTrialsResult(),
             )
-        _mesh_id, mesh_term = resolved
+        _mesh_id, mesh_term, _route = resolved
 
         async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.get_terminated_trials(
@@ -481,7 +482,7 @@ def build_clinical_trials_tools(
                 f"Landscape for {indication}: MeSH unresolved, skipped.",
                 IndicationLandscape(),
             )
-        _mesh_id, mesh_term = resolved
+        _mesh_id, mesh_term, _route = resolved
 
         async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             landscape = await client.get_landscape(

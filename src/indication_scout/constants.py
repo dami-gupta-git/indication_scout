@@ -382,6 +382,11 @@ DISEASE_SYNONYM_CANONICAL: dict[str, str] = {
     "cocaine-related-disorder": "cocaine dependence",
 }
 
+# MeSH resolution: a candidate label ending in this suffix is an Open Targets measurement trait, not a disease, and is
+# not resolved through its Open Targets synonyms ("multiple sclerosis symptom measurement" would otherwise resolve to
+# Multiple Sclerosis). The Open Targets "measurement" therapeutic area is not used instead: it also tags Miscarriage.
+MESH_FALLBACK_SKIP_SUFFIX: str = "measurement"
+
 # -- Stop-reason keywords → category (ClinicalTrials.gov) ------------------
 # Order matters: _classify_stop_reason takes the first match, so more specific
 # phrases must appear before broader ones. Examples observed in real CT.gov

@@ -333,6 +333,7 @@ async def test_run_clinical_trials_agent_keeps_unresolved_query_unknown():
         "by_status": {},
         "trials": [],
         "resolution_status": "unresolved",
+        "resolution_route": None,
     }
     assert output.completed == CompletedTrialsResult()
     assert output.terminated == TerminatedTrialsResult()

@@ -8,6 +8,7 @@ import pytest
 
 from indication_scout.constants import BROADENING_BLOCKLIST
 from indication_scout.data_sources.base_client import DataSourceError
+from indication_scout.models.model_open_targets import DiseaseSynonyms
 from indication_scout.services.disease_helper import (
     llm_normalize_disease,
     llm_normalize_disease_batch,
@@ -409,6 +410,136 @@ async def test_batch_returned_keys_match_all_input_terms():
 # ── resolve_mesh_id unit tests ───────────────────────────────────────────────
 
 
+def _fake_ot_client(
+    synonyms: DiseaseSynonyms | None = None, error: Exception | None = None
+) -> MagicMock:
+    """An OpenTargetsClient stand-in whose get_disease_synonyms returns `synonyms` or raises `error`."""
+    client = MagicMock()
+    client.get_disease_synonyms = AsyncMock(return_value=synonyms, side_effect=error)
+    client.__aenter__ = AsyncMock(return_value=client)
+    client.__aexit__ = AsyncMock(return_value=None)
+    return client
+
+
+_HYPERTENSION = ("D006973", "Hypertension")
+_COCAINE = ("D019970", "Cocaine-Related Disorders")
+_AMPHETAMINE = ("D019969", "Amphetamine-Related Disorders")
+
+
+@pytest.mark.parametrize(
+    "indication, direct_hits, synonyms, expected, expected_direct_calls, synonym_lookup_called",
+    [
+        # label hit: no canonical retry, no synonym lookup
+        (
+            "hypertension",
+            {"hypertension": _HYPERTENSION},
+            DiseaseSynonyms(exact=["high blood pressure"]),
+            (*_HYPERTENSION, "label"),
+            ["hypertension"],
+            False,
+        ),
+        # canonical hit: label misses, DISEASE_SYNONYM_CANONICAL maps to "cocaine dependence"
+        (
+            "cocaine use disorder",
+            {"cocaine dependence": _COCAINE},
+            DiseaseSynonyms(exact=["cocaine addiction"]),
+            (*_COCAINE, "canonical"),
+            ["cocaine use disorder", "cocaine dependence"],
+            False,
+        ),
+        # Open Targets exact synonyms tried in order; the first hit wins
+        (
+            "methamphetamine dependence",
+            {"amphetamine-related disorders": _AMPHETAMINE},
+            DiseaseSynonyms(
+                exact=["methamphetamine addiction", "amphetamine-related disorders"]
+            ),
+            (*_AMPHETAMINE, "ot_synonym"),
+            [
+                "methamphetamine dependence",
+                "methamphetamine addiction",
+                "amphetamine-related disorders",
+            ],
+            True,
+        ),
+        # related, narrow and broad synonyms are never tried
+        (
+            "methamphetamine dependence",
+            {"amphetamine-related disorders": _AMPHETAMINE},
+            DiseaseSynonyms(
+                related=["amphetamine-related disorders"],
+                narrow=["amphetamine-related disorders"],
+                broad=["amphetamine-related disorders"],
+            ),
+            None,
+            ["methamphetamine dependence"],
+            True,
+        ),
+        # a measurement trait is not resolved through its synonyms
+        (
+            "multiple sclerosis symptom measurement",
+            {"multiple sclerosis": ("D009103", "Multiple Sclerosis")},
+            DiseaseSynonyms(exact=["multiple sclerosis"]),
+            None,
+            ["multiple sclerosis symptom measurement"],
+            False,
+        ),
+    ],
+)
+async def test_resolve_mesh_id_routes(
+    indication,
+    direct_hits,
+    synonyms,
+    expected,
+    expected_direct_calls,
+    synonym_lookup_called,
+):
+    """The three routes run in order (label, canonical, exact Open Targets synonyms), each returning its route."""
+    direct = AsyncMock(side_effect=lambda name: direct_hits.get(name))
+    ot_client = _fake_ot_client(synonyms)
+    with (
+        patch(
+            "indication_scout.services.disease_helper._resolve_mesh_id_direct",
+            new=direct,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.OpenTargetsClient",
+            return_value=ot_client,
+        ),
+    ):
+        result = await resolve_mesh_id(indication)
+
+    assert result == expected
+    assert [call.args[0] for call in direct.call_args_list] == expected_direct_calls
+    if synonym_lookup_called:
+        ot_client.get_disease_synonyms.assert_awaited_once_with(indication)
+    else:
+        ot_client.get_disease_synonyms.assert_not_awaited()
+
+
+async def test_resolve_mesh_id_synonym_lookup_failure_leaves_unresolved():
+    """An Open Targets error during the synonym lookup returns None instead of raising."""
+    ot_client = _fake_ot_client(
+        error=DataSourceError("open_targets", "No disease found")
+    )
+    with (
+        patch(
+            "indication_scout.services.disease_helper._resolve_mesh_id_direct",
+            new=AsyncMock(return_value=None),
+        ),
+        patch(
+            "indication_scout.services.disease_helper.OpenTargetsClient",
+            return_value=ot_client,
+        ),
+    ):
+        result = await resolve_mesh_id("methamphetamine dependence")
+
+    assert result is None
+    ot_client.get_disease_synonyms.assert_awaited_once_with(
+        "methamphetamine dependence"
+    )
+
+
 async def test_resolve_mesh_id_cached_hit_skips_network():
     """A cached (D-number, preferred_term) tuple is returned without aiohttp."""
     with (
@@ -422,7 +553,7 @@ async def test_resolve_mesh_id_cached_hit_skips_network():
     ):
         result = await resolve_mesh_id("hypertension")
 
-    assert result == ("D006973", "Hypertension")
+    assert result == ("D006973", "Hypertension", "label")
     mock_session.assert_not_called()
 
 
@@ -452,6 +583,10 @@ async def test_resolve_mesh_id_returns_none_when_esearch_empty():
         patch(
             "indication_scout.services.disease_helper.aiohttp.ClientSession",
             return_value=mock_session,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.OpenTargetsClient",
+            return_value=_fake_ot_client(DiseaseSynonyms()),
         ),
     ):
         result = await resolve_mesh_id("totally-fake-indication-xyz")
@@ -514,7 +649,7 @@ async def test_resolve_mesh_id_writes_cache_on_success():
     ):
         result = await resolve_mesh_id("hypertension")
 
-    assert result == ("D006973", "Hypertension")
+    assert result == ("D006973", "Hypertension", "label")
     mock_cache_set.assert_called_once()
     args, kwargs = mock_cache_set.call_args
     assert args[0] == "mesh_resolver"
@@ -581,8 +716,8 @@ async def test_resolve_mesh_id_round_trip_through_real_cache(tmp_path, monkeypat
         second = await resolve_mesh_id("hypertension")
         calls_after_second = len(call_log)
 
-    assert first == ("D006973", "Hypertension")
-    assert second == ("D006973", "Hypertension")
+    assert first == ("D006973", "Hypertension", "label")
+    assert second == ("D006973", "Hypertension", "label")
     # First call: esearch + esummary = 2 HTTP requests
     assert calls_after_first == 2
     # Second call: must hit the cache and skip the network entirely
@@ -630,9 +765,15 @@ async def test_resolve_mesh_id_does_not_cache_failures(tmp_path, monkeypatch):
     session.__aenter__ = AsyncMock(return_value=session)
     session.__aexit__ = AsyncMock(return_value=None)
 
-    with patch(
-        "indication_scout.services.disease_helper.aiohttp.ClientSession",
-        return_value=session,
+    with (
+        patch(
+            "indication_scout.services.disease_helper.aiohttp.ClientSession",
+            return_value=session,
+        ),
+        patch(
+            "indication_scout.services.disease_helper.OpenTargetsClient",
+            return_value=_fake_ot_client(DiseaseSynonyms()),
+        ),
     ):
         result = await resolve_mesh_id("totally-fake-indication-xyz")
 

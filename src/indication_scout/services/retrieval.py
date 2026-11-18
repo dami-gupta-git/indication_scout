@@ -973,7 +973,7 @@ class RetrievalService:
         resolved = await resolve_mesh_id(disease)
         if resolved is None:
             return []
-        _, mesh_term = resolved
+        _, mesh_term, _route = resolved
         async with ClinicalTrialsClient(cache_dir=self.cache_dir) as trials_client:
             trial_result = await trials_client.search_trials(
                 drug, mesh_term, date_before=date_before
@@ -2141,16 +2141,27 @@ class RetrievalService:
 
         # Resolve the disease to its canonical MeSH preferred term for the prompt: PubMed's auto-term-mapping breaks on bare
         # multi-word phrases around AND, so the prompt has the LLM wrap the term in double quotes. Falls back to the raw
-        # disease name if the MeSH lookup misses.
+        # disease name if the MeSH lookup misses. The raw name is also kept on the ot_synonym route: that descriptor comes
+        # from an Open Targets synonym and can be broader than the disease, and a broader MeSH heading changes the papers
+        # retrieved (cocaine use disorder moved from mixed to contradicts when searched as "Cocaine-Related Disorders").
         from indication_scout.services.disease_helper import resolve_mesh_id
 
         mesh_result = await resolve_mesh_id(disease_name)
-        disease_term = mesh_result[1] if mesh_result else disease_name
         if mesh_result is None:
+            disease_term = disease_name
             logger.warning(
                 "expand_search_terms: MeSH resolution missed for %r; using raw disease name",
                 disease_name,
             )
+        elif mesh_result[2] == "ot_synonym":
+            disease_term = disease_name
+            logger.info(
+                "expand_search_terms: %r resolved only through an Open Targets synonym (%r); using raw disease name",
+                disease_name,
+                mesh_result[1],
+            )
+        else:
+            disease_term = mesh_result[1]
 
         template = (_PROMPTS_DIR / "expand_search_terms.txt").read_text()
         prompt = template.format(

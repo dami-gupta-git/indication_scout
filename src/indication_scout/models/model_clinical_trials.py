@@ -141,6 +141,9 @@ class SearchTrialsResult(BaseModel):
     by_status: dict[str, int] = {}
     trials: list[Trial] = []
     resolution_status: Literal["resolved", "unresolved"] | None = None
+    # Which resolve_mesh_id route produced the MeSH term the registry was searched with. "ot_synonym" means the term
+    # came from an exact Open Targets synonym and can be broader than the indication. None when unresolved.
+    resolution_route: Literal["label", "canonical", "ot_synonym"] | None = None
 
     @model_validator(mode="before")
     @classmethod
