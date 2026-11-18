@@ -37,6 +37,20 @@ TRIAL_TARGET_NS = "trial_treats_disease"
 _FIELD_CAP = 1500
 
 
+def _format_primary_outcomes(trial: Trial) -> str:
+    """Render the registry's measure, explanation, and time frame for the target gate."""
+    rendered: list[str] = []
+    for outcome in trial.primary_outcomes:
+        parts = [
+            part
+            for part in (outcome.measure, outcome.description, outcome.time_frame)
+            if part
+        ]
+        if parts:
+            rendered.append(" — ".join(parts))
+    return "; ".join(rendered) or "(none listed)"
+
+
 async def judge_trials_treat_disease(
     drug: str,
     disease: str,
@@ -58,7 +72,7 @@ async def judge_trials_treat_disease(
             "nct": trial.nct_id,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "trial_treats_disease_v1",
+            "logic_version": "trial_treats_disease_v2",
         }
         cached = cache_get(TRIAL_TARGET_NS, cache_params, cache_dir)
         if isinstance(cached, str) and cached in _TRIAL_TREATS_VERDICTS:
@@ -71,8 +85,7 @@ async def judge_trials_treat_disease(
             title=trial.title,
             summary=(trial.brief_summary or "")[:_FIELD_CAP],
             conditions="; ".join(trial.indications) or "(none listed)",
-            outcomes="; ".join(o.measure for o in trial.primary_outcomes if o.measure)
-            or "(none listed)",
+            outcomes=_format_primary_outcomes(trial),
         )
         async with semaphore:
             try:

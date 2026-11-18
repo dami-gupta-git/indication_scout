@@ -99,14 +99,14 @@ def test_format_interventions_empty_renders_none():
     assert _format_interventions(blanks) == "(none)"
 
 
-def test_format_interventions_caps_at_five():
-    """At most five drug names are rendered."""
+def test_format_interventions_caps_at_fifteen():
+    """At most fifteen drug names are rendered."""
     many = [
         Intervention(intervention_type="Drug", intervention_name=f"Drug{i}")
-        for i in range(8)
+        for i in range(18)
     ]
     out = _format_interventions(many)
-    assert out == "Drug: Drug0; Drug: Drug1; Drug: Drug2; Drug: Drug3; Drug: Drug4"
+    assert out == "; ".join(f"Drug: Drug{i}" for i in range(15))
 
 
 def test_format_interventions_preserves_diagnostic_type():

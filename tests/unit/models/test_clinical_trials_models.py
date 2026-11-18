@@ -67,17 +67,22 @@ def test_intervention_missing_fields_defaults_to_empty_string():
 
 
 @pytest.mark.parametrize(
-    "measure,time_frame",
+    "measure,description,time_frame",
     [
-        ("Change in HbA1c from baseline", "24 weeks"),
-        ("Overall survival", "5 years"),
-        ("Tumor response rate", None),
+        ("Change in HbA1c from baseline", "Glycemic control", "24 weeks"),
+        ("Overall survival", "Time to death from any cause", "5 years"),
+        ("Tumor response rate", None, None),
     ],
 )
-def test_primary_outcome_with_various_measures(measure, time_frame):
+def test_primary_outcome_with_various_measures(measure, description, time_frame):
     """PrimaryOutcome should accept various measures and time frames."""
-    outcome = PrimaryOutcome(measure=measure, time_frame=time_frame)
+    outcome = PrimaryOutcome(
+        measure=measure,
+        description=description,
+        time_frame=time_frame,
+    )
     assert outcome.measure == measure
+    assert outcome.description == description
     assert outcome.time_frame == time_frame
 
 
@@ -85,6 +90,7 @@ def test_primary_outcome_missing_measure_defaults_to_empty_string():
     """PrimaryOutcome measure defaults to empty string when omitted."""
     outcome = PrimaryOutcome(time_frame="24 weeks")
     assert outcome.measure == ""
+    assert outcome.description is None
     assert outcome.time_frame == "24 weeks"
 
 

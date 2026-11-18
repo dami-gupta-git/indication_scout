@@ -17,7 +17,10 @@ from indication_scout.agents._react_loop import (
     _trailing_tool_messages,
     build_gated_react_loop,
 )
-from indication_scout.agents._trial_signals import derive_trial_signals
+from indication_scout.agents._trial_signals import (
+    derive_trial_signals,
+    superseded_registrations,
+)
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
     FinalizeClinicalTrialsArtifact,
@@ -241,6 +244,31 @@ async def run_clinical_trials_agent(
         output.search is not None and output.search.resolution_status == "unresolved"
     )
     if finalized and not query_unresolved:
+        # Collapse sibling registrations of one protocol (EU per-site/per-indication registrations)
+        # FIRST, so every downstream consumer — coverage counts, the derived signals, the prose,
+        # and the report's trial listings — reads one relevant set. They all key off
+        # relevant_nct_ids, so dropping a superseded registration anywhere later makes the prose
+        # disagree with the counts beside it.
+        all_trials = [
+            t
+            for result in (output.completed, output.terminated, output.search)
+            for t in (result.trials if result else [])
+        ]
+        superseded = superseded_registrations(
+            [t for t in all_trials if t.nct_id in set(output.relevant_nct_ids)]
+        )
+        if superseded:
+            logger.info(
+                "[CT] %s x %s: collapsed %d superseded registration(s): %s",
+                drug_name,
+                disease_name,
+                len(superseded),
+                superseded,
+            )
+            output.relevant_nct_ids = [
+                n for n in output.relevant_nct_ids if n not in superseded
+            ]
+
         relevant_ids = set(output.relevant_nct_ids)
         contaminated_ids = set(output.contaminated_nct_ids)
         output.search_coverage = _derive_relevance_coverage(
@@ -262,7 +290,9 @@ async def run_clinical_trials_agent(
             output,
             relevant_nct_ids=relevant_ids,
             contaminated_nct_ids=contaminated_ids,
+            drug=drug_name,
         )
+        output.signals.superseded_registrations = superseded
         # dev_stage is an LLM judgment over nct/phase/status, cached per trial set; the deterministic dev_stage is
         # the fallback when the relevant set is empty. Completed, terminated and search trials are all filtered by
         # relevant_nct_ids.
@@ -277,6 +307,7 @@ async def run_clinical_trials_agent(
             if t.nct_id and t.nct_id in relevant_set and t.nct_id not in seen:
                 seen.add(t.nct_id)
                 relevant_trials.append(t)
+
         if relevant_trials:
             judgment = await judge_dev_stage(
                 relevant_trials,

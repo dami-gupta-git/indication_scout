@@ -14,6 +14,10 @@ from the enrolled population — patients bring their other diagnoses with them.
 - "treats": PREVENTION — the trial administers the drug and measures the candidate disease's
   incidence or onset as a prespecified clinical outcome, even in people who do not have it at
   baseline.
+- "treats": the trial measures a recognized domain of the candidate disease with a
+  disease-specific activity or severity instrument. Treating one organ domain of a multisystem
+  disease is treatment of that disease when the registry names the candidate disease and the
+  primary outcome explicitly measures that disease domain.
 - "not_treats": the trial targets a COMPLICATION, comorbidity or manifestation occurring in patients
   who have the candidate disease, rather than the candidate disease itself. Being caused by the
   candidate disease does not make it the candidate disease. For example, a trial treating

@@ -205,6 +205,34 @@ CLINICAL_TRIALS_CACHE_TTL: int = (
 NON_THERAPEUTIC_INTERVENTION_TYPES: frozenset[str] = frozenset(
     {"Diagnostic Test", "Device", "Radiation", "Procedure"}
 )
+# Registry intervention types that CAN be the therapeutic agent under study. Title-cased to
+# match ClinicalTrialsClient's normalization of the API's SCREAMING_SNAKE types.
+THERAPEUTIC_INTERVENTION_TYPES: frozenset[str] = frozenset({"Drug", "Biological"})
+
+# Distinct drug-like interventions in one arm at or above which that arm is a multi-drug
+# REGIMEN (fixed combination) or a MENU (investigator picks from a list) rather than a test of
+# any single agent. A trial whose only arm carrying our drug is this crowded cannot attribute
+# its outcome to that drug, so the pair's development stage must not be read as a program for it.
+#
+# Calibrated on the 30 PIVOTAL-band (Phase 2/3, 3, 3/4) bupropion records in a 200-trial registry
+# sweep (2026-11), scored on the statistic the gate actually uses: the MINIMUM crowding across the
+# arms carrying the drug. The band is the calibration set because it is the only band the signal is
+# read on. The distribution separates cleanly with no trials in between:
+#   1-2 (24 trials) — single-agent and genuine two-drug combination work that must NOT flag
+#                     (NCT00474630 naltrexone SR/bupropion SR, NCT00943618 varenicline+bupropion)
+#   3   (2 trials)  — individualized-menu designs (NCT03897439 Individualizing Pharmacotherapy for
+#                     African American Smokers, NCT03374956 Individualized Obesity Pharmacotherapy)
+#   7-8 (4 trials)  — strategy and standard-of-care designs (INTENSIFY NCT05973786 and NCT05603104,
+#                     NCT03852160 esketamine plus a new standard-of-care antidepressant)
+# Both trials at the boundary are real menus, so the cut sits at 3. Raising it to 4 would miss both;
+# lowering it to 2 would wrongly flag every combination trial in the band.
+#
+# The threshold is NOT calibrated for non-pivotal phases. Across all 133 bupropion-containing
+# records, crowding of 3-8 is dominated by Phase 1 PK/drug-interaction cocktail panels (bupropion is
+# a CYP2B6 probe substrate), which are crowded for a reason unrelated to menu design. Those never
+# reach this gate because the consumer filters to the pivotal band first; a caller that applies this
+# constant outside that band would misread them.
+DRUG_ARM_CROWDING_THRESHOLD: int = 3
 
 # -- PubMed / NCBI ----------------------------------------------------------
 NCBI_BASE_URL: str = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"

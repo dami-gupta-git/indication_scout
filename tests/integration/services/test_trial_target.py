@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
         ("NCT02136329", "acute kidney injury", False),
         ("NCT01441934", "chronic obstructive pulmonary disease", False),
         ("NCT00104637", "chronic obstructive pulmonary disease", True),
+        ("NCT06857240", "dermatomyositis", True),
     ],
 )
 async def test_trial_target_gate_rejects_trials_aimed_elsewhere(

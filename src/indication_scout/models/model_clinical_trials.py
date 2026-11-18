@@ -66,6 +66,7 @@ class PrimaryOutcome(BaseModel):
     """A primary outcome measure for a trial."""
 
     measure: str = ""  # what they're measuring
+    description: str | None = None  # registry explanation of the measure
     time_frame: str | None = None  # e.g. "72 weeks"
 
     @model_validator(mode="before")
@@ -81,6 +82,12 @@ class Trial(BaseModel):
     """A single clinical trial record from ClinicalTrials.gov."""
 
     nct_id: str = ""
+    # The sponsor's own protocol id and any other registry ids for the same protocol. For EU trials
+    # these carry the EU CT / EudraCT number, which is what links sibling registrations of one
+    # protocol (ClinicalTrials.gov models no relation between them). See
+    # _trial_signals.superseded_registrations.
+    org_study_id: str = ""
+    secondary_ids: list[str] = []
     title: str = ""
     brief_summary: str | None = None
     phase: str = ""  # "Phase 1", "Phase 2", "Phase 1/Phase 2", etc.
@@ -91,6 +98,11 @@ class Trial(BaseModel):
     mesh_ancestors: list[MeshTerm] = []
     interventions: list[Intervention] = []
     arm_groups: list[ArmGroup] = []
+    # CT.gov designInfo.interventionModel ("Parallel", "Factorial", "Crossover", ...). A factorial
+    # trial deliberately gives every participant several agents in order to estimate each one's
+    # effect, so its crowded arms are not the menu design that blocks attribution. See
+    # _trial_signals.is_drug_isolated_in_arms.
+    intervention_model: str = ""
     sponsor: str = ""
     enrollment: int | None = None
     start_date: str | None = None

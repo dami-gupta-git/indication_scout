@@ -64,6 +64,9 @@ regardless of how relevant the disease is. Only if this drug IS the studied agen
     monotherapy arm even when another arm lists a different active drug. Treat drugs as a
     combination only when the same arm assigns them together. If arm groups are not reported, use
     the title and summary; do not infer a combination from the flattened intervention list alone.
+  - ONE OF SEVERAL OPTIONS. When an experimental arm lets the clinician pick one of several drugs
+    and THIS drug is one of the options, THIS drug is a studied agent of that arm, even if the arm
+    calls the options "combinations". A drug given in every arm alike is still background.
   - The rule is about which drug the trial is ABOUT, not which drugs it administers. Do not rescue a
     trial to "relevant" just because this drug's name is in the interventions.
   - NON-THERAPEUTIC STUDY OBJECT. If this drug is not listed as a Drug or Biological intervention
@@ -115,6 +118,10 @@ relevant.
   target the candidate disease itself, or is the candidate merely naming WHICH PATIENTS were
   enrolled while the drug is given FOR something else? If the candidate names the patients rather
   than the target => CONTAMINATION.
+    A trial measuring a recognized domain of the candidate disease with a disease-specific activity
+    or severity instrument treats the candidate disease; do not relabel that domain as a separate
+    complication when the registry names the candidate disease and the primary outcome measures its
+    activity.
     This holds whatever the real target is. It does NOT require the target to be an approved
     indication, a distinct disease, or a recognised disease at all — a symptom, a complication, a
     side effect of another drug, or a metabolic measure all count.
