@@ -243,11 +243,13 @@ MESH_RESOLVER_MAX_CONCURRENT: int = 5
 # -- Clinical stage ranking (Open Targets) ----------------------------------
 # Maps maximumClinicalStage / maxClinicalStage string values to numeric ranks
 # for comparison. Higher rank = further in pipeline. PHASE_4 is post-approval: target drug rows report it in place of
-# APPROVAL for approved drugs with phase 4 trials. WITHDRAWAL ranks with UNKNOWN: a drug pulled from the market is not a
-# current competitor.
+# APPROVAL for approved drugs with phase 4 trials. WITHDRAWAL ranks with APPROVAL: on a target drug row it is the
+# highest stage across the drug's clinical reports, and Open Targets orders it above APPROVAL, so one withdrawal record
+# from any regulator sets it. Metformin carries it for four EMA type 2 diabetes authorisations, as do sildenafil,
+# celecoxib and aspirin, alongside drugs pulled from the market (rofecoxib, cerivastatin). A withdrawal follows an
+# approval, so the drug reached approval either way.
 CLINICAL_STAGE_RANK: dict[str, int] = {
     "UNKNOWN": 0,
-    "WITHDRAWAL": 0,
     "PRECLINICAL": 1,
     "IND": 2,
     "EARLY_PHASE_1": 3,
@@ -258,11 +260,12 @@ CLINICAL_STAGE_RANK: dict[str, int] = {
     "PHASE_3": 8,
     "PREAPPROVAL": 9,
     "APPROVAL": 10,
+    "WITHDRAWAL": 10,
     "PHASE_4": 11,
 }
 # Cache-key version for the Open Targets competitor lists (raw, and the merged lists built from them). Bump when the
 # competitor selection logic changes, e.g. CLINICAL_STAGE_RANK, so cached lists built under the old rule are not reused.
-OPEN_TARGETS_COMPETITOR_LOGIC_VERSION: str = "phase4_rank_v1"
+OPEN_TARGETS_COMPETITOR_LOGIC_VERSION: str = "withdrawal_as_approval_v2"
 
 # -- Interaction type mapping (Open Targets) --------------------------------
 INTERACTION_TYPE_MAP: dict[str, str] = {
