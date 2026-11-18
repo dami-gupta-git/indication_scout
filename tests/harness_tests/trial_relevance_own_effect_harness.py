@@ -29,10 +29,25 @@ from indication_scout.services.llm import parse_last_json_object, query_llm
 
 logger = logging.getLogger(__name__)
 
-_PRODUCTION_PROMPT = Path(__file__).resolve().parents[2] / "src" / "indication_scout" / "prompts" / "clinical_trials.txt"
+_PRODUCTION_PROMPT = (
+    Path(__file__).resolve().parents[2]
+    / "src"
+    / "indication_scout"
+    / "prompts"
+    / "clinical_trials.txt"
+)
 
 # The columns the production search view shows the relevance gate.
-_COLUMNS = ("nct_id", "phase", "status", "interventions", "arms", "mesh", "brief_summary", "title")
+_COLUMNS = (
+    "nct_id",
+    "phase",
+    "status",
+    "interventions",
+    "arms",
+    "mesh",
+    "brief_summary",
+    "title",
+)
 
 
 class TrialCase(BaseModel):
@@ -52,10 +67,22 @@ _CASES: tuple[PairCase, ...] = (
     PairCase(
         drug="bupropion",
         disease="bipolar disorder",
-        approved=["major depressive disorder", "seasonal affective disorder", "smoking cessation"],
+        approved=[
+            "major depressive disorder",
+            "seasonal affective disorder",
+            "smoking cessation",
+        ],
         trials=[
-            TrialCase(nct="NCT00012558", relevant=True, note="STEP-BD programme, eight drugs, no arms reported"),
-            TrialCase(nct="NCT05973786", relevant=True, note="bipolar arm: switch to one of seven drugs"),
+            TrialCase(
+                nct="NCT00012558",
+                relevant=True,
+                note="STEP-BD programme, eight drugs, no arms reported",
+            ),
+            TrialCase(
+                nct="NCT05973786",
+                relevant=True,
+                note="bipolar arm: switch to one of seven drugs",
+            ),
             TrialCase(
                 nct="NCT05603104",
                 relevant=False,
@@ -68,7 +95,11 @@ _CASES: tuple[PairCase, ...] = (
         disease="gestational diabetes",
         approved=["type 2 diabetes mellitus"],
         trials=[
-            TrialCase(nct="NCT03029702", relevant=False, note="strategy trial, both arms insulin/glyburide/metformin"),
+            TrialCase(
+                nct="NCT03029702",
+                relevant=False,
+                note="strategy trial, both arms insulin/glyburide/metformin",
+            ),
         ],
     ),
     PairCase(
@@ -76,28 +107,50 @@ _CASES: tuple[PairCase, ...] = (
         disease="polycystic ovary syndrome",
         approved=["type 2 diabetes mellitus"],
         trials=[
-            TrialCase(nct="NCT05394142", relevant=True, note="SPIOMET vs SPIO isolates metformin"),
+            TrialCase(
+                nct="NCT05394142",
+                relevant=True,
+                note="SPIOMET vs SPIO isolates metformin",
+            ),
             TrialCase(nct="NCT06170463", relevant=True, note="metformin-alone arm"),
-            TrialCase(nct="NCT06405178", relevant=True, note="metformin + letrozole vs control"),
+            TrialCase(
+                nct="NCT06405178",
+                relevant=True,
+                note="metformin + letrozole vs control",
+            ),
         ],
     ),
     PairCase(
         drug="metformin",
         disease="obesity disorder",
         approved=["type 2 diabetes mellitus"],
-        trials=[TrialCase(nct="NCT01351753", relevant=True, note="metformin arm vs placebo")],
+        trials=[
+            TrialCase(nct="NCT01351753", relevant=True, note="metformin arm vs placebo")
+        ],
     ),
     PairCase(
         drug="semaglutide",
         disease="type 1 diabetes mellitus",
         approved=["type 2 diabetes mellitus", "obesity"],
-        trials=[TrialCase(nct="NCT03899402", relevant=True, note="insulin + semaglutide vs insulin")],
+        trials=[
+            TrialCase(
+                nct="NCT03899402",
+                relevant=True,
+                note="insulin + semaglutide vs insulin",
+            )
+        ],
     ),
     PairCase(
         drug="sildenafil",
         disease="infertility",
         approved=["erectile dysfunction", "pulmonary arterial hypertension"],
-        trials=[TrialCase(nct="NCT05753098", relevant=True, note="sildenafil + clomiphene vs clomiphene alone")],
+        trials=[
+            TrialCase(
+                nct="NCT05753098",
+                relevant=True,
+                note="sildenafil + clomiphene vs clomiphene alone",
+            )
+        ],
     ),
 )
 
@@ -107,7 +160,9 @@ def _task(case: PairCase, rows: list[str]) -> str:
         f"DRUG FACT — drug under analysis: {case.drug}\n"
         f"DRUG FACT — FDA-approved indications of this drug: {', '.join(case.approved)}\n\n"
         f"Repurposing candidate (the broad indication under investigation): {case.disease}\n\n"
-        "Shown trials to classify (every one needs a verdict):\n" + "\n".join(rows) + "\n\n"
+        "Shown trials to classify (every one needs a verdict):\n"
+        + "\n".join(rows)
+        + "\n\n"
         'Respond with ONLY a JSON object: {"verdicts": [{"nct": "...", "drug_role": '
         '"studied"|"comparator"|"background"|"absent", "verdict": "relevant"|"contaminated"}, ...]} '
         "— one per shown trial."

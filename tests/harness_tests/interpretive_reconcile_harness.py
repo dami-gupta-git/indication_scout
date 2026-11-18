@@ -38,7 +38,6 @@ logger = logging.getLogger(__name__)
 _RELATIONSHIP_NONE = "no notable relationship to an approved indication"
 
 
-
 class CardCase(BaseModel):
     name: str
     production: dict[str, str]  # inputs the 2026-11-16 cards were written from
@@ -165,7 +164,9 @@ async def _fails(card: str, question: str) -> bool | None:
     return parsed["answer"] == "yes"
 
 
-async def _run_one(prompt_template: str, facts: dict[str, str], question: str) -> tuple[str | None, bool | None]:
+async def _run_one(
+    prompt_template: str, facts: dict[str, str], question: str
+) -> tuple[str | None, bool | None]:
     card = await _write_card(prompt_template, facts)
     if card is None:
         return None, None
@@ -185,14 +186,18 @@ async def main() -> None:
             ("candidate", _INTERP_PROMPT, case.candidate),
         ):
             for _ in range(runs):
-                jobs.append((case, variant, _run_one(template, facts, case.fail_question)))
+                jobs.append(
+                    (case, variant, _run_one(template, facts, case.fail_question))
+                )
     results = await asyncio.gather(*(job[2] for job in jobs))
 
     candidate_ok = True
     for case in _CASES:
         for variant in ("production", "candidate"):
             outcomes = [
-                result for job, result in zip(jobs, results, strict=True) if job[0] is case and job[1] == variant
+                result
+                for job, result in zip(jobs, results, strict=True)
+                if job[0] is case and job[1] == variant
             ]
             passed = sum(fail is False for _, fail in outcomes)
             if variant == "candidate":

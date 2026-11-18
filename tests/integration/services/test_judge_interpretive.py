@@ -138,7 +138,8 @@ async def test_judge_interpretive_no_contradiction_live(label, facts, test_cache
 async def test_judge_interpretive_does_not_call_null_trials_supportive(test_cache_dir):
     """bupropion x cocaine dependence, 2026-11-16: the card called the hypothesis "RCT-supported" above a literature
     section saying the controlled trials were null. Given the summary text and a registry-only closure sentence, the card
-    must not describe the efficacy evidence as supported or say that no efficacy failure was found."""
+    must not describe the efficacy evidence as supported or say that no efficacy failure was found.
+    """
     j = await judge_interpretive(
         stage="Phase 2/Phase 3 completed for this indication (no standalone Phase 3)",
         active_programs="None active",

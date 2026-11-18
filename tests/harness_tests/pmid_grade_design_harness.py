@@ -147,7 +147,12 @@ _CASES: tuple[DesignCase, ...] = (
     ),
 )
 
-_FIELDS: tuple[str, ...] = ("is_human", "is_controlled", "is_interventional", "is_pilot")
+_FIELDS: tuple[str, ...] = (
+    "is_human",
+    "is_controlled",
+    "is_interventional",
+    "is_pilot",
+)
 
 
 def _load_abstracts() -> dict[str, HarnessAbstract]:

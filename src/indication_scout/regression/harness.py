@@ -48,7 +48,8 @@ _OPEN_TARGETS_RENAMES: dict[str, str] = {
 
 def _golden_name(name: str) -> str:
     """Map a disease name to the name the 2026-09-10 goldens use. Applied to both sides: a golden can already carry
-    the newer name (bupropion's golden has "hypertensive disorder" while semaglutide's has "hypertension")."""
+    the newer name (bupropion's golden has "hypertensive disorder" while semaglutide's has "hypertension").
+    """
     return _OPEN_TARGETS_RENAMES.get(name, name)
 
 
@@ -190,8 +191,12 @@ def _compare_mechanism(
             )
         )
 
-    g_cand_diseases = {_golden_name(c.disease_name) for c in golden.mechanism.candidates}
-    c_cand_diseases = {_golden_name(c.disease_name) for c in current.mechanism.candidates}
+    g_cand_diseases = {
+        _golden_name(c.disease_name) for c in golden.mechanism.candidates
+    }
+    c_cand_diseases = {
+        _golden_name(c.disease_name) for c in current.mechanism.candidates
+    }
     mech_overlap = jaccard(g_cand_diseases, c_cand_diseases)
     if mech_overlap < CANDIDATE_SET_JACCARD_MIN:
         diffs.append(

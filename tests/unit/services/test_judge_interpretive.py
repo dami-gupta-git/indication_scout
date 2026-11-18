@@ -150,8 +150,14 @@ async def test_judge_passes_literature_summary_and_keys_cache_on_it(tmp_path):
     assert mock.await_count == 2
     first_prompt = mock.await_args_list[0].args[0]
     second_prompt = mock.await_args_list[1].args[0]
-    assert "Literature summary: Two placebo-controlled trials met their primary endpoints." in first_prompt
-    assert "Literature summary: Both placebo-controlled trials missed their primary endpoints." in second_prompt
+    assert (
+        "Literature summary: Two placebo-controlled trials met their primary endpoints."
+        in first_prompt
+    )
+    assert (
+        "Literature summary: Both placebo-controlled trials missed their primary endpoints."
+        in second_prompt
+    )
 
 
 async def test_judge_none_approved_indication_ok(tmp_path):
