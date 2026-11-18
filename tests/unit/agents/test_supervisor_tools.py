@@ -803,14 +803,16 @@ def _finalize_tools_and_closure(cutoff: date | None = None):
 
 
 async def test_finalize_does_not_treat_unresolved_trial_query_as_zero_evidence():
-    """Missing trial coverage is unknown and cannot satisfy the zero-trial evidence gate."""
+    """Missing trial coverage is unknown, not zero: an unresolved candidate with literature evidence is ranked with the
+    unresolved stage. One with no usable literature has no evidence at all and is gate-excluded.
+    """
     by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
     allowed_diseases["unresolved disease"] = (
         "unresolved disease",
         "competitor",
     )
     findings_local["unresolved disease"] = {
-        "literature": _make_lit("none", 0, 0, direction="none"),
+        "literature": _make_lit("moderate", 2, 2, direction="supports"),
         "clinical_trials": ClinicalTrialsOutput(
             search=SearchTrialsResult(resolution_status="unresolved")
         ),
@@ -866,27 +868,25 @@ async def test_finalize_does_not_treat_unresolved_trial_query_as_zero_evidence()
             }
         )
 
-    unresolved_fields = {
-        "stage": (
-            "Trial search unavailable — disease name could not be resolved to a "
-            "MeSH descriptor"
-        ),
-        "literature": "none, undetermined design",
-        "blocker": "",
-        "active_programs": "Unknown — registry search was not run",
-        "key_risk": "",
-        "verdict": "",
-        "watch": "",
-        "prose": "",
-    }
-    # The candidate the model left out (named only in a demotion footer line) is ranked after the first, and its
-    # footer line is dropped instead of naming it twice.
-    assert msg.artifact["blurbs"] == [
-        {"disease": "unresolved disease", **unresolved_fields},
-        {"disease": "unresolved footer", **unresolved_fields},
-    ]
+    assert len(msg.artifact["blurbs"]) == 1
+    ranked = msg.artifact["blurbs"][0]
+    assert ranked["disease"] == "unresolved disease"
+    assert ranked["stage"] == (
+        "Trial search unavailable — disease name could not be resolved to a MeSH descriptor"
+    )
+    assert ranked["active_programs"] == "Unknown — registry search was not run"
+    assert ranked["blocker"] == ""
+    assert ranked["key_risk"] == ""
+    assert ranked["verdict"] == ""
+    assert ranked["watch"] == ""
+    assert ranked["prose"] == ""
+    # The candidate the model left out has no literature either, so it is gate-excluded instead of ranked, and its
+    # demotion footer line is not repeated.
     assert msg.artifact["summary"] == (
-        "Ranked repurposing signals:\n" "1. unresolved disease\n" "2. unresolved footer"
+        "Ranked repurposing signals:\n"
+        "1. unresolved disease\n"
+        "Evidence gate exclusions: unresolved footer — trial search unavailable (disease could not be resolved to a "
+        "MeSH descriptor) and no usable literature signal (direction=none, study_count=0)"
     )
     assert (
         "authoritative trial query state = unresolved"

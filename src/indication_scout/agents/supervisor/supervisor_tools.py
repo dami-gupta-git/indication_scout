@@ -273,10 +273,12 @@ def _log_disease_banner(title: str, diseases: list[str]) -> None:
 def _evidence_gate_reason(slot: dict) -> str | None:
     """Top-N evidence gate over one findings slot: the exclusion reason, or None when the candidate survives.
 
-    Excludes a candidate with 0 relevant trials AND no usable literature signal (direction "none" OR study_count 0).
-    Literature with at least one relevant abstract and 0 trials is a legitimate signal and is kept. The PMID-count
-    fallback applies only when synthesize didn't run. The gate keys off direction, not strength, so a contradicting
-    body survives as a negative. An unresolved trial query has n_trials None, never 0, so it cannot satisfy the gate.
+    Excludes a candidate with no usable literature signal (direction "none" OR study_count 0) when it has 0 relevant
+    trials or its registry query could not run. An unresolved query is unknown trial status, not zero trials, but a
+    candidate with unknown trials and no literature has no evidence at all to rank on ("multiple sclerosis symptom
+    measurement" for bupropion). Literature with at least one relevant abstract is a legitimate signal and is kept. The
+    PMID-count fallback applies only when synthesize didn't run. The gate keys off direction, not strength, so a
+    contradicting body survives as a negative.
     """
     lit = slot.get("literature")
     ct = slot.get("clinical_trials")
@@ -295,11 +297,16 @@ def _evidence_gate_reason(slot: dict) -> str | None:
             and n_pmids < SUPERVISOR_MIN_PMIDS_NO_TRIALS
         )
     )
+    lit_detail = (
+        f"(direction={lit_direction or 'unavailable'}, "
+        f"study_count={lit_study_count if lit_study_count is not None else 'unavailable'})"
+    )
     if n_trials == 0 and no_lit_signal:
+        return f"0 relevant trials and no usable literature signal {lit_detail}"
+    if _trial_query_unresolved(ct) and no_lit_signal:
         return (
-            f"0 relevant trials and no usable literature signal "
-            f"(direction={lit_direction or 'unavailable'}, "
-            f"study_count={lit_study_count if lit_study_count is not None else 'unavailable'})"
+            "trial search unavailable (disease could not be resolved to a MeSH descriptor) and no usable literature "
+            f"signal {lit_detail}"
         )
     return None
 
@@ -2099,16 +2106,14 @@ def build_supervisor_tools(
             if m is None:
                 # The LLM's own "Evidence gate exclusions:" / "Closed signals:" / "Not ranked:" lines are discarded and
                 # rebuilt below from finalize's decisions. Other lines (demotion footer entries) pass through with a false
-                # stage clause corrected, except a footer entry for an unresolved candidate, which is now ranked.
+                # stage clause corrected, except a footer entry for an unresolved candidate, which is now either ranked or
+                # listed as a gate exclusion.
                 if rebuilt_footer_line.match(line):
                     continue
                 fm = footer_line.match(line)
                 if fm is not None:
                     footer_disease = fm.group("disease").lower()
-                    if any(
-                        key in footer_disease and key in validated_diseases
-                        for key in unresolved_trial_queries
-                    ):
+                    if any(key in footer_disease for key in unresolved_trial_queries):
                         continue
                 passthrough.append(_repair_footer_stage(line))
                 continue
