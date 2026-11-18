@@ -1643,8 +1643,8 @@ def test_union_tagged_keeps_one_copy_with_both_tags():
 @pytest.mark.parametrize(
     "date_before, expected_recent",
     [
-        (None, [str(i) for i in range(40, 50)]),
-        (date(2020, 6, 1), [str(i) for i in range(40, 55)]),
+        (None, [str(i) for i in range(40, 50)][:LITERATURE_RECENT_BUDGET]),
+        (date(2020, 6, 1), [str(i) for i in range(40, 55)][:LITERATURE_RECENT_BUDGET]),
     ],
 )
 async def test_semantic_search_appends_recent_papers_after_window(

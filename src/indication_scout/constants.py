@@ -170,7 +170,10 @@ LITERATURE_RERANK_HEADROOM: int = 10
 # Recent pass: after the adaptive window, add up to this many rerank candidates published in the last
 # LITERATURE_RECENT_YEARS (of the run year, or of date_before's year in holdout runs) that the window missed, in
 # relevance order. Kept by the PLAN_literature_screening Phase 3 ablation; the other passes tested were rejected.
-LITERATURE_RECENT_BUDGET: int = 20
+# Cut from 20 to 10 on 2026-11-17 for cost: in the semaglutide run of that day the recent pass read 312 of 552 papers,
+# and 27 cited papers sat at recent ranks 11-20, all in pairs with deep evidence (stroke, heart failure, myocardial
+# infarction, Alzheimer disease, hyperglycemia).
+LITERATURE_RECENT_BUDGET: int = 10
 LITERATURE_RECENT_YEARS: int = 3
 # Output-token limit for the literature synthesis call. The model writes a per-abstract classification before its JSON
 # (about 150 output tokens per abstract: semaglutide x heart failure, 54 abstracts, 8,207 tokens), so the output grows
