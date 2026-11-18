@@ -2,7 +2,8 @@
 #
 # Authored against gold_standard/bupropion_2026-09-10_14-59-56.json; re-pinned 2026-11-17 to
 # gold_standard/bupropion_2026-11-17_20-27-23.json (main plus the Open Targets WITHDRAWAL rank fix) after the
-# rewind replay; all anchors below still hold. Each assertion encodes a
+# rewind replay, then to gold_standard/bupropion_2026-11-17_21-49-58.json (MeSH synonym fallback, bipolar-depression
+# trials admitted by the trial target gate); all anchors below still hold. Each assertion encodes a
 # domain-meaningful invariant — a fact about bupropion's evidence base that a regression must NOT
 # silently flip.
 #
