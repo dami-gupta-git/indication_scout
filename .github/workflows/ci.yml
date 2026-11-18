@@ -48,10 +48,10 @@ jobs:
         run: pytest tests/regression/layer1_deterministic/
 
   regression:
-    # The live regression runs full pipelines against paid APIs. Set the repository variable RUN_LIVE_REGRESSION to
-    # "false" (Settings > Secrets and variables > Actions > Variables) to skip it on pushes and pull requests; a manual
-    # run from the Actions tab always runs it.
-    if: ${{ vars.RUN_LIVE_REGRESSION != 'false' || github.event_name == 'workflow_dispatch' }}
+    # The live regression runs full pipelines against paid APIs, so it is off by default. It runs on a manual run from
+    # the Actions tab, or on pushes and pull requests once the repository variable RUN_LIVE_REGRESSION is set to "true"
+    # (Settings > Secrets and variables > Actions > Variables).
+    if: ${{ vars.RUN_LIVE_REGRESSION == 'true' || github.event_name == 'workflow_dispatch' }}
     runs-on: ubuntu-latest
     # Four full pipeline runs against a cold database: every abstract is fetched
     # from PubMed and embedded on CPU before the specs can be checked.
