@@ -98,11 +98,6 @@ class Trial(BaseModel):
     mesh_ancestors: list[MeshTerm] = []
     interventions: list[Intervention] = []
     arm_groups: list[ArmGroup] = []
-    # CT.gov designInfo.interventionModel ("Parallel", "Factorial", "Crossover", ...). A factorial
-    # trial deliberately gives every participant several agents in order to estimate each one's
-    # effect, so its crowded arms are not the menu design that blocks attribution. See
-    # _trial_signals.is_drug_isolated_in_arms.
-    intervention_model: str = ""
     sponsor: str = ""
     enrollment: int | None = None
     start_date: str | None = None

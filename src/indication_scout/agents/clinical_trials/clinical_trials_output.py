@@ -33,13 +33,6 @@ class TrialSignals(BaseModel):
     # A Phase 3 terminated for a non-operational reason: the positive closure signal; the sub-agent decides closure.
     phase3_terminated_for_cause: bool = False
     terminated_phase3_nct_ids: list[str] = []
-    # Active pivotal trials in which the drug shares every arm with DRUG_ARM_CROWDING_THRESHOLD+ other agents —
-    # a fixed regimen or an investigator-chosen menu. Such a trial cannot produce a drug-specific readout, so the
-    # stage phrase must not claim a development program for the drug. Subset of active_phase3_nct_ids.
-    non_attributable_active_phase3_nct_ids: list[str] = []
-    # True when EVERY active pivotal trial is non-attributable: the pair has pivotal activity on record but no
-    # trial that can measure this drug. Drives the "contains but does not evaluate" stage phrasing.
-    active_phase3_all_non_attributable: bool = False
     # Superseded registration -> the registration that continues it, for sibling registrations of one protocol
     # (see _trial_signals.superseded_registrations). The superseded ones are dropped from the relevant set before
     # it is counted or described; this map is kept so the report can say which records were collapsed and why.

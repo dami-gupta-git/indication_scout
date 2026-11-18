@@ -18,11 +18,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from indication_scout.agents._trial_formatting import _classify_stop_reason
-from indication_scout.agents._trial_signals import (
-    _is_active,
-    _normalize_status,
-    is_drug_isolated_in_arms,
-)
+from indication_scout.agents._trial_signals import _is_active, _normalize_status
 from indication_scout.constants import JUDGMENT_CACHE_TTL
 from indication_scout.models.model_clinical_trials import Trial
 from indication_scout.services.llm import parse_last_json_object, query_llm
@@ -76,21 +72,6 @@ def dev_stage_phrase(sig: "TrialSignals | None") -> str | None:
         and not getattr(sig, "has_completed_pure_phase3", False)
     ):
         return "Phase 2/Phase 3 completed for this indication (no standalone Phase 3)"
-    # An active_phase3 tier whose every active trial gives the drug no attributable readout is pivotal
-    # activity the drug merely appears in — a fixed regimen or an investigator-chosen menu. Saying
-    # "active development for this indication" there asserts a program that does not exist and promises a
-    # readout that will never report on this drug. State what the registry supports instead; the tier is
-    # unchanged, so the trial section and ranking stay consistent.
-    if (
-        sig.dev_stage == "active_phase3"
-        and getattr(sig, "active_phase3_all_non_attributable", False)
-        and sig.active_phase3_nct_ids
-    ):
-        return (
-            "No drug-specific trial programme for this indication; the drug appears as one of "
-            "several agents within an active pivotal trial "
-            f"({', '.join(sig.active_phase3_nct_ids)})"
-        )
     if sig.dev_stage == "active_phase3" and sig.active_phase3_nct_ids:
         phrase = f"{phrase} ({', '.join(sig.active_phase3_nct_ids)})"
     return phrase
@@ -310,7 +291,7 @@ def _active_trials(trials: list[Trial]) -> list[Trial]:
     return [t for t in trials if _is_active(t)]
 
 
-def _render_active_programs(trials: list[Trial], drug: str = "") -> str:
+def _render_active_programs(trials: list[Trial]) -> str:
     """Deterministically render the 'active programs' line — what is still MOVING — from the
     relevant trial set. NO LLM: counting and listing NCTs is mechanical, and letting the model do
     it produced miscounts (count != listed ids) and false "None active". Rules mirror the former
@@ -362,29 +343,6 @@ def _render_active_programs(trials: list[Trial], drug: str = "") -> str:
                 f"{len(p2p3_planned)} Phase 2/Phase 3 not yet recruiting "
                 f"({', '.join(p2p3_planned)})"
             )
-        # Qualify the count when the drug cannot be measured by these trials. The count stays
-        # accurate (the trials ARE active and pivotal); the qualifier stops it being read as a
-        # development program for the drug. Trials with no arm structure are left out of the
-        # judgment — absence of arm data is not evidence of crowding.
-        if drug:
-            attributions = {
-                t.nct_id: is_drug_isolated_in_arms(t, drug)
-                for t in active
-                if t.nct_id in set(pivotal)
-            }
-            judged = [v for v in attributions.values() if v is not None]
-            blocked = [n for n, v in attributions.items() if v is False]
-            if judged and all(v is False for v in judged):
-                return (
-                    f"{'; '.join(parts)} — none drug-specific: the drug shares its arm with "
-                    "several other agents in every active trial, so no drug-specific readout "
-                    "is possible"
-                )
-            if blocked:
-                parts.append(
-                    f"{len(blocked)} of these cannot attribute an outcome to the drug "
-                    f"({', '.join(blocked)})"
-                )
         return "; ".join(parts)
 
     # No pivotal trial active, but something earlier-phase / post-approval is moving.
@@ -462,7 +420,7 @@ async def judge_dev_stage(
     is logged and the same safe floor is returned (never fabricates a higher tier).
     """
     # active_programs is ALWAYS deterministic (counting/listing NCTs is mechanical, not judgment).
-    active_programs = _render_active_programs(relevant_trials, drug=drug)
+    active_programs = _render_active_programs(relevant_trials)
     floor = StageJudgment(tier="untested", active_programs="None active")
     if not relevant_trials:
         return floor

@@ -290,7 +290,6 @@ async def run_clinical_trials_agent(
             output,
             relevant_nct_ids=relevant_ids,
             contaminated_nct_ids=contaminated_ids,
-            drug=drug_name,
         )
         output.signals.superseded_registrations = superseded
         # dev_stage is an LLM judgment over nct/phase/status, cached per trial set; the deterministic dev_stage is

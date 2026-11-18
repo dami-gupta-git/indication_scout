@@ -705,10 +705,6 @@ class ClinicalTrialsClient(BaseClient):
             mesh_ancestors=mesh_ancestors,
             interventions=interventions,
             arm_groups=arm_groups,
-            intervention_model=(design.get("designInfo") or {})
-            .get("interventionModel", "")
-            .replace("_", " ")
-            .title(),
             sponsor=sponsor_mod.get("leadSponsor", {}).get("name", ""),
             enrollment=enrollment,
             start_date=self._extract_date(status.get("startDateStruct")),

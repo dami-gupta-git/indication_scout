@@ -20,9 +20,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 )
 from indication_scout.constants import (
     CLINICAL_TRIALS_ACTIVE_STATUSES,
-    DRUG_ARM_CROWDING_THRESHOLD,
     NON_THERAPEUTIC_INTERVENTION_TYPES,
-    THERAPEUTIC_INTERVENTION_TYPES,
 )
 from indication_scout.models.model_clinical_trials import Trial
 
@@ -69,97 +67,6 @@ def _is_active(trial: Trial) -> bool:
 # registration of the same protocol. SUSPENDED is included: a paused site's record can point at the
 # registrations that continue, exactly as a terminated one does.
 _STOPPED_STATUSES = frozenset({"TERMINATED", "WITHDRAWN", "SUSPENDED"})
-
-
-# ClinicalTrials.gov renders armGroups.interventionNames as "<Type>: <Name>" while
-# interventions[].name carries the bare name. Strip the prefix before comparing the two.
-_INTERVENTION_NAME_PREFIX = re.compile(
-    r"^(drug|biological|other|device|procedure|dietary supplement|behavioral|radiation"
-    r"|diagnostic test|combination product|genetic)\s*:\s*",
-    re.IGNORECASE,
-)
-
-
-def _normalize_drug_name(name: str) -> str:
-    """Lowercase, strip any registry type prefix, collapse punctuation to single spaces."""
-    bare = _INTERVENTION_NAME_PREFIX.sub("", (name or "").strip())
-    return re.sub(r"[^a-z0-9]+", " ", bare.lower()).strip()
-
-
-def _arm_drug_counts(trial: Trial, drug: str) -> list[int]:
-    """Distinct therapeutic interventions in each arm that carries `drug`.
-
-    Returns one count per matching arm, or [] when the drug is absent from the trial's
-    therapeutic interventions or the record declares no arm structure. A single-arm count of 1
-    means the arm tests that drug alone; higher counts mean it shares the arm.
-
-    Arm membership comes from interventions[].arm_group_labels where the registry populates it,
-    falling back to arm_groups[].intervention_names (which many older records use instead).
-    """
-    drug_key = _normalize_drug_name(drug)
-    if not drug_key or not trial.arm_groups:
-        return []
-    therapeutic = [
-        i
-        for i in trial.interventions
-        if i.intervention_type in THERAPEUTIC_INTERVENTION_TYPES
-    ]
-    if not any(
-        drug_key in _normalize_drug_name(i.intervention_name) for i in therapeutic
-    ):
-        return []
-
-    arm_to_drugs: dict[str, set[str]] = {arm.label: set() for arm in trial.arm_groups}
-    mapped = False
-    for interv in therapeutic:
-        for label in interv.arm_group_labels:
-            if label in arm_to_drugs:
-                arm_to_drugs[label].add(_normalize_drug_name(interv.intervention_name))
-                mapped = True
-    if not mapped:
-        therapeutic_names = {
-            _normalize_drug_name(i.intervention_name) for i in therapeutic
-        }
-        for arm in trial.arm_groups:
-            for name in arm.intervention_names:
-                normalized = _normalize_drug_name(name)
-                if normalized in therapeutic_names:
-                    arm_to_drugs[arm.label].add(normalized)
-
-    return [
-        len(drugs)
-        for drugs in arm_to_drugs.values()
-        if any(drug_key in name for name in drugs)
-    ]
-
-
-def is_drug_isolated_in_arms(trial: Trial, drug: str) -> bool | None:
-    """Whether the trial can attribute an outcome to `drug` specifically.
-
-    False when every arm carrying the drug also carries DRUG_ARM_CROWDING_THRESHOLD or more
-    other therapeutic agents — the arm is a fixed multi-drug regimen or a menu the investigator
-    chooses from, so the trial measures the regimen or the strategy, not the drug. True when at
-    least one such arm is less crowded. None when the record carries no arm structure, which is
-    not evidence either way (common for naturalistic and observational studies).
-
-    This is a fact about the trial's DESIGN, not its relevance: a menu trial is a real trial for
-    the pair and belongs in the relevant set. It must not be read as a development program for
-    the drug, which is what the dev-stage tier would otherwise assert.
-
-    Callers must restrict this to pivotal-band trials. DRUG_ARM_CROWDING_THRESHOLD is calibrated
-    on that band only; Phase 1 PK/drug-interaction cocktail panels are crowded for reasons that
-    have nothing to do with menu design and would be misread as non-attributable.
-    """
-    # A FACTORIAL trial gives every participant several agents BY DESIGN, in the combinations that
-    # let each one's individual effect be estimated — the opposite of a menu, though it produces
-    # the same arm crowding. Semaglutide x T1D NCT06894784 is the case: a 2x2 factorial crossover
-    # whose four arms each list 4 interventions, which the crowding rule alone would suppress.
-    if trial.intervention_model.strip().lower() == "factorial":
-        return True
-    counts = _arm_drug_counts(trial, drug)
-    if not counts:
-        return None
-    return min(counts) < DRUG_ARM_CROWDING_THRESHOLD
 
 
 # A trial registration carries external ids in org_study_id and secondary_ids. The EU Clinical
@@ -294,16 +201,12 @@ def derive_trial_signals(
     ct: ClinicalTrialsOutput | None,
     relevant_nct_ids: set[str] | None = None,
     contaminated_nct_ids: set[str] | None = None,
-    drug: str = "",
 ) -> TrialSignals:
     """Compute deterministic trial facts from a clinical-trials artifact.
 
     When `relevant_nct_ids` is given, only those trials contribute to the completed/terminated facts.
     The active-Phase-3 fact comes from the all-status `ct.search` set, which is not relevance-classified, so
     contamination dropping is best-effort there.
-
-    `drug` enables the arm-attribution facts (which active pivotal trials can actually measure this
-    drug). Omitting it leaves those fields at their defaults; every other fact is unaffected.
     """
     if ct is None:
         return TrialSignals()
@@ -333,20 +236,6 @@ def derive_trial_signals(
         and t.nct_id not in search_excluded
     ]
     active_phase3_nct_ids = [t.nct_id for t in active_phase3 if t.nct_id]
-
-    # Which active pivotal trials can attribute an outcome to this drug. A trial with no arm structure
-    # (is_drug_isolated_in_arms -> None) is not counted as non-attributable: absence of arm data is not
-    # evidence that the drug shares its arm.
-    non_attributable_active = [
-        t.nct_id
-        for t in active_phase3
-        if t.nct_id and is_drug_isolated_in_arms(t, drug) is False
-    ]
-    # "All non-attributable" requires at least one active trial AND every one of them flagged — otherwise a
-    # pair with no active trials would read as having a blocked program rather than no program.
-    active_phase3_all_non_attributable = bool(active_phase3_nct_ids) and len(
-        non_attributable_active
-    ) == len(active_phase3_nct_ids)
 
     # Use the same pivotal band as the active signals, not the >= floor (counts a completed Phase 4) and not the
     # stricter termination band (excludes Phase 3/4, which has a Phase 3 arm).
@@ -386,8 +275,6 @@ def derive_trial_signals(
         active_phase3_nct_ids=active_phase3_nct_ids,
         phase3_terminated_for_cause=bool(terminated_phase3_for_cause),
         terminated_phase3_nct_ids=terminated_phase3_nct_ids,
-        non_attributable_active_phase3_nct_ids=non_attributable_active,
-        active_phase3_all_non_attributable=active_phase3_all_non_attributable,
     )
 
 
@@ -406,18 +293,6 @@ def format_derived_signals(sig: TrialSignals) -> str:
         lines.append("  completed_phase_3: no")
     if sig.has_active_phase3:
         lines.append(f"  active_phase_3: yes ({', '.join(sig.active_phase3_nct_ids)})")
-        if sig.non_attributable_active_phase3_nct_ids:
-            scope = (
-                "every active pivotal trial"
-                if sig.active_phase3_all_non_attributable
-                else "some active pivotal trials"
-            )
-            lines.append(
-                f"  active_phase_3_drug_attributable: no — in {scope} the drug shares its "
-                "arm with several other agents (fixed regimen or investigator-chosen menu), "
-                "so no drug-specific efficacy readout is possible "
-                f"({', '.join(sig.non_attributable_active_phase3_nct_ids)})"
-            )
     else:
         lines.append("  active_phase_3: no")
     if sig.phase3_terminated_for_cause:
