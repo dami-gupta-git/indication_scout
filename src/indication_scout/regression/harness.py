@@ -27,6 +27,30 @@ from indication_scout.regression.constants import (
 )
 from indication_scout.regression.diff import Diff, jaccard
 
+# Temporary (2026-11-17 rewind): Open Targets renamed these diseases after the 2026-09-10 goldens were captured. Each
+# pair was checked against Open Targets: the same disease ID now carries the new name, with the old name kept as a
+# synonym. The current report's names are mapped back before comparing, so a rename is not counted as a different
+# disease. Pairs that are different diseases (stroke / ischemic stroke, hepatic steatosis / non-alcoholic fatty liver)
+# are absent. The last three pairs are separate Open Targets IDs treated as the same condition for this comparison:
+# DSM-5 merged cocaine abuse and dependence into cocaine use disorder, "anxiety" names the same candidate as "anxiety
+# disorder", and smoking cessation is treatment of nicotine dependence.
+_OPEN_TARGETS_RENAMES: dict[str, str] = {
+    "hypertensive disorder": "hypertension",  # MONDO_0005044
+    "non-alcoholic fatty liver": "metabolic dysfunction-associated steatotic liver disease",  # EFO_1001248
+    "obesity disorder": "obesity",  # MONDO_0011122
+    "stroke disorder": "stroke",  # MONDO_0005098
+    "cocaine abuse": "cocaine use disorder",  # MONDO_0004456 vs EFO_0010445, clinically the same condition
+    "cocaine dependence": "cocaine use disorder",  # DSM-5 merged dependence into use disorder
+    "anxiety": "anxiety disorder",
+    "smoking cessation": "nicotine dependence",
+}
+
+
+def _golden_name(name: str) -> str:
+    """Map a disease name to the name the 2026-09-10 goldens use. Applied to both sides: a golden can already carry
+    the newer name (bupropion's golden has "hypertensive disorder" while semaglutide's has "hypertension")."""
+    return _OPEN_TARGETS_RENAMES.get(name, name)
+
 
 def compare_reports(golden: SupervisorOutput, current: SupervisorOutput) -> list[Diff]:
     """Return all structural and semantic-overlap diffs between two reports."""
@@ -72,8 +96,8 @@ def _compare_candidate_sets(
     golden: SupervisorOutput, current: SupervisorOutput
 ) -> list[Diff]:
     diffs: list[Diff] = []
-    g_cands = set(golden.candidate_diseases)
-    c_cands = set(current.candidate_diseases)
+    g_cands = {_golden_name(d) for d in golden.candidate_diseases}
+    c_cands = {_golden_name(d) for d in current.candidate_diseases}
     cand_overlap = jaccard(g_cands, c_cands)
     if cand_overlap < CANDIDATE_SET_JACCARD_MIN:
         diffs.append(
@@ -91,8 +115,8 @@ def _compare_candidate_sets(
             )
         )
 
-    g_top = set(golden.top_diseases)
-    c_top = set(current.top_diseases)
+    g_top = {_golden_name(d) for d in golden.top_diseases}
+    c_top = {_golden_name(d) for d in current.top_diseases}
     top_overlap = jaccard(g_top, c_top)
     if top_overlap < TOP_DISEASES_JACCARD_MIN:
         diffs.append(
@@ -112,7 +136,7 @@ def _compare_candidate_sets(
 
     # top_diseases must remain a strict subset of disease_findings (invariant
     # enforced upstream; a violation means the supervisor's contract changed).
-    findings_diseases = {f.disease for f in current.disease_findings}
+    findings_diseases = {_golden_name(f.disease) for f in current.disease_findings}
     leaked = c_top - findings_diseases
     if leaked:
         diffs.append(
@@ -166,8 +190,8 @@ def _compare_mechanism(
             )
         )
 
-    g_cand_diseases = {c.disease_name for c in golden.mechanism.candidates}
-    c_cand_diseases = {c.disease_name for c in current.mechanism.candidates}
+    g_cand_diseases = {_golden_name(c.disease_name) for c in golden.mechanism.candidates}
+    c_cand_diseases = {_golden_name(c.disease_name) for c in current.mechanism.candidates}
     mech_overlap = jaccard(g_cand_diseases, c_cand_diseases)
     if mech_overlap < CANDIDATE_SET_JACCARD_MIN:
         diffs.append(
@@ -190,8 +214,8 @@ def _compare_per_disease(
     golden: SupervisorOutput, current: SupervisorOutput
 ) -> list[Diff]:
     diffs: list[Diff] = []
-    g_by_disease = {f.disease: f for f in golden.disease_findings}
-    c_by_disease = {f.disease: f for f in current.disease_findings}
+    g_by_disease = {_golden_name(f.disease): f for f in golden.disease_findings}
+    c_by_disease = {_golden_name(f.disease): f for f in current.disease_findings}
     shared = sorted(set(g_by_disease) & set(c_by_disease))
     for disease in shared:
         diffs.extend(_compare_one_finding(g_by_disease[disease], c_by_disease[disease]))
