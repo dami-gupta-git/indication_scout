@@ -84,7 +84,7 @@ JUDGMENT_CACHE_TTL: int = CACHE_TTL
 # its full SupervisorOutput is cached on the persistent volume; a cached run
 # older than EXAMPLE_CACHE_TTL_SECONDS is re-run lazily on the next request.
 EXAMPLE_DRUGS: tuple[str, ...] = ("metformin", "semaglutide", "bupropion", "sildenafil")
-EXAMPLE_CACHE_TTL_SECONDS: int = 30 * 86400  # 30 days
+EXAMPLE_CACHE_TTL_SECONDS: int = 60 * 86400  # 60 days
 EXAMPLE_CACHE_DIR: Path = DEFAULT_CACHE_DIR / "examples"
 # Committed seed snapshots copied into EXAMPLE_CACHE_DIR on startup when the
 # persistent volume is empty (e.g. a fresh Railway deploy). captured_at.json
