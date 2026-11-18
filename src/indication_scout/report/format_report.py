@@ -244,7 +244,14 @@ def _fmt_clinical_trials(
                 lines.append(
                     f"- **Registry query matches:** {ct.search_coverage.registry_query_matches}"
                 )
-            if (
+            if s.resolution_route == "ot_synonym" and not ct.relevant_nct_ids:
+                # The term came from an Open Targets synonym and can be broader than the indication, so an empty result
+                # is not evidence that the exact indication has no trials.
+                lines.append(
+                    f"- _No trials found under the broader term {s.resolution_term}; the exact indication was not "
+                    "searchable._"
+                )
+            elif (
                 ct.search_coverage
                 and ct.search_coverage.coverage_complete
                 and s.total_count == 0

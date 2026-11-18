@@ -181,6 +181,7 @@ def build_clinical_trials_tools(
                 date_before=date_before,
             )
         result.resolution_route = route
+        result.resolution_term = mesh_term
         result.trials = _drop_non_therapeutic(
             result.trials, "search_trials", drug, indication
         )

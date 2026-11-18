@@ -144,6 +144,8 @@ class SearchTrialsResult(BaseModel):
     # Which resolve_mesh_id route produced the MeSH term the registry was searched with. "ot_synonym" means the term
     # came from an exact Open Targets synonym and can be broader than the indication. None when unresolved.
     resolution_route: Literal["label", "canonical", "ot_synonym"] | None = None
+    # The MeSH preferred term the registry was searched with. None when unresolved.
+    resolution_term: str | None = None
 
     @model_validator(mode="before")
     @classmethod

@@ -179,6 +179,7 @@ async def test_search_trials_records_ot_synonym_route(tmp_path):
     assert isinstance(msg.artifact, SearchTrialsResult)
     assert msg.artifact.resolution_status == "resolved"
     assert msg.artifact.resolution_route == "ot_synonym"
+    assert msg.artifact.resolution_term == "Amphetamine-Related Disorders"
     assert msg.artifact.total_count == 0
     assert msg.artifact.trials == []
 

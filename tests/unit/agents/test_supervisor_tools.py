@@ -866,32 +866,32 @@ async def test_finalize_does_not_treat_unresolved_trial_query_as_zero_evidence()
             }
         )
 
+    unresolved_fields = {
+        "stage": (
+            "Trial search unavailable — disease name could not be resolved to a "
+            "MeSH descriptor"
+        ),
+        "literature": "none, undetermined design",
+        "blocker": "",
+        "active_programs": "Unknown — registry search was not run",
+        "key_risk": "",
+        "verdict": "",
+        "watch": "",
+        "prose": "",
+    }
+    # The candidate the model left out (named only in a demotion footer line) is ranked after the first, and its
+    # footer line is dropped instead of naming it twice.
     assert msg.artifact["blurbs"] == [
-        {
-            "disease": "unresolved disease",
-            "stage": (
-                "Trial search unavailable — disease name could not be resolved to a "
-                "MeSH descriptor"
-            ),
-            "literature": "none, undetermined design",
-            "blocker": "",
-            "active_programs": "Unknown — registry search was not run",
-            "key_risk": "",
-            "verdict": "",
-            "watch": "",
-            "prose": "",
-        }
+        {"disease": "unresolved disease", **unresolved_fields},
+        {"disease": "unresolved footer", **unresolved_fields},
     ]
-    assert "Evidence gate exclusions" not in msg.artifact["summary"]
+    assert msg.artifact["summary"] == (
+        "Ranked repurposing signals:\n" "1. unresolved disease\n" "2. unresolved footer"
+    )
     assert (
         "authoritative trial query state = unresolved"
         in mock_query.await_args_list[0].args[0]
     )
-    assert (
-        "- unresolved footer — Trial search unavailable — disease name could not be "
-        "resolved to a MeSH descriptor; active programs Unknown — registry search was "
-        "not run"
-    ) in msg.artifact["summary"]
 
 
 async def test_fact_critic_flags_withdrawn_only_pair():
@@ -1941,9 +1941,10 @@ async def test_finalize_rebuilds_closed_signals_footer_from_closure_verdicts():
 
 async def test_finalize_discloses_every_investigated_disease_not_ranked():
     """Every disease that reached the findings stage is either ranked, gate-excluded, or named in a
-    'Not ranked:' line with its reason (absent from ranking / unresolved trial query /
-    combination-only demotion). A gate-excluded disease appears in the gate line only, whether the
-    model submitted it as a blurb or silently left it out.
+    'Not ranked:' line with its reason (absent from ranking / combination-only demotion). A candidate
+    whose trial query was unresolved is ranked last even when the model left it out. A gate-excluded
+    disease appears in the gate line only, whether the model submitted it as a blurb or silently left
+    it out.
     """
     by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
     fin = by_name["finalize_supervisor"]
@@ -1991,14 +1992,63 @@ async def test_finalize_discloses_every_investigated_disease_not_ranked():
     assert msg.artifact["summary"] == (
         "Candidates assessed for testdrug:\n"
         "1. ranked one\n"
+        "2. unresolved one\n"
         "Not ranked: endothelial dysfunction — investigated but absent from the supervisor's "
-        "ranking; obesity — demoted: approved only as a fixed-dose combination; "
-        "unresolved one — trial search coverage unavailable (disease could not be resolved to a "
-        "MeSH descriptor)\n"
+        "ranking; obesity — demoted: approved only as a fixed-dose combination\n"
         "Evidence gate exclusions: gate drop — 0 relevant trials and no usable literature signal "
         "(direction=none, study_count=0); silent gate drop — 0 relevant trials and no usable "
         "literature signal (direction=none, study_count=0)"
     )
+
+
+async def test_finalize_ranks_unresolved_candidates_after_searched_ones():
+    """A candidate whose registry query was unresolved is listed after every searched candidate, even when the model
+    ranked it first, and its blurb carries the unresolved stage."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+    supported = _make_lit("moderate", 2, 2, direction="supports")
+    for name in ("searched a", "searched b"):
+        allowed_diseases[name] = (name, "competitor")
+        findings_local[name] = {
+            "literature": supported,
+            "clinical_trials": _make_ct(
+                1, 1, 0, signals=TrialSignals(dev_stage="untested")
+            ),
+        }
+    allowed_diseases["unresolved one"] = ("unresolved one", "competitor")
+    findings_local["unresolved one"] = {
+        "literature": supported,
+        "clinical_trials": ClinicalTrialsOutput(
+            search=SearchTrialsResult(resolution_status="unresolved")
+        ),
+    }
+
+    blurbs = [
+        {"disease": "unresolved one", "prose": "first by the model."},
+        {"disease": "searched a", "prose": "a."},
+        {"disease": "searched b", "prose": "b."},
+    ]
+    msg = await _critique_then_finalize(
+        by_name,
+        blurbs,
+        "Candidates assessed for testdrug:\n1. unresolved one\n2. searched a\n3. searched b",
+    )
+
+    assert msg.artifact["summary"] == (
+        "Candidates assessed for testdrug:\n"
+        "1. searched a\n"
+        "2. searched b\n"
+        "3. unresolved one"
+    )
+    assert [b["disease"] for b in msg.artifact["blurbs"]] == [
+        "searched a",
+        "searched b",
+        "unresolved one",
+    ]
+    unresolved = msg.artifact["blurbs"][2]
+    assert unresolved["stage"] == (
+        "Trial search unavailable — disease name could not be resolved to a MeSH descriptor"
+    )
+    assert unresolved["active_programs"] == "Unknown — registry search was not run"
 
 
 async def test_investigate_top_candidates_names_every_candidate_to_rank():

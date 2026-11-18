@@ -155,7 +155,6 @@ _UNRESOLVED_TRIAL_STAGE = (
 )
 _UNRESOLVED_ACTIVE_PROGRAMS = "Unknown — registry search was not run"
 # Summary footer accounting: every disease that reached findings appears in the ranked block or exactly one footer line.
-_NOT_RANKED_REASON_UNRESOLVED = "trial search coverage unavailable (disease could not be resolved to a MeSH descriptor)"
 _NOT_RANKED_REASON_COMBINATION = "demoted: approved only as a fixed-dose combination"
 _NOT_RANKED_REASON_ABSENT = "investigated but absent from the supervisor's ranking"
 
@@ -1766,6 +1765,27 @@ def build_supervisor_tools(
                 "re-passed order)",
                 len(critic_blurbs),
             )
+        # An investigated candidate whose registry query could not run stays in the ranked block, after every searched
+        # candidate, even when the model left it out: its card says trial status is unknown instead of the candidate
+        # disappearing into a footer. Its structured fields are set deterministically in the loop below, so a stub
+        # blurb carrying only the disease is enough.
+        listed_keys = {(b.get("disease") or "").lower().strip() for b in source_blurbs}
+        omitted_unresolved = [
+            dkey
+            for dkey, dslot in findings_local.items()
+            if dkey not in listed_keys
+            and _trial_query_unresolved((dslot or {}).get("clinical_trials"))
+            and dkey in allowed_diseases
+        ]
+        if omitted_unresolved:
+            logger.info(
+                "[TOOL] finalize_supervisor adding unresolved candidates the model left out: %s",
+                omitted_unresolved,
+            )
+            source_blurbs = list(source_blurbs) + [
+                {"disease": allowed_diseases[dkey][0], "stage": _UNRESOLVED_TRIAL_STAGE}
+                for dkey in omitted_unresolved
+            ]
         validated: list[dict] = []
         # Diseases the evidence gate actually dropped, as (disease, reason). The "Evidence gate exclusions:" footer is
         # rebuilt from this, not the LLM's prose, which named a kept candidate (semaglutide × hypoglycemia) on an invented
@@ -1911,6 +1931,7 @@ def build_supervisor_tools(
                 # The same closure fact the writer sees; the "Closed signals:" footer is rebuilt from it so it cannot
                 # disagree with a card's "Closed signal" assessment.
                 "_closed": closure_text.startswith("CLOSED"),
+                "_trial_query_unresolved": trial_query_unresolved,
                 **fields,
             }
             validated.append(entry)
@@ -1941,6 +1962,9 @@ def build_supervisor_tools(
                     e["key_risk"] = j.key_risk
                     e["verdict"] = j.verdict
                     e["prose"] = j.prose
+        # Candidates whose registry query could not run rank after every candidate whose search ran, keeping their
+        # relative order; an unknown trial status must not sit above a searched result.
+        validated.sort(key=lambda e: bool(e.pop("_trial_query_unresolved", False)))
         closed_diseases = [e["disease"] for e in validated if e.get("_closed")]
         for e in validated:
             e.pop("_interp_facts", None)
@@ -2075,9 +2099,17 @@ def build_supervisor_tools(
             if m is None:
                 # The LLM's own "Evidence gate exclusions:" / "Closed signals:" / "Not ranked:" lines are discarded and
                 # rebuilt below from finalize's decisions. Other lines (demotion footer entries) pass through with a false
-                # stage clause corrected.
+                # stage clause corrected, except a footer entry for an unresolved candidate, which is now ranked.
                 if rebuilt_footer_line.match(line):
                     continue
+                fm = footer_line.match(line)
+                if fm is not None:
+                    footer_disease = fm.group("disease").lower()
+                    if any(
+                        key in footer_disease and key in validated_diseases
+                        for key in unresolved_trial_queries
+                    ):
+                        continue
                 passthrough.append(_repair_footer_stage(line))
                 continue
             matched = _match_validated(m.group("head").lower())
@@ -2146,9 +2178,7 @@ def build_supervisor_tools(
                 )
                 gate_excluded.append((canonical, unranked_gate_reason))
                 continue
-            if dkey in unresolved_trial_queries:
-                reason = _NOT_RANKED_REASON_UNRESOLVED
-            elif approval_labels.get(dkey) == "combination_only":
+            if approval_labels.get(dkey) == "combination_only":
                 reason = _NOT_RANKED_REASON_COMBINATION
             else:
                 reason = _NOT_RANKED_REASON_ABSENT

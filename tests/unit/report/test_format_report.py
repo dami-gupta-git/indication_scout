@@ -186,6 +186,46 @@ def test_fmt_clinical_trials_search_whitespace():
     assert "Whitespace: no trials found for this drug × indication pair." in rendered
 
 
+@pytest.mark.parametrize(
+    "route, expected_line, absent_line",
+    [
+        (
+            "ot_synonym",
+            "- _No trials found under the broader term Amphetamine-Related Disorders; the exact indication was not "
+            "searchable._",
+            "Whitespace",
+        ),
+        (
+            "label",
+            "- _Whitespace: no trials found for this drug × indication pair._",
+            "broader term",
+        ),
+    ],
+)
+def test_fmt_clinical_trials_zero_relevant_wording_by_route(
+    route, expected_line, absent_line
+):
+    """With no relevant trials, a search made under an Open Targets synonym's broader MeSH term says so instead of
+    reporting the pair as whitespace."""
+    out = ClinicalTrialsOutput(
+        search=SearchTrialsResult(
+            total_count=0,
+            by_status={},
+            trials=[],
+            resolution_status="resolved",
+            resolution_route=route,
+            resolution_term="Amphetamine-Related Disorders",
+        ),
+        search_coverage=_coverage(total=0, relevant=0, contaminated=0, retrieved=0),
+    )
+
+    rendered = _fmt_clinical_trials(out)
+
+    assert "**Trial activity:** 0 relevant trial(s); 0 excluded" in rendered
+    assert expected_line in rendered
+    assert absent_line not in rendered
+
+
 def test_fmt_clinical_trials_unresolved_search_is_not_reported_as_zero():
     out = ClinicalTrialsOutput(
         search=SearchTrialsResult(resolution_status="unresolved"),
