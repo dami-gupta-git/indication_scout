@@ -11,7 +11,7 @@ import time
 from collections.abc import Callable
 from datetime import date
 from pathlib import Path
-from typing import Any, Literal, TypedDict, TypeVar
+from typing import Any, Literal, TypedDict, TypeVar, cast
 
 from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import tool
@@ -64,7 +64,9 @@ from indication_scout.helpers.drug_helpers import (
 )
 from indication_scout.models.model_evidence_summary import EvidenceSummary
 from indication_scout.services.approval_check import (
+    ApprovalLabel,
     get_approved_indications,
+    get_combination_only_indications,
     get_fda_approved_disease_mapping,
 )
 from indication_scout.services.cost_tracking import candidate_cost_scope
@@ -155,7 +157,6 @@ _UNRESOLVED_TRIAL_STAGE = (
 )
 _UNRESOLVED_ACTIVE_PROGRAMS = "Unknown — registry search was not run"
 # Summary footer accounting: every disease that reached findings appears in the ranked block or exactly one footer line.
-_NOT_RANKED_REASON_UNRESOLVED = "trial search coverage unavailable (disease could not be resolved to a MeSH descriptor)"
 _NOT_RANKED_REASON_COMBINATION = "demoted: approved only as a fixed-dose combination"
 _NOT_RANKED_REASON_ABSENT = "investigated but absent from the supervisor's ranking"
 
@@ -274,10 +275,12 @@ def _log_disease_banner(title: str, diseases: list[str]) -> None:
 def _evidence_gate_reason(slot: dict) -> str | None:
     """Top-N evidence gate over one findings slot: the exclusion reason, or None when the candidate survives.
 
-    Excludes a candidate with 0 relevant trials AND no usable literature signal (direction "none" OR study_count 0).
-    Literature with at least one relevant abstract and 0 trials is a legitimate signal and is kept. The PMID-count
-    fallback applies only when synthesize didn't run. The gate keys off direction, not strength, so a contradicting
-    body survives as a negative. An unresolved trial query has n_trials None, never 0, so it cannot satisfy the gate.
+    Excludes a candidate with no usable literature signal (direction "none" OR study_count 0) when it has 0 relevant
+    trials or its registry query could not run. An unresolved query is unknown trial status, not zero trials, but a
+    candidate with unknown trials and no literature has no evidence at all to rank on ("multiple sclerosis symptom
+    measurement" for bupropion). Literature with at least one relevant abstract is a legitimate signal and is kept. The
+    PMID-count fallback applies only when synthesize didn't run. The gate keys off direction, not strength, so a
+    contradicting body survives as a negative.
     """
     lit = slot.get("literature")
     ct = slot.get("clinical_trials")
@@ -296,11 +299,16 @@ def _evidence_gate_reason(slot: dict) -> str | None:
             and n_pmids < SUPERVISOR_MIN_PMIDS_NO_TRIALS
         )
     )
+    lit_detail = (
+        f"(direction={lit_direction or 'unavailable'}, "
+        f"study_count={lit_study_count if lit_study_count is not None else 'unavailable'})"
+    )
     if n_trials == 0 and no_lit_signal:
+        return f"0 relevant trials and no usable literature signal {lit_detail}"
+    if _trial_query_unresolved(ct) and no_lit_signal:
         return (
-            f"0 relevant trials and no usable literature signal "
-            f"(direction={lit_direction or 'unavailable'}, "
-            f"study_count={lit_study_count if lit_study_count is not None else 'unavailable'})"
+            "trial search unavailable (disease could not be resolved to a MeSH descriptor) and no usable literature "
+            f"signal {lit_detail}"
         )
     return None
 
@@ -461,9 +469,12 @@ def build_supervisor_tools(
     # {"literature": ..., "clinical_trials": ...}.
     auto_findings: dict[str, dict] = {}
 
-    # FDA approval-relationship labels for kept candidates, keyed by lowercase disease name → "contaminated" |
-    # "combination_only" ("approved" is dropped, "none" omitted). run_supervisor_agent reads it via get_approval_labels()
-    # so approval_relationship comes from the label, not LLM prose.
+    # FDA approval labels for every checked candidate, keyed by lowercase disease name → "approved" | "contaminated" |
+    # "combination_only" | "none" | "unresolved". "unresolved" means the lookup could not judge the candidate. Competitor
+    # candidates labelled "approved" are dropped from the allowlist in find_candidates. analyze_clinical_trials hands the
+    # pair's label to the trials tool; run_supervisor_agent reads it via get_approval_labels() so approval_relationship comes
+    # from the label, not LLM prose; consumers that expose it as a relationship map every label other than "contaminated" and
+    # "combination_only" to "none", which the relationship field can hold.
     approval_labels: dict[str, str] = {}
 
     # Per-disease sub-agent artifacts from analyze_literature / analyze_clinical_trials, used by finalize_supervisor's
@@ -586,6 +597,14 @@ def build_supervisor_tools(
                     candidate_diseases=diseases,
                     as_of=date_before,
                 )
+                # The table carries no contaminated / none verdicts, only combination-product approvals; record those so
+                # a holdout card shows combination_only like a live one.
+                for disease in await get_combination_only_indications(
+                    drug_name=drug_name,
+                    candidate_diseases=[d for d in diseases if d not in fda_approved],
+                    as_of=date_before,
+                ):
+                    approval_labels[disease.lower().strip()] = "combination_only"
             else:
                 mapping = await get_fda_approved_disease_mapping(
                     drug_name=drug_name,
@@ -596,11 +615,11 @@ def build_supervisor_tools(
                 fda_approved = {
                     disease for disease, label in mapping.items() if label == "approved"
                 }
-                # Record non-"approved" labels for KEPT candidates so the report renders them from the label, not LLM
-                # prose. "none" is omitted. The holdout path has no label data, so labels are captured only in the live path.
+                # Record every label (none and unresolved included), so the report renders contaminated and
+                # combination_only from the label, not LLM prose, and the trials sub-agent receives the same verdict for the
+                # pair. The holdout path records only combination_only, from the table.
                 for disease, label in mapping.items():
-                    if label in ("contaminated", "combination_only"):
-                        approval_labels[disease.lower().strip()] = label
+                    approval_labels[disease.lower().strip()] = label
             if fda_approved:
                 _log_disease_banner(
                     f"FDA-DROPPED (already approved for {drug_name}, source: "
@@ -701,8 +720,40 @@ def build_supervisor_tools(
         """
         try:
             await _merge_and_dedup_impl(drug_name)
+            # Mechanism-route entries (and competitor entries the merge renamed) were never checked against the FDA label.
+            # Drop the approved ones before the allowlist is published, so none is investigated or ranked as a new use.
+            # Holdout runs have no live label data.
+            if date_before is None:
+                await _drop_approved_merged_candidates(drug_name)
         finally:
             find_candidates_done.set()
+
+    async def _drop_approved_merged_candidates(drug_name: str) -> None:
+        """Label every unlabelled allowlist entry, then remove the ones labelled "approved".
+
+        A removed entry joins the drug's approved indications, as in find_candidates' competitor drop.
+        """
+        await _record_missing_approval_labels(drug_name)
+        approved = [
+            (key, canonical)
+            for key, (canonical, _) in allowed_diseases.items()
+            if approval_labels.get(key) == "approved"
+        ]
+        if not approved:
+            return
+        _log_disease_banner(
+            f"FDA-DROPPED after merge (already approved for {drug_name}, source: live FDA)",
+            [canonical for _, canonical in approved],
+        )
+        entry = _ensure_drug_entry(drug_name)
+        existing = {ind.lower().strip() for ind in entry["approved_indications"]}
+        for key, canonical in approved:
+            del allowed_diseases[key]
+            for efo_id in [e for e, v in allowed_efo_ids.items() if v == key]:
+                del allowed_efo_ids[efo_id]
+            if key not in existing:
+                entry["approved_indications"].append(canonical)
+                existing.add(key)
 
     async def _merge_and_dedup_impl(drug_name: str) -> None:
         # Steps 1-3: exact-match dedup against the competitor-seeded allowlist.
@@ -972,13 +1023,23 @@ def build_supervisor_tools(
             if seed_entry and seed_entry["drug_aliases"]
             else drug_name
         )
+        # The candidate step's FDA verdict for this pair, handed to the trials tool so its "FDA approval" line and the
+        # candidate drop read the same label. The supervisor may call this tool before investigate_top_candidates has
+        # labelled mechanism-route candidates, so fill any missing labels first (a cache read once labelled). Holdout runs
+        # have no label data; the trials tool reads the hardcoded table there.
+        ct_approval_label: ApprovalLabel | None = None
+        if date_before is None:
+            await _record_missing_approval_labels(drug_name)
+            ct_approval_label = cast(
+                ApprovalLabel, approval_labels[disease_name.lower().strip()]
+            )
         # Fresh agent per call so concurrent investigations don't accumulate each other's trials in shown_by_pair.
         ct_agent = build_clinical_trials_agent(
             llm=llm,
             date_before=date_before,
             assigned_indication=disease_name,
-            target_drug=registry_drug,
             cache_dir=svc.cache_dir,
+            approval_label=ct_approval_label,
         )
         # Approved indications are seeded by find_candidates before fan-out; threaded into the task so the relevance
         # gate's TEST 1 treats an approved sub-indication's trial as contamination, not roll-up evidence.
@@ -1114,6 +1175,11 @@ def build_supervisor_tools(
             signals_block += (
                 f"\n  contaminated_excluded: {len(output.contaminated_nct_ids)} trial(s) "
                 f"({', '.join(output.contaminated_nct_ids)})"
+            )
+        if output.combination_nct_ids:
+            signals_block += (
+                f"\n  combination_only_excluded: {len(output.combination_nct_ids)} trial(s) give the drug only "
+                f"with another drug ({', '.join(output.combination_nct_ids)})"
             )
 
         # Closure is a typed field from the post-loop synthesis; the supervisor trusts it. The prose summary is
@@ -1263,10 +1329,11 @@ def build_supervisor_tools(
                 drug_name,
                 e,
             )
+            for disease in missing:
+                approval_labels[disease.lower().strip()] = "unresolved"
             return
         for disease, label in mapping.items():
-            if label in ("contaminated", "combination_only"):
-                approval_labels[disease.lower().strip()] = label
+            approval_labels[disease.lower().strip()] = label
 
     # Fan-out tool: bulk-investigate the top-N candidates (settings.supervisor_investigation_cap, env-tunable via
     # SUPERVISOR_INVESTIGATION_CAP). The supervisor LLM systematically skipped "obvious" candidates like T2DM for
@@ -1766,6 +1833,27 @@ def build_supervisor_tools(
                 "re-passed order)",
                 len(critic_blurbs),
             )
+        # An investigated candidate whose registry query could not run stays in the ranked block, after every searched
+        # candidate, even when the model left it out: its card says trial status is unknown instead of the candidate
+        # disappearing into a footer. Its structured fields are set deterministically in the loop below, so a stub
+        # blurb carrying only the disease is enough.
+        listed_keys = {(b.get("disease") or "").lower().strip() for b in source_blurbs}
+        omitted_unresolved = [
+            dkey
+            for dkey, dslot in findings_local.items()
+            if dkey not in listed_keys
+            and _trial_query_unresolved((dslot or {}).get("clinical_trials"))
+            and dkey in allowed_diseases
+        ]
+        if omitted_unresolved:
+            logger.info(
+                "[TOOL] finalize_supervisor adding unresolved candidates the model left out: %s",
+                omitted_unresolved,
+            )
+            source_blurbs = list(source_blurbs) + [
+                {"disease": allowed_diseases[dkey][0], "stage": _UNRESOLVED_TRIAL_STAGE}
+                for dkey in omitted_unresolved
+            ]
         validated: list[dict] = []
         # Diseases the evidence gate actually dropped, as (disease, reason). The "Evidence gate exclusions:" footer is
         # rebuilt from this, not the LLM's prose, which named a kept candidate (semaglutide × hypoglycemia) on an invented
@@ -1888,9 +1976,13 @@ def build_supervisor_tools(
                     "stage": stage_phrase,
                     "active_programs": fields["active_programs"],
                     "literature": fields["literature"],
+                    "literature_summary": es.summary if es is not None else "",
                     # Authoritative upstream FDA label relationship (NOT the LLM blurb value).
-                    "relationship": approval_labels.get(
-                        disease.lower().strip(), "none"
+                    "relationship": (
+                        approval_labels[disease.lower().strip()]
+                        if approval_labels.get(disease.lower().strip())
+                        in ("contaminated", "combination_only")
+                        else "none"
                     ),
                     "approved_indication": approved_ind,
                     "trial_evidence": _trial_evidence_text(coverage),
@@ -1910,6 +2002,7 @@ def build_supervisor_tools(
                 # The same closure fact the writer sees; the "Closed signals:" footer is rebuilt from it so it cannot
                 # disagree with a card's "Closed signal" assessment.
                 "_closed": closure_text.startswith("CLOSED"),
+                "_trial_query_unresolved": trial_query_unresolved,
                 **fields,
             }
             validated.append(entry)
@@ -1940,6 +2033,9 @@ def build_supervisor_tools(
                     e["key_risk"] = j.key_risk
                     e["verdict"] = j.verdict
                     e["prose"] = j.prose
+        # Candidates whose registry query could not run rank after every candidate whose search ran, keeping their
+        # relative order; an unknown trial status must not sit above a searched result.
+        validated.sort(key=lambda e: bool(e.pop("_trial_query_unresolved", False)))
         closed_diseases = [e["disease"] for e in validated if e.get("_closed")]
         for e in validated:
             e.pop("_interp_facts", None)
@@ -2074,9 +2170,15 @@ def build_supervisor_tools(
             if m is None:
                 # The LLM's own "Evidence gate exclusions:" / "Closed signals:" / "Not ranked:" lines are discarded and
                 # rebuilt below from finalize's decisions. Other lines (demotion footer entries) pass through with a false
-                # stage clause corrected.
+                # stage clause corrected, except a footer entry for an unresolved candidate, which is now either ranked or
+                # listed as a gate exclusion.
                 if rebuilt_footer_line.match(line):
                     continue
+                fm = footer_line.match(line)
+                if fm is not None:
+                    footer_disease = fm.group("disease").lower()
+                    if any(key in footer_disease for key in unresolved_trial_queries):
+                        continue
                 passthrough.append(_repair_footer_stage(line))
                 continue
             matched = _match_validated(m.group("head").lower())
@@ -2145,9 +2247,7 @@ def build_supervisor_tools(
                 )
                 gate_excluded.append((canonical, unranked_gate_reason))
                 continue
-            if dkey in unresolved_trial_queries:
-                reason = _NOT_RANKED_REASON_UNRESOLVED
-            elif approval_labels.get(dkey) == "combination_only":
+            if approval_labels.get(dkey) == "combination_only":
                 reason = _NOT_RANKED_REASON_COMBINATION
             else:
                 reason = _NOT_RANKED_REASON_ABSENT

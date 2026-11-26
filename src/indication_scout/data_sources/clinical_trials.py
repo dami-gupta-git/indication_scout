@@ -85,7 +85,7 @@ class ClinicalTrialsClient(BaseClient):
         """
         cache_params = {
             "nct_id": nct_id,
-            "trial_schema_version": "arm_groups_v1",
+            "trial_schema_version": "protocol_ids_v3",
         }
         cached = cache_get("ct_trial", cache_params, self.cache_dir)
         if cached is not None:
@@ -137,7 +137,7 @@ class ClinicalTrialsClient(BaseClient):
             "date_before": date_before.isoformat() if date_before else None,
             "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
             "coverage_version": "active_union_v1",
-            "trial_schema_version": "arm_groups_v1",
+            "trial_schema_version": "protocol_ids_v3",
         }
         cached = cache_get("ct_search", cache_params, self.cache_dir)
         if cached is not None:
@@ -317,7 +317,7 @@ class ClinicalTrialsClient(BaseClient):
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
             "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
-            "trial_schema_version": "arm_groups_v1",
+            "trial_schema_version": "protocol_ids_v3",
         }
         cached = cache_get("ct_terminated", cache_params, self.cache_dir)
         if cached is not None:
@@ -417,7 +417,7 @@ class ClinicalTrialsClient(BaseClient):
             "mesh_term": mesh_term,
             "date_before": date_before.isoformat() if date_before else None,
             "fetch_max": CLINICAL_TRIALS_FETCH_MAX,
-            "trial_schema_version": "arm_groups_v1",
+            "trial_schema_version": "protocol_ids_v3",
         }
         cached = cache_get("ct_completed", cache_params, self.cache_dir)
         if cached is not None:
@@ -670,6 +670,7 @@ class ClinicalTrialsClient(BaseClient):
         primary_outcomes = [
             PrimaryOutcome(
                 measure=o.get("measure", ""),
+                description=o.get("description"),
                 time_frame=o.get("timeFrame"),
             )
             for o in outcomes.get("primaryOutcomes", [])
@@ -688,6 +689,12 @@ class ClinicalTrialsClient(BaseClient):
 
         return Trial(
             nct_id=ident.get("nctId", ""),
+            org_study_id=(ident.get("orgStudyIdInfo") or {}).get("id", ""),
+            secondary_ids=[
+                s.get("id", "")
+                for s in (ident.get("secondaryIdInfos") or [])
+                if s.get("id")
+            ],
             title=ident.get("briefTitle", ""),
             brief_summary=desc.get("briefSummary"),
             phase=phase,

@@ -41,6 +41,8 @@ def _load_chembl_names(chembl_id: str, cache_dir: Path) -> list[str] | None:
         return None
     try:
         raw = json.loads(path.read_text())
+        if raw["salt_forms_checked"] is not True:
+            return None
         cached_at = datetime.fromisoformat(raw["cached_at"])
         ttl = int(raw.get("ttl", CACHE_TTL))
         names = raw["names"]
@@ -66,6 +68,7 @@ def _save_chembl_names(
         "ns": _CHEMBL_NAMES_NS,
         "chembl_id": chembl_id,
         "names": list(names),
+        "salt_forms_checked": True,
         "cached_at": datetime.now().isoformat(),
         "ttl": ttl,
     }
@@ -85,6 +88,8 @@ def _lookup_chembl_id_by_name(name: str, cache_dir: Path) -> str | None:
     for path in ns_dir.glob("*.json"):
         try:
             raw = json.loads(path.read_text())
+            if raw["salt_forms_checked"] is not True:
+                continue
             cached_at = datetime.fromisoformat(raw["cached_at"])
             ttl = int(raw.get("ttl", CACHE_TTL))
             chembl_id = raw["chembl_id"]
@@ -320,6 +325,9 @@ async def get_all_drug_names(
 
     Returns:
         Deduplicated list of drug names, pref_name first. All lowercase.
+
+    Raises:
+        DataSourceError: if the parent or salt-form lookup fails.
     """
     cached = _load_chembl_names(chembl_id, cache_dir)
     if cached is not None:
@@ -336,19 +344,21 @@ async def get_all_drug_names(
 
         # 2. Discover salt forms via molecule_hierarchy
         hierarchy_url = f"{CHEMBL_BASE_URL}/molecule.json"
-        try:
-            hierarchy_raw = await client._rest_get(
-                hierarchy_url,
-                params={
-                    "molecule_hierarchy__parent_chembl_id": chembl_id,
-                    "limit": 50,
-                },
-            )
-        except DataSourceError as e:
-            logger.warning("Failed to fetch salt forms for %s: %s", chembl_id, e)
-            hierarchy_raw = {}
+        hierarchy_raw = await client._rest_get(
+            hierarchy_url,
+            params={
+                "molecule_hierarchy__parent_chembl_id": chembl_id,
+                "limit": 50,
+            },
+        )
 
-    salt_molecules = (hierarchy_raw or {}).get("molecules", [])
+    if not isinstance(hierarchy_raw, dict) or not isinstance(
+        hierarchy_raw.get("molecules"), list
+    ):
+        raise DataSourceError(
+            "chembl", f"Unexpected salt-form response for '{chembl_id}'"
+        )
+    salt_molecules = hierarchy_raw["molecules"]
     for mol in salt_molecules:
         mol_id = mol.get("molecule_chembl_id", "")
         if mol_id == chembl_id:

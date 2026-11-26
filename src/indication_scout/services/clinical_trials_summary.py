@@ -67,10 +67,10 @@ Hard rules on the prose:
   facts. Leave the "what stage has this reached" conclusion to the given stage.
 - Use plain English. Never use internal field names (by_status, total_count, etc).
 
-CLOSURE (live vs closed) — judge from the RELEVANT trials only:
+CLOSURE (live vs closed) — judge from the RELEVANT trials only. You are not shown the published
+literature, so the closure_reason must describe only the trials and say nothing about the literature:
 - Call the pair CLOSED only on a real negative: a relevant Phase 3 terminated for SAFETY or
-  benefit:risk, or literature reporting the drug failed for this indication. Operational stops
-  (low enrollment, funding, sponsor decision) are NOT closure.
+  benefit:risk. Operational stops (low enrollment, funding, sponsor decision) are NOT closure.
 - An old/off-patent drug (first_approval many years before now) with NO approval for this
   indication is NOT closure — it reflects no commercial NDA filing, not efficacy failure.
 - If neither holds, the pair is live (or unknown if you genuinely cannot tell).
@@ -183,7 +183,7 @@ async def judge_ct_summary(
         "coverage": coverage.model_dump(mode="json") if coverage else None,
         "first_approval": first_approval_str,
         "trials": facts,
-        "logic_version": "cited_nct_guard_v1",
+        "logic_version": "registry_only_closure_v2",
     }
     cached = cache_get("ct_summary", cache_params, cache_dir)
     if isinstance(cached, dict) and cached.get("closure") in _CLOSURE_VALUES:

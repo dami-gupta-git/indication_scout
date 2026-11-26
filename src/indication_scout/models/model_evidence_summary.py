@@ -10,8 +10,8 @@ class PmidJudgment(BaseModel):
     THAT abstract reports, and how directly its own result answers whether the drug works for the disease.
     """
 
-    # "neutral" = a relevant abstract with NO efficacy result (PK / safety-only / mechanism). It stays RELEVANT (counts in
-    # study_count) but is kept OUT of supporting AND contradicting, so a PK paper can't flip a clean "supports" to "mixed"
+    # "neutral" = a relevant abstract with NO efficacy result (PK / safety-only / mechanism). It stays RELEVANT (listed, but not
+    # counted in study_count) and is kept OUT of supporting AND contradicting, so a PK paper can't flip a clean "supports" to "mixed"
     # (thalidomide × prostate: a PK study force-bucketed as contradicting; baricitinib safety analysis force-bucketed as
     # supporting).
     verdict: Literal["supporting", "contradicting", "mixed", "neutral"]
@@ -93,7 +93,7 @@ class EvidenceSummary(BaseModel):
     relevant_pmids: list[str] = []
     contaminated_pmids: list[str] = []
     # neutral_pmids = relevant abstracts with NO efficacy result (PK / safety-only / mechanism),
-    # labeled "neutral" by the direction sub-call. They count toward study_count and may be cited in
+    # labeled "neutral" by the direction sub-call. They do not count toward study_count and may be cited in
     # the narrative as context, but are in NEITHER supporting nor contradicting. Surfaced so a reader
     # can see why a cited PMID is in neither list (rather than appearing dropped).
     neutral_pmids: list[str] = []

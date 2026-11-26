@@ -43,7 +43,7 @@ async def test_search_trials_with_resolved_mesh_term(
     for drug, indication in _PAIRS:
         resolved = await resolve_mesh_id(indication)
         assert resolved is not None, f"resolver returned None for {indication!r}"
-        descriptor_id, preferred_term = resolved
+        descriptor_id, preferred_term, _route = resolved
 
         result = await clinical_trials_client.search_trials(
             drug=drug, mesh_term=preferred_term, date_before=_CUTOFF

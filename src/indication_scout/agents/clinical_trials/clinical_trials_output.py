@@ -33,6 +33,10 @@ class TrialSignals(BaseModel):
     # A Phase 3 terminated for a non-operational reason: the positive closure signal; the sub-agent decides closure.
     phase3_terminated_for_cause: bool = False
     terminated_phase3_nct_ids: list[str] = []
+    # Superseded registration -> the registration that continues it, for sibling registrations of one protocol
+    # (see _trial_signals.superseded_registrations). The superseded ones are dropped from the relevant set before
+    # it is counted or described; this map is kept so the report can say which records were collapsed and why.
+    superseded_registrations: dict[str, str] = {}
     # Development-stage tier and the "what is still moving" line, both from judge_dev_stage over the relevant
     # trials; the supervisor renders them verbatim. dev_stage is one of: phase3_terminated_for_cause,
     # completed_phase3, active_phase3, phase3_unknown_status, completed_phase2, exploratory_phase4_only,
@@ -148,6 +152,15 @@ class ClinicalTrialsOutput(BaseModel):
         ),
     )
 
+    combination_nct_ids: list[str] = Field(
+        default_factory=list,
+        description=(
+            "NCT ids the agent judged relevant that give the drug only together with another active agent, "
+            "with no arm or comparison isolating it (services.trial_drug_isolation). Removed from "
+            "relevant_nct_ids and excluded from signals; listed separately in the report."
+        ),
+    )
+
     relevance_reasoning: str = Field(
         default="",
         description="1-2 sentence justification for the relevance split.",
@@ -163,11 +176,8 @@ class ClinicalTrialsOutput(BaseModel):
 
 
 class FinalizeClinicalTrialsArtifact(BaseModel):
-    """Artifact returned by finalize_analysis: the agent's relevance split, harvested by run_clinical_trials_agent.
+    """Artifact returned by finalize_analysis. Its presence marks that the agent finished fetching.
 
-    Trial-section prose is written post-loop by services.clinical_trials_summary.
+    Trials are classified after the loop by services.trial_relevance, and the trial-section prose is written by
+    services.clinical_trials_summary.
     """
-
-    relevant_ncts: list[str] = []
-    contaminated_ncts: list[str] = []
-    relevance_reasoning: str = ""

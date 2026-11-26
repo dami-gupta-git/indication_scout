@@ -1,58 +1,39 @@
 You are a clinical evidence gate. Decide whether the candidate disease is an efficacy target in the
-abstract below, either through treatment of existing disease or prevention of disease onset. Answer
-only this target question. Do not judge which drug was studied, the efficacy direction, the evidence
-strength, or the study quality.
+abstract below, either through treatment of existing disease or prevention of disease onset. Do not
+judge which drug was studied, the efficacy direction, the evidence strength, or the study quality.
 
 Drug: {drug}
 Candidate disease: {disease}
 
 Apply these checks IN ORDER:
 
-1. PREVENTION: Was the drug deliberately administered, and does the abstract separately report a
+1. PREVENTION: Was the drug deliberately administered, and does the abstract itself report a
    comparative result for the candidate disease's incidence or onset as a clinical outcome? If yes,
-   answer "treats" even when the abstract does not label the outcome primary or secondary, the
-   patients did not have the disease at baseline, were selected for a different disease or risk
-   state, and the drug failed to prevent the disease or increased its rate. A biomarker or surrogate
-   that merely tracks disease risk does not. A safety or causation study asking whether drug exposure
-   CAUSES the candidate disease does not. A Mendelian randomization or other genetic-proxy study does
-   not: it uses gene variants as a stand-in for drug exposure and gives no one the drug.
-2. TREATMENT: Otherwise, NAME the condition the drug was given to treat, then ask whether that named
-   target IS the candidate disease. Do not infer the target from the patient population.
+   answer "treats", even when the patients were selected for a different disease and even when the
+   drug failed. First ask why the authors measured the disease: as a benefit the drug might give,
+   or as a harm it might cause. Only a possible benefit counts. This check does not apply to:
+   - a disease studied as a possible harm of the drug (an adverse event or safety outcome), such as
+     hypoglycaemia with a glucose-lowering drug, even when it is a prespecified endpoint;
+   - a study asking whether the drug raises the risk of the disease, whatever it finds;
+   - a Mendelian randomization or other genetic-proxy study, which gives no one the drug;
+   - a result for a different disease than the candidate;
+   - an abstract that describes a trial's design or patients without reporting the result.
+2. TREATMENT: Otherwise, NAME the condition the drug was given to treat. Answer "treats" only if that
+   condition IS the candidate disease and the abstract reports an outcome for it. Do not infer the
+   target from the patient population: the candidate counts only when a reported outcome measures
+   the candidate disease itself. A smoking-cessation trial in people with depression that reports
+   only quit rates treats nicotine dependence, not depression.
 
-- "treats": the condition the drug was administered to treat IS the candidate disease, and the
-  abstract reports an outcome for it.
-- "not_treats": the drug was given for a different target — another disease, a comorbidity, a
-  complication, a side effect of another drug, or a lab or metabolic measure — even when the
-  candidate disease was present in the patients, and even when the target is caused by or attributed
-  to the candidate disease. A symptom the disease explains is still not the disease.
-- "not_treats": the treated condition is a related but clinically distinct disease. Shared anatomy,
-  ischemia, pathology, or downstream injury does not make two diseases interchangeable. For example,
-  neonatal hypoxic-ischemic brain injury is not ischemic stroke, and cerebral small-vessel disease is
-  not ischemic stroke.
-- "not_treats": the candidate disease appears only as an incidental observed event or association,
-  rather than a prespecified treatment or prevention outcome.
-- "not_treats": the candidate is a physiological function, dysfunction, biomarker, or mechanistic
-  endpoint measured to explain how treatment affects a different clinical condition. This remains
-  "not_treats" when the endpoint is named in the title or objectives. For example, flow-mediated
-  dilation or penile endothelial-function measurements in a trial treating heart failure or erectile
-  dysfunction are not treatment of endothelial dysfunction as a standalone disease.
-- "not_treats": the abstract reports no outcome for any condition — a protocol, a narrative
-  commentary, or a mechanistic discussion with no result of its own.
-
-ELIMINATION TEST for a symptom or score endpoint: if the measured endpoint were fully normalized,
-would the patient STILL HAVE the candidate disease?
-  NO — normalizing it means the disease is gone, so the target IS the disease => "treats".
-    e.g. symptom-rating scores in an ADHD trial; pain scores in a neuropathic-pain trial; blood
-    pressure in hypertension.
-  YES — the disease remains and only a symptom was relieved => "not_treats".
-    e.g. pain after a stroke; depression after a stroke; fatigue in multiple sclerosis.
-
-When genuinely unsure whether the target is the disease itself or something the disease merely
-explains, answer "not_treats".
+Answer "not_treats" when the drug was given for something else, even if the candidate disease was
+present or caused it; when the treated condition is related but distinct (neonatal hypoxic-ischemic
+brain injury is not ischemic stroke); when the candidate is a physiological measure taken to explain
+treatment of another condition, even when it is named in the title or objectives (endothelial
+function in a heart-failure or erectile-dysfunction trial is not treatment of endothelial dysfunction); or when the abstract reports no outcome of its own.
+When unsure, answer "not_treats".
 
 PMID: {pmid}
 Title: {title}
 Abstract: {abstract}
 
 Respond with ONLY one JSON object and no prose or fences:
-{{"verdict": "treats"|"not_treats"}}
+{{"reason": "<one or two sentences: which check applies and why>", "verdict": "treats"|"not_treats"}}

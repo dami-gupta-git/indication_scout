@@ -1,0 +1,15 @@
+List the active drug ingredients in each intervention of a registered clinical trial.
+
+For each intervention, give the generic (INN) names of the pharmacologically active drugs it delivers, lowercase,
+without salt names ("metformin", not "metformin hydrochloride"). Resolve brand names and code names to their
+ingredients when the name or description identifies them (Wellbutrin -> bupropion; a fixed-dose combination product ->
+each of its ingredients). An intervention that delivers no drug gets an empty list: placebo, sham, no treatment,
+observation, diet, exercise, lifestyle programs, counseling, psychotherapy, surgery, procedures, radiotherapy, devices.
+Dietary supplements and amino acids given as treatment (L-citrulline, myo-inositol, zinc) are active ingredients.
+
+Trial: {nct} — {title}
+Interventions:
+{interventions}
+
+Respond with ONLY one JSON object mapping each intervention number to its list:
+{{"1": ["..."], "2": []}}

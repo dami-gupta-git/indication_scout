@@ -60,9 +60,7 @@ Also report the design of the study THIS abstract reports:
   health-record or pharmacovigilance data, propensity-matched or not), for a Mendelian randomization
   or other genetic-proxy study, for case reports and retrospective case series, and for preclinical,
   modelling and narrative-review studies.
-- "is_pilot": true if the abstract calls the reported study a pilot, feasibility or preliminary study,
-  or states that it was not powered for its efficacy outcome. False otherwise, and always false when
-  is_interventional is false.
+- "is_pilot": true if the reported study is a pilot study.
 
 Judge every design field from the study the abstract reports, never from a study it cites. An abstract often
 opens with background sentences describing earlier work — a placebo-controlled trial mentioned there

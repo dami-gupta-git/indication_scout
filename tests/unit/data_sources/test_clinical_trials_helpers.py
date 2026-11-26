@@ -207,6 +207,32 @@ def test_parse_trial_missing_ancestors_defaults_empty(tmp_path):
     assert trial.mesh_ancestors == []
 
 
+def test_parse_trial_preserves_primary_outcome_description(tmp_path):
+    """The target gate receives the registry explanation for opaque outcome acronyms."""
+    study = _study_with_dates(primary="2030-12", overall=None)
+    study["protocolSection"]["outcomesModule"] = {
+        "primaryOutcomes": [
+            {
+                "measure": "CDASI",
+                "description": (
+                    "Change in Cutaneous Dermatomyositis Activity and Severity Index "
+                    "activity score"
+                ),
+                "timeFrame": "8 weeks",
+            }
+        ]
+    }
+
+    trial = ClinicalTrialsClient(cache_dir=tmp_path)._parse_trial(study)
+
+    assert len(trial.primary_outcomes) == 1
+    assert trial.primary_outcomes[0].measure == "CDASI"
+    assert trial.primary_outcomes[0].description == (
+        "Change in Cutaneous Dermatomyositis Activity and Severity Index activity score"
+    )
+    assert trial.primary_outcomes[0].time_frame == "8 weeks"
+
+
 def _study_with_dates(
     primary: str | None, overall: str | None, tmp_status: dict | None = None
 ) -> dict:

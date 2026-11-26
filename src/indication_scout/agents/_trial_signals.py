@@ -8,6 +8,8 @@ When `relevant_nct_ids` is supplied, facts are computed over relevant trials onl
 cannot inflate the phase or trip the termination signal.
 """
 
+import re
+
 from indication_scout.agents._trial_formatting import (
     _PHASE_RANK,
     _classify_stop_reason,
@@ -59,6 +61,92 @@ def _normalize_status(status: str) -> str:
 def _is_active(trial: Trial) -> bool:
     """True when overall_status is an active/ongoing program status (exact match)."""
     return _normalize_status(trial.overall_status) in _ACTIVE_STATUSES
+
+
+# Statuses in which a registration has stopped enrolling and may have been superseded by a sibling
+# registration of the same protocol. SUSPENDED is included: a paused site's record can point at the
+# registrations that continue, exactly as a terminated one does.
+_STOPPED_STATUSES = frozenset({"TERMINATED", "WITHDRAWN", "SUSPENDED"})
+
+
+# A trial registration carries external ids in org_study_id and secondary_ids. The EU Clinical
+# Trials Regulation number (2023-506605-19-00) and its legacy EudraCT form (2012-004321-16) are the
+# ones that link sibling registrations of one protocol; the regulation form is matched first
+# because the legacy pattern is a prefix of it.
+_EU_CT_NUMBER = re.compile(r"\b\d{4}-\d{6}-\d{2}-\d{2}\b")
+_EUDRACT_NUMBER = re.compile(r"\b\d{4}-\d{6}-\d{2}\b")
+_NCT_ID = re.compile(r"\bNCT\d{8}\b")
+# org_study_id often annotates the number: "2023-506605-19-00 (EU CT#)".
+_ID_ANNOTATION = re.compile(r"\s*\(.*\)\s*$")
+
+
+def _external_ids(trial: Trial) -> set[str]:
+    """Registry-external protocol ids this record carries (org study id + secondary ids)."""
+    raw = [_ID_ANNOTATION.sub("", (trial.org_study_id or "")).strip()]
+    raw += [(s or "").strip() for s in trial.secondary_ids]
+    return {
+        value
+        for value in raw
+        if value
+        and (_EU_CT_NUMBER.fullmatch(value) or _EUDRACT_NUMBER.fullmatch(value))
+    }
+
+
+def _referenced_ids(why_stopped: str | None) -> set[str]:
+    """Protocol ids named in a stop reason, as pointers to the registrations that continue.
+
+    EU CT numbers are extracted before the legacy EudraCT pattern and their prefixes removed, so
+    "2023-506605-19-00" yields one id rather than also the spurious "2023-506605-19".
+    """
+    text = why_stopped or ""
+    eu_ct = set(_EU_CT_NUMBER.findall(text))
+    eudract = {
+        value
+        for value in _EUDRACT_NUMBER.findall(text)
+        if not any(full.startswith(value) for full in eu_ct)
+    }
+    return eu_ct | eudract | set(_NCT_ID.findall(text))
+
+
+def superseded_registrations(trials: list[Trial]) -> dict[str, str]:
+    """Map each superseded registration in `trials` to the registration that continues it.
+
+    A multi-site or multi-indication protocol run under the EU Clinical Trials Regulation gets one
+    ClinicalTrials.gov registration per site or per indication. When one is stopped, its stop
+    reason names the protocol ids still recruiting — ClinicalTrials.gov models no relation between
+    them, so both records otherwise count as independent trials of the pair and the stopped one is
+    described as a separate programme that ended.
+
+    Detection requires the stopped record to NAME an id that resolves to another trial in the same
+    set. That explicit pointer is the whole signal: across 789 records spanning four drugs, one
+    record carried such a reference and it resolved correctly, while 22 records matched the
+    tempting proxy of "terminated with an enrollment of 0 or 1" — only one of which was a sibling
+    registration. Inferring supersession from tiny enrollment alone would wrongly merge 21
+    genuinely independent trials, so it is deliberately not implemented.
+
+    Only stopped records (terminated, withdrawn, suspended) are considered, so an active trial that
+    merely cites another protocol is never dropped.
+    """
+    by_external_id: dict[str, str] = {}
+    for trial in trials:
+        if not trial.nct_id:
+            continue
+        for external_id in _external_ids(trial):
+            by_external_id[external_id] = trial.nct_id
+
+    present = {t.nct_id for t in trials if t.nct_id}
+    superseded: dict[str, str] = {}
+    for trial in trials:
+        if _normalize_status(trial.overall_status) not in _STOPPED_STATUSES:
+            continue
+        for reference in sorted(_referenced_ids(trial.why_stopped)):
+            successor = (
+                reference if reference in present else by_external_id.get(reference)
+            )
+            if successor and successor != trial.nct_id:
+                superseded[trial.nct_id] = successor
+                break
+    return superseded
 
 
 def _is_pivotal_phase3(trial: Trial) -> bool:
@@ -214,6 +302,16 @@ def format_derived_signals(sig: TrialSignals) -> str:
         )
     else:
         lines.append("  relevant_phase3_terminated_for_cause: no")
+    if sig.superseded_registrations:
+        pairs = ", ".join(
+            f"{old} -> {new}"
+            for old, new in sorted(sig.superseded_registrations.items())
+        )
+        lines.append(
+            "  superseded_registrations: the first id in each pair is a stopped registration of "
+            "the SAME protocol as the second (one trial registered per site or per indication), "
+            f"already excluded from the counts above; do not describe it as a separate trial ({pairs})"
+        )
     lines.append(f"  dev_stage: {sig.dev_stage}")
     return "\n".join(lines)
 

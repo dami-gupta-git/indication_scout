@@ -129,7 +129,9 @@ async def run_pair_analysis(
     )
     from indication_scout.helpers.drug_helpers import seed_drug_intake
     from indication_scout.services.approval_check import (
+        ApprovalLabel,
         get_approved_indications,
+        get_combination_only_indications,
         get_fda_approved_disease_mapping,
     )
     from indication_scout.services.dev_stage import dev_stage_phrase
@@ -178,14 +180,16 @@ async def run_pair_analysis(
             )
             return await run_literature_agent(lit_agent, drug, disease_name)
 
-    async def _run_clinical_trials() -> ClinicalTrialsOutput:
+    async def _run_clinical_trials(
+        approval_label: ApprovalLabel | None,
+    ) -> ClinicalTrialsOutput:
         registry_drug = intake.aliases[0] if intake.aliases else drug
         ct_agent = build_clinical_trials_agent(
             llm=llm,
             date_before=date_before,
             assigned_indication=disease_name,
-            target_drug=registry_drug,
             cache_dir=svc.cache_dir,
+            approval_label=approval_label,
         )
         with candidate_cost_scope(disease_name):
             return await run_clinical_trials_agent(
@@ -212,29 +216,36 @@ async def run_pair_analysis(
             disease_name,
             date_before,
         )
-        mechanism, literature, clinical_trials = await asyncio.gather(
-            _run_mechanism(), _run_literature(), _run_clinical_trials()
-        )
-
-        # Label-grounded FDA relationship for the pair, from the same source find_candidates uses (NOT LLM prose). Unlike the
+        # Label-grounded FDA verdict for the pair, resolved once BEFORE the sub-agents start so every consumer reads the same
+        # verdict (the trials tool reports it as-is). Same source find_candidates uses (NOT LLM prose). Unlike the
         # supervisor path we do NOT drop an "approved" pair — the user asked for it explicitly — but we still surface the
         # relationship so the blurb judge reasons on-label instead of as if novel (e.g. metformin × type 2 diabetes). Maps to
         # CandidateFindings.approval_relationship, which has no "approved" member: an "approved" pair carries no relationship
         # tag ("none") but its matched approved_indication is threaded to the judge below.
         #
         # Holdout swap (mirrors find_candidates): the live openFDA path leaks post-cutoff approvals, so under date_before use
-        # the hardcoded approvals table (get_approved_indications, gated on as_of). That table only tells us approved-or-not —
-        # it does NOT carry the finer contaminated / combination_only labels — so in holdout the relationship collapses to
-        # "none" (the Literal has no "approved" member); an approved pair still gets its approved_indication threaded to the
-        # judge below.
+        # the hardcoded approvals table (gated on as_of). That table tells us approved, combination_only, or neither — it
+        # does NOT carry contaminated — so in holdout the relationship is combination_only or "none" (the Literal has no
+        # "approved" member); an approved pair still gets its approved_indication threaded to the judge below.
         if date_before is not None:
             approved_at = await get_approved_indications(
                 drug_name=drug,
                 candidate_diseases=[disease_name],
                 as_of=date_before,
             )
-            fda_label = "approved" if disease_name in approved_at else "none"
-            approval_relationship = "none"
+            if disease_name in approved_at:
+                fda_label = "approved"
+            elif await get_combination_only_indications(
+                drug_name=drug, candidate_diseases=[disease_name], as_of=date_before
+            ):
+                fda_label = "combination_only"
+            else:
+                fda_label = "none"
+            approval_relationship = (
+                "combination_only" if fda_label == "combination_only" else "none"
+            )
+            # The holdout trials tool reads the hardcoded table itself and ignores a passed label.
+            ct_approval_label: ApprovalLabel | None = None
         else:
             fda_mapping = await get_fda_approved_disease_mapping(
                 drug_name=drug,
@@ -242,12 +253,17 @@ async def run_pair_analysis(
                 approved_indications=list(intake.approved_indications),
                 cache_dir=DEFAULT_CACHE_DIR,
             )
-            fda_label = fda_mapping.get(disease_name, "none")
+            fda_label = fda_mapping[disease_name]
             approval_relationship = (
                 fda_label
                 if fda_label in ("contaminated", "combination_only")
-                else "none"
+                else "none"  # none, approved and unresolved all carry no relationship tag
             )
+            ct_approval_label = fda_label
+
+        mechanism, literature, clinical_trials = await asyncio.gather(
+            _run_mechanism(), _run_literature(), _run_clinical_trials(ct_approval_label)
+        )
 
         # Build the per-candidate blurb the report card renders. Replicates finalize_supervisor's enrich pass for a single
         # pair: the deterministic fields (stage / active_programs / literature) come straight from the trial signals and the
@@ -284,6 +300,7 @@ async def run_pair_analysis(
                     stage=stage_phrase,
                     active_programs=active_programs,
                     literature=lit_oneliner,
+                    literature_summary=es.summary if es is not None else "",
                     relationship=approval_relationship,
                     approved_indication=approved_ind,
                     trial_evidence=trial_evidence,

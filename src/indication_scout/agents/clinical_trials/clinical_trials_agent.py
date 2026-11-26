@@ -17,7 +17,10 @@ from indication_scout.agents._react_loop import (
     _trailing_tool_messages,
     build_gated_react_loop,
 )
-from indication_scout.agents._trial_signals import derive_trial_signals
+from indication_scout.agents._trial_signals import (
+    derive_trial_signals,
+    superseded_registrations,
+)
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
     FinalizeClinicalTrialsArtifact,
@@ -32,8 +35,10 @@ from indication_scout.models.model_clinical_trials import (
     SearchTrialsResult,
     TerminatedTrialsResult,
 )
+from indication_scout.services.approval_check import ApprovalLabel
 from indication_scout.services.clinical_trials_summary import judge_ct_summary
 from indication_scout.services.dev_stage import dev_stage_phrase, judge_dev_stage
+from indication_scout.services.trial_relevance import classify_trials
 
 logger = logging.getLogger(__name__)
 
@@ -54,19 +59,19 @@ def build_clinical_trials_agent(
     llm: BaseChatModel,
     date_before: date | None = None,
     assigned_indication: str | None = None,
-    target_drug: str | None = None,
     cache_dir: Path = DEFAULT_CACHE_DIR,
+    approval_label: ApprovalLabel | None = None,
 ) -> CompiledStateGraph:
     """Return a compiled ReAct agent.
 
     `assigned_indication` pins the tools to one indication; calls for any other are soft-rejected.
-    `target_drug` pins the drug for the finalize drug-role check so the model cannot widen it.
+    `approval_label` is the candidate step's FDA verdict for the pair; required in a live run (see check_fda_approval).
     """
     tools = build_clinical_trials_tools(
         date_before=date_before,
         assigned_indication=assigned_indication,
-        target_drug=target_drug,
         cache_dir=cache_dir,
+        approval_label=approval_label,
     )
     return build_gated_react_loop(llm, tools, SYSTEM_PROMPT, _finalize_done)
 
@@ -121,8 +126,8 @@ async def run_clinical_trials_agent(
     """Invoke the agent and assemble a ClinicalTrialsOutput from the run.
 
     `first_approval` (ChEMBL) lets the closure judgment tell an old generic from a genuine negative; None renders
-    "unknown", never a default year. `approved_indications` feeds the relevance gate's approved-subtype test;
-    empty renders "(none)", which disables that test.
+    "unknown", never a default year. `approved_indications` feeds the per-trial approved-subtype check; empty
+    disables it.
     """
     approval_line = (
         f"first_approval (year first approved anywhere): {first_approval}"
@@ -212,17 +217,15 @@ async def run_clinical_trials_agent(
             disease_name,
         )
 
-    # "" / None when finalize was never reached or only rejected. Unpack defensively.
-    finalize = artifacts.get("finalize")
-    finalized = isinstance(finalize, FinalizeClinicalTrialsArtifact)
-    if not isinstance(finalize, FinalizeClinicalTrialsArtifact):
+    # finalize_analysis only ends the loop; no artifact means the agent never got there.
+    finalized = isinstance(artifacts.get("finalize"), FinalizeClinicalTrialsArtifact)
+    if not finalized:
         logger.warning(
             "clinical_trials_agent: %s × %s — finalize_analysis produced no artifact; "
             "relevance, signals, and summary will be empty",
             drug_name,
             disease_name,
         )
-        finalize = FinalizeClinicalTrialsArtifact()
 
     output = ClinicalTrialsOutput(
         search=artifacts["search"],
@@ -230,9 +233,6 @@ async def run_clinical_trials_agent(
         terminated=artifacts["terminated"],
         landscape=artifacts["landscape"],
         approval=artifacts["approval"],
-        relevant_nct_ids=finalize.relevant_ncts,
-        contaminated_nct_ids=finalize.contaminated_ncts,
-        relevance_reasoning=finalize.relevance_reasoning,
     )
 
     # Signals come from relevant trials only. Left None when finalize never ran, so a missing relevance judgment
@@ -241,8 +241,52 @@ async def run_clinical_trials_agent(
         output.search is not None and output.search.resolution_status == "unresolved"
     )
     if finalized and not query_unresolved:
+        all_trials = [
+            t
+            for result in (output.completed, output.terminated, output.search)
+            for t in (result.trials if result else [])
+        ]
+        # Every shown trial is classified by four isolated, cached per-trial checks (services.trial_relevance), not by
+        # the agent: a batch verdict depended on the other trials in the batch and moved between runs.
+        relevance = await classify_trials(
+            drug_name, disease_name, all_trials, approved_indications or [], cache_dir
+        )
+        output.relevant_nct_ids = relevance.ncts("relevant")
+        output.contaminated_nct_ids = relevance.ncts("excluded")
+        output.combination_nct_ids = relevance.ncts("combination")
+
+        # Collapse sibling registrations of one protocol (EU per-site/per-indication registrations) before anything
+        # counts or describes the relevant set: coverage counts, the derived signals, the prose and the report's
+        # trial listings all key off relevant_nct_ids.
+        superseded = superseded_registrations(
+            [t for t in all_trials if t.nct_id in set(output.relevant_nct_ids)]
+        )
+        if superseded:
+            logger.info(
+                "[CT] %s x %s: collapsed %d superseded registration(s): %s",
+                drug_name,
+                disease_name,
+                len(superseded),
+                superseded,
+            )
+            output.relevant_nct_ids = [
+                n for n in output.relevant_nct_ids if n not in superseded
+            ]
+        output.relevance_reasoning = (
+            f"Relevant trials: {', '.join(output.relevant_nct_ids) or 'none'}. "
+            f"Excluded trials: {', '.join(output.contaminated_nct_ids) or 'none'}."
+            + (
+                f" Combination-only trials: {', '.join(output.combination_nct_ids)}."
+                if output.combination_nct_ids
+                else ""
+            )
+        )
+
+        # Combination-only trials count as classified-and-excluded for coverage but stay apart from
+        # contaminated_nct_ids, so the report does not call them a different indication.
+        combination = set(output.combination_nct_ids)
         relevant_ids = set(output.relevant_nct_ids)
-        contaminated_ids = set(output.contaminated_nct_ids)
+        contaminated_ids = set(output.contaminated_nct_ids) | combination
         output.search_coverage = _derive_relevance_coverage(
             output.search,
             relevant_nct_ids=relevant_ids,
@@ -263,6 +307,7 @@ async def run_clinical_trials_agent(
             relevant_nct_ids=relevant_ids,
             contaminated_nct_ids=contaminated_ids,
         )
+        output.signals.superseded_registrations = superseded
         # dev_stage is an LLM judgment over nct/phase/status, cached per trial set; the deterministic dev_stage is
         # the fallback when the relevant set is empty. Completed, terminated and search trials are all filtered by
         # relevant_nct_ids.
@@ -277,6 +322,7 @@ async def run_clinical_trials_agent(
             if t.nct_id and t.nct_id in relevant_set and t.nct_id not in seen:
                 seen.add(t.nct_id)
                 relevant_trials.append(t)
+
         if relevant_trials:
             judgment = await judge_dev_stage(
                 relevant_trials,

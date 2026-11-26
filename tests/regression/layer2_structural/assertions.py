@@ -21,6 +21,7 @@ from tests.regression.layer2_structural.spec import (
     CandidateSetContains,
     DrugSafety,
     DrugSpec,
+    ForbiddenInCandidates,
     ForbiddenInRanked,
     ForbiddenPhrase,
     IndicationHarm,
@@ -255,6 +256,25 @@ def check_forbidden_in_ranked(
     ]
 
 
+def check_forbidden_in_candidates(
+    report: SupervisorOutput,
+    a: ForbiddenInCandidates,
+    aliases: dict[str, list[str]] | None = None,
+) -> list[BucketedDiff]:
+    candidates = {_norm(d) for d in report.candidate_diseases}
+    if not (_alias_set(aliases or {}, a.indication) & candidates):
+        return []
+    return [
+        BucketedDiff(
+            bucket=a.bucket,
+            path="candidate_diseases",
+            severity="error",
+            detail=f"forbidden indication {a.indication!r} appeared in candidate_diseases",
+            spec_ref="forbidden_in_candidates",
+        )
+    ]
+
+
 def check_forbidden_phrase(
     report: SupervisorOutput, rendered_md: str, a: ForbiddenPhrase
 ) -> list[BucketedDiff]:
@@ -426,6 +446,8 @@ def run_spec(
         diffs.extend(check_ranked_order(report, spec.ranked_order, aliases))
     for a in spec.forbidden_in_ranked:
         diffs.extend(check_forbidden_in_ranked(report, a, aliases))
+    for a in spec.forbidden_in_candidates:
+        diffs.extend(check_forbidden_in_candidates(report, a, aliases))
     for a in spec.forbidden_phrases:
         diffs.extend(check_forbidden_phrase(report, rendered_md, a))
     if spec.candidate_set_contains is not None:

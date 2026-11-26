@@ -66,6 +66,7 @@ class PrimaryOutcome(BaseModel):
     """A primary outcome measure for a trial."""
 
     measure: str = ""  # what they're measuring
+    description: str | None = None  # registry explanation of the measure
     time_frame: str | None = None  # e.g. "72 weeks"
 
     @model_validator(mode="before")
@@ -81,6 +82,12 @@ class Trial(BaseModel):
     """A single clinical trial record from ClinicalTrials.gov."""
 
     nct_id: str = ""
+    # The sponsor's own protocol id and any other registry ids for the same protocol. For EU trials
+    # these carry the EU CT / EudraCT number, which is what links sibling registrations of one
+    # protocol (ClinicalTrials.gov models no relation between them). See
+    # _trial_signals.superseded_registrations.
+    org_study_id: str = ""
+    secondary_ids: list[str] = []
     title: str = ""
     brief_summary: str | None = None
     phase: str = ""  # "Phase 1", "Phase 2", "Phase 1/Phase 2", etc.
@@ -129,6 +136,11 @@ class SearchTrialsResult(BaseModel):
     by_status: dict[str, int] = {}
     trials: list[Trial] = []
     resolution_status: Literal["resolved", "unresolved"] | None = None
+    # Which resolve_mesh_id route produced the MeSH term the registry was searched with. "ot_synonym" means the term
+    # came from an exact Open Targets synonym and can be broader than the indication. None when unresolved.
+    resolution_route: Literal["label", "canonical", "ot_synonym"] | None = None
+    # The MeSH preferred term the registry was searched with. None when unresolved.
+    resolution_term: str | None = None
 
     @model_validator(mode="before")
     @classmethod
@@ -182,24 +194,6 @@ class TerminatedTrialsResult(BaseModel):
 # ------------------------------------------------------------------
 # Relevance verdicts
 # ------------------------------------------------------------------
-
-
-class TrialVerdict(BaseModel):
-    """One trial's relevance verdict, as returned by the clinical-trials agent's finalize call.
-
-    `drug_role` is the part the pinned target drug plays in THIS trial, judged from its title,
-    interventions and summary. Only "studied" can carry a "relevant" verdict — a comparator,
-    background or absent drug makes the trial someone else's evidence. Asking for the role
-    rather than a drug name keeps the check off string matching, which cannot separate
-    "metformin" from "Dapagliflozin/Metformin".
-
-    All three fields are required: an unparseable entry is rejected at finalize rather than
-    silently dropping the trial from both the relevant and contaminated sets.
-    """
-
-    nct: str
-    drug_role: Literal["studied", "comparator", "background", "absent"]
-    verdict: Literal["relevant", "contaminated"]
 
 
 # ------------------------------------------------------------------
@@ -275,14 +269,17 @@ class ApprovalCheck(BaseModel):
     "not found on FDA labels" — it does not distinguish trial failure
     from approval pending from approval outside the US.
 
-    `label_found` is True when FDA returned at least one label for any
-    of the drug names checked. When False, no label exists in openFDA
-    for this drug (e.g. withdrawn drugs like aducanumab after 2024) —
-    approval status cannot be determined from available data.
+    `label_found` is True when a label verdict was obtained for the pair.
+    When False, approval status cannot be determined from available data.
+
+    `inconclusive` is True when the verdict could not be reached (no label
+    text, FDA fetch failure, or an unreadable model answer). It is never set
+    together with `is_approved` or `label_found`.
     """
 
     is_approved: bool = False
     label_found: bool = False
+    inconclusive: bool = False
     matched_indication: str | None = None
     drug_names_checked: list[str] = []
 
@@ -293,3 +290,17 @@ class ApprovalCheck(BaseModel):
             if values.get(field_name) is None and field_info.default is not None:
                 values[field_name] = field_info.default
         return values
+
+    @model_validator(mode="after")
+    def reject_contradictions(self) -> "ApprovalCheck":
+        if self.inconclusive and (self.is_approved or self.label_found):
+            raise ValueError(
+                "ApprovalCheck: inconclusive requires is_approved and label_found to be False"
+            )
+        if self.is_approved and (
+            not self.label_found or self.inconclusive or not self.matched_indication
+        ):
+            raise ValueError(
+                "ApprovalCheck: is_approved requires label_found, not inconclusive, and a matched_indication"
+            )
+        return self

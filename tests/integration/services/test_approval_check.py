@@ -1,15 +1,100 @@
 """Integration tests for approval_check service — hits real openFDA + LLM APIs."""
 
+from pathlib import Path
+
 import pytest
 
 from indication_scout.data_sources.chembl import get_all_drug_names
 from indication_scout.data_sources.fda import FDAClient
+from indication_scout.helpers.drug_helpers import seed_drug_intake
 from indication_scout.services import approval_check
 from indication_scout.services.approval_check import (
     extract_approved_from_labels,
     get_fda_approved_disease_mapping,
     list_approved_indications_from_labels,
 )
+
+
+@pytest.mark.approval_aware
+async def test_sildenafil_approval_mapping_drops_eisenmenger_in_recorded_batch(
+    tmp_path: Path,
+) -> None:
+    """Replay the ordered candidate list from sildenafil_2026-11-25_19-59-55.json."""
+    candidates = [
+        "covid-19",
+        "raynaud disease",
+        "major depressive disorder",
+        "coronary artery disorder",
+        "astrocytoma (excluding glioblastoma)",
+        "stroke disorder",
+        "heart failure",
+        "lower urinary tract symptom",
+        "infertility",
+        "hypertensive disorder",
+        "endothelial dysfunction",
+        "eisenmenger syndrome",
+        "chronic obstructive pulmonary disease",
+        "duchenne muscular dystrophy",
+        "acute kidney injury",
+        "chronic kidney disease",
+        "alzheimer disease",
+        "rheumatoid arthritis",
+        "pancreatic adenocarcinoma",
+        "hiv infectious disease",
+        "schizophrenia",
+        "neuropathic pain",
+        "glioblastoma",
+        "overactive bladder",
+        "diabetic kidney disease",
+        "head and neck squamous cell carcinoma",
+        "peripheral arterial disease",
+        "perinatal asphyxia",
+        "pregnancy",
+        "insulin resistance",
+        "fatigue",
+        "diabetes mellitus",
+        "type 2 diabetes mellitus",
+        "non-small cell lung carcinoma",
+        "cystic fibrosis",
+        "sickle cell disease",
+        "priapism",
+        "muscular dystrophy",
+        "malignant glioma",
+        "parkinson disease",
+        "non-alcoholic fatty liver",
+        "obesity disorder",
+        "urinary incontinence",
+        "premature ejaculation",
+        "kidney disorder",
+        "cognitive impairment",
+        "cirrhosis of liver",
+        "pancreatic neoplasm",
+        "alopecia areata",
+        "stage 5 chronic kidney disease",
+        "systolic heart failure",
+        "recurrent thrombophlebitis",
+        "cervical artery dissection",
+        "transient ischemic attack",
+        "myocardial infarction",
+        "uremia",
+        "restless legs syndrome",
+        "ovarian carcinoma",
+        "osteoarthritis, knee",
+        "pterygium",
+        "benign prostatic hyperplasia",
+        "pulmonary hypertension",
+        "intermittent vascular claudication",
+        "cardiovascular disorder",
+    ]
+    intake = await seed_drug_intake("sildenafil", tmp_path)
+    result = await get_fda_approved_disease_mapping(
+        drug_name="sildenafil",
+        candidate_diseases=candidates,
+        approved_indications=list(intake.approved_indications),
+        cache_dir=tmp_path,
+    )
+
+    assert result["eisenmenger syndrome"] == "approved"
 
 
 @pytest.mark.approval_aware

@@ -37,6 +37,31 @@ logger = logging.getLogger(__name__)
 # event loop that opened them. One loop for the module keeps a later test from reusing a connection from a closed loop.
 pytestmark = pytest.mark.asyncio(loop_scope="module")
 
+# 30-patient placebo-controlled trial of bupropion SR in PTSD; never called a pilot.
+_BUPROPION_PTSD = {
+    "pmid": "17414245",
+    "title": "A placebo-controlled trial of bupropion SR in the treatment of chronic posttraumatic stress disorder.",
+    "abstract": (
+        "OBJECTIVE: Although selective serotonin reuptake inhibitors have been the most empirically studied "
+        "pharmacotherapy for posttraumatic stress disorder (PTSD), a need remains for the investigation of "
+        "additional pharmacological agents in the treatment of PTSD. The present study examined the use of "
+        "bupropion sustained release (SR) as compared with placebo for symptom reduction in patients with "
+        "PTSD: approximately half who were already prescribed an selective serotonin reuptake inhibitor and "
+        "half who were not. METHOD: Thirty patients (mean age, 50 years) with civilian- or military-related "
+        "PTSD enrolled in an 8-week evaluation of bupropion SR versus placebo assigned in a 2:1 ratio in "
+        "addition to their usual pharmacological care. Statistical tests included analyzing both study "
+        "completers and using an intent-to-treat analysis, as well as post hoc examination of responders "
+        "versus nonresponders. RESULTS: Although no between-group differences were detected, both groups "
+        "reported a reduction in PTSD symptoms. In a hypothesis-generating post hoc analysis of responders "
+        "versus nonresponders in the bupropion SR condition (defined as a Clinician Global Improvement score "
+        "of at least minimally improved), it seemed that younger patients not currently on another "
+        "antidepressant were more likely to benefit from bupropion. CONCLUSIONS: Bupropion SR in the "
+        "treatment of PTSD had no significant effect in the current sample. Factors contributing to the "
+        "absence of an effect need further study. Our analysis points to the inclusion of age and concomitant"
+        " antidepressant treatment as important variables in any future larger-scale study."
+    ),
+}
+
 _PREGMET2 = {
     "pmid": "30792154",
     "title": (
@@ -390,6 +415,12 @@ async def test_pmid_grade_design(
             "Miscarriage",
             [_PREGMET2],
             {"30792154": (True, True, True, False)},
+        ),
+        (
+            "bupropion",
+            "post-traumatic stress disorder",
+            [_BUPROPION_PTSD],
+            {"17414245": (True, True, True, False)},
         ),
     ],
 )

@@ -1,7 +1,14 @@
 # Metformin regression spec.
 #
-# Authored against gold_standard/metformin_2026-09-10_15-01-58.json. Each assertion encodes a
-# domain-meaningful invariant a regression must NOT flip.
+# Authored against gold_standard/metformin_2026-09-10_15-01-58.json; re-pinned 2026-11-17 to
+# gold_standard/metformin_2026-11-17_22-06-12.json, then 2026-11-25 to gold_standard/metformin_2026-11-25_19-48-46.json (narrower
+# combination rule; Duchenne now has two relevant trials). Each assertion encodes a domain-meaningful invariant a
+# regression must NOT flip.
+#
+# Shift at the 2026-11-17 re-pin, all from Open Targets release 26.09 or the investigation cap, not from code:
+# hepatic steatosis, prediabetes syndrome and cardiovascular disorder are no longer metformin candidates, so their
+# anchors are removed; metabolic syndrome and obesity are still candidates but sit at the edge of the 16-slot
+# investigation cap, so they are pinned as candidates only.
 #
 # Anchors are cut from the LATEST run under the current code, not from agreement across runs. The
 # grading prompts and gates change often enough that an older snapshot describes different code, so
@@ -56,10 +63,6 @@ required_in_ranked:
   - bucket: ranking
     indication: polycystic ovary syndrome
   - bucket: ranking
-    indication: metabolic syndrome
-  - bucket: ranking
-    indication: obesity
-  - bucket: ranking
     indication: heart failure
   - bucket: ranking
     indication: breast cancer
@@ -78,11 +81,10 @@ candidate_set_contains:
     - preeclampsia
     - atherosclerosis
     - polycystic ovary syndrome
-    - hepatic steatosis
     - obesity
+    - metabolic syndrome
     - breast cancer
     - gestational diabetes
-    - prediabetes syndrome
     - diabetes mellitus
 
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Two anchors per disease,
@@ -113,22 +115,13 @@ required_pmids_cited:
     pmids:
       - "10206447"
       - "10634377"
-  - bucket: literature_coverage
-    indication: cardiovascular disease
-    mode: cited
-    pmids:
-      - "21205121"
-      # 35032305 dropped out of the top-15 semantic retrieval on 2026-09-12 (retrieval-ranking
-      # variance, not a gate decision — it's still in the raw candidate pool). Replaced with
-      # 37816240, the highest-similarity metformin-monotherapy RCT in this disease's pool.
-      - "37816240"
 
 # Safety — metformin carries black-box warnings (lactic acidosis). Production derives black_box from
 # OT; holdout would fall back to serious.
 safety_severity:
   - indication: polycystic ovary syndrome
     allowed: [black_box, serious]
-  - indication: cardiovascular disease
+  - indication: heart failure
     allowed: [black_box, serious]
 
 # Drug-level collapsed safety signal must surface (empty = collapse regression).

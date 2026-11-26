@@ -114,6 +114,12 @@ _PMID_DRUG_IDENTITY_PROMPT = (_PROMPTS_DIR / "pmid_drug_identity.txt").read_text
 _PMID_DRUG_IDENTITY_VERDICTS = {"studied", "class_level", "not_studied"}
 _PMID_TREATS_DISEASE_PROMPT = (_PROMPTS_DIR / "pmid_treats_disease.txt").read_text()
 _PMID_TREATS_DISEASE_VERDICTS = {"treats", "not_treats"}
+# Cache versions of the three per-paper judgments. The synthesize cache key includes all three: a synthesis is built from
+# the papers these judgments admit, so a cached synthesis for the same PMIDs must miss when any of them changes. Without
+# this, a gate bump left eye disorder's synthesis cached with a paper the new gate rejects (semaglutide, 2026-11-16).
+_PMID_DRUG_IDENTITY_LOGIC_VERSION = "drug_identity_v2"
+_PMID_TREATS_DISEASE_LOGIC_VERSION = "treats_disease_v9_benefit_or_harm"
+_PMID_GRADE_LOGIC_VERSION = "pmid_grade_v3_plain_pilot"
 # Appended on the retry after a prose field cited a PMID that was not in the supplied abstracts.
 _PMID_RETRY_NOTE = """
 
@@ -393,7 +399,7 @@ async def _judge_pmid_drug_identity(
             "pmid": result.pmid,
             "drug_names": sorted(names),
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "drug_identity_v2",
+            "logic_version": _PMID_DRUG_IDENTITY_LOGIC_VERSION,
         }
         cached = cache_get("pmid_drug_identity", cache_params, cache_dir)
         if isinstance(cached, str) and cached in _PMID_DRUG_IDENTITY_VERDICTS:
@@ -471,7 +477,7 @@ async def _judge_pmid_treats_disease(
             "pmid": result.pmid,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "treats_disease_v6_genetic_proxy",
+            "logic_version": _PMID_TREATS_DISEASE_LOGIC_VERSION,
         }
         cached = cache_get("pmid_treats_disease", cache_params, cache_dir)
         if isinstance(cached, str) and cached in _PMID_TREATS_DISEASE_VERDICTS:
@@ -552,7 +558,7 @@ async def _judge_pmid_grades(
             "pmid": result.pmid,
             "disease": disease,
             "small_llm_model": _settings.small_llm_model,
-            "logic_version": "pmid_grade_v2_interventional_pilot",
+            "logic_version": _PMID_GRADE_LOGIC_VERSION,
         }
         cached = cache_get("pmid_grade", cache_params, cache_dir)
         if isinstance(cached, dict):
@@ -967,7 +973,7 @@ class RetrievalService:
         resolved = await resolve_mesh_id(disease)
         if resolved is None:
             return []
-        _, mesh_term = resolved
+        _, mesh_term, _route = resolved
         async with ClinicalTrialsClient(cache_dir=self.cache_dir) as trials_client:
             trial_result = await trials_client.search_trials(
                 drug, mesh_term, date_before=date_before
@@ -1675,7 +1681,12 @@ class RetrievalService:
             "llm_model": _settings.llm_model,
             # Bump when the relevance prompt or derived fields (direction rollup, strength cap) change, so stale judgments
             # cannot preserve behavior the new rules reject.
-            "logic_version": "per_pmid_class_and_target_gates_v9_contradicting_trials",
+            "logic_version": "per_pmid_class_and_target_gates_v10_simplified_gate",
+            "paper_judgment_versions": [
+                _PMID_DRUG_IDENTITY_LOGIC_VERSION,
+                _PMID_TREATS_DISEASE_LOGIC_VERSION,
+                _PMID_GRADE_LOGIC_VERSION,
+            ],
         }
         cached = cache_get("synthesize", cache_params, self.cache_dir)
         if cached is not None:
@@ -1877,7 +1888,7 @@ class RetrievalService:
         input_pmids = [r.pmid for r in top_abstracts if r.pmid not in unread_pmids]
         synthesis_pmids = {r.pmid for r in synthesis_abstracts}
         # Relevant = anything not contaminated. "neutral" (PK/safety/mechanism, set by the per-paper grade) is relevant
-        # and counts toward study_count but is excluded from supporting AND contradicting below. synthesize never emits it.
+        # but is excluded from study_count and from supporting AND contradicting below. synthesize never emits it.
         _RELEVANT_VERDICTS = {"supporting", "contradicting", "mixed", "neutral"}
         if isinstance(verdicts, dict):
             verdict_of = {
@@ -1951,7 +1962,12 @@ class RetrievalService:
         data["contradicting_trial_pmids"] = contradicting_trial_pmids
         data["secondary_report_pmids"] = secondary_reports
         data["screened_not_selected_pmids"] = screened_not_selected
-        data["study_count"] = len(relevant_pmids)
+        # Only papers with an efficacy result count as studies; neutral papers are context and do not make a pair evidenced.
+        data["study_count"] = sum(
+            1
+            for p in input_pmids
+            if verdict_of[p] in ("supporting", "contradicting", "mixed")
+        )
         summary = EvidenceSummary(**data)
 
         # The synthesis model sometimes emits is_observational=False while describing every relevant human study as
@@ -2001,9 +2017,26 @@ class RetrievalService:
 
         # Preserve the synthesis model's evidence-weighted overall direction when papers disagree (a presence-only rollup let
         # any positive case report cancel controlled negative evidence). One-sided and no-efficacy cases stay deterministic.
-        has_support = bool(supporting_pmids)
+        # When at least one efficacy paper studied people, only human papers decide the direction: an animal or in-vitro
+        # result does not offset a human trial (sildenafil x acute kidney injury read "mixed" on four rat studies against
+        # two negative human RCTs). The animal papers stay in the supporting/contradicting lists and the summary. With no
+        # human efficacy paper every paper counts, as before.
+        human_efficacy_pmids = {
+            result.pmid
+            for result in relevant_for_direction
+            if verdict_of[result.pmid] in ("supporting", "contradicting", "mixed")
+            and pmid_grades[result.pmid].is_human
+        }
+        direction_pmids = (
+            [p for p in input_pmids if p in human_efficacy_pmids]
+            if human_efficacy_pmids
+            else input_pmids
+        )
+        has_support = any(
+            verdict_of[p] in ("supporting", "mixed") for p in direction_pmids
+        )
         has_against = any(
-            verdict_of[p] in ("contradicting", "mixed") for p in input_pmids
+            verdict_of[p] in ("contradicting", "mixed") for p in direction_pmids
         )
         if not relevant_pmids:
             summary.direction = "none"
@@ -2012,6 +2045,7 @@ class RetrievalService:
                 result
                 for result in relevant_for_direction
                 if verdict_of[result.pmid] != "neutral"
+                and result.pmid in direction_pmids
             ]
             judgment = await _judge_overall_evidence_direction(
                 pref_name,
@@ -2031,7 +2065,10 @@ class RetrievalService:
             # Every relevant abstract is "neutral" (PK / safety-only / mechanism), so there is no efficacy result to grade.
             # Without this branch the LLM's direction survived unchecked (sildenafil x astrocytoma read "weak, supports" on
             # four neutral abstracts) and the non-zero study_count carried it past the supervisor's zero-evidence gate.
+            # Strength is reset too: the synthesis model rated one neutral systematic review "moderate" (bupropion x
+            # schizophrenia), and strength grades efficacy evidence, of which there is none.
             summary.direction = "none"
+            summary.strength = "none"
 
         # DETERMINISTIC strength cap, the one clinical-accuracy invariant not trusted to the prompt: strength/direction grade
         # DRUG-SPECIFIC evidence only, so when evidence_basis is not "drug_specific" (class_level / approved / none) they
@@ -2130,16 +2167,27 @@ class RetrievalService:
 
         # Resolve the disease to its canonical MeSH preferred term for the prompt: PubMed's auto-term-mapping breaks on bare
         # multi-word phrases around AND, so the prompt has the LLM wrap the term in double quotes. Falls back to the raw
-        # disease name if the MeSH lookup misses.
+        # disease name if the MeSH lookup misses. The raw name is also kept on the ot_synonym route: that descriptor comes
+        # from an Open Targets synonym and can be broader than the disease, and a broader MeSH heading changes the papers
+        # retrieved (cocaine use disorder moved from mixed to contradicts when searched as "Cocaine-Related Disorders").
         from indication_scout.services.disease_helper import resolve_mesh_id
 
         mesh_result = await resolve_mesh_id(disease_name)
-        disease_term = mesh_result[1] if mesh_result else disease_name
         if mesh_result is None:
+            disease_term = disease_name
             logger.warning(
                 "expand_search_terms: MeSH resolution missed for %r; using raw disease name",
                 disease_name,
             )
+        elif mesh_result[2] == "ot_synonym":
+            disease_term = disease_name
+            logger.info(
+                "expand_search_terms: %r resolved only through an Open Targets synonym (%r); using raw disease name",
+                disease_name,
+                mesh_result[1],
+            )
+        else:
+            disease_term = mesh_result[1]
 
         template = (_PROMPTS_DIR / "expand_search_terms.txt").read_text()
         prompt = template.format(

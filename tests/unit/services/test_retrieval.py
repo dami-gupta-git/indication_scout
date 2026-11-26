@@ -270,6 +270,50 @@ async def test_expand_search_terms_returns_list(tmp_path, metformin_profile):
     ]
 
 
+@pytest.mark.parametrize(
+    "resolved, expected_query",
+    [
+        # label route: the MeSH preferred heading is the disease term
+        (
+            ("D019969", "Amphetamine-Related Disorders", "label"),
+            'metformin AND "Amphetamine-Related Disorders"',
+        ),
+        # ot_synonym route: the heading came from an Open Targets synonym and can be broader, so the raw name is kept
+        (
+            ("D019969", "Amphetamine-Related Disorders", "ot_synonym"),
+            'metformin AND "methamphetamine dependence"',
+        ),
+    ],
+)
+async def test_expand_search_terms_disease_term_by_route(
+    tmp_path, metformin_profile, resolved, expected_query
+):
+    """PubMed queries use the MeSH heading on the label route and the raw disease name on the ot_synonym route."""
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["metformin", "glucophage"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval.RetrievalService.extract_organ_term",
+            new=AsyncMock(return_value="brain"),
+        ),
+        patch(
+            "indication_scout.services.disease_helper.resolve_mesh_id",
+            new=AsyncMock(return_value=resolved),
+        ),
+        patch(
+            "indication_scout.services.retrieval.query_small_llm",
+            new=AsyncMock(return_value='["metformin AND <DISEASE>"]'),
+        ),
+    ):
+        result = await RetrievalService(tmp_path).expand_search_terms(
+            "CHEMBL1431", "methamphetamine dependence", metformin_profile
+        )
+
+    assert result == [expected_query]
+
+
 async def test_expand_search_terms_prompt_contains_drug_name(
     tmp_path, metformin_profile
 ):
@@ -1012,7 +1056,7 @@ async def test_find_trial_linked_pmids_batches_nct_secondary_source_query(tmp_pa
     with (
         patch(
             "indication_scout.services.retrieval.resolve_mesh_id",
-            new=AsyncMock(return_value=("D000437", "Alcoholism")),
+            new=AsyncMock(return_value=("D000437", "Alcoholism", "label")),
         ),
         patch(
             "indication_scout.services.retrieval.ClinicalTrialsClient",
@@ -1643,8 +1687,8 @@ def test_union_tagged_keeps_one_copy_with_both_tags():
 @pytest.mark.parametrize(
     "date_before, expected_recent",
     [
-        (None, [str(i) for i in range(40, 50)]),
-        (date(2020, 6, 1), [str(i) for i in range(40, 55)]),
+        (None, [str(i) for i in range(40, 50)][:LITERATURE_RECENT_BUDGET]),
+        (date(2020, 6, 1), [str(i) for i in range(40, 55)][:LITERATURE_RECENT_BUDGET]),
     ],
 )
 async def test_semantic_search_appends_recent_papers_after_window(
@@ -2080,7 +2124,7 @@ async def test_synthesize_neutral_paper_cannot_certify_controlled_design(svc):
     assert result.supporting_pmids == ["12411660"]
     assert result.neutral_pmids == ["19717023"]
     assert result.relevant_pmids == ["12411660", "19717023"]
-    assert result.study_count == 2
+    assert result.study_count == 1  # the neutral paper is context, not a study
     assert result.strength == "weak"
     assert result.direction == "supports"
     assert result.evidence_basis == "drug_specific"
@@ -2751,7 +2795,7 @@ async def test_synthesize_neutral_pmid_excluded_from_both_lists(svc):
     assert "22222222" not in result.contradicting_pmids
     assert "22222222" in result.relevant_pmids  # neutral still counts as relevant
     assert result.neutral_pmids == ["22222222"]  # surfaced as context, not dropped
-    assert result.study_count == 2
+    assert result.study_count == 1  # the neutral paper is context, not a study
     assert result.direction == "supports"  # the PK paper did not make it "mixed"
 
 
@@ -2818,6 +2862,53 @@ async def test_synthesize_focuses_final_judgment_when_papers_disagree(svc):
     assert query_llm.await_count == 2
 
 
+async def test_animal_support_does_not_offset_human_contradiction(svc):
+    """One animal paper supports, one human trial contradicts: the human paper alone decides the
+    direction, so the pair reads "contradicts" without a second judgment call. The animal paper
+    stays in the supporting list (sildenafil x acute kidney injury read "mixed" on four rat studies
+    against two negative human RCTs)."""
+    main = json.dumps(
+        {
+            "verdicts": {"11111111": "supporting", "22222222": "contradicting"},
+            "evidence_basis": "drug_specific",
+            "summary": "Rat data support, the human trial does not.",
+            "strength": "moderate",
+            "direction": "mixed",
+            "is_observational": False,
+            "is_animal_only": False,
+            "key_findings": [],
+        }
+    )
+    query_llm = AsyncMock(return_value=main)
+    with (
+        patch(
+            "indication_scout.services.retrieval.get_all_drug_names",
+            new=AsyncMock(return_value=["sildenafil"]),
+        ),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_drug_identity",
+            new=AsyncMock(return_value={"11111111": "studied", "22222222": "studied"}),
+        ),
+        patch("indication_scout.services.retrieval.query_llm", new=query_llm),
+        patch(
+            "indication_scout.services.retrieval._judge_pmid_grades",
+            new=_grades(
+                ("11111111", "supporting", False, False),
+                ("22222222", "contradicting", True, True),
+            ),
+        ),
+    ):
+        result = await svc.synthesize(
+            "CHEMBL192", "acute kidney injury", _SAMPLE_ABSTRACTS
+        )
+
+    assert result.direction == "contradicts"
+    assert result.is_animal_only is False
+    assert result.supporting_pmids == ["11111111"]
+    assert result.contradicting_pmids == ["22222222"]
+    assert query_llm.await_count == 1
+
+
 async def test_all_neutral_abstracts_force_direction_none(svc):
     """Every relevant abstract non-efficacy (PK / safety / mechanism): there is no result in either
     direction, so the deterministic rollup must overwrite the LLM's claimed direction with "none".
@@ -2858,8 +2949,9 @@ async def test_all_neutral_abstracts_force_direction_none(svc):
     assert result.supporting_pmids == []
     assert result.contradicting_pmids == []
     assert result.neutral_pmids == ["11111111", "22222222"]
-    assert result.study_count == 2  # still relevant, still cited as context
+    assert result.study_count == 0  # neutral papers are context, not studies
     assert result.direction == "none"  # overwrites the LLM's "supports"
+    assert result.strength == "none"  # overwrites the LLM's "weak"
 
 
 async def test_synthesize_pmid_grade_overrides_verdict(svc):

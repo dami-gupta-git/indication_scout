@@ -1,7 +1,14 @@
 # Sildenafil regression spec.
 #
-# Authored against gold_standard/sildenafil_2026-09-10_14-56-21.json. Each assertion encodes a
-# domain-meaningful invariant a regression must NOT flip.
+# Authored against gold_standard/sildenafil_2026-09-10_14-56-21.json; re-pinned 2026-11-17 to
+# gold_standard/sildenafil_2026-11-17_22-07-06.json, then 2026-11-25 to gold_standard/sildenafil_2026-11-25_21-29-16.json
+# (approval prompt writes the reason first; animal papers no longer decide direction). Each assertion encodes a domain-meaningful invariant a
+# regression must NOT flip.
+#
+# Shift at the 2026-11-17 re-pin: Eisenmenger syndrome is no longer a candidate. The FDA approval mapping labels it
+# approved (pulmonary arterial hypertension associated with congenital heart disease is within the Revatio
+# indication), so it is dropped as approved use, which is correct. Its ranking, candidate, citation and safety anchors
+# are removed.
 #
 # Anchors are pinned only where they held across ALL FOUR 2026-09-10 runs (14:41, 14:46, 14:49,
 # 14:56). Heart failure, Raynaud disease and Eisenmenger syndrome fill the top three, but only
@@ -35,12 +42,14 @@ aliases:
   astrocytoma (excluding glioblastoma):
     - astrocytoma
     - malignant glioma
+  eisenmenger syndrome:
+    - eisenmenger complex
 
-ranked_order:
-  bucket: ranking
-  indications:
-    - heart failure
-    - eisenmenger syndrome
+forbidden_in_candidates:
+  - indication: eisenmenger syndrome
+
+forbidden_in_ranked:
+  - indication: eisenmenger syndrome
 
 # Present in the ranked set; exact rank not pinned.
 required_in_ranked:
@@ -56,7 +65,6 @@ required_in_ranked:
 candidate_set_contains:
   bucket: structural_integrity
   indications:
-    - eisenmenger syndrome
     - heart failure
     - raynaud disease
     - infertility
@@ -86,12 +94,6 @@ required_ncts_surfaced:
 # Cited PMIDs (evidence_summary supporting + contradicting).
 required_pmids_cited:
   - bucket: literature_coverage
-    indication: eisenmenger syndrome
-    mode: cited
-    pmids:
-      - "16569546"
-      - "20304507"
-  - bucket: literature_coverage
     indication: heart failure
     mode: cited
     pmids:
@@ -108,8 +110,6 @@ required_pmids_cited:
 # "black_box". A run reporting black_box here would mean the severity is coming from somewhere other
 # than the label.
 safety_severity:
-  - indication: eisenmenger syndrome
-    allowed: [serious]
   - indication: heart failure
     allowed: [serious]
   - indication: raynaud disease

@@ -1,0 +1,35 @@
+You are reviewing one registered clinical trial for a drug that is already FDA-approved for some indications. Decide
+whether the trial studies an approved indication of the drug, or a narrower form of one. Answer only this question.
+
+Drug: {drug}
+The drug's approved indications: {approved}
+
+- "approved_subtype": a condition the trial treats is one of the approved indications, a synonym of one, or a narrower
+  form of one. The conditions the trial treats are those its primary outcomes measure. A trial listing several
+  conditions counts when a primary outcome measures an approved one; a co-listed other disease does not change that
+  (a trial of "type 2 diabetes with NASH" whose primary outcome is NASH resolution, with NASH approved, is
+  "approved_subtype"). An approved condition that is listed but measured by no primary outcome only describes the
+  patients: a trial in depressed cocaine users whose primary outcome is cocaine use does not treat the depression for
+  this question. The approval covers patients who have the approved condition: a trial that enrols people without it
+  and measures whether they develop it (prevention of type 2 diabetes in people with prediabetes, with type 2 diabetes
+  approved) does not study an approved use.
+  Ignore a severity, stage or biomarker qualifier on the approval when matching: approved "MASH with fibrosis" makes a
+  trial of bare "NASH", "MASH" or "steatohepatitis" an approved subtype.
+- "not_approved_subtype": otherwise. In particular:
+  - a sibling of an approved indication, not a narrower form of it ("type 1 diabetes" vs approved "type 2 diabetes");
+  - a broader parent of an approved indication (all-comers "NAFLD" vs approved "MASH");
+  - a bare broad disease vs a minority-biomarker approval that covers only a small subset of it (all-comers NSCLC vs
+    approved EGFR-mutated NSCLC). A severity grade is not a minority biomarker.
+
+Read the conditions from the registered conditions, the title, the summary and the primary outcomes.
+
+Write one sentence naming the trial's condition and the closest approved indication, then the verdict.
+
+NCT: {nct}
+Title: {title}
+Summary: {summary}
+Registered conditions: {conditions}
+Primary outcomes: {outcomes}
+
+Respond with ONLY one JSON object and no prose or fences:
+{{"reason": "...", "verdict": "approved_subtype"|"not_approved_subtype"}}

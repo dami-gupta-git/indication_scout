@@ -16,6 +16,7 @@ INPUTS are the resolved facts (NOT free LLM text):
 - stage            : the authoritative dev_stage PHRASE (from judge_dev_stage / _DEV_STAGE_PHRASE)
 - active_programs  : the "what is still moving" line (from judge_dev_stage)
 - literature       : a deterministic one-liner built from typed EvidenceSummary fields
+- literature_summary : the EvidenceSummary's synthesized summary text
 - relationship     : the approval_relationship Literal (best-effort enum; constrained, so it
                      cannot reintroduce a stage contradiction). Pass the RAW enum value.
 - approved_indication : ApprovalCheck.matched_indication (typed FDA fact) or None — the grounding
@@ -44,11 +45,15 @@ _INTERP_PROMPT = """You are a drug-repurposing analyst writing four interpretive
 candidate card. You are GIVEN the authoritative facts below — already decided. Interpret them; \
 do NOT restate, re-derive, or contradict them.
 
-AUTHORITATIVE FACTS (ground truth):
-- Development stage: {stage}
-- Active programs (what is still moving): {active_programs}
-- Relevance-reviewed trial evidence: {trial_evidence}
-- Literature: {literature}
+AUTHORITATIVE FACTS (ground truth). They come from two separate sources, the trial registry and the
+published literature, and each fact names its source. The two can disagree: the literature may report a
+trial the registry search did not find. When they disagree, say so; never let one source's silence stand
+for the other's findings.
+- Registry development stage: {stage}
+- Registry active programs (what is still moving): {active_programs}
+- Registry relevance-reviewed trial evidence: {trial_evidence}
+- Literature label: {literature}
+- Literature summary: {literature_summary}
 - Approval relationship (how this candidate relates to an approved use): {relationship}
 - Drug's approved indication that this relates to: {approved_indication}
 - Closure verdict (whether the signal is still live): {closure}
@@ -107,8 +112,9 @@ the object: \
 
 # Bumped whenever _INTERP_PROMPT changes, so the fact-keyed cache does not replay prose written
 # by an older prompt. v2: zero relevant trials no longer described as an empty registry. v3: an
-# unresolved trial search no longer takes a tag that asserts what the registry holds.
-_INTERP_PROMPT_VERSION = "v3_unresolved_search_tag"
+# unresolved trial search no longer takes a tag that asserts what the registry holds. v4: facts are labelled by
+# source (registry / literature) and the literature summary text is passed alongside its label.
+_INTERP_PROMPT_VERSION = "v4_source_labelled_facts"
 
 
 @dataclass(frozen=True)
@@ -166,6 +172,7 @@ async def judge_interpretive(
     stage: str,
     active_programs: str,
     literature: str,
+    literature_summary: str,
     relationship: str,
     approved_indication: str | None,
     trial_evidence: str,
@@ -184,6 +191,8 @@ async def judge_interpretive(
     sentence — without it the writer judged closure itself and contradicted the trial section.
     `terminations` names any late-stage stop for safety or efficacy, which the development stage
     hides whenever a completed Phase 3 also exists.
+    `literature_summary` is the synthesized literature summary text: the one-line label alone hid null trials behind
+    "mixed, RCT-backed" (bupropion x cocaine dependence read "RCT-supported" above a section saying the RCTs were null).
     `relationship` is the upstream FDA label (e.g. "contaminated" / "combination_only" / "none")
     — not prose. `trial_evidence` states the relevance-reviewed count and coverage limit.
     """
@@ -194,6 +203,7 @@ async def judge_interpretive(
         "stage": stage,
         "active_programs": active_programs,
         "literature": literature,
+        "literature_summary": literature_summary,
         "relationship": relationship or "none",
         "approved_indication": approved,
         "trial_evidence": trial_evidence,
@@ -221,6 +231,7 @@ async def judge_interpretive(
         stage=stage,
         active_programs=active_programs,
         literature=literature,
+        literature_summary=literature_summary or "none",
         relationship=relationship_phrase,
         approved_indication=approved,
         trial_evidence=trial_evidence,

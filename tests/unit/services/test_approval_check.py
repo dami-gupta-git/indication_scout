@@ -2,16 +2,20 @@
 
 import json
 from datetime import date
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.services.approval_check import (
     _coerce_label,
     _load_drug_approvals_table,
     _parse_approval_decisions,
+    _table_as_label_text,
     extract_approved_from_labels,
     get_approved_indications,
+    get_combination_only_indications,
     get_fda_approved_disease_mapping,
     list_approved_indications_at,
     list_approved_indications_from_labels,
@@ -96,15 +100,17 @@ async def test_sildenafil_hypertension_uses_curated_contamination(tmp_path):
     mock_llm.assert_not_awaited()
 
 
-async def test_hardcoded_table_marks_approved_before_label_lookup(tmp_path):
-    """Baricitinib, October 2026: openFDA's name index lost the Olumiant label, so the table must mark alopecia areata
-    approved; only the remaining candidate goes on to the label lookup."""
-    table_mock = AsyncMock(return_value={"alopecia areata"})
+async def test_missing_label_falls_back_to_the_table_as_label_text(tmp_path):
+    """Baricitinib, October 2026: openFDA's name index lost the Olumiant label. The table entries stand in for the label
+    text in the same prompt, so the model judges every candidate; those verdicts are not cached."""
+    answer = json.dumps(
+        {
+            "alopecia areata": {"reason": "listed", "label": "approved"},
+            "psoriasis": {"reason": "not listed", "label": "none"},
+        }
+    )
+    llm_mock = AsyncMock(return_value=answer)
     with (
-        patch(
-            "indication_scout.services.approval_check.get_approved_indications",
-            new=table_mock,
-        ),
         patch(
             "indication_scout.services.approval_check.resolve_drug_name",
             new=AsyncMock(return_value="CHEMBL2105759"),
@@ -117,21 +123,226 @@ async def test_hardcoded_table_marks_approved_before_label_lookup(tmp_path):
             "indication_scout.services.approval_check.FDAClient.get_all_label_indications",
             new=AsyncMock(return_value=[]),
         ),
+        patch("indication_scout.services.approval_check.query_llm", new=llm_mock),
     ):
         result = await get_fda_approved_disease_mapping(
             drug_name="baricitinib",
             candidate_diseases=["alopecia areata", "psoriasis"],
-            approved_indications=[],
+            approved_indications=["rheumatoid arthritis", "alopecia areata"],
             cache_dir=tmp_path,
         )
 
     assert result == {"alopecia areata": "approved", "psoriasis": "none"}
-    table_mock.assert_awaited_once()
-    assert table_mock.await_args.args[:2] == (
-        "baricitinib",
-        ["alopecia areata", "psoriasis"],
+    prompt = llm_mock.await_args.args[0]
+    assert (
+        "INDICATIONS AND USAGE (baricitinib, from a curated FDA approvals record):\n"
+        "- rheumatoid arthritis\n"
+        "- severe covid-19 hospitalization\n"
+        "- alopecia areata"
+    ) in prompt
+    assert _cached_labels(tmp_path) == []
+
+
+def test_table_as_label_text_names_the_combination_partner():
+    assert _table_as_label_text("bupropion", date(2026, 11, 25)) == (
+        "INDICATIONS AND USAGE (bupropion, from a curated FDA approvals record):\n"
+        "- major depressive disorder\n"
+        "- smoking cessation\n"
+        "- seasonal affective disorder\n"
+        "- obesity (approved only in a fixed-dose combination product with naltrexone)\n"
+        "- alzheimer's disease agitation (approved only in a fixed-dose combination product with dextromethorphan)"
     )
-    assert table_mock.await_args.kwargs == {"as_of": date.today()}
+
+
+def test_table_as_label_text_is_none_for_a_drug_not_in_the_table():
+    assert _table_as_label_text("atabecestat", date(2026, 11, 25)) is None
+
+
+def _mapping_patches(
+    label_texts=None, label_error=None, llm_response=None, alias_error=None
+):
+    """Patch everything around the label judgment: ChEMBL aliases, FDA label fetch, model call."""
+    fda_mock = (
+        AsyncMock(side_effect=label_error)
+        if label_error is not None
+        else AsyncMock(return_value=label_texts)
+    )
+    alias_mock = (
+        AsyncMock(side_effect=alias_error)
+        if alias_error is not None
+        else AsyncMock(return_value=["sildenafil"])
+    )
+    llm_mock = AsyncMock(return_value=llm_response)
+    patches = (
+        patch(
+            "indication_scout.services.approval_check.resolve_drug_name",
+            new=AsyncMock(return_value="CHEMBL192"),
+        ),
+        patch(
+            "indication_scout.services.approval_check.get_all_drug_names",
+            new=alias_mock,
+        ),
+        patch(
+            "indication_scout.services.approval_check.FDAClient.get_all_label_indications",
+            new=fda_mock,
+        ),
+        patch("indication_scout.services.approval_check.query_llm", new=llm_mock),
+    )
+    return patches, llm_mock, fda_mock
+
+
+async def _run_mapping(tmp_path, patches, candidates, drug_name="sildenafil"):
+    for p in patches:
+        p.start()
+    try:
+        return await get_fda_approved_disease_mapping(
+            drug_name=drug_name,
+            candidate_diseases=candidates,
+            approved_indications=["pulmonary arterial hypertension"],
+            cache_dir=tmp_path,
+        )
+    finally:
+        for p in patches:
+            p.stop()
+
+
+def _cached_labels(tmp_path):
+    files = list((tmp_path / "fda_drug_disease_approval").glob("*.json"))
+    return [] if not files else json.loads(files[0].read_text())["entries"]
+
+
+async def test_mapping_unresolved_when_no_label_text_and_no_table_entry(tmp_path):
+    patches, llm_mock, _ = _mapping_patches(label_texts=[])
+    result = await _run_mapping(
+        tmp_path, patches, ["eisenmenger syndrome", "raynaud disease"], "atabecestat"
+    )
+    assert result == {
+        "eisenmenger syndrome": "unresolved",
+        "raynaud disease": "unresolved",
+    }
+    llm_mock.assert_not_awaited()
+    assert _cached_labels(tmp_path) == []
+
+
+async def test_mapping_unresolved_when_label_fetch_fails(tmp_path):
+    patches, llm_mock, _ = _mapping_patches(
+        label_error=DataSourceError("fda", "openFDA down")
+    )
+    result = await _run_mapping(
+        tmp_path, patches, ["eisenmenger syndrome", "raynaud disease"]
+    )
+    assert result == {
+        "eisenmenger syndrome": "unresolved",
+        "raynaud disease": "unresolved",
+    }
+    llm_mock.assert_not_awaited()
+    assert _cached_labels(tmp_path) == []
+
+
+async def test_mapping_unresolved_when_model_answer_is_unparseable(tmp_path):
+    patches, _, _ = _mapping_patches(
+        label_texts=["INDICATIONS AND USAGE REVATIO is indicated for PAH"],
+        llm_response="this is not json at all",
+    )
+    result = await _run_mapping(
+        tmp_path, patches, ["eisenmenger syndrome", "raynaud disease"]
+    )
+    assert result == {
+        "eisenmenger syndrome": "unresolved",
+        "raynaud disease": "unresolved",
+    }
+    assert _cached_labels(tmp_path) == []
+
+
+async def test_mapping_unresolved_for_candidate_the_answer_omits(tmp_path):
+    answer = json.dumps(
+        {"raynaud disease": {"reason": "not on the label", "label": "none"}}
+    )
+    patches, _, _ = _mapping_patches(
+        label_texts=["INDICATIONS AND USAGE REVATIO is indicated for PAH"],
+        llm_response=answer,
+    )
+    result = await _run_mapping(
+        tmp_path, patches, ["eisenmenger syndrome", "raynaud disease"]
+    )
+    assert result == {"eisenmenger syndrome": "unresolved", "raynaud disease": "none"}
+    cached = _cached_labels(tmp_path)
+    assert set(cached) == {"raynaud disease"}
+    assert cached["raynaud disease"]["label"] == "none"
+
+
+async def test_mapping_judged_none_is_cached_and_not_unresolved(tmp_path):
+    answer = json.dumps(
+        {"raynaud disease": {"reason": "not on the label", "label": "none"}}
+    )
+    patches, llm_mock, _ = _mapping_patches(
+        label_texts=["INDICATIONS AND USAGE REVATIO is indicated for PAH"],
+        llm_response=answer,
+    )
+    first = await _run_mapping(tmp_path, patches, ["raynaud disease"])
+    assert first == {"raynaud disease": "none"}
+    assert _cached_labels(tmp_path)["raynaud disease"]["label"] == "none"
+
+    patches2, llm_mock2, _ = _mapping_patches(label_texts=[], llm_response="unused")
+    second = await _run_mapping(tmp_path, patches2, ["raynaud disease"])
+    assert second == {"raynaud disease": "none"}  # served from the per-drug cache
+    llm_mock2.assert_not_awaited()
+
+
+async def test_mapping_alias_lookup_failure_keeps_cached_verdicts_and_leaves_the_rest_unresolved(tmp_path):
+    """A ChEMBL failure must not fall back to a bare-name label search: that can miss a formulation's label (sildenafil
+    without Revatio) and cache a conclusive "none". Cached verdicts are kept; uncached candidates stay unresolved."""
+    answer = json.dumps(
+        {"raynaud disease": {"reason": "not on the label", "label": "none"}}
+    )
+    patches, _, _ = _mapping_patches(
+        label_texts=["INDICATIONS AND USAGE REVATIO is indicated for PAH"],
+        llm_response=answer,
+    )
+    await _run_mapping(tmp_path, patches, ["raynaud disease"])
+
+    patches2, llm_mock2, fda_mock2 = _mapping_patches(
+        label_texts=["INDICATIONS AND USAGE VIAGRA is indicated for erectile dysfunction"],
+        llm_response="unused",
+        alias_error=RuntimeError("chembl down"),
+    )
+    result = await _run_mapping(
+        tmp_path, patches2, ["raynaud disease", "eisenmenger syndrome"]
+    )
+    assert result == {"raynaud disease": "none", "eisenmenger syndrome": "unresolved"}
+    fda_mock2.assert_not_awaited()
+    llm_mock2.assert_not_awaited()
+    assert set(_cached_labels(tmp_path)) == {"raynaud disease"}
+
+
+async def test_mapping_ignores_verdicts_cached_before_salt_form_checks(
+    tmp_path: Path,
+) -> None:
+    patches, _, _ = _mapping_patches(
+        label_texts=["REVATIO is indicated for pulmonary arterial hypertension"],
+        llm_response=json.dumps(
+            {"raynaud disease": {"reason": "not on the label", "label": "none"}}
+        ),
+    )
+    await _run_mapping(tmp_path, patches, ["raynaud disease"])
+    (cache_path,) = (tmp_path / "fda_drug_disease_approval").glob("*.json")
+    payload = json.loads(cache_path.read_text())
+    del payload["salt_forms_checked"]
+    cache_path.write_text(json.dumps(payload))
+
+    failure_patches, llm_mock, fda_mock = _mapping_patches(
+        alias_error=DataSourceError("chembl", "HTTP 500", 500),
+    )
+    result = await _run_mapping(tmp_path, failure_patches, ["raynaud disease"])
+
+    assert result == {"raynaud disease": "unresolved"}
+    fda_mock.assert_not_awaited()
+    llm_mock.assert_not_awaited()
+    assert json.loads(cache_path.read_text()) == payload
+
+
+def test_unresolved_is_not_a_judged_label():
+    assert _coerce_label("unresolved") is None
 
 
 # --- extract_approved_from_labels ---
@@ -540,6 +751,48 @@ async def test_get_approved_indications_semaglutide_2022_returns_three():
         "cardiovascular risk reduction",
         "obesity",
     }
+
+
+@pytest.mark.parametrize(
+    "lookup, table_diseases, matched",
+    [
+        (
+            get_approved_indications,
+            ["major depressive disorder", "smoking cessation", "seasonal affective disorder"],
+            {"major depressive disorder"},
+        ),
+        (
+            get_combination_only_indications,
+            ["obesity", "alzheimer's disease agitation"],
+            {"obesity"},
+        ),
+    ],
+)
+async def test_bupropion_table_splits_single_drug_and_combination_entries(
+    lookup, table_diseases, matched
+):
+    """Contrave (with naltrexone) and Auvelity (with dextromethorphan) are combination products: the single-drug lookup
+    never sees them, and the combination lookup sees only them."""
+    candidates = ["major depressive disorder", "obesity", "alzheimer disease"]
+    matcher = AsyncMock(return_value={"merge": {}, "remove": sorted(matched)})
+    with patch(
+        "indication_scout.services.disease_helper.merge_duplicate_diseases", new=matcher
+    ):
+        result = await lookup(
+            drug_name="bupropion",
+            candidate_diseases=candidates,
+            as_of=date(2026, 11, 25),
+        )
+    matcher.assert_awaited_once_with(candidates, table_diseases)
+    assert result == matched
+
+
+def test_list_approved_indications_at_bupropion_leaves_out_combination_products():
+    assert list_approved_indications_at("bupropion", date(2026, 11, 25)) == [
+        "major depressive disorder",
+        "smoking cessation",
+        "seasonal affective disorder",
+    ]
 
 
 async def test_get_approved_indications_returns_empty_when_as_of_is_none():

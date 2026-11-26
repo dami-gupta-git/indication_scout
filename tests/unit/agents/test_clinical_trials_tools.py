@@ -7,6 +7,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from langchain_core.messages import ToolCall as LCToolCall
 
+from indication_scout.agents.clinical_trials.clinical_trials_output import (
+    FinalizeClinicalTrialsArtifact,
+)
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     build_clinical_trials_tools,
 )
@@ -87,7 +90,7 @@ async def test_search_trials_returns_search_trials_result_artifact(tmp_path):
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -138,6 +141,52 @@ async def test_search_trials_returns_search_trials_result_artifact(tmp_path):
     assert "1 registry query matches" in msg.content
 
 
+async def test_search_trials_records_ot_synonym_route(tmp_path):
+    """A descriptor found through an Open Targets synonym is searched as usual, and the route is recorded on the
+    result so the report can say the indication was searched under a broader term."""
+    mock_result = SearchTrialsResult(
+        total_count=0,
+        by_status={"RECRUITING": 0, "ACTIVE_NOT_RECRUITING": 0, "WITHDRAWN": 0},
+        trials=[],
+        resolution_status="resolved",
+    )
+    mock_client = _mock_client(search_trials=mock_result)
+    tools = build_clinical_trials_tools(date_before=None, cache_dir=tmp_path)
+
+    with (
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
+            new=AsyncMock(
+                return_value=("D019969", "Amphetamine-Related Disorders", "ot_synonym")
+            ),
+        ),
+        patch(
+            "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
+            return_value=mock_client,
+        ),
+    ):
+        msg = await _get_tool(tools, "search_trials").ainvoke(
+            LCToolCall(
+                name="search_trials",
+                args={"drug": "bupropion", "indication": "methamphetamine dependence"},
+                id="tc_route",
+                type="tool_call",
+            )
+        )
+
+    mock_client.search_trials.assert_awaited_once_with(
+        "bupropion",
+        "Amphetamine-Related Disorders",
+        date_before=None,
+    )
+    assert isinstance(msg.artifact, SearchTrialsResult)
+    assert msg.artifact.resolution_status == "resolved"
+    assert msg.artifact.resolution_route == "ot_synonym"
+    assert msg.artifact.resolution_term == "Amphetamine-Related Disorders"
+    assert msg.artifact.total_count == 0
+    assert msg.artifact.trials == []
+
+
 async def test_search_trials_passes_date_before():
     """search_trials forwards date_before from closure into the client call."""
     cutoff = date(2018, 1, 1)
@@ -147,7 +196,7 @@ async def test_search_trials_passes_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D000505", "Alopecia Areata")),
+            new=AsyncMock(return_value=("D000505", "Alopecia Areata", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -227,7 +276,7 @@ async def test_search_trials_content_notes_top_50_when_total_exceeds_shown():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D003866", "Depressive Disorder")),
+            new=AsyncMock(return_value=("D003866", "Depressive Disorder", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -272,7 +321,7 @@ async def test_search_trials_renders_every_trial_it_records_for_classification()
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D011236", "Prediabetic State")),
+            new=AsyncMock(return_value=("D011236", "Prediabetic State", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -322,7 +371,9 @@ async def test_get_completed_returns_completed_trials_result_artifact():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D003924", "Diabetes Mellitus, Type 2")),
+            new=AsyncMock(
+                return_value=("D003924", "Diabetes Mellitus, Type 2", "label")
+            ),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -366,7 +417,7 @@ async def test_get_completed_passes_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D000001", "Test Term")),
+            new=AsyncMock(return_value=("D000001", "Test Term", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -462,7 +513,7 @@ async def test_get_terminated_returns_terminated_trials_result_artifact():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D050177", "Overweight")),
+            new=AsyncMock(return_value=("D050177", "Overweight", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -518,7 +569,7 @@ async def test_get_terminated_classification_view_uncapped_with_rich_columns():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D050177", "Overweight")),
+            new=AsyncMock(return_value=("D050177", "Overweight", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -553,7 +604,7 @@ async def test_get_terminated_passes_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D000001", "Test Term")),
+            new=AsyncMock(return_value=("D000001", "Test Term", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -644,7 +695,7 @@ async def test_get_landscape_returns_landscape_artifact():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D018589", "Gastroparesis")),
+            new=AsyncMock(return_value=("D018589", "Gastroparesis", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -705,7 +756,7 @@ async def test_get_landscape_does_not_call_client_when_date_before_set():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D018589", "Gastroparesis")),
+            new=AsyncMock(return_value=("D018589", "Gastroparesis", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -770,7 +821,7 @@ async def test_get_landscape_returns_empty_when_resolver_returns_none():
 
 @pytest.fixture(autouse=True)
 def _empty_approvals_table():
-    """Keep the live label-path tests off the hardcoded approvals table (and the LLM matcher behind it)."""
+    """Keep the tests off the hardcoded approvals table (and the LLM matcher behind it)."""
     with patch(
         "indication_scout.agents.clinical_trials.clinical_trials_tools.get_approved_indications",
         new=AsyncMock(return_value=set()),
@@ -778,306 +829,135 @@ def _empty_approvals_table():
         yield table_mock
 
 
-async def test_check_fda_approval_hardcoded_table_approves_without_label(
+async def test_check_fda_approval_live_run_does_not_consult_the_hardcoded_table(
     _empty_approvals_table,
 ):
-    """The hardcoded table answers approved before openFDA is queried (baricitinib's label left the name index)."""
+    """A live run reports the passed verdict only; a table hit cannot override an unresolved verdict."""
     _empty_approvals_table.return_value = {"alopecia areata"}
-    fda_factory = MagicMock()
-    tools = build_clinical_trials_tools(date_before=None)
+    tools = build_clinical_trials_tools(date_before=None, approval_label="unresolved")
 
-    with patch(
-        "indication_scout.agents.clinical_trials.clinical_trials_tools.FDAClient",
-        new=fda_factory,
-    ):
-        msg = await _get_tool(tools, "check_fda_approval").ainvoke(
-            LCToolCall(
-                name="check_fda_approval",
-                args={"drug": "baricitinib", "indication": "alopecia areata"},
-                id="tc_fda_table",
-                type="tool_call",
-            )
+    msg = await _get_tool(tools, "check_fda_approval").ainvoke(
+        LCToolCall(
+            name="check_fda_approval",
+            args={"drug": "baricitinib", "indication": "alopecia areata"},
+            id="tc_fda_table",
+            type="tool_call",
         )
+    )
 
-    fda_factory.assert_not_called()
+    _empty_approvals_table.assert_not_awaited()
     assert msg.artifact == ApprovalCheck(
-        is_approved=True,
-        label_found=True,
-        matched_indication="alopecia areata",
+        is_approved=False,
+        label_found=False,
+        inconclusive=True,
+        matched_indication=None,
         drug_names_checked=["baricitinib"],
     )
     assert msg.content == (
-        "FDA approval check for baricitinib × alopecia areata: APPROVED (hardcoded approvals table)"
+        "FDA approval check for baricitinib × alopecia areata: could not be checked "
+        "(label text unavailable or unreadable)"
     )
 
 
-def _fda_client_mock(label_texts: list[str]) -> AsyncMock:
-    """AsyncMock FDAClient that works as an async context manager."""
-    client = AsyncMock()
-    client.__aenter__ = AsyncMock(return_value=client)
-    client.__aexit__ = AsyncMock(return_value=False)
-    client.get_all_label_indications = AsyncMock(return_value=label_texts)
-    return client
-
-
-async def test_check_fda_approval_approved_match():
-    """Drug resolved, labels found, indication approved → is_approved=True with all fields populated."""
-    drug_names = ["semaglutide", "ozempic", "wegovy", "rybelsus"]
-    label_texts = ["INDICATIONS AND USAGE: treatment of type 2 diabetes mellitus"]
-    fda_client = _fda_client_mock(label_texts)
-    tools = build_clinical_trials_tools(date_before=None)
-
-    with (
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_drug_name",
-            new=AsyncMock(return_value="CHEMBL2108724"),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.get_all_drug_names",
-            new=AsyncMock(return_value=drug_names),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.FDAClient",
-            return_value=fda_client,
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.extract_approved_from_labels",
-            new=AsyncMock(return_value={"type 2 diabetes mellitus"}),
-        ),
-    ):
-        msg = await _get_tool(tools, "check_fda_approval").ainvoke(
-            LCToolCall(
-                name="check_fda_approval",
-                args={"drug": "semaglutide", "indication": "type 2 diabetes mellitus"},
-                id="tc_fda1",
-                type="tool_call",
-            )
-        )
-
-    fda_client.get_all_label_indications.assert_awaited_once_with(drug_names)
-    assert isinstance(msg.artifact, ApprovalCheck)
-    assert msg.artifact.is_approved is True
-    assert msg.artifact.label_found is True
-    assert msg.artifact.matched_indication == "type 2 diabetes mellitus"
-    assert msg.artifact.drug_names_checked == drug_names
-    assert "APPROVED" in msg.content
-
-
-async def test_check_fda_approval_label_found_but_not_approved():
-    """Labels returned but the indication is not in the approved set → is_approved=False, label_found=True."""
-    drug_names = ["semaglutide", "ozempic", "wegovy", "rybelsus"]
-    label_texts = ["INDICATIONS AND USAGE: treatment of type 2 diabetes mellitus"]
-    fda_client = _fda_client_mock(label_texts)
-    tools = build_clinical_trials_tools(date_before=None)
-
-    with (
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_drug_name",
-            new=AsyncMock(return_value="CHEMBL2108724"),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.get_all_drug_names",
-            new=AsyncMock(return_value=drug_names),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.FDAClient",
-            return_value=fda_client,
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.extract_approved_from_labels",
-            new=AsyncMock(return_value=set()),
-        ),
-    ):
-        msg = await _get_tool(tools, "check_fda_approval").ainvoke(
-            LCToolCall(
-                name="check_fda_approval",
-                args={"drug": "semaglutide", "indication": "huntington disease"},
-                id="tc_fda2",
-                type="tool_call",
-            )
-        )
-
-    assert isinstance(msg.artifact, ApprovalCheck)
-    assert msg.artifact.is_approved is False
-    assert msg.artifact.label_found is True
-    assert msg.artifact.matched_indication is None
-    assert msg.artifact.drug_names_checked == drug_names
-    assert "not on FDA label" in msg.content
-
-
-async def test_check_fda_approval_indication_match_is_case_insensitive():
-    """Indication match strips and lowercases both sides before comparing."""
-    drug_names = ["semaglutide"]
-    fda_client = _fda_client_mock(["some label text"])
-    tools = build_clinical_trials_tools(date_before=None)
-
-    with (
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_drug_name",
-            new=AsyncMock(return_value="CHEMBL2108724"),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.get_all_drug_names",
-            new=AsyncMock(return_value=drug_names),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.FDAClient",
-            return_value=fda_client,
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.extract_approved_from_labels",
-            new=AsyncMock(return_value={"TYPE 2 Diabetes Mellitus"}),
-        ),
-    ):
-        msg = await _get_tool(tools, "check_fda_approval").ainvoke(
-            LCToolCall(
-                name="check_fda_approval",
-                args={
-                    "drug": "semaglutide",
-                    "indication": "  type 2 diabetes mellitus  ",
-                },
-                id="tc_fda3",
-                type="tool_call",
-            )
-        )
-
-    assert msg.artifact.is_approved is True
-    assert msg.artifact.label_found is True
-    assert msg.artifact.matched_indication == "  type 2 diabetes mellitus  "
-    assert msg.artifact.drug_names_checked == drug_names
-
-
-async def test_check_fda_approval_no_labels_found():
-    """Drug names resolved but FDA has no labels → label_found=False, is_approved=False."""
-    drug_names = ["aducanumab", "aduhelm"]
-    fda_client = _fda_client_mock([])
-    tools = build_clinical_trials_tools(date_before=None)
-    extract_mock = AsyncMock()
-
-    with (
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_drug_name",
-            new=AsyncMock(return_value="CHEMBL4650346"),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.get_all_drug_names",
-            new=AsyncMock(return_value=drug_names),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.FDAClient",
-            return_value=fda_client,
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.extract_approved_from_labels",
-            new=extract_mock,
-        ),
-    ):
-        msg = await _get_tool(tools, "check_fda_approval").ainvoke(
-            LCToolCall(
-                name="check_fda_approval",
-                args={"drug": "aducanumab", "indication": "alzheimer disease"},
-                id="tc_fda4",
-                type="tool_call",
-            )
-        )
-
-    assert isinstance(msg.artifact, ApprovalCheck)
-    assert msg.artifact.is_approved is False
-    assert msg.artifact.label_found is False
-    assert msg.artifact.matched_indication is None
-    assert msg.artifact.drug_names_checked == drug_names
-    assert "no FDA label" in msg.content
-    extract_mock.assert_not_awaited()
-
-
-async def test_check_fda_approval_unresolved_drug_returns_default():
-    """resolve_drug_name raises DataSourceError → default ApprovalCheck, no FDA call, no extract call."""
-    fda_factory = MagicMock()
-    extract_mock = AsyncMock()
-    get_names_mock = AsyncMock()
-    tools = build_clinical_trials_tools(date_before=None)
-
-    with (
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_drug_name",
-            new=AsyncMock(
-                side_effect=DataSourceError("chembl", "No drug found for 'xyzzybogus'")
+@pytest.mark.parametrize(
+    "label, expected, content_verdict",
+    [
+        (
+            "approved",
+            ApprovalCheck(
+                is_approved=True,
+                label_found=True,
+                inconclusive=False,
+                matched_indication="hyperglycemia",
+                drug_names_checked=["semaglutide"],
             ),
+            "APPROVED",
         ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.get_all_drug_names",
-            new=get_names_mock,
+        (
+            "none",
+            ApprovalCheck(
+                is_approved=False,
+                label_found=True,
+                inconclusive=False,
+                matched_indication=None,
+                drug_names_checked=["semaglutide"],
+            ),
+            "not on FDA label",
         ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.FDAClient",
-            new=fda_factory,
+        (
+            "contaminated",
+            ApprovalCheck(
+                is_approved=False,
+                label_found=True,
+                inconclusive=False,
+                matched_indication=None,
+                drug_names_checked=["semaglutide"],
+            ),
+            "not on FDA label",
         ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.extract_approved_from_labels",
-            new=extract_mock,
+        (
+            "combination_only",
+            ApprovalCheck(
+                is_approved=False,
+                label_found=True,
+                inconclusive=False,
+                matched_indication=None,
+                drug_names_checked=["semaglutide"],
+            ),
+            "not on FDA label",
         ),
-    ):
-        msg = await _get_tool(tools, "check_fda_approval").ainvoke(
-            LCToolCall(
-                name="check_fda_approval",
-                args={"drug": "xyzzybogus", "indication": "alzheimer disease"},
-                id="tc_fda5",
-                type="tool_call",
-            )
+        (
+            "unresolved",
+            ApprovalCheck(
+                is_approved=False,
+                label_found=False,
+                inconclusive=True,
+                matched_indication=None,
+                drug_names_checked=["semaglutide"],
+            ),
+            "could not be checked (label text unavailable or unreadable)",
+        ),
+    ],
+)
+async def test_check_fda_approval_reports_passed_label(
+    label, expected, content_verdict, _empty_approvals_table
+):
+    """A live run reports the candidate step's label for the pair with no lookup of its own."""
+    tools = build_clinical_trials_tools(date_before=None, approval_label=label)
+
+    msg = await _get_tool(tools, "check_fda_approval").ainvoke(
+        LCToolCall(
+            name="check_fda_approval",
+            args={"drug": "semaglutide", "indication": "hyperglycemia"},
+            id="tc_fda_label",
+            type="tool_call",
         )
+    )
 
-    assert isinstance(msg.artifact, ApprovalCheck)
-    assert msg.artifact.is_approved is False
-    assert msg.artifact.label_found is False
-    assert msg.artifact.matched_indication is None
-    assert msg.artifact.drug_names_checked == []
-    assert "drug not resolved" in msg.content
-    get_names_mock.assert_not_awaited()
-    fda_factory.assert_not_called()
-    extract_mock.assert_not_awaited()
+    assert msg.artifact == expected
+    assert msg.content == (
+        f"FDA approval check for semaglutide × hyperglycemia: {content_verdict}"
+    )
+    _empty_approvals_table.assert_not_awaited()
 
 
-async def test_check_fda_approval_no_drug_names_returns_default():
-    """get_all_drug_names returns empty → default ApprovalCheck, no FDA call, no extract call."""
-    fda_factory = MagicMock()
-    extract_mock = AsyncMock()
+async def test_check_fda_approval_live_run_without_label_raises():
+    """A live run with no label passed is a wiring failure, not an inconclusive or "not approved" result."""
     tools = build_clinical_trials_tools(date_before=None)
 
-    with (
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_drug_name",
-            new=AsyncMock(return_value="CHEMBL2108724"),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.get_all_drug_names",
-            new=AsyncMock(return_value=[]),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.FDAClient",
-            new=fda_factory,
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.extract_approved_from_labels",
-            new=extract_mock,
-        ),
-    ):
-        msg = await _get_tool(tools, "check_fda_approval").ainvoke(
+    with pytest.raises(DataSourceError) as exc_info:
+        await _get_tool(tools, "check_fda_approval").ainvoke(
             LCToolCall(
                 name="check_fda_approval",
-                args={"drug": "semaglutide", "indication": "type 2 diabetes mellitus"},
-                id="tc_fda6",
+                args={"drug": "semaglutide", "indication": "hyperglycemia"},
+                id="tc_fda_nolabel",
                 type="tool_call",
             )
         )
 
-    assert isinstance(msg.artifact, ApprovalCheck)
-    assert msg.artifact.is_approved is False
-    assert msg.artifact.label_found is False
-    assert msg.artifact.matched_indication is None
-    assert msg.artifact.drug_names_checked == []
-    assert "no drug names" in msg.content
-    fda_factory.assert_not_called()
-    extract_mock.assert_not_awaited()
+    assert str(exc_info.value) == (
+        "[check_fda_approval] no approval label passed for semaglutide × hyperglycemia in a live run"
+    )
 
 
 # ------------------------------------------------------------------
@@ -1107,494 +987,17 @@ async def test_tool_list_contains_expected_tools():
 
 
 # ------------------------------------------------------------------
-# finalize_analysis
+# finalize_analysis — ends the loop; trials are classified afterwards
 # ------------------------------------------------------------------
 
 
-async def _populate_shown(tools: list, *, completed=(), terminated=()) -> None:
-    """Drive get_completed/get_terminated so finalize_analysis's closure-scoped
-    shown_by_pair is filled — the same path production takes. Returns nothing;
-    the shown NCTs live in the tools' shared closure.
-    """
-
-    def _mk(nct: str) -> Trial:
-        return Trial(
-            nct_id=nct,
-            title=f"trial {nct}",
-            phase="Phase 3",
-            overall_status="COMPLETED",
-            sponsor="S",
-            mesh_conditions=[MeshTerm(id="D006973", term="Hypertension")],
-            interventions=[
-                Intervention(intervention_type="Drug", intervention_name="Sildenafil")
-            ],
-        )
-
-    if completed:
-        client = _mock_client(
-            get_completed_trials=CompletedTrialsResult(
-                total_count=len(completed), trials=[_mk(n) for n in completed]
-            )
-        )
-        with (
-            patch(
-                "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-                new=AsyncMock(return_value=("D006973", "Hypertension")),
-            ),
-            patch(
-                "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
-                return_value=client,
-            ),
-        ):
-            await _get_tool(tools, "get_completed").ainvoke(
-                LCToolCall(
-                    name="get_completed",
-                    args={"drug": "sildenafil", "indication": "hypertension"},
-                    id="pc",
-                    type="tool_call",
-                )
-            )
-    if terminated:
-        client = _mock_client(
-            get_terminated_trials=TerminatedTrialsResult(
-                total_count=len(terminated), trials=[_mk(n) for n in terminated]
-            )
-        )
-        with (
-            patch(
-                "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-                new=AsyncMock(return_value=("D006973", "Hypertension")),
-            ),
-            patch(
-                "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
-                return_value=client,
-            ),
-        ):
-            await _get_tool(tools, "get_terminated").ainvoke(
-                LCToolCall(
-                    name="get_terminated",
-                    args={"drug": "sildenafil", "indication": "hypertension"},
-                    id="pt",
-                    type="tool_call",
-                )
-            )
-
-
-async def _finalize(tools: list, treats: dict[str, bool] | None = None, **args):
-    """Invoke finalize_analysis with the therapeutic-target gate stubbed.
-
-    `treats` maps NCT to the gate's verdict; anything unlisted passes, so tests that are not about
-    the gate keep their pre-gate expectations.
-    """
-
-    async def gate(drug, disease, trials, cache_dir):
-        return {t.nct_id: (treats or {}).get(t.nct_id, True) for t in trials}
-
-    with patch(
-        "indication_scout.agents.clinical_trials.clinical_trials_tools."
-        "judge_trials_treat_disease",
-        new=gate,
-    ):
-        return await _get_tool(tools, "finalize_analysis").ainvoke(
-            LCToolCall(
-                name="finalize_analysis", args=args, id="tc_fin", type="tool_call"
-            )
-        )
-
-
-async def test_finalize_analysis_target_gate_rejects_then_accepts_rewritten_reasoning():
-    """A trial that studies the drug in patients who have the candidate disease but targets a
-    complication of it is rejected back to the agent, so the reasoning it publishes describes the
-    split that is actually stored."""
-    tools = build_clinical_trials_tools(
-        date_before=None, target_drug="sildenafil", assigned_indication="hypertension"
-    )
-    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
-
-    rejection = await _finalize(
-        tools,
-        treats={"NCT00000002": False},
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-            {"nct": "NCT00000002", "drug_role": "studied", "verdict": "relevant"},
-        ],
-        relevance_reasoning="both study sildenafil in this indication.",
-    )
-    assert rejection.content.startswith("REJECTED:")
-    assert "NCT00000002" in rejection.content
-    assert rejection.artifact == ""
-
-    msg = await _finalize(
-        tools,
-        treats={"NCT00000002": False},
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-            {"nct": "NCT00000002", "drug_role": "studied", "verdict": "contaminated"},
-        ],
-        relevance_reasoning="NCT00000002 targets a complication, not hypertension itself.",
-    )
-
-    art = msg.artifact
-    assert art.relevant_ncts == ["NCT00000001"]
-    assert art.contaminated_ncts == ["NCT00000002"]
-    assert art.relevance_reasoning == (
-        "Relevant trials: NCT00000001. Excluded trials: NCT00000002."
-    )
-    assert "Analysis complete" in msg.content
-
-
-async def test_finalize_analysis_target_gate_replaces_reasoning_when_agent_insists():
-    """When the agent re-submits a gate-rejected trial as relevant, the demotion is applied and its
-    stale reasoning is replaced rather than published against the stored split."""
-    tools = build_clinical_trials_tools(
-        date_before=None, target_drug="sildenafil", assigned_indication="hypertension"
-    )
-    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
-
-    verdicts = [
-        {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-        {"nct": "NCT00000002", "drug_role": "studied", "verdict": "relevant"},
-    ]
-    reasoning = "both study sildenafil in this indication."
-
-    first = await _finalize(
-        tools,
-        treats={"NCT00000002": False},
-        verdicts=verdicts,
-        relevance_reasoning=reasoning,
-    )
-    assert first.content.startswith("REJECTED:")
-
-    msg = await _finalize(
-        tools,
-        treats={"NCT00000002": False},
-        verdicts=verdicts,
-        relevance_reasoning=reasoning,
-    )
-
-    art = msg.artifact
-    assert art.relevant_ncts == ["NCT00000001"]
-    assert art.contaminated_ncts == ["NCT00000002"]
-    assert "both study sildenafil" not in art.relevance_reasoning
-    assert art.relevance_reasoning == (
-        "Relevant trials: NCT00000001. Excluded trials: NCT00000002."
-    )
-    assert "Analysis complete" in msg.content
-
-
-async def test_finalize_analysis_accepts_complete_verdicts_and_derives_split():
-    """A verdict for every shown trial → FinalizeClinicalTrialsArtifact with
-    relevant/contaminated derived from the verdicts."""
+async def test_finalize_analysis_takes_no_arguments_and_returns_the_marker():
     tools = build_clinical_trials_tools(date_before=None)
-    await _populate_shown(
-        tools, completed=["NCT00000001", "NCT00000002"], terminated=["NCT00000099"]
+    msg = await _get_tool(tools, "finalize_analysis").ainvoke(
+        LCToolCall(name="finalize_analysis", args={}, id="tc_fin", type="tool_call")
     )
-
-    msg = await _finalize(
-        tools,
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-            {"nct": "NCT00000002", "drug_role": "studied", "verdict": "relevant"},
-            {"nct": "NCT00000099", "drug_role": "absent", "verdict": "contaminated"},
-        ],
-        relevance_reasoning="NCT99 is a PAH trial; the query is systemic hypertension.",
-    )
-
-    art = msg.artifact
-    assert art.relevant_ncts == ["NCT00000001", "NCT00000002"]
-    assert art.contaminated_ncts == ["NCT00000099"]
-    assert art.relevance_reasoning == (
-        "Relevant trials: NCT00000001, NCT00000002. " "Excluded trials: NCT00000099."
-    )
-    assert "Analysis complete" in msg.content
-
-
-async def test_finalize_analysis_rejects_relevant_verdict_when_drug_is_not_studied():
-    """A comparator-arm trial marked relevant is rejected; marked contaminated it is accepted.
-    The rejection names the pinned drug and the role given."""
-    tools = build_clinical_trials_tools(date_before=None, target_drug="metformin")
-    await _populate_shown(tools, completed=["NCT00000001", "NCT03968224"])
-
-    msg = await _finalize(
-        tools,
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-            {"nct": "NCT03968224", "drug_role": "comparator", "verdict": "relevant"},
-        ],
-        relevance_reasoning="both relevant",
-    )
-    assert msg.artifact == ""
-    assert "1 trial(s) marked relevant while metformin is not the studied agent" in (
-        msg.content
-    )
-    assert "NCT03968224 (comparator)" in msg.content
-
-    msg = await _finalize(
-        tools,
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-            {
-                "nct": "NCT03968224",
-                "drug_role": "comparator",
-                "verdict": "contaminated",
-            },
-        ],
-        relevance_reasoning="NCT03968224 studies dapagliflozin; metformin is the comparator.",
-    )
-    assert msg.artifact.relevant_ncts == ["NCT00000001"]
-    assert msg.artifact.contaminated_ncts == ["NCT03968224"]
-
-
-@pytest.mark.parametrize(
-    "bad_entry, expected_field",
-    [
-        ({"nct": "NCT00000002", "verdict": "relevant"}, "drug_role"),
-        ({"nct": "NCT00000002", "drug_role": "studied"}, "verdict"),
-        (
-            {"nct": "NCT00000002", "drug_role": "studied", "verdict": "Relevant"},
-            "verdict",
-        ),
-        (
-            {"nct": "NCT00000002", "drug_role": "control", "verdict": "relevant"},
-            "drug_role",
-        ),
-    ],
-)
-async def test_finalize_analysis_rejects_malformed_entry(
-    bad_entry: dict, expected_field: str
-):
-    """A missing or misspelled field is rejected. Left unvalidated, such an entry matched
-    neither verdict filter and dropped its trial from both sets."""
-    tools = build_clinical_trials_tools(date_before=None, target_drug="sildenafil")
-    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
-
-    msg = await _finalize(
-        tools,
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-            bad_entry,
-        ],
-        relevance_reasoning="both relevant",
-    )
-
-    assert msg.artifact == ""
-    assert f"NCT00000002 ({expected_field})" in msg.content
-
-
-async def test_finalize_analysis_rejects_duplicate_entries_for_one_trial():
-    """Two entries for the same trial are rejected rather than landing it in both sets."""
-    tools = build_clinical_trials_tools(date_before=None, target_drug="sildenafil")
-    await _populate_shown(tools, completed=["NCT00000001"])
-
-    msg = await _finalize(
-        tools,
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-            {"nct": "NCT00000001", "drug_role": "absent", "verdict": "contaminated"},
-        ],
-        relevance_reasoning="conflicting",
-    )
-
-    assert msg.artifact == ""
-    assert "1 trial(s) have more than one entry: NCT00000001" in msg.content
-
-
-async def test_finalize_analysis_rejects_missing_verdict():
-    """A shown trial with no verdict is rejected so the loop retries; the
-    missing NCT is named in the rejection."""
-    tools = build_clinical_trials_tools(date_before=None)
-    await _populate_shown(tools, completed=["NCT00000001", "NCT00000002"])
-
-    msg = await _finalize(
-        tools,
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"}
-        ],
-        relevance_reasoning="r",
-    )
-
-    assert msg.artifact == ""
-    assert "REJECTED" in msg.content
-    assert "NCT00000002" in msg.content
-
-
-async def test_finalize_analysis_rejects_unknown_nct():
-    """A verdict naming a trial that was never shown is rejected."""
-    tools = build_clinical_trials_tools(date_before=None)
-    await _populate_shown(tools, completed=["NCT00000001"])
-
-    msg = await _finalize(
-        tools,
-        verdicts=[
-            {"nct": "NCT00000001", "drug_role": "studied", "verdict": "relevant"},
-            {"nct": "NCT09999999", "drug_role": "absent", "verdict": "contaminated"},
-        ],
-        relevance_reasoning="r",
-    )
-
-    assert msg.artifact == ""
-    assert "REJECTED" in msg.content
-    assert "NCT09999999" in msg.content
-
-
-async def test_finalize_analysis_empty_shown_accepts_empty_verdicts():
-    """No trials shown (e.g. MeSH unresolved) → empty verdicts is valid, not rejected."""
-    tools = build_clinical_trials_tools(date_before=None)
-
-    msg = await _finalize(
-        tools,
-        verdicts=[],
-        relevance_reasoning="No completed or terminated trials shown.",
-    )
-
-    art = msg.artifact
-    assert art.relevant_ncts == []
-    assert art.contaminated_ncts == []
-    assert "Analysis complete" in msg.content
-
-
-# ------------------------------------------------------------------
-# Cross-pair isolation — shown_by_pair must not leak across candidates.
-# Regression for the supervisor's concurrent fan-out: a single shared tools
-# instance accumulates every pair's trials into shown_by_pair and finalize
-# unions across keys, so one disease's trials get tagged contaminated under
-# another. The supervisor fix builds the agent PER analyze_clinical_trials call;
-# this test pins the property that per-call instances stay isolated, and
-# documents that a shared instance does NOT.
-# ------------------------------------------------------------------
-
-
-def _completed_for(drug: str, mesh_term: str, ncts: list[str]):
-    """A mock ClinicalTrialsClient returning the given NCTs as completed trials."""
-
-    def _mk(nct: str) -> Trial:
-        return Trial(
-            nct_id=nct,
-            title=f"trial {nct}",
-            phase="Phase 3",
-            overall_status="COMPLETED",
-            sponsor="S",
-            mesh_conditions=[MeshTerm(id="DXXXXXX", term=mesh_term)],
-            interventions=[
-                Intervention(intervention_type="Drug", intervention_name=drug)
-            ],
-        )
-
-    return _mock_client(
-        get_completed_trials=CompletedTrialsResult(
-            total_count=len(ncts), trials=[_mk(n) for n in ncts]
-        )
-    )
-
-
-async def _run_pair(tools, drug: str, indication: str, mesh_term: str, ncts: list[str]):
-    """get_completed (populates shown_by_pair) then finalize, tagging all RELEVANT."""
-    client = _completed_for(drug, mesh_term, ncts)
-    with (
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("DXXXXXX", mesh_term)),
-        ),
-        patch(
-            "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
-            return_value=client,
-        ),
-    ):
-        await _get_tool(tools, "get_completed").ainvoke(
-            LCToolCall(
-                name="get_completed",
-                args={"drug": drug, "indication": indication},
-                id=f"gc_{indication}",
-                type="tool_call",
-            )
-        )
-    return await _finalize(
-        tools,
-        verdicts=[
-            {"nct": n, "drug_role": "studied", "verdict": "relevant"} for n in ncts
-        ],
-        relevance_reasoning="all relevant to this pair",
-    )
-
-
-async def test_per_call_instances_keep_contaminated_sets_disjoint():
-    """Two pairs on SEPARATE tools instances (the supervisor's per-call build) —
-    each finalize sees only its own pair's trials, so neither rejects and neither
-    contaminated set leaks the other pair's NCTs.
-
-    Runs the pairs sequentially: with state per-instance there is nothing shared
-    to race on, so the isolation is timing-independent (the concurrency hazard
-    exists only for a SHARED instance, pinned by the test below). Sequencing also
-    avoids `unittest.mock.patch`'s module-global monkeypatch, which is not
-    task-local and would otherwise let concurrent coroutines stomp each other's
-    mocked client — a harness artifact, not product behavior."""
-    tools_a = build_clinical_trials_tools(date_before=None)
-    tools_b = build_clinical_trials_tools(date_before=None)
-
-    msg_a = await _run_pair(
-        tools_a,
-        "metformin",
-        "type 1 diabetes",
-        "Diabetes Mellitus, Type 1",
-        ["NCT_A1", "NCT_A2"],
-    )
-    msg_b = await _run_pair(
-        tools_b,
-        "metformin",
-        "nafld",
-        "Non-alcoholic Fatty Liver Disease",
-        ["NCT_B1", "NCT_B2", "NCT_B3"],
-    )
-
-    # Both finalize cleanly (no missing/unknown reject) and stay disjoint.
-    assert msg_a.artifact.relevant_ncts == ["NCT_A1", "NCT_A2"]
-    assert msg_a.artifact.contaminated_ncts == []
-    assert msg_b.artifact.relevant_ncts == ["NCT_B1", "NCT_B2", "NCT_B3"]
-    assert msg_b.artifact.contaminated_ncts == []
-
-
-async def test_shared_instance_across_pairs_raises_not_leaks():
-    """A SHARED tools instance accumulates both pairs into shown_by_pair. finalize
-    detects the >1-key state and RAISES DataSourceError rather than silently
-    unioning the second pair's trials into this pair's verdict scope (the
-    cross-pair leak). Pins the guard so reusing a tools instance across pairs
-    fails loudly instead of corrupting the contaminated set."""
-    shared = build_clinical_trials_tools(date_before=None)
-
-    # Populate pair A then pair B on the SAME instance.
-    client_a = _completed_for("metformin", "Diabetes Mellitus, Type 1", ["NCT_A1"])
-    client_b = _completed_for("metformin", "NAFLD", ["NCT_B1", "NCT_B2"])
-    for client, indication, mesh in (
-        (client_a, "type 1 diabetes", "Diabetes Mellitus, Type 1"),
-        (client_b, "nafld", "NAFLD"),
-    ):
-        with (
-            patch(
-                "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-                new=AsyncMock(return_value=("DXXXXXX", mesh)),
-            ),
-            patch(
-                "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
-                return_value=client,
-            ),
-        ):
-            await _get_tool(shared, "get_completed").ainvoke(
-                LCToolCall(
-                    name="get_completed",
-                    args={"drug": "metformin", "indication": indication},
-                    id=f"gc_{indication}",
-                    type="tool_call",
-                )
-            )
-
-    # finalize on the two-pair instance must raise, naming both leaked pairs.
-    with pytest.raises(DataSourceError) as exc:
-        await _finalize(
-            shared,
-            verdicts=[{"nct": "NCT_A1", "drug_role": "studied", "verdict": "relevant"}],
-            relevance_reasoning="relevant to T1D",
-        )
-    assert "reused across indications" in str(exc.value)
+    assert msg.content == "Analysis complete."
+    assert msg.artifact == FinalizeClinicalTrialsArtifact()
 
 
 # ------------------------------------------------------------------
@@ -1760,7 +1163,7 @@ async def test_search_trials_scrubs_post_cutoff_outcomes_under_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1824,7 +1227,7 @@ async def test_get_completed_drops_post_cutoff_trials_under_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1875,7 +1278,7 @@ async def test_get_terminated_drops_post_cutoff_trials_under_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -1927,7 +1330,7 @@ async def test_get_landscape_runs_normally_without_date_before():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D001943", "Breast Neoplasms")),
+            new=AsyncMock(return_value=("D001943", "Breast Neoplasms", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -2000,7 +1403,7 @@ async def test_assigned_indication_match_is_case_insensitive():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D014029", "Tobacco Use Disorder")),
+            new=AsyncMock(return_value=("D014029", "Tobacco Use Disorder", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",
@@ -2029,7 +1432,7 @@ async def test_no_assigned_indication_disables_the_check():
     with (
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.resolve_mesh_id",
-            new=AsyncMock(return_value=("D016540", "Smoking Cessation")),
+            new=AsyncMock(return_value=("D016540", "Smoking Cessation", "label")),
         ),
         patch(
             "indication_scout.agents.clinical_trials.clinical_trials_tools.ClinicalTrialsClient",

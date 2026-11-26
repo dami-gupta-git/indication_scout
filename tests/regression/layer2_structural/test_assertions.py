@@ -17,7 +17,7 @@ from indication_scout.models.model_clinical_trials import (
     Trial,
 )
 from indication_scout.models.model_evidence_summary import EvidenceSummary
-from tests.regression.common.failure_buckets import Bucket, has_errors
+from tests.regression.common.failure_buckets import Bucket, BucketedDiff, has_errors
 from tests.regression.layer2_structural.assertions import (
     check_candidate_set_contains,
     check_drug_safety,
@@ -35,6 +35,7 @@ from tests.regression.layer2_structural.spec import (
     CandidateSetContains,
     DrugSafety,
     DrugSpec,
+    ForbiddenInCandidates,
     ForbiddenInRanked,
     ForbiddenPhrase,
     IndicationHarm,
@@ -340,6 +341,28 @@ class TestForbiddenInRanked:
         r = _report(findings=[_finding(disease="obesity")], top=[])
         a = ForbiddenInRanked(indication="obesity")
         assert check_forbidden_in_ranked(r, a) == []
+
+
+def test_spec_flags_forbidden_candidate_even_when_unranked() -> None:
+    spec = DrugSpec(
+        drug="sildenafil",
+        aliases={"eisenmenger syndrome": ["eisenmenger complex"]},
+        forbidden_in_candidates=[
+            ForbiddenInCandidates(indication="eisenmenger syndrome")
+        ],
+        forbidden_in_ranked=[ForbiddenInRanked(indication="eisenmenger syndrome")],
+    )
+    report = _report(drug="sildenafil", candidates=["Eisenmenger Complex"], top=[])
+    assert run_spec(spec, report, rendered_md="") == [
+        BucketedDiff(
+            bucket=Bucket.STRUCTURAL_INTEGRITY,
+            path="candidate_diseases",
+            severity="error",
+            detail="forbidden indication 'eisenmenger syndrome' appeared in candidate_diseases",
+            spec_ref="forbidden_in_candidates",
+        )
+    ]
+    assert run_spec(spec, _report(drug="sildenafil"), rendered_md="") == []
 
 
 class TestForbiddenPhrase:

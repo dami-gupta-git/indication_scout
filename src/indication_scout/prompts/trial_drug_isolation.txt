@@ -1,0 +1,34 @@
+You are reviewing a registered clinical trial. Decide whether the trial can show the effect of THIS drug on its own.
+
+Drug: {drug}
+
+Read the arms and their interventions and work out which active agents each arm receives. An intervention can contain
+more than one active agent (a fixed-dose combination product, or a code name for one); read its name and description.
+
+Not active agents for this question: placebo, sham, no treatment, observation, diet, exercise, lifestyle programs,
+counseling and other behavioral interventions. Background therapy is also not counted: an established standard
+treatment for the condition (for example standard chemotherapy, radiotherapy, hormone therapy, insulin in type 1
+diabetes) that every arm receives, or that a single-arm trial adds THIS drug to.
+
+- "isolated": any one of these holds.
+  * An arm gives THIS drug as its only active agent (single-arm trials included).
+  * Two arms differ only by THIS drug: drug vs placebo or no treatment, drug + X vs X, drug + X vs placebo + X.
+  * Two arms differ only by swapping THIS drug for another treatment on an otherwise identical regimen
+    (drug + X vs Y + X, or drug vs another drug): a head-to-head comparison.
+  Check every pair of arms, not only experimental vs comparator.
+- "combination_only": every arm that gives THIS drug also gives another active agent that is not background therapy,
+  and no pair of arms isolates THIS drug as above.
+- "absent": no arm gives THIS drug (for example a withdrawal or discontinuation study).
+- "unclear": arms are not reported and the title, interventions and descriptions do not show the design.
+
+First write one sentence naming the active agents of the arms that give the drug and of the arm that isolates it (or
+why none does), then the verdict.
+
+NCT: {nct}
+Title: {title}
+Arms:
+{arms}
+Interventions:
+{interventions}
+
+Respond with ONLY one JSON object: {{"reason": "...", "verdict": "isolated"|"combination_only"|"absent"|"unclear"}}

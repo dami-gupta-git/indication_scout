@@ -160,6 +160,39 @@ def test_fmt_clinical_trials_approval_no_label():
     assert "status undetermined" in rendered
 
 
+def test_fmt_clinical_trials_approval_inconclusive():
+    """An inconclusive check renders its own line and never reads as "Not found on FDA label"."""
+    out = ClinicalTrialsOutput(
+        approval=ApprovalCheck(
+            is_approved=False,
+            label_found=False,
+            inconclusive=True,
+            matched_indication=None,
+            drug_names_checked=["semaglutide"],
+        )
+    )
+    rendered = _fmt_clinical_trials(out)
+    assert (
+        "**FDA approval:** Could not be checked (label text unavailable or unreadable)"
+        in rendered
+    )
+    assert "Not found on FDA label" not in rendered
+    assert "No FDA label found" not in rendered
+
+
+def test_fmt_clinical_trials_lists_combination_only_trials_apart_from_exclusions():
+    out = ClinicalTrialsOutput(
+        contaminated_nct_ids=["NCT00000009"],
+        combination_nct_ids=["NCT03539900", "NCT03047005"],
+    )
+    rendered = _fmt_clinical_trials(out)
+    assert "_1 trial(s) excluded as a different indication: NCT00000009._" in rendered
+    assert (
+        "_2 trial(s) give the drug only together with another drug, with no arm isolating it; not counted as "
+        "evidence for the drug alone: NCT03539900, NCT03047005._"
+    ) in rendered
+
+
 def test_fmt_clinical_trials_search_renders_total():
     out = ClinicalTrialsOutput(
         search=SearchTrialsResult(
@@ -184,6 +217,46 @@ def test_fmt_clinical_trials_search_whitespace():
     rendered = _fmt_clinical_trials(out)
     assert "**Trial activity:** 0 relevant trial(s); 0 excluded" in rendered
     assert "Whitespace: no trials found for this drug × indication pair." in rendered
+
+
+@pytest.mark.parametrize(
+    "route, expected_line, absent_line",
+    [
+        (
+            "ot_synonym",
+            "- _No trials found under the broader term Amphetamine-Related Disorders; the exact indication was not "
+            "searchable._",
+            "Whitespace",
+        ),
+        (
+            "label",
+            "- _Whitespace: no trials found for this drug × indication pair._",
+            "broader term",
+        ),
+    ],
+)
+def test_fmt_clinical_trials_zero_relevant_wording_by_route(
+    route, expected_line, absent_line
+):
+    """With no relevant trials, a search made under an Open Targets synonym's broader MeSH term says so instead of
+    reporting the pair as whitespace."""
+    out = ClinicalTrialsOutput(
+        search=SearchTrialsResult(
+            total_count=0,
+            by_status={},
+            trials=[],
+            resolution_status="resolved",
+            resolution_route=route,
+            resolution_term="Amphetamine-Related Disorders",
+        ),
+        search_coverage=_coverage(total=0, relevant=0, contaminated=0, retrieved=0),
+    )
+
+    rendered = _fmt_clinical_trials(out)
+
+    assert "**Trial activity:** 0 relevant trial(s); 0 excluded" in rendered
+    assert expected_line in rendered
+    assert absent_line not in rendered
 
 
 def test_fmt_clinical_trials_unresolved_search_is_not_reported_as_zero():

@@ -43,6 +43,36 @@ def _make_study(
     }
 
 
+def test_parse_trial_keeps_external_protocol_ids(tmp_path):
+    """The sponsor's protocol id and secondary ids survive into the typed contract.
+
+    These carry the EU CT / EudraCT number that links sibling registrations of one protocol, so
+    dropping them would make superseded_registrations unable to resolve a successor.
+    """
+    study = _make_study("NCT05973786")
+    study["protocolSection"]["identificationModule"].update(
+        {
+            "orgStudyIdInfo": {"id": "2023-506605-19-00 (EU CT#)"},
+            "secondaryIdInfos": [{"id": "2023", "type": "NIH"}, {"id": ""}],
+        }
+    )
+
+    trial = ClinicalTrialsClient(cache_dir=tmp_path)._parse_trial(study)
+
+    assert trial.org_study_id == "2023-506605-19-00 (EU CT#)"
+    assert trial.secondary_ids == ["2023"]
+
+
+def test_parse_trial_defaults_external_ids_when_absent(tmp_path):
+    """A record with no id modules yields empty values, never None."""
+    trial = ClinicalTrialsClient(cache_dir=tmp_path)._parse_trial(
+        _make_study("NCT00000001")
+    )
+
+    assert trial.org_study_id == ""
+    assert trial.secondary_ids == []
+
+
 def test_parse_trial_preserves_arm_intervention_assignments(tmp_path):
     """Separate active-drug arms remain separate in the typed trial contract."""
     study = _make_study("NCT01359670")
@@ -217,6 +247,8 @@ async def test_search_trials_assembles_counts_and_fetch(tmp_path):
         "trials": [
             {
                 "nct_id": "NCT11111111",
+                "org_study_id": "",
+                "secondary_ids": [],
                 "title": "T",
                 "brief_summary": None,
                 "phase": "Phase 2",
@@ -236,6 +268,8 @@ async def test_search_trials_assembles_counts_and_fetch(tmp_path):
             },
             {
                 "nct_id": "NCT22222222",
+                "org_study_id": "",
+                "secondary_ids": [],
                 "title": "Small active trial",
                 "brief_summary": None,
                 "phase": "Phase 3",
@@ -255,6 +289,8 @@ async def test_search_trials_assembles_counts_and_fetch(tmp_path):
             },
         ],
         "resolution_status": "resolved",
+        "resolution_route": None,
+        "resolution_term": None,
     }
 
     # 5 counts: total + recruiting + active + withdrawn + unknown

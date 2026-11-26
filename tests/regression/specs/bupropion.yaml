@@ -1,6 +1,9 @@
 # Bupropion regression spec.
 #
-# Authored against gold_standard/bupropion_2026-09-10_14-59-56.json. Each assertion encodes a
+# Authored against gold_standard/bupropion_2026-09-10_14-59-56.json; re-pinned 2026-11-17 to
+# gold_standard/bupropion_2026-11-17_20-27-23.json (main plus the Open Targets WITHDRAWAL rank fix) after the
+# rewind replay, then to gold_standard/bupropion_2026-11-17_21-49-58.json (MeSH synonym fallback, bipolar-depression
+# trials admitted by the trial target gate); all anchors below still hold. Each assertion encodes a
 # domain-meaningful invariant — a fact about bupropion's evidence base that a regression must NOT
 # silently flip.
 #
@@ -72,8 +75,10 @@ forbidden_in_ranked:
   - bucket: demotion_logic
     indication: obesity disorder
   # Bupropion is approved for major depressive disorder and seasonal affective disorder, so the
-  # umbrella "mood disorder" and "depressive disorder" are on-label. Both stay surfaced candidates
-  # (see candidate_set_contains) but must never reach the ranking.
+  # umbrella "mood disorder" and "depressive disorder" are on-label and must never reach the ranking.
+  # "mood disorder" stays a surfaced candidate (see candidate_set_contains). "depressive disorder" is
+  # dropped as approved by the FDA approval mapping (6 of 6 cold-cache calls, 2026-11-18), so it is not
+  # required as a candidate.
   - bucket: demotion_logic
     indication: mood disorder
   - bucket: demotion_logic
@@ -89,7 +94,6 @@ candidate_set_contains:
     - alcohol dependence
     - mood disorder
     - parkinson disease
-    - depressive disorder
     - schizophrenia
 
 # Curated trials the report surfaces (clinical_trials.relevant_nct_ids). Anchors are the trials

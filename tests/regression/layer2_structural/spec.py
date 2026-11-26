@@ -122,6 +122,18 @@ class ForbiddenInRanked(BaseModel):
         return _coerce_nones(cls, values)
 
 
+class ForbiddenInCandidates(BaseModel):
+    """`indication` must be absent from candidate_diseases."""
+
+    bucket: Bucket = Bucket.STRUCTURAL_INTEGRITY
+    indication: str
+
+    @model_validator(mode="before")
+    @classmethod
+    def _v(cls, values: dict) -> dict:
+        return _coerce_nones(cls, values)
+
+
 class ForbiddenPhrase(BaseModel):
     """`phrase` must NOT appear in the rendered report (case-insensitive)."""
 
@@ -224,6 +236,7 @@ class DrugSpec(BaseModel):
     required_in_ranked: list[RequiredInRanked] = Field(default_factory=list)
     ranked_order: RankedOrder | None = None
     forbidden_in_ranked: list[ForbiddenInRanked] = Field(default_factory=list)
+    forbidden_in_candidates: list[ForbiddenInCandidates] = Field(default_factory=list)
     forbidden_phrases: list[ForbiddenPhrase] = Field(default_factory=list)
     candidate_set_contains: CandidateSetContains | None = None
     safety_severity: list[SafetySeverity] = Field(default_factory=list)

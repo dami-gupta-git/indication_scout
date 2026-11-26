@@ -1,0 +1,45 @@
+You are reviewing one registered clinical trial. Decide the part THIS DRUG plays in it. Answer only this question. Do
+not judge the disease, the phase, the status or the result.
+
+Drug: {drug}
+
+Roles:
+- "studied": the trial is designed to evaluate this drug. It is the experimental intervention, or one of the agents of
+  the regimen under test.
+- "comparator": the trial evaluates another agent and measures it against this drug (this drug is the control or
+  reference arm).
+- "background": this drug is given to every arm alike as standard care, not as the variable under test.
+- "absent": this drug is not administered as a treatment.
+
+Rules:
+- This drug appearing in the interventions list is not enough. When the title or summary names a different drug as the
+  subject and this drug is only a second or reference arm, the role is "comparator".
+- Use the summary to name the studied agent. If the summary names a different drug as the agent being evaluated and this
+  drug is only given alongside it, the role is "background" (or "comparator" if it is the control arm).
+- If the summary names no drug and this drug is the only active agent (others placebo or sham), the role is "studied".
+  If several active drugs are present and neither the title nor the summary shows which is the subject, the role is
+  "background".
+- Do not infer the role from an arm-type label alone. A single-drug placebo-controlled trial studies that drug even if
+  the registry labels its arm "Active Comparator".
+- When the investigators deliberately test this drug together with another named agent (an add-on, a co-administration,
+  "X and Y versus placebo", a single-arm trial of the pair, a trial comparing X, Y and their combination), this drug is
+  "studied". Whether such a trial counts as evidence for the drug alone is decided elsewhere.
+- One of several options: when an experimental arm lets the clinician pick one of several drugs and this drug is one of
+  the options, this drug is "studied". A drug given in every arm alike is "background".
+- Read the arms to see which arm gives which drug. Drugs in the overall interventions list are not given together when
+  they are assigned to separate arms.
+- Non-therapeutic study object: when this drug appears only as a radiolabelled tracer or imaging agent (registry type
+  "Radiation" or "Diagnostic Test"), or the trial only studies withdrawal of this drug, the role is "absent".
+
+Write one sentence naming the agent the trial evaluates and how this drug is given, then the role.
+
+NCT: {nct}
+Title: {title}
+Summary: {summary}
+Interventions:
+{interventions}
+Arms:
+{arms}
+
+Respond with ONLY one JSON object and no prose or fences:
+{{"reason": "...", "drug_role": "studied"|"comparator"|"background"|"absent"}}

@@ -803,14 +803,16 @@ def _finalize_tools_and_closure(cutoff: date | None = None):
 
 
 async def test_finalize_does_not_treat_unresolved_trial_query_as_zero_evidence():
-    """Missing trial coverage is unknown and cannot satisfy the zero-trial evidence gate."""
+    """Missing trial coverage is unknown, not zero: an unresolved candidate with literature evidence is ranked with the
+    unresolved stage. One with no usable literature has no evidence at all and is gate-excluded.
+    """
     by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
     allowed_diseases["unresolved disease"] = (
         "unresolved disease",
         "competitor",
     )
     findings_local["unresolved disease"] = {
-        "literature": _make_lit("none", 0, 0, direction="none"),
+        "literature": _make_lit("moderate", 2, 2, direction="supports"),
         "clinical_trials": ClinicalTrialsOutput(
             search=SearchTrialsResult(resolution_status="unresolved")
         ),
@@ -866,32 +868,30 @@ async def test_finalize_does_not_treat_unresolved_trial_query_as_zero_evidence()
             }
         )
 
-    assert msg.artifact["blurbs"] == [
-        {
-            "disease": "unresolved disease",
-            "stage": (
-                "Trial search unavailable — disease name could not be resolved to a "
-                "MeSH descriptor"
-            ),
-            "literature": "none, undetermined design",
-            "blocker": "",
-            "active_programs": "Unknown — registry search was not run",
-            "key_risk": "",
-            "verdict": "",
-            "watch": "",
-            "prose": "",
-        }
-    ]
-    assert "Evidence gate exclusions" not in msg.artifact["summary"]
+    assert len(msg.artifact["blurbs"]) == 1
+    ranked = msg.artifact["blurbs"][0]
+    assert ranked["disease"] == "unresolved disease"
+    assert ranked["stage"] == (
+        "Trial search unavailable — disease name could not be resolved to a MeSH descriptor"
+    )
+    assert ranked["active_programs"] == "Unknown — registry search was not run"
+    assert ranked["blocker"] == ""
+    assert ranked["key_risk"] == ""
+    assert ranked["verdict"] == ""
+    assert ranked["watch"] == ""
+    assert ranked["prose"] == ""
+    # The candidate the model left out has no literature either, so it is gate-excluded instead of ranked, and its
+    # demotion footer line is not repeated.
+    assert msg.artifact["summary"] == (
+        "Ranked repurposing signals:\n"
+        "1. unresolved disease\n"
+        "Evidence gate exclusions: unresolved footer — trial search unavailable (disease could not be resolved to a "
+        "MeSH descriptor) and no usable literature signal (direction=none, study_count=0)"
+    )
     assert (
         "authoritative trial query state = unresolved"
         in mock_query.await_args_list[0].args[0]
     )
-    assert (
-        "- unresolved footer — Trial search unavailable — disease name could not be "
-        "resolved to a MeSH descriptor; active programs Unknown — registry search was "
-        "not run"
-    ) in msg.artifact["summary"]
 
 
 async def test_fact_critic_flags_withdrawn_only_pair():
@@ -1941,9 +1941,10 @@ async def test_finalize_rebuilds_closed_signals_footer_from_closure_verdicts():
 
 async def test_finalize_discloses_every_investigated_disease_not_ranked():
     """Every disease that reached the findings stage is either ranked, gate-excluded, or named in a
-    'Not ranked:' line with its reason (absent from ranking / unresolved trial query /
-    combination-only demotion). A gate-excluded disease appears in the gate line only, whether the
-    model submitted it as a blurb or silently left it out.
+    'Not ranked:' line with its reason (absent from ranking / combination-only demotion). A candidate
+    whose trial query was unresolved is ranked last even when the model left it out. A gate-excluded
+    disease appears in the gate line only, whether the model submitted it as a blurb or silently left
+    it out.
     """
     by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
     fin = by_name["finalize_supervisor"]
@@ -1991,14 +1992,63 @@ async def test_finalize_discloses_every_investigated_disease_not_ranked():
     assert msg.artifact["summary"] == (
         "Candidates assessed for testdrug:\n"
         "1. ranked one\n"
+        "2. unresolved one\n"
         "Not ranked: endothelial dysfunction — investigated but absent from the supervisor's "
-        "ranking; obesity — demoted: approved only as a fixed-dose combination; "
-        "unresolved one — trial search coverage unavailable (disease could not be resolved to a "
-        "MeSH descriptor)\n"
+        "ranking; obesity — demoted: approved only as a fixed-dose combination\n"
         "Evidence gate exclusions: gate drop — 0 relevant trials and no usable literature signal "
         "(direction=none, study_count=0); silent gate drop — 0 relevant trials and no usable "
         "literature signal (direction=none, study_count=0)"
     )
+
+
+async def test_finalize_ranks_unresolved_candidates_after_searched_ones():
+    """A candidate whose registry query was unresolved is listed after every searched candidate, even when the model
+    ranked it first, and its blurb carries the unresolved stage."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+    supported = _make_lit("moderate", 2, 2, direction="supports")
+    for name in ("searched a", "searched b"):
+        allowed_diseases[name] = (name, "competitor")
+        findings_local[name] = {
+            "literature": supported,
+            "clinical_trials": _make_ct(
+                1, 1, 0, signals=TrialSignals(dev_stage="untested")
+            ),
+        }
+    allowed_diseases["unresolved one"] = ("unresolved one", "competitor")
+    findings_local["unresolved one"] = {
+        "literature": supported,
+        "clinical_trials": ClinicalTrialsOutput(
+            search=SearchTrialsResult(resolution_status="unresolved")
+        ),
+    }
+
+    blurbs = [
+        {"disease": "unresolved one", "prose": "first by the model."},
+        {"disease": "searched a", "prose": "a."},
+        {"disease": "searched b", "prose": "b."},
+    ]
+    msg = await _critique_then_finalize(
+        by_name,
+        blurbs,
+        "Candidates assessed for testdrug:\n1. unresolved one\n2. searched a\n3. searched b",
+    )
+
+    assert msg.artifact["summary"] == (
+        "Candidates assessed for testdrug:\n"
+        "1. searched a\n"
+        "2. searched b\n"
+        "3. unresolved one"
+    )
+    assert [b["disease"] for b in msg.artifact["blurbs"]] == [
+        "searched a",
+        "searched b",
+        "unresolved one",
+    ]
+    unresolved = msg.artifact["blurbs"][2]
+    assert unresolved["stage"] == (
+        "Trial search unavailable — disease name could not be resolved to a MeSH descriptor"
+    )
+    assert unresolved["active_programs"] == "Unknown — registry search was not run"
 
 
 async def test_investigate_top_candidates_names_every_candidate_to_rank():
@@ -2084,3 +2134,316 @@ async def test_investigate_top_candidates_names_every_candidate_to_rank():
         "Your ranking (summary and blurbs) must include every one of these 2 candidates: "
         "Registered Disease, Thin Disease."
     )
+
+
+# --- approval labels: every non-approved label is stored, unresolved included ---
+
+
+def _tools_and_closure(
+    tool_name: str, svc: MagicMock | None = None, date_before: date | None = None
+):
+    """Build the supervisor tools and return (tool, closure-cell dict) for one tool's coroutine."""
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.build_mechanism_agent",
+        return_value=MagicMock(),
+    ):
+        tools, _, _, _ = build_supervisor_tools(
+            llm=MagicMock(),
+            svc=svc or MagicMock(),
+            db=MagicMock(),
+            date_before=date_before,
+        )
+    tool = {t.name: t for t in tools}[tool_name]
+    closure = dict(
+        zip(
+            tool.coroutine.__code__.co_freevars,
+            tool.coroutine.__closure__,
+            strict=False,
+        )
+    )
+    return tool, closure
+
+
+async def test_find_candidates_stores_every_label():
+    """Every label is stored, approved included; an approved candidate is dropped from the allowlist."""
+    svc = MagicMock()
+    svc.cache_dir = Path("unused")
+    competitors = {
+        "disease a": "EFO_1",
+        "disease b": "EFO_2",
+        "disease c": "EFO_3",
+        "disease d": "EFO_4",
+        "disease e": "EFO_5",
+    }
+    svc.get_drug_competitors = AsyncMock(return_value=competitors)
+    tool, outer = _tools_and_closure("find_candidates", svc)
+    impl = outer["_find_candidates_impl"].cell_contents
+    closure = dict(zip(impl.__code__.co_freevars, impl.__closure__, strict=False))
+    closure["analyze_mechanism_done"].cell_contents.set()
+    closure["merge_and_dedup"].cell_contents = AsyncMock(return_value=None)
+    closure["_get_drug_intake"].cell_contents = AsyncMock(
+        return_value=DrugIntake(
+            chembl_id="CHEMBL1431",
+            aliases=["metformin"],
+            approved_indications=["type 2 diabetes mellitus"],
+        )
+    )
+    mapping = {
+        "disease a": "none",
+        "disease b": "unresolved",
+        "disease c": "contaminated",
+        "disease d": "approved",
+        "disease e": "combination_only",
+    }
+    ot_client = MagicMock()
+    ot_client.get_drug_competitors = AsyncMock(return_value={"disease_efo_ids": {}})
+    ot_client.__aenter__ = AsyncMock(return_value=ot_client)
+    ot_client.__aexit__ = AsyncMock(return_value=None)
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_fda_approved_disease_mapping",
+            new=AsyncMock(return_value=mapping),
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.OpenTargetsClient",
+            return_value=ot_client,
+        ),
+    ):
+        await impl("metformin")
+
+    approval_labels = closure["approval_labels"].cell_contents
+    assert approval_labels == {
+        "disease a": "none",
+        "disease b": "unresolved",
+        "disease c": "contaminated",
+        "disease d": "approved",
+        "disease e": "combination_only",
+    }
+    assert "disease d" not in closure["allowed_diseases"].cell_contents
+
+
+async def _investigate_closure():
+    tool, closure = _tools_and_closure("investigate_top_candidates")
+    allowed = closure["allowed_diseases"].cell_contents
+    allowed.update(
+        {
+            name: (name.title(), "mechanism")
+            for name in ("disease a", "disease b", "disease c")
+        }
+    )
+    return closure
+
+
+async def test_record_missing_approval_labels_stores_every_label():
+    """none, unresolved and approved are all stored, so the trials agent of any allowlisted candidate gets a verdict."""
+    closure = await _investigate_closure()
+    record = closure["_record_missing_approval_labels"].cell_contents
+    mapping = {
+        "Disease A": "none",
+        "Disease B": "unresolved",
+        "Disease C": "approved",
+    }
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.get_fda_approved_disease_mapping",
+        new=AsyncMock(return_value=mapping),
+    ):
+        await record("metformin")
+    assert closure["approval_labels"].cell_contents == {
+        "disease a": "none",
+        "disease b": "unresolved",
+        "disease c": "approved",
+    }
+
+
+async def test_record_missing_approval_labels_marks_all_unresolved_when_mapping_raises():
+    closure = await _investigate_closure()
+    record = closure["_record_missing_approval_labels"].cell_contents
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.get_fda_approved_disease_mapping",
+        new=AsyncMock(side_effect=RuntimeError("approval check down")),
+    ):
+        await record("metformin")
+    assert closure["approval_labels"].cell_contents == {
+        "disease a": "unresolved",
+        "disease b": "unresolved",
+        "disease c": "unresolved",
+    }
+
+
+async def _finalize_relationship(label: str | None) -> str:
+    """Run finalize for one investigated candidate carrying `label` and return the relationship handed to the judge."""
+    by_name, findings_local, allowed_diseases = _finalize_tools_and_closure()
+    fin = by_name["finalize_supervisor"]
+    fin_closure = dict(
+        zip(fin.coroutine.__code__.co_freevars, fin.coroutine.__closure__, strict=False)
+    )
+    if label is not None:
+        fin_closure["approval_labels"].cell_contents["disease x"] = label
+    allowed_diseases["disease x"] = ("disease x", "competitor")
+    findings_local["disease x"] = {
+        "literature": _make_lit("moderate", 2, 2, direction="supports"),
+        "clinical_trials": _make_ct(
+            1, 1, 0, signals=TrialSignals(dev_stage="untested")
+        ),
+    }
+    judge = AsyncMock(return_value=None)
+    with patch(
+        "indication_scout.agents.supervisor.supervisor_tools.judge_interpretive",
+        new=judge,
+    ):
+        await _critique_then_finalize(
+            by_name,
+            [{"disease": "disease x", "prose": "x."}],
+            "Candidates assessed for testdrug:\n1. disease x",
+        )
+    judge.assert_awaited_once()
+    return judge.await_args.kwargs["relationship"]
+
+
+@pytest.mark.parametrize(
+    ("label", "expected"),
+    [
+        ("contaminated", "contaminated"),
+        ("combination_only", "combination_only"),
+        ("none", "none"),
+        ("unresolved", "none"),
+        (None, "none"),
+    ],
+)
+async def test_finalize_card_relationship_from_stored_label(label, expected):
+    """An unresolved label reaches the card as "none", which the relationship field can hold; the other labels pass through."""
+    assert await _finalize_relationship(label) == expected
+
+
+async def test_analyze_clinical_trials_hands_the_pair_label_to_the_trials_agent():
+    """A live call labels any unlabelled allowlist entry first, then builds the trials agent with that pair's label."""
+    # analyze_clinical_trials is not exposed to the supervisor; investigate_top_candidates closes over it.
+    _, investigate = _tools_and_closure("investigate_top_candidates")
+    tool = investigate["analyze_clinical_trials"].cell_contents
+    closure = dict(
+        zip(tool.coroutine.__code__.co_freevars, tool.coroutine.__closure__, strict=False)
+    )
+    closure["find_candidates_done"].cell_contents.set()
+    closure["analyze_mechanism_done"].cell_contents.set()
+    closure["allowed_diseases"].cell_contents["disease a"] = ("Disease A", "mechanism")
+    mapping = AsyncMock(return_value={"Disease A": "unresolved"})
+    build_ct = MagicMock(return_value=MagicMock())
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_fda_approved_disease_mapping",
+            new=mapping,
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.build_clinical_trials_agent",
+            new=build_ct,
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.run_clinical_trials_agent",
+            new=AsyncMock(return_value=ClinicalTrialsOutput()),
+        ),
+    ):
+        await tool.ainvoke(
+            {
+                "name": "analyze_clinical_trials",
+                "args": {"drug_name": "metformin", "disease_name": "Disease A"},
+                "id": "tc_ct",
+                "type": "tool_call",
+            }
+        )
+
+    mapping.assert_awaited_once()
+    assert mapping.await_args.kwargs["candidate_diseases"] == ["Disease A"]
+    assert build_ct.call_count == 1
+    assert build_ct.call_args.kwargs["approval_label"] == "unresolved"
+    assert build_ct.call_args.kwargs["date_before"] is None
+    assert build_ct.call_args.kwargs["assigned_indication"] == "Disease A"
+
+
+async def test_merge_drops_an_approved_mechanism_candidate_before_publishing_the_allowlist():
+    """A mechanism-route candidate the FDA label check calls approved leaves the allowlist (and its EFO index) and joins
+    the drug's approved indications; a kept candidate keeps its label."""
+    (
+        merge_and_dedup,
+        mechanism_candidates_buffer,
+        allowed_diseases,
+        allowed_efo_ids,
+    ) = _build_tools_and_allowlists({"disease a": "EFO_A"})
+    md_closure = dict(
+        zip(merge_and_dedup.__code__.co_freevars, merge_and_dedup.__closure__, strict=False)
+    )
+    drop = md_closure["_drop_approved_merged_candidates"].cell_contents
+    drop_closure = dict(zip(drop.__code__.co_freevars, drop.__closure__, strict=False))
+    approval_labels = drop_closure["approval_labels"].cell_contents
+    approval_labels["disease a"] = "none"
+    mechanism_candidates_buffer.append(
+        MechanismCandidate(disease_name="disease m", disease_id="EFO_M")
+    )
+    mapping = AsyncMock(return_value={"disease m": "approved"})
+
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.OpenTargetsClient",
+            new=_ot_client_mock({"disease m": "EFO_M"}),
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.merge_mechanism_entries",
+            new=AsyncMock(return_value=[]),
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_fda_approved_disease_mapping",
+            new=mapping,
+        ),
+    ):
+        await merge_and_dedup(drug_name="testdrug")
+
+    assert mapping.await_args.kwargs["candidate_diseases"] == ["disease m"]
+    assert allowed_diseases == {"disease a": ("disease a", "competitor")}
+    assert allowed_efo_ids == {"EFO_A": "disease a"}
+    assert approval_labels == {"disease a": "none", "disease m": "approved"}
+    entry = drop_closure["_ensure_drug_entry"].cell_contents("testdrug")
+    assert entry["approved_indications"] == ["disease m"]
+
+
+async def test_find_candidates_holdout_records_table_combination_only():
+    """In a holdout the table's combination-product match is recorded as combination_only; its approved match is dropped."""
+    svc = MagicMock()
+    svc.cache_dir = Path("unused")
+    svc.get_drug_competitors = AsyncMock(
+        return_value={"major depressive disorder": "EFO_1", "obesity": "EFO_2", "anxiety": "EFO_3"}
+    )
+    tool, outer = _tools_and_closure("find_candidates", svc, date_before=date(2020, 1, 1))
+    impl = outer["_find_candidates_impl"].cell_contents
+    closure = dict(zip(impl.__code__.co_freevars, impl.__closure__, strict=False))
+    closure["analyze_mechanism_done"].cell_contents.set()
+    closure["merge_and_dedup"].cell_contents = AsyncMock(return_value=None)
+    closure["_get_drug_intake"].cell_contents = AsyncMock(
+        return_value=DrugIntake(chembl_id="CHEMBL894", aliases=["bupropion"])
+    )
+    ot_client = MagicMock()
+    ot_client.get_drug_competitors = AsyncMock(return_value={"disease_efo_ids": {}})
+    ot_client.__aenter__ = AsyncMock(return_value=ot_client)
+    ot_client.__aexit__ = AsyncMock(return_value=None)
+    combination = AsyncMock(return_value={"obesity"})
+    with (
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_approved_indications",
+            new=AsyncMock(return_value={"major depressive disorder"}),
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.get_combination_only_indications",
+            new=combination,
+        ),
+        patch(
+            "indication_scout.agents.supervisor.supervisor_tools.OpenTargetsClient",
+            return_value=ot_client,
+        ),
+    ):
+        await impl("bupropion")
+
+    assert combination.await_args.kwargs == {
+        "drug_name": "bupropion",
+        "candidate_diseases": ["obesity", "anxiety"],
+        "as_of": date(2020, 1, 1),
+    }
+    assert closure["approval_labels"].cell_contents == {"obesity": "combination_only"}
+    assert set(closure["allowed_diseases"].cell_contents) == {"obesity", "anxiety"}

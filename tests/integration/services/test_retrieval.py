@@ -11,7 +11,11 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 )
 from indication_scout.agents.supervisor.supervisor_tools import _closure_text
 from indication_scout.config import get_settings
-from indication_scout.constants import LITERATURE_SCREEN_MAX_DEPTH
+from indication_scout.constants import (
+    LITERATURE_RECENT_YEARS,
+    LITERATURE_SCREEN_MAX_DEPTH,
+    LITERATURE_SHALLOW_DEPTH,
+)
 from indication_scout.data_sources.pubmed import PubMedClient
 from indication_scout.models.model_drug_profile import DrugProfile
 from indication_scout.models.model_evidence_summary import EvidenceSummary
@@ -908,3 +912,109 @@ async def test_synthesize_caches_result(tmp_path, db_session_truncating):
     assert second.model_dump() == first.model_dump()
     assert reordered.model_dump() == first.model_dump()
     assert len(list((tmp_path / "synthesize").glob("*.json"))) == 1
+
+
+async def test_semantic_search_recent_pass_on_live_pubmed(svc, db_session_truncating):
+    """Live PubMed, held out before 2022: the recent pass appends, after the fixed relevance window, the rerank
+    candidates published 2019-2021 that the window missed, in rerank order and tagged "recent".
+
+    Metformin x PCOS has a large pre-2018 RCT literature, so the window holds no recent paper and every recent paper
+    reaches the shortlist only through the recent pass. The rerank set holds nine papers in the recent window, under the
+    budget of ten. The fixed window (adaptive=False) runs no screening gates.
+    """
+    cutoff = date(2022, 1, 1)
+    query = 'metformin AND "Polycystic Ovary Syndrome"'
+    pmids = await svc.fetch_and_cache(
+        [query], db_session_truncating, date_before=cutoff, direct_query=query
+    )
+
+    results = await svc.semantic_search(
+        "polycystic ovary syndrome",
+        "CHEMBL1431",
+        pmids,
+        db_session_truncating,
+        date_before=cutoff,
+        adaptive=False,
+        recent_pass=True,
+    )
+
+    window = results[:LITERATURE_SHALLOW_DEPTH]
+    recent = results[LITERATURE_SHALLOW_DEPTH:]
+    assert all(result.selected_by == ["relevance"] for result in window)
+    assert all(result.pub_year < 2018 for result in window)
+    assert [result.pmid for result in recent] == [
+        "30792154",
+        "31845767",
+        "31087796",
+        "32744629",
+        "33347618",
+        "33429918",
+        "31475082",
+        "34115034",
+        "33014044",
+    ]
+    assert all(result.selected_by == ["recent"] for result in recent)
+    assert all(
+        cutoff.year - LITERATURE_RECENT_YEARS <= result.pub_year < cutoff.year
+        for result in recent
+    )
+
+    pregmet2 = recent[0]
+    assert pregmet2.pmid == "30792154"
+    assert pregmet2.title == (
+        "Use of metformin to treat pregnant women with polycystic ovary syndrome (PregMet2): a randomised, "
+        "double-blind, placebo-controlled trial."
+    )
+    assert pregmet2.abstract.startswith(
+        "BACKGROUND: Women with polycystic ovary syndrome (PCOS) have an increased risk of pregnancy complications."
+    )
+    assert pregmet2.similarity == pytest.approx(0.7789, abs=1e-3)
+    assert pregmet2.pubtype == [
+        "Journal Article",
+        "Multicenter Study",
+        "Randomized Controlled Trial",
+        "Research Support, Non-U.S. Gov't",
+    ]
+    assert pregmet2.selected_by == ["recent"]
+    assert pregmet2.pub_year == 2019
+
+
+async def test_synthesize_merges_same_trial_reports_only(svc):
+    """Two reports of STEP-HFpEF DM (NCT04916470) count as one study. The STEP-HFpEF report (NCT04788511), the pooled
+    analysis citing both trials and two others, and a paper citing no trial stay separate: grouping is on the exact NCT
+    set, so the pooled analysis does not chain the two trials together. Abstracts come from live PubMed, every judgment
+    from the live model (semaglutide x heart failure, 2026-11-17 report).
+    """
+    pub_years = {
+        "38587233": 2024,
+        "39848268": 2025,
+        "37622681": 2023,
+        "39222642": 2024,
+        "41290376": 2025,
+    }
+    async with PubMedClient() as client:
+        fetched = await client.fetch_abstracts(list(pub_years))
+    window = [
+        AbstractResult(
+            pmid=a.pmid,
+            title=a.title,
+            abstract=a.abstract,
+            similarity=0.9,
+            pub_year=pub_years[a.pmid],
+        )
+        for a in fetched
+    ]
+
+    summary = await svc.synthesize(
+        chembl_id="CHEMBL2108724",
+        disease="heart failure",
+        top_abstracts=window,
+        approved_indications=["type 2 diabetes mellitus", "obesity"],
+    )
+
+    assert summary.secondary_report_pmids == {"38587233": ["39848268"]}
+    assert summary.relevant_pmids == ["38587233", "37622681", "39222642", "41290376"]
+    assert summary.study_count == 4
+    assert summary.contaminated_pmids == []
+    assert summary.screened_not_selected_pmids == []
+    assert "39848268" not in summary.supporting_pmids + summary.contradicting_pmids

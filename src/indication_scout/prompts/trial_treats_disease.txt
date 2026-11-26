@@ -14,6 +14,10 @@ from the enrolled population — patients bring their other diagnoses with them.
 - "treats": PREVENTION — the trial administers the drug and measures the candidate disease's
   incidence or onset as a prespecified clinical outcome, even in people who do not have it at
   baseline.
+- "treats": the trial measures a recognized domain of the candidate disease with a
+  disease-specific activity or severity instrument. Treating one organ domain of a multisystem
+  disease is treatment of that disease when the registry names the candidate disease and the
+  primary outcome explicitly measures that disease domain.
 - "not_treats": the trial targets a COMPLICATION, comorbidity or manifestation occurring in patients
   who have the candidate disease, rather than the candidate disease itself. Being caused by the
   candidate disease does not make it the candidate disease. For example, a trial treating
@@ -27,6 +31,11 @@ from the enrolled population — patients bring their other diagnoses with them.
   pathology or downstream injury does not make two diseases interchangeable.
 - "not_treats": the candidate disease appears only as an enrolment criterion, a background
   condition, an observed event, or a safety endpoint.
+- "not_treats": SEPARATE COHORTS — the arm labels show separate patient groups with different
+  objectives, the candidate disease is treated only in a group whose arms do not give the drug
+  (under its generic or brand name), and the arms that do give the drug belong to a group aimed at
+  a different condition. This rule applies only when the arm labels show such separate groups.
+  When every arm serves one objective, or arms are not reported, judge by the rules above.
 
 When genuinely unsure whether the trial's target is the candidate disease itself or something the
 candidate disease merely explains, answer "not_treats".
@@ -36,6 +45,7 @@ Title: {title}
 Summary: {summary}
 Registered conditions: {conditions}
 Primary outcomes: {outcomes}
+Arms (label [type]: interventions): {arms}
 
 Respond with ONLY one JSON object and no prose or fences:
 {{"verdict": "treats"|"not_treats"}}

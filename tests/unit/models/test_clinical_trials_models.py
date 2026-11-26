@@ -1,6 +1,7 @@
 """Unit tests for Clinical Trials models."""
 
 import pytest
+from pydantic import ValidationError
 
 from indication_scout.models.model_clinical_trials import (
     ApprovalCheck,
@@ -67,17 +68,22 @@ def test_intervention_missing_fields_defaults_to_empty_string():
 
 
 @pytest.mark.parametrize(
-    "measure,time_frame",
+    "measure,description,time_frame",
     [
-        ("Change in HbA1c from baseline", "24 weeks"),
-        ("Overall survival", "5 years"),
-        ("Tumor response rate", None),
+        ("Change in HbA1c from baseline", "Glycemic control", "24 weeks"),
+        ("Overall survival", "Time to death from any cause", "5 years"),
+        ("Tumor response rate", None, None),
     ],
 )
-def test_primary_outcome_with_various_measures(measure, time_frame):
+def test_primary_outcome_with_various_measures(measure, description, time_frame):
     """PrimaryOutcome should accept various measures and time frames."""
-    outcome = PrimaryOutcome(measure=measure, time_frame=time_frame)
+    outcome = PrimaryOutcome(
+        measure=measure,
+        description=description,
+        time_frame=time_frame,
+    )
     assert outcome.measure == measure
+    assert outcome.description == description
     assert outcome.time_frame == time_frame
 
 
@@ -85,6 +91,7 @@ def test_primary_outcome_missing_measure_defaults_to_empty_string():
     """PrimaryOutcome measure defaults to empty string when omitted."""
     outcome = PrimaryOutcome(time_frame="24 weeks")
     assert outcome.measure == ""
+    assert outcome.description is None
     assert outcome.time_frame == "24 weeks"
 
 
@@ -464,6 +471,7 @@ def test_approval_check_defaults():
     result = ApprovalCheck()
     assert result.is_approved is False
     assert result.label_found is False
+    assert result.inconclusive is False
     assert result.matched_indication is None
     assert result.drug_names_checked == []
 
@@ -473,11 +481,13 @@ def test_approval_check_all_fields():
     result = ApprovalCheck(
         is_approved=True,
         label_found=True,
+        inconclusive=False,
         matched_indication="type 2 diabetes mellitus",
         drug_names_checked=["semaglutide", "ozempic", "wegovy", "rybelsus"],
     )
     assert result.is_approved is True
     assert result.label_found is True
+    assert result.inconclusive is False
     assert result.matched_indication == "type 2 diabetes mellitus"
     assert result.drug_names_checked == ["semaglutide", "ozempic", "wegovy", "rybelsus"]
 
@@ -487,10 +497,60 @@ def test_approval_check_coerce_nones():
     result = ApprovalCheck(
         is_approved=None,
         label_found=None,
+        inconclusive=None,
         matched_indication=None,
         drug_names_checked=None,
     )
     assert result.is_approved is False
     assert result.label_found is False
+    assert result.inconclusive is False
     assert result.matched_indication is None
     assert result.drug_names_checked == []
+
+
+@pytest.mark.parametrize(
+    "is_approved, label_found, inconclusive, matched_indication",
+    [
+        (True, True, False, "hyperglycemia"),  # approved
+        (False, True, False, None),  # none / contaminated / combination_only
+        (False, False, True, None),  # unresolved
+    ],
+)
+def test_approval_check_accepts_each_tool_row(
+    is_approved, label_found, inconclusive, matched_indication
+):
+    """Every row check_fda_approval can produce is accepted."""
+    result = ApprovalCheck(
+        is_approved=is_approved,
+        label_found=label_found,
+        inconclusive=inconclusive,
+        matched_indication=matched_indication,
+        drug_names_checked=["semaglutide"],
+    )
+    assert result.is_approved is is_approved
+    assert result.label_found is label_found
+    assert result.inconclusive is inconclusive
+    assert result.matched_indication == matched_indication
+    assert result.drug_names_checked == ["semaglutide"]
+
+
+@pytest.mark.parametrize(
+    "is_approved, label_found, inconclusive, matched_indication",
+    [
+        (False, True, True, None),  # inconclusive with a label verdict
+        (True, False, True, "hyperglycemia"),  # inconclusive and approved
+        (True, False, False, "hyperglycemia"),  # approved without a label verdict
+        (True, True, True, "hyperglycemia"),  # approved and inconclusive
+        (True, True, False, None),  # approved without a matched indication
+    ],
+)
+def test_approval_check_rejects_contradictions(
+    is_approved, label_found, inconclusive, matched_indication
+):
+    with pytest.raises(ValidationError):
+        ApprovalCheck(
+            is_approved=is_approved,
+            label_found=label_found,
+            inconclusive=inconclusive,
+            matched_indication=matched_indication,
+        )

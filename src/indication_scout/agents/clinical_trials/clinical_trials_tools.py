@@ -3,7 +3,6 @@ from datetime import date
 from pathlib import Path
 
 from langchain_core.tools import tool
-from pydantic import ValidationError
 
 from indication_scout.agents._trial_formatting import (
     _classify_stop_reason,
@@ -17,9 +16,7 @@ from indication_scout.agents.clinical_trials.clinical_trials_output import (
 from indication_scout.config import get_settings
 from indication_scout.constants import DEFAULT_CACHE_DIR
 from indication_scout.data_sources.base_client import DataSourceError
-from indication_scout.data_sources.chembl import get_all_drug_names, resolve_drug_name
 from indication_scout.data_sources.clinical_trials import ClinicalTrialsClient
-from indication_scout.data_sources.fda import FDAClient
 from indication_scout.models.model_clinical_trials import (
     ApprovalCheck,
     CompletedTrialsResult,
@@ -27,14 +24,12 @@ from indication_scout.models.model_clinical_trials import (
     SearchTrialsResult,
     TerminatedTrialsResult,
     Trial,
-    TrialVerdict,
 )
 from indication_scout.services.approval_check import (
-    extract_approved_from_labels,
+    ApprovalLabel,
     get_approved_indications,
 )
 from indication_scout.services.disease_helper import resolve_mesh_id
-from indication_scout.services.trial_target import judge_trials_treat_disease
 
 _settings = get_settings()
 
@@ -82,27 +77,14 @@ def _scrub_post_cutoff_outcome(trial: Trial, cutoff: date) -> tuple[Trial, bool]
 def build_clinical_trials_tools(
     date_before: date | None = None,
     assigned_indication: str | None = None,
-    target_drug: str | None = None,
     cache_dir: Path = DEFAULT_CACHE_DIR,
+    approval_label: ApprovalLabel | None = None,
 ) -> list:
+    """Build the trials tools for one drug × indication pair.
 
-    # Snapshot of the NCTs shown to the agent for relevance classification, keyed by normalized indication only (not
-    # drug): the agent may query under several drug-name variants of one pair, so this keeps a re-call rewriting the
-    # same set while separating distinct indications. get_completed/get_terminated populate it; finalize_analysis
-    # enforces a verdict for every shown trial.
-    shown_by_indication: dict[str, set[str]] = {}
-
-    # The Trial records behind those ids, so the therapeutic-target gate at finalize can read each objective.
-    # Keyed on NCT alone; a later fetch rewrites the same entry.
-    records_by_nct: dict[str, Trial] = {}
-
-    # NCTs the therapeutic-target gate already rejected and named back to the agent; bounds that to one round
-    # before the gate applies the demotion itself.
-    gate_rejected_told: set[str] = set()
-
-    # The drug this agent was launched to analyze, pinned by the caller so a model cannot widen the finalize
-    # drug-role check by querying under another drug's name.
-    _target_drug = (target_drug or "").strip()
+    `approval_label` is the candidate step's FDA verdict for the pair (get_fda_approved_disease_mapping). check_fda_approval
+    reports it as-is in a live run and raises if it is missing; holdout runs (`date_before` set) ignore it.
+    """
 
     # The indication this agent was launched to investigate. Calls for any OTHER indication are rejected so a
     # drifting LLM (e.g. "smoking cessation" vs assigned "nicotine dependence") is nudged back instead of crashing
@@ -172,7 +154,7 @@ def build_clinical_trials_tools(
                 f"Search for {drug} × {indication}: MeSH unresolved, skipped.",
                 SearchTrialsResult(resolution_status="unresolved"),
             )
-        mesh_id, mesh_term = resolved
+        mesh_id, mesh_term, route = resolved
 
         async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.search_trials(
@@ -180,6 +162,8 @@ def build_clinical_trials_tools(
                 mesh_term,
                 date_before=date_before,
             )
+        result.resolution_route = route
+        result.resolution_term = mesh_term
         result.trials = _drop_non_therapeutic(
             result.trials, "search_trials", drug, indication
         )
@@ -243,13 +227,6 @@ def build_clinical_trials_tools(
             f"Trials shown (all {shown} — classify EVERY one):\n"
             f"{table}"
         )
-        # Record search-pool trials in the classification set too, so the relevance gate forces a verdict on them;
-        # otherwise a contaminated active trial leaks into the "Phase 3 active" signal. The table above is un-capped
-        # because a trial never shown gets a blind verdict, which reads "relevant".
-        shown_by_indication.setdefault(indication.lower().strip(), set()).update(
-            t.nct_id for t in result.trials if t.nct_id
-        )
-        records_by_nct.update({t.nct_id: t for t in result.trials if t.nct_id})
         return content, result
 
     @tool(response_format="content_and_artifact")
@@ -277,7 +254,7 @@ def build_clinical_trials_tools(
                 f"Completed for {drug} × {indication}: MeSH unresolved, skipped.",
                 CompletedTrialsResult(),
             )
-        _mesh_id, mesh_term = resolved
+        _mesh_id, mesh_term, _route = resolved
 
         async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.get_completed_trials(
@@ -303,12 +280,6 @@ def build_clinical_trials_tools(
             result.trials = kept
             result.total_count = max(0, result.total_count - scrub_dropped)
 
-        # Record the un-capped classification set (every shown trial needs a verdict at finalize), keyed on
-        # normalized indication so drug-name and case/whitespace variants accumulate into one set.
-        shown_by_indication.setdefault(indication.lower().strip(), set()).update(
-            t.nct_id for t in result.trials if t.nct_id
-        )
-        records_by_nct.update({t.nct_id: t for t in result.trials if t.nct_id})
 
         scrub_note = (
             f"; dropped {scrub_dropped} post-cutoff completion(s) "
@@ -373,7 +344,7 @@ def build_clinical_trials_tools(
                 f"Terminated for {drug} × {indication}: MeSH unresolved, skipped.",
                 TerminatedTrialsResult(),
             )
-        _mesh_id, mesh_term = resolved
+        _mesh_id, mesh_term, _route = resolved
 
         async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             result = await client.get_terminated_trials(
@@ -412,12 +383,6 @@ def build_clinical_trials_tools(
             else ""
         )
 
-        # Record the un-capped classification set (every shown trial needs a verdict at finalize), keyed on
-        # normalized indication so drug-name and case/whitespace variants accumulate into one set.
-        shown_by_indication.setdefault(indication.lower().strip(), set()).update(
-            t.nct_id for t in result.trials if t.nct_id
-        )
-        records_by_nct.update({t.nct_id: t for t in result.trials if t.nct_id})
 
         header = (
             f"Terminated for {drug} × {indication}: {result.total_count} registry query matches "
@@ -481,7 +446,7 @@ def build_clinical_trials_tools(
                 f"Landscape for {indication}: MeSH unresolved, skipped.",
                 IndicationLandscape(),
             )
-        _mesh_id, mesh_term = resolved
+        _mesh_id, mesh_term, _route = resolved
 
         async with ClinicalTrialsClient(cache_dir=cache_dir) as client:
             landscape = await client.get_landscape(
@@ -500,14 +465,15 @@ def build_clinical_trials_tools(
     ) -> tuple[str, ApprovalCheck | None]:
         """Check whether the drug is FDA-approved for this indication.
 
-        Resolves all known trade/generic names for the drug via ChEMBL, then checks current FDA
-        labels for any label whose approved indications cover the given indication. Use this
-        whenever the completed scope contains any trial — it is the only tool that can tell you
-        whether a completed trial led to approval.
+        Reports the FDA-label verdict for this drug and indication, judged across all current
+        FDA labels for every known name of the drug. Use this whenever the completed scope
+        contains any trial — it is the only tool that can tell you whether a completed trial
+        led to approval.
 
         When is_approved is True, the drug IS approved for this indication — this is NOT a
         repurposing opportunity. When False, the indication was not found on FDA labels (which
         does not distinguish trial failure from approval pending from approval outside the US).
+        When inconclusive is True, the label could not be checked; draw no approval conclusion.
         """
         mismatch = _indication_mismatch(indication)
         if mismatch is not None:
@@ -535,245 +501,48 @@ def build_clinical_trials_tools(
             )
             return content, result
 
-        # The hardcoded table backs up the live label: openFDA can drop a current label from its name index.
-        if await get_approved_indications(
-            drug_name=drug, candidate_diseases=[indication], as_of=date.today()
-        ):
+        # Live path: report the verdict the candidate step already reached for this pair (get_fda_approved_disease_mapping),
+        # so the trials card and the candidate drop cannot disagree. No table lookup, model call or label fetch here: the
+        # mapping already consults the hardcoded approvals table, and a second lookup keyed on the agent's drug name could
+        # override an unresolved verdict. A missing label means the caller did not wire the pair's verdict through, which
+        # is a bug, not a "not approved".
+        if approval_label is None:
+            raise DataSourceError(
+                "check_fda_approval",
+                f"no approval label passed for {drug} × {indication} in a live run",
+            )
+        if approval_label == "unresolved":
             return (
-                f"FDA approval check for {drug} × {indication}: APPROVED (hardcoded approvals table)",
-                ApprovalCheck(
-                    is_approved=True,
-                    label_found=True,
-                    matched_indication=indication,
-                    drug_names_checked=[drug],
-                ),
-            )
-
-        try:
-            chembl_id = await resolve_drug_name(drug, DEFAULT_CACHE_DIR)
-        except DataSourceError:
-            logger.warning(
-                "check_fda_approval: could not resolve '%s' to ChEMBL id", drug
-            )
-            return (
-                f"FDA approval check for {drug} × {indication}: drug not resolved.",
-                ApprovalCheck(),
-            )
-
-        drug_names = await get_all_drug_names(chembl_id, DEFAULT_CACHE_DIR)
-        if not drug_names:
-            logger.warning(
-                "check_fda_approval: no drug names for ChEMBL id '%s'", chembl_id
-            )
-            return (
-                f"FDA approval check for {drug} × {indication}: no drug names.",
-                ApprovalCheck(),
-            )
-
-        async with FDAClient(cache_dir=DEFAULT_CACHE_DIR) as client:
-            label_texts = await client.get_all_label_indications(drug_names)
-
-        if not label_texts:
-            logger.warning(
-                "check_fda_approval: no FDA labels found for any of %s", drug_names
-            )
-            return (
-                f"FDA approval check for {drug} × {indication}: "
-                f"no FDA label found (checked {len(drug_names)} drug names)",
+                f"FDA approval check for {drug} × {indication}: could not be checked "
+                f"(label text unavailable or unreadable)",
                 ApprovalCheck(
                     is_approved=False,
                     label_found=False,
-                    drug_names_checked=drug_names,
+                    inconclusive=True,
+                    drug_names_checked=[drug],
                 ),
             )
-
-        approved = await extract_approved_from_labels(
-            label_texts, [indication], DEFAULT_CACHE_DIR
-        )
-        approved_lower = {d.lower().strip() for d in approved}
-        is_approved = indication.lower().strip() in approved_lower
-        matched = indication if is_approved else None
-
-        result = ApprovalCheck(
-            is_approved=is_approved,
-            label_found=True,
-            matched_indication=matched,
-            drug_names_checked=drug_names,
-        )
-        content = (
+        is_approved = approval_label == "approved"
+        return (
             f"FDA approval check for {drug} × {indication}: "
-            f"{'APPROVED' if is_approved else 'not on FDA label'} "
-            f"(checked {len(drug_names)} drug names)"
+            f"{'APPROVED' if is_approved else 'not on FDA label'}",
+            ApprovalCheck(
+                is_approved=is_approved,
+                label_found=True,
+                matched_indication=indication if is_approved else None,
+                drug_names_checked=[drug],
+            ),
         )
-        return content, result
 
     @tool(response_format="content_and_artifact")
-    async def finalize_analysis(
-        verdicts: list[dict],
-        relevance_reasoning: str,
-    ) -> tuple[str, FinalizeClinicalTrialsArtifact | str]:
-        """Signal that the analysis is complete.
+    async def finalize_analysis() -> tuple[str, FinalizeClinicalTrialsArtifact]:
+        """Signal that the analysis is complete. Call this as the very last step, after all the fetch tools.
 
-        Call this as the very last step. Pass:
-        - verdicts: one entry PER trial shown to you — across the search, completed, AND
-          terminated scopes — each a dict with three keys:
-            "nct": the trial's NCT id.
-            "drug_role": the part THIS DRUG plays in that trial, read off its title,
-              interventions and summary — "studied" (the trial evaluates this drug),
-              "comparator" (this drug is the control arm the studied agent is measured
-              against), "background" (given to all arms as standard care), or "absent".
-            "verdict": "relevant" or "contaminated". "relevant" = studies this drug for THIS
-              exact indication (a narrower NON-approved subtype rolls up). "contaminated" =
-              the condition is an APPROVED indication of this drug (or a narrower form of one)
-              — already-approved evidence, not repurposing; OR a DISTINCT disease (e.g.
-              pulmonary vs systemic hypertension); OR another drug's trial.
-          You MUST classify EVERY shown trial — omit none, and give each exactly one entry.
-        - relevance_reasoning: 1-2 sentences justifying the split.
-
-        Do NOT write a prose summary — the trial-section prose is authored separately after
-        the development stage is resolved. This terminates the agent loop.
-
-        Rejected (re-call to fix) when: any shown trial is missing an entry; an entry names an
-        NCT that was not shown; a trial has more than one entry; an entry is malformed or uses
-        a value outside those listed; an entry is "relevant" while drug_role is not
-        "studied"; or a trial marked "relevant" did not set out to treat this indication.
+        Takes no arguments. Each shown trial is classified afterwards by isolated per-trial checks, and the
+        trial-section prose is authored separately after the development stage is resolved. This terminates the
+        agent loop.
         """
-        # Each analyze_clinical_trials call builds a fresh agent, so shown_by_indication holds at most one key.
-        # More than one means a tools instance was reused across indications and the relevance gate would leak one
-        # pair's contamination into another. The LLM can't fix that by retrying, so fail loudly.
-        if len(shown_by_indication) > 1:
-            raise DataSourceError(
-                "clinical_trials",
-                "finalize_analysis: shown_by_indication holds "
-                f"{len(shown_by_indication)} indications {sorted(shown_by_indication)} — "
-                "the tools instance was reused across indications. Build a fresh "
-                "clinical-trials agent per analyze_clinical_trials call.",
-            )
-        # Empty when no trials were shown (e.g. MeSH unresolved) → empty verdicts is valid.
-        shown: set[str] = next(iter(shown_by_indication.values()), set())
-
-        # Parse before counting: an entry with a typo'd verdict or role would otherwise drop its trial from both sets.
-        parsed: list[TrialVerdict] = []
-        malformed: list[str] = []
-        for raw in verdicts:
-            try:
-                parsed.append(TrialVerdict.model_validate(raw))
-            except ValidationError as exc:
-                nct = (raw or {}).get("nct") or "(no nct)"
-                fields = ", ".join(
-                    str(e["loc"][0]) for e in exc.errors() if e.get("loc")
-                )
-                malformed.append(f"{nct} ({fields or 'unparseable'})")
-        if malformed:
-            return (
-                f"REJECTED: {len(malformed)} entr(y/ies) malformed: "
-                f"{', '.join(sorted(malformed))}. Each entry needs nct, drug_role "
-                f"(studied|comparator|background|absent) and verdict "
-                f"(relevant|contaminated). Re-call with all three, spelled exactly.",
-                "",
-            )
-
-        duplicates = sorted(
-            {v.nct for v in parsed if [x.nct for x in parsed].count(v.nct) > 1}
-        )
-        if duplicates:
-            return (
-                f"REJECTED: {len(duplicates)} trial(s) have more than one entry: "
-                f"{', '.join(duplicates)}. Give each shown trial exactly one entry "
-                f"and re-call.",
-                "",
-            )
-
-        verdict_ncts = {v.nct for v in parsed}
-        missing = shown - verdict_ncts
-        unknown = verdict_ncts - shown
-        if missing:
-            return (
-                f"REJECTED: missing verdicts for {len(missing)} shown trial(s): "
-                f"{', '.join(sorted(missing))}. Classify EVERY shown trial "
-                f"(relevant or contaminated) and re-call.",
-                "",
-            )
-        if unknown:
-            return (
-                f"REJECTED: verdicts name {len(unknown)} trial(s) that were not shown: "
-                f"{', '.join(sorted(unknown))}. Only classify shown trials and re-call.",
-                "",
-            )
-
-        # A trial is this drug's evidence only when the drug is the agent under study (role asked per trial), so a
-        # comparator-arm trial cannot count.
-        mismatched = sorted(
-            v.nct
-            for v in parsed
-            if v.verdict == "relevant" and v.drug_role != "studied"
-        )
-        if mismatched:
-            roles = {v.nct: v.drug_role for v in parsed}
-            named = _target_drug or "this drug"
-            listed = ", ".join(f"{n} ({roles[n]})" for n in mismatched)
-            return (
-                f"REJECTED: {len(mismatched)} trial(s) marked relevant while {named} is not "
-                f"the studied agent: {listed}. Only a trial that STUDIES {named} is its own "
-                f"evidence; a comparator, background or absent role is contamination. "
-                f"Re-call with corrected verdicts.",
-                "",
-            )
-
-        relevant_ncts = [v.nct for v in parsed if v.verdict == "relevant"]
-        contaminated_ncts = [v.nct for v in parsed if v.verdict == "contaminated"]
-
-        # Therapeutic-target gate: the drug's role is checked above; this checks the trial's objective. Asked once per
-        # trial in isolation and cached, then applied deterministically because the agent's own relevance call counted
-        # a cardiomyopathy trial as muscular-dystrophy development. A rejected trial moves to contaminated for good.
-        gated = [records_by_nct[n] for n in relevant_ncts if n in records_by_nct]
-        if relevant_ncts:
-            treats = (
-                await judge_trials_treat_disease(
-                    _target_drug or "this drug",
-                    _assigned or next(iter(shown_by_indication), ""),
-                    gated,
-                    DEFAULT_CACHE_DIR,
-                )
-                if gated
-                else {}
-            )
-            # A relevant NCT with no stored record can't be gated, so it is demoted (fail-closed).
-            demoted = [n for n in relevant_ncts if not treats.get(n, False)]
-            if demoted:
-                logger.debug(
-                    "clinical_trials: therapeutic-target gate demoted %d trial(s) for %s x %s: %s",
-                    len(demoted),
-                    _target_drug or "this drug",
-                    _assigned,
-                    ", ".join(demoted),
-                )
-                unreported = [n for n in demoted if n not in gate_rejected_told]
-                gate_rejected_told.update(demoted)
-                if unreported:
-                    named = _assigned or "this indication"
-                    return (
-                        f"REJECTED: {len(unreported)} trial(s) marked relevant did not set out "
-                        f"to TREAT {named} — the objective is a complication, comorbidity, "
-                        f"distinct disease, or a pharmacokinetic/safety characterization: "
-                        f"{', '.join(sorted(unreported))}. This verdict is final. Re-call with "
-                        f"those trial(s) marked contaminated and relevance_reasoning rewritten "
-                        f"to match.",
-                        "",
-                    )
-                relevant_ncts = [n for n in relevant_ncts if n not in demoted]
-                contaminated_ncts = contaminated_ncts + demoted
-        relevant_text = ", ".join(sorted(relevant_ncts)) or "none"
-        contaminated_text = ", ".join(sorted(contaminated_ncts)) or "none"
-        relevance_reasoning = (
-            f"Relevant trials: {relevant_text}. Excluded trials: {contaminated_text}."
-        )
-        artifact = FinalizeClinicalTrialsArtifact(
-            relevant_ncts=relevant_ncts,
-            contaminated_ncts=contaminated_ncts,
-            relevance_reasoning=relevance_reasoning,
-        )
-        return "Analysis complete.", artifact
+        return "Analysis complete.", FinalizeClinicalTrialsArtifact()
 
     return [
         search_trials,

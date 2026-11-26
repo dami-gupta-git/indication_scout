@@ -21,6 +21,8 @@ from indication_scout.agents.clinical_trials.clinical_trials_agent import (
 from indication_scout.agents.clinical_trials.clinical_trials_output import (
     ClinicalTrialsOutput,
 )
+from indication_scout.helpers.drug_helpers import seed_drug_intake
+from indication_scout.services.approval_check import get_fda_approved_disease_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -43,15 +45,23 @@ def clinical_trials_agent():
 
 
 @pytest.fixture
-def clinical_trials_agent_live():
-    """Agent with no holdout cutoff (date_before=None).
+async def clinical_trials_agent_live(tmp_path):
+    """Agent with no holdout cutoff (date_before=None) for atabecestat × Alzheimer Disease.
 
-    The no-label short-circuit branch (label_found=False) is only reachable on
-    the live openFDA path — the holdout path hardcodes label_found=True and a
-    single drug name. Tests that exercise that branch need this fixture.
+    The inconclusive approval branch is only reachable on the live openFDA path — the holdout path hardcodes
+    label_found=True. A live agent needs the candidate step's verdict for the pair, taken here from the real mapping.
     """
+    intake = await seed_drug_intake("atabecestat", tmp_path)
+    mapping = await get_fda_approved_disease_mapping(
+        drug_name="atabecestat",
+        candidate_diseases=["Alzheimer Disease"],
+        approved_indications=intake.approved_indications,
+        cache_dir=tmp_path,
+    )
     llm = ChatAnthropic(model="claude-sonnet-4-6", temperature=0, max_tokens=4096)
-    return build_clinical_trials_agent(llm, date_before=None)
+    return build_clinical_trials_agent(
+        llm, date_before=None, approval_label=mapping["Alzheimer Disease"]
+    )
 
 
 async def test_approved_pair_semaglutide_t2dm(clinical_trials_agent):
@@ -99,7 +109,7 @@ async def test_approved_pair_semaglutide_t2dm(clinical_trials_agent):
 
 
 async def test_no_label_atabecestat_alzheimer(clinical_trials_agent_live):
-    """No FDA label found → ApprovalCheck.label_found=False, summary notes it.
+    """No FDA label found → the verdict is unresolved and ApprovalCheck is inconclusive.
 
     The prompt no longer short-circuits to a single sentence when no label is
     found: it mandates a full analysis. This test verifies the deterministic
@@ -122,14 +132,9 @@ async def test_no_label_atabecestat_alzheimer(clinical_trials_agent_live):
     assert output.approval is not None
     assert output.approval.is_approved is False
     assert output.approval.label_found is False
+    assert output.approval.inconclusive is True
     assert output.approval.matched_indication is None
-    assert set(output.approval.drug_names_checked) == {
-        "atabecestat",
-        "jnj-54861911",
-        "jnj-54861911-aaa",
-        "rsc- 385896",
-        "rsc-385896",
-    }
+    assert output.approval.drug_names_checked == ["atabecestat"]
 
     # --- Summary (LLM-generated; assertions reflect prompt rules) ---
     # No label-absence assertion: the CT prompt now forbids the summary from drawing any

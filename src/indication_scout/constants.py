@@ -84,7 +84,7 @@ JUDGMENT_CACHE_TTL: int = CACHE_TTL
 # its full SupervisorOutput is cached on the persistent volume; a cached run
 # older than EXAMPLE_CACHE_TTL_SECONDS is re-run lazily on the next request.
 EXAMPLE_DRUGS: tuple[str, ...] = ("metformin", "semaglutide", "bupropion", "sildenafil")
-EXAMPLE_CACHE_TTL_SECONDS: int = 30 * 86400  # 30 days
+EXAMPLE_CACHE_TTL_SECONDS: int = 60 * 86400  # 60 days
 EXAMPLE_CACHE_DIR: Path = DEFAULT_CACHE_DIR / "examples"
 # Committed seed snapshots copied into EXAMPLE_CACHE_DIR on startup when the
 # persistent volume is empty (e.g. a fresh Railway deploy). captured_at.json
@@ -170,7 +170,10 @@ LITERATURE_RERANK_HEADROOM: int = 10
 # Recent pass: after the adaptive window, add up to this many rerank candidates published in the last
 # LITERATURE_RECENT_YEARS (of the run year, or of date_before's year in holdout runs) that the window missed, in
 # relevance order. Kept by the PLAN_literature_screening Phase 3 ablation; the other passes tested were rejected.
-LITERATURE_RECENT_BUDGET: int = 20
+# Cut from 20 to 10 on 2026-11-17 for cost: in the semaglutide run of that day the recent pass read 312 of 552 papers,
+# and 27 cited papers sat at recent ranks 11-20, all in pairs with deep evidence (stroke, heart failure, myocardial
+# infarction, Alzheimer disease, hyperglycemia).
+LITERATURE_RECENT_BUDGET: int = 10
 LITERATURE_RECENT_YEARS: int = 3
 # Output-token limit for the literature synthesis call. The model writes a per-abstract classification before its JSON
 # (about 150 output tokens per abstract: semaglutide x heart failure, 54 abstracts, 8,207 tokens), so the output grows
@@ -243,11 +246,13 @@ MESH_RESOLVER_MAX_CONCURRENT: int = 5
 # -- Clinical stage ranking (Open Targets) ----------------------------------
 # Maps maximumClinicalStage / maxClinicalStage string values to numeric ranks
 # for comparison. Higher rank = further in pipeline. PHASE_4 is post-approval: target drug rows report it in place of
-# APPROVAL for approved drugs with phase 4 trials. WITHDRAWAL ranks with UNKNOWN: a drug pulled from the market is not a
-# current competitor.
+# APPROVAL for approved drugs with phase 4 trials. WITHDRAWAL ranks with APPROVAL: on a target drug row it is the
+# highest stage across the drug's clinical reports, and Open Targets orders it above APPROVAL, so one withdrawal record
+# from any regulator sets it. Metformin carries it for four EMA type 2 diabetes authorisations, as do sildenafil,
+# celecoxib and aspirin, alongside drugs pulled from the market (rofecoxib, cerivastatin). A withdrawal follows an
+# approval, so the drug reached approval either way.
 CLINICAL_STAGE_RANK: dict[str, int] = {
     "UNKNOWN": 0,
-    "WITHDRAWAL": 0,
     "PRECLINICAL": 1,
     "IND": 2,
     "EARLY_PHASE_1": 3,
@@ -258,11 +263,12 @@ CLINICAL_STAGE_RANK: dict[str, int] = {
     "PHASE_3": 8,
     "PREAPPROVAL": 9,
     "APPROVAL": 10,
+    "WITHDRAWAL": 10,
     "PHASE_4": 11,
 }
 # Cache-key version for the Open Targets competitor lists (raw, and the merged lists built from them). Bump when the
 # competitor selection logic changes, e.g. CLINICAL_STAGE_RANK, so cached lists built under the old rule are not reused.
-OPEN_TARGETS_COMPETITOR_LOGIC_VERSION: str = "phase4_rank_v1"
+OPEN_TARGETS_COMPETITOR_LOGIC_VERSION: str = "withdrawal_as_approval_v2"
 
 # -- Interaction type mapping (Open Targets) --------------------------------
 INTERACTION_TYPE_MAP: dict[str, str] = {
@@ -347,6 +353,11 @@ DISEASE_SYNONYM_CANONICAL: dict[str, str] = {
     "cocaine use disorder": "cocaine dependence",
     "cocaine-related-disorder": "cocaine dependence",
 }
+
+# MeSH resolution: a candidate label ending in this suffix is an Open Targets measurement trait, not a disease, and is
+# not resolved through its Open Targets synonyms ("multiple sclerosis symptom measurement" would otherwise resolve to
+# Multiple Sclerosis). The Open Targets "measurement" therapeutic area is not used instead: it also tags Miscarriage.
+MESH_FALLBACK_SKIP_SUFFIX: str = "measurement"
 
 # -- Stop-reason keywords → category (ClinicalTrials.gov) ------------------
 # Order matters: _classify_stop_reason takes the first match, so more specific

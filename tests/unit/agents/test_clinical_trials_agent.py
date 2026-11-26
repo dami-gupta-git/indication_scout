@@ -226,6 +226,24 @@ def _stub_post_loop_judgments(monkeypatch):
 
     monkeypatch.setattr(cta, "judge_dev_stage", _stage)
     monkeypatch.setattr(cta, "judge_ct_summary", _summary)
+    _set_relevance(monkeypatch, {})
+
+
+def _set_relevance(monkeypatch, verdicts: dict[str, str]) -> list[dict]:
+    """Stub the per-trial classification with fixed verdicts; returns the list of recorded calls."""
+    from indication_scout.agents.clinical_trials import clinical_trials_agent as cta
+    from indication_scout.services.trial_relevance import TrialRelevance
+
+    calls: list[dict] = []
+
+    async def _classify(drug, disease, trials, approved, cache_dir):
+        calls.append(
+            {"drug": drug, "disease": disease, "trials": [t.nct_id for t in trials], "approved": approved}
+        )
+        return TrialRelevance(verdicts=verdicts)
+
+    monkeypatch.setattr(cta, "classify_trials", _classify)
+    return calls
 
 
 def _make_agent(messages: list) -> MagicMock:
@@ -241,7 +259,7 @@ def _tool_msg(name: str, artifact) -> ToolMessage:
     # judge_ct_summary). With no verdicts the relevant set is empty, so judge_ct_summary is
     # never reached and output.summary stays "".
     if name == "finalize_analysis" and isinstance(artifact, str):
-        artifact = FinalizeClinicalTrialsArtifact(relevance_reasoning=artifact)
+        artifact = FinalizeClinicalTrialsArtifact()
     return ToolMessage(
         content=f"result of {name}",
         artifact=artifact,
@@ -333,6 +351,8 @@ async def test_run_clinical_trials_agent_keeps_unresolved_query_unknown():
         "by_status": {},
         "trials": [],
         "resolution_status": "unresolved",
+        "resolution_route": None,
+        "resolution_term": None,
     }
     assert output.completed == CompletedTrialsResult()
     assert output.terminated == TerminatedTrialsResult()
@@ -347,7 +367,7 @@ async def test_run_clinical_trials_agent_keeps_unresolved_query_unknown():
     assert output.closure_reason == ""
     assert output.relevant_nct_ids == []
     assert output.contaminated_nct_ids == []
-    assert output.relevance_reasoning == "The disease name could not be resolved."
+    assert output.relevance_reasoning == ""
 
 
 # ------------------------------------------------------------------
@@ -426,17 +446,13 @@ async def test_run_clinical_trials_agent_summary_from_ct_summary_synthesis(monke
     from indication_scout.services.clinical_trials_summary import CTSummary
     from indication_scout.services.dev_stage import StageJudgment
 
-    finalize = FinalizeClinicalTrialsArtifact(
-        relevant_ncts=["NCT04111111"],
-        contaminated_ncts=[],
-        relevance_reasoning="the completed Phase 3 studies this exact pair",
-    )
+    _set_relevance(monkeypatch, {"NCT04111111": "relevant"})
     messages = [
         HumanMessage(content="Analyze somedrug in huntingtons"),
         _tool_msg("search_trials", SEARCH),
         _tool_msg("get_completed", COMPLETED),
         _tool_msg("get_landscape", LANDSCAPE),
-        _tool_msg("finalize_analysis", finalize),
+        _tool_msg("finalize_analysis", FinalizeClinicalTrialsArtifact()),
     ]
     agent = _make_agent(messages)
 
@@ -465,6 +481,40 @@ async def test_run_clinical_trials_agent_summary_from_ct_summary_synthesis(monke
     assert output.summary == "A completed Phase 3 (NCT04111111) is on record."
     assert output.closure == "live"
     assert output.closure_reason == "no negative readout"
+
+
+async def test_run_clinical_trials_agent_keeps_combination_only_trials_apart(monkeypatch):
+    """A trial classified combination-only stays out of the relevant set, is listed apart from the excluded trials,
+    counts as classified for coverage, and never reaches the stage judgment."""
+    from indication_scout.agents.clinical_trials import clinical_trials_agent as cta
+
+    _set_relevance(monkeypatch, {"NCT04111111": "combination"})
+    messages = [
+        HumanMessage(content="Analyze somedrug in huntingtons"),
+        _tool_msg("search_trials", SEARCH),
+        _tool_msg("get_completed", COMPLETED),
+        _tool_msg("get_landscape", LANDSCAPE),
+        _tool_msg("finalize_analysis", FinalizeClinicalTrialsArtifact()),
+    ]
+
+    async def _stage(trials, cache_dir, **kw):
+        raise AssertionError("judge_dev_stage must not run with no relevant trial left")
+
+    monkeypatch.setattr(cta, "judge_dev_stage", _stage)
+
+    output = await run_clinical_trials_agent(_make_agent(messages), "somedrug", "huntingtons")
+
+    assert output.relevant_nct_ids == []
+    assert output.contaminated_nct_ids == []
+    assert output.combination_nct_ids == ["NCT04111111"]
+    assert output.relevance_reasoning == (
+        "Relevant trials: none. Excluded trials: none. Combination-only trials: NCT04111111."
+    )
+    assert output.completed_coverage.relevant_records == 0
+    assert output.completed_coverage.contaminated_records == 1
+    assert output.completed_coverage.classified_records == 1
+    assert output.completed_coverage.unreviewed_records == 7  # 8 registry matches, 1 retrieved
+    assert output.signals.has_completed_phase3 is False
 
 
 # ------------------------------------------------------------------
@@ -659,9 +709,9 @@ async def test_run_clinical_trials_agent_missing_tool_leaves_default(
 # ------------------------------------------------------------------
 
 
-async def test_relevance_fields_and_filtered_signals_assembled():
-    """The finalize artifact's relevance split flows onto the output, and signals are computed
-    from RELEVANT trials only — a contaminating completed Phase 3 is excluded."""
+async def test_relevance_fields_and_filtered_signals_assembled(monkeypatch):
+    """The per-trial classification flows onto the output, and signals are computed
+    from RELEVANT trials only — an excluded completed Phase 3 is dropped."""
     completed = CompletedTrialsResult(
         total_count=2,
         trials=[
@@ -669,12 +719,8 @@ async def test_relevance_fields_and_filtered_signals_assembled():
             Trial(nct_id="NCT_CONTAM", phase="Phase 3", overall_status="COMPLETED"),
         ],
     )
-    finalize = FinalizeClinicalTrialsArtifact(
-        summary="Phase 2 on record; the Phase 3 is a different disease.",
-        relevant_ncts=["NCT_REL"],
-        contaminated_ncts=["NCT_CONTAM"],
-        relevance_reasoning="NCT_CONTAM is a distinct disease sharing a parent term.",
-    )
+    calls = _set_relevance(monkeypatch, {"NCT_REL": "relevant", "NCT_CONTAM": "excluded"})
+    finalize = FinalizeClinicalTrialsArtifact()
     messages = [
         HumanMessage(content="Analyze somedrug in somedisease"),
         _tool_msg("search_trials", SEARCH),
@@ -684,14 +730,22 @@ async def test_relevance_fields_and_filtered_signals_assembled():
     ]
     agent = _make_agent(messages)
 
-    output = await run_clinical_trials_agent(agent, "somedrug", "somedisease")
+    output = await run_clinical_trials_agent(
+        agent, "somedrug", "somedisease", approved_indications=["approved disease"]
+    )
 
+    assert calls == [
+        {
+            "drug": "somedrug",
+            "disease": "somedisease",
+            "trials": ["NCT_REL", "NCT_CONTAM"],
+            "approved": ["approved disease"],
+        }
+    ]
     assert output.relevant_nct_ids == ["NCT_REL"]
     assert output.contaminated_nct_ids == ["NCT_CONTAM"]
-    assert (
-        output.relevance_reasoning
-        == "NCT_CONTAM is a distinct disease sharing a parent term."
-    )
+    assert output.combination_nct_ids == []
+    assert output.relevance_reasoning == "Relevant trials: NCT_REL. Excluded trials: NCT_CONTAM."
     # Signals computed from the RELEVANT set only: the contaminating Phase 3 is dropped.
     assert output.signals is not None
     assert output.signals.highest_completed_phase == "Phase 2"

@@ -19,6 +19,7 @@ import pytest
 from indication_scout.agents.clinical_trials.clinical_trials_tools import (
     build_clinical_trials_tools,
 )
+from indication_scout.helpers.drug_helpers import seed_drug_intake
 from indication_scout.models.model_clinical_trials import (
     ApprovalCheck,
     CompletedTrialsResult,
@@ -26,6 +27,7 @@ from indication_scout.models.model_clinical_trials import (
     SearchTrialsResult,
     TerminatedTrialsResult,
 )
+from indication_scout.services.approval_check import get_fda_approved_disease_mapping
 
 logger = logging.getLogger(__name__)
 
@@ -143,81 +145,88 @@ async def test_search_trials_tool_respects_date_before_cutoff():
 
 
 # ------------------------------------------------------------------
-# check_fda_approval — hits real ChEMBL, openFDA, and Anthropic
+# check_fda_approval — the candidate step's verdict (real ChEMBL, openFDA, Anthropic) reported by the tool
 # ------------------------------------------------------------------
 
 
-# Verified live on 2026-04-25: ChEMBL resolves semaglutide to 9 drug names —
-# the four brand/INN forms plus ChEMBL/Novo Nordisk research codes and the
-# Spanish INN. Lock the full set so a regression in the resolver surfaces here.
-_SEMAGLUTIDE_EXPECTED_NAMES = {
-    "semaglutide",
-    "semaglutida",
-    "ozempic",
-    "wegovy",
-    "rybelsus",
-    "nn-9535",
-    "nn9535",
-    "nnc 0113-0217",
-    "nnc-0113-0217",
-}
-
-
 @pytest.mark.parametrize(
-    "indication,is_approved,matched_indication,expected_content",
+    "drug,indication,expected_label,expected_check,expected_content",
     [
         (
-            "type 2 diabetes mellitus",
-            True,
-            "type 2 diabetes mellitus",
-            "FDA approval check for semaglutide × type 2 diabetes mellitus: "
-            "APPROVED (checked 9 drug names)",
+            # Eisenmenger syndrome is PAH associated with congenital heart disease, inside the Revatio "pulmonary
+            # arterial hypertension (WHO Group I)" indication. The 2026-11-25 sildenafil run returned none here.
+            "sildenafil",
+            "eisenmenger syndrome",
+            "approved",
+            ApprovalCheck(
+                is_approved=True,
+                label_found=True,
+                inconclusive=False,
+                matched_indication="eisenmenger syndrome",
+                drug_names_checked=["sildenafil"],
+            ),
+            "FDA approval check for sildenafil × eisenmenger syndrome: APPROVED",
         ),
         (
+            "semaglutide",
             "alzheimer disease",
-            False,
-            None,
-            "FDA approval check for semaglutide × alzheimer disease: "
-            "not on FDA label (checked 9 drug names)",
+            "none",
+            ApprovalCheck(
+                is_approved=False,
+                label_found=True,
+                inconclusive=False,
+                matched_indication=None,
+                drug_names_checked=["semaglutide"],
+            ),
+            "FDA approval check for semaglutide × alzheimer disease: not on FDA label",
+        ),
+        (
+            # Investigational BACE1 inhibitor: openFDA has no label under any alias, so the verdict is unresolved and
+            # must not read as "not approved".
+            "atabecestat",
+            "alzheimer disease",
+            "unresolved",
+            ApprovalCheck(
+                is_approved=False,
+                label_found=False,
+                inconclusive=True,
+                matched_indication=None,
+                drug_names_checked=["atabecestat"],
+            ),
+            "FDA approval check for atabecestat × alzheimer disease: could not be checked "
+            "(label text unavailable or unreadable)",
         ),
     ],
 )
-async def test_check_fda_approval_semaglutide(
-    indication, is_approved, matched_indication, expected_content
+async def test_check_fda_approval_reports_the_candidate_step_label(
+    drug, indication, expected_label, expected_check, expected_content, tmp_path
 ):
-    """End-to-end: ChEMBL resolution, openFDA label fetch, and LLM approval
-    extraction for semaglutide.
+    """The live mapping's verdict for the pair is correct, and check_fda_approval reports exactly that verdict.
 
-    - type 2 diabetes mellitus: printed on the Ozempic label → is_approved=True.
-    - alzheimer disease: label exists, indication not on it → is_approved=False.
-    matched_indication is the caller's input verbatim when is_approved is True,
-    otherwise None.
-
-    The positive case must name an indication the SERVED label states. NASH was used here and
-    fails: semaglutide is approved for MASH in the real world, but openFDA carries a single Wegovy
-    label effective 2024-04-23 that predates that approval, so the extraction correctly finds no
-    such indication. An expectation drawn from outside the label tests the label lag, not the code.
-
-    Numbers verified live on 2026-04-25: ChEMBL resolves to 9 drug names for
-    semaglutide.
+    An empty cache directory forces the mapping to fetch labels and call the model rather than read a cached verdict.
     """
-    tools = build_clinical_trials_tools(date_before=None)
-    check_fda_approval = next(t for t in tools if t.name == "check_fda_approval")
+    mapping = await get_fda_approved_disease_mapping(
+        drug_name=drug,
+        candidate_diseases=[indication],
+        approved_indications=(await seed_drug_intake(drug, tmp_path)).approved_indications,
+        cache_dir=tmp_path,
+    )
+    assert mapping == {indication: expected_label}
 
+    tools = build_clinical_trials_tools(
+        date_before=None, approval_label=mapping[indication]
+    )
+    check_fda_approval = next(t for t in tools if t.name == "check_fda_approval")
     msg = await check_fda_approval.ainvoke(
         {
             "name": "check_fda_approval",
-            "args": {"drug": "semaglutide", "indication": indication},
-            "id": f"it-fda-{indication}",
+            "args": {"drug": drug, "indication": indication},
+            "id": f"it-fda-{drug}-{indication}",
             "type": "tool_call",
         }
     )
 
-    assert isinstance(msg.artifact, ApprovalCheck)
-    assert msg.artifact.is_approved is is_approved
-    assert msg.artifact.label_found is True
-    assert msg.artifact.matched_indication == matched_indication
-    assert set(msg.artifact.drug_names_checked) == _SEMAGLUTIDE_EXPECTED_NAMES
+    assert msg.artifact == expected_check
     assert msg.content == expected_content
 
 

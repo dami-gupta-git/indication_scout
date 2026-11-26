@@ -38,7 +38,7 @@ Judge synonymy and parent/child/sibling from medical knowledge. Do NOT use knowl
 Return ONLY a JSON object mapping each candidate verbatim to one of these object shapes:
 - For contaminated: write "reason" first, then "matched_approved_indication", and write "label" last. The label must be "contaminated", and the matched indication must exactly equal one item from the supplied approved-indication list.
 - For approved, combination_only, or none: write "reason" first and "label" last. Do not include "matched_approved_indication".
-The reason must be one sentence. Do not put the candidate name in the "label" field. Do not add a "classification", "label_result", or other field.
+For every candidate, including a candidate ultimately labelled none, write the reason before the label. In one short sentence, quote the closest indication from the FDA label text, give a short phrase explaining why it could cover this candidate (or state why no credible coverage case exists), and quote any explicit label restriction that rules out coverage. If no such restriction is stated, say so. If there is no relevant indication to quote, say so. Then write the verdict as the final field. Do not put the candidate name in the "label" field. Do not add a "classification", "label_result", or other field.
 
 Required format example:
 {{

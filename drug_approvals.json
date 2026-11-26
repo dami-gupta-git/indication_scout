@@ -3,8 +3,8 @@
     {"disease": "major depressive disorder", "approved": "1985-12-30"},
     {"disease": "smoking cessation", "approved": "1997-05-14"},
     {"disease": "seasonal affective disorder", "approved": "2006-06-12"},
-    {"disease": "obesity", "approved": "2014-09-10"},
-    {"disease": "alzheimer's disease agitation", "approved": "2026-04-30"}
+    {"disease": "obesity", "approved": "2014-09-10", "combination_with": "naltrexone"},
+    {"disease": "alzheimer's disease agitation", "approved": "2026-04-30", "combination_with": "dextromethorphan"}
   ],
   "semaglutide": [
     {"disease": "type 2 diabetes mellitus", "approved": "2017-12-05"},
@@ -23,11 +23,11 @@
   "imatinib": [
     {"disease": "chronic myeloid leukemia", "approved": "2001-05-10"},
     {"disease": "gastrointestinal stromal tumor", "approved": "2002-02-01"},
-    {"disease": "acute lymphoblastic leukemia", "approved": "2006-10-19"},
-    {"disease": "myelodysplastic syndrome", "approved": "2006-10-19"},
-    {"disease": "myeloproliferative neoplasm", "approved": "2006-10-19"},
+    {"disease": "Philadelphia chromosome positive acute lymphoblastic leukemia", "approved": "2006-10-19"},
+    {"disease": "myelodysplastic/myeloproliferative diseases associated with PDGFR gene re-arrangements", "approved": "2006-10-19"},
     {"disease": "aggressive systemic mastocytosis", "approved": "2006-10-19"},
     {"disease": "hypereosinophilic syndrome", "approved": "2006-10-19"},
+    {"disease": "chronic eosinophilic leukemia", "approved": "2006-10-19"},
     {"disease": "dermatofibrosarcoma protuberans", "approved": "2006-10-19"}
   ],
   "colchicine": [
@@ -86,7 +86,7 @@
     {"disease": "prevention of organ rejection in kidney transplant", "approved": "2010-04-20"},
     {"disease": "subependymal giant cell astrocytoma", "approved": "2010-10-29"},
     {"disease": "progressive pancreatic neuroendocrine tumors", "approved": "2011-05-05"},
-    {"disease": "renal angiomyolipoma associated", "approved": "2012-04-26"},
+    {"disease": "renal angiomyolipoma associated with tuberous sclerosis complex", "approved": "2012-04-26"},
     {"disease": "advanced HR+, HER2- breast cancer", "approved": "2012-07-20"},
     {"disease": "prevention of organ rejection in liver transplant", "approved": "2013-02-15"},
     {"disease": "TSC-associated partial-onset seizures", "approved": "2018-04-10"}
@@ -125,11 +125,11 @@
   ],
   "dupilumab": [
     {"disease": "atopic dermatitis", "approved": "2017-03-28"},
-    {"disease": "asthma", "approved": "2018-10-19"},
+    {"disease": "moderate-to-severe asthma with an eosinophilic phenotype or oral corticosteroid dependent asthma", "approved": "2018-10-19"},
     {"disease": "chronic rhinosinusitis with nasal polyps", "approved": "2019-06-26"},
     {"disease": "eosinophilic esophagitis", "approved": "2022-05-20"},
     {"disease": "prurigo nodularis", "approved": "2022-09-28"},
-    {"disease": "chronic obstructive pulmonary disease", "approved": "2024-09-27"}
+    {"disease": "chronic obstructive pulmonary disease with an eosinophilic phenotype", "approved": "2024-09-27"}
   ],
   "eculizumab": [
     {"disease": "paroxysmal nocturnal hemoglobinuria", "approved": "2007-03-16"},
@@ -141,7 +141,7 @@
     {"disease": "treatment-resistant depression", "approved": "2019-03-05"}
   ],
   "gabapentin": [
-    {"disease": "epilepsy", "approved": "1993-12-30"}
+    {"disease": "partial-onset seizures (adjunctive therapy)", "approved": "1993-12-30"}
   ],
   "lamotrigine": [
     {"disease": "epilepsy", "approved": "1994-12-27"},

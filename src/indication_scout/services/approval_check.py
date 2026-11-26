@@ -32,6 +32,7 @@ from indication_scout.constants import (
     DEFAULT_CACHE_DIR,
     DRUG_APPROVALS_PATH,
 )
+from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import (
     get_all_drug_names,
     resolve_drug_name,
@@ -55,7 +56,12 @@ _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
 # Per-candidate approval relationship, decided once from the FDA label. Only "approved" removes a candidate;
 # "combination_only" demotes; "contaminated" and "none" both rank (contaminated also flags trial-table suppression).
-ApprovalLabel = Literal["approved", "combination_only", "contaminated", "none"]
+# "unresolved" is not a judgment: the mapping returns it for a candidate it could not judge (no label text found, the FDA
+# lookup failed, or the model's answer was unparseable or did not cover the candidate). It is never cached, never emitted by
+# the model, and never accepted from the per-drug cache, so APPROVAL_LABELS below lists only the four judged labels.
+ApprovalLabel = Literal[
+    "approved", "combination_only", "contaminated", "none", "unresolved"
+]
 APPROVAL_LABELS: frozenset[str] = frozenset(
     ("approved", "combination_only", "contaminated", "none")
 )
@@ -184,6 +190,9 @@ def _load_drug_approvals(drug_name: str, cache_dir: Path) -> dict[str, dict[str,
         raw = json.loads(path.read_text())
     except (json.JSONDecodeError, ValueError):
         return {}
+    # Older verdicts may have been judged against parent-only aliases after a failed salt-form lookup.
+    if not isinstance(raw, dict) or raw.get("salt_forms_checked") is not True:
+        return {}
     entries = raw.get("entries")
     if not isinstance(entries, dict):
         return {}
@@ -236,6 +245,7 @@ def _save_drug_approvals(
     payload = {
         "ns": _DRUG_APPROVAL_NS,
         "drug_name": drug_name,
+        "salt_forms_checked": True,
         "entries": existing,
     }
     path.write_text(json.dumps(payload, default=str, indent=2))
@@ -245,8 +255,10 @@ def _save_drug_approvals(
 # Hardcoded FDA approval lookup (used during temporal holdouts)
 #
 # With `date_before` set, the live openFDA path would leak today's approvals into a holdout (a 2020 holdout would see
-# semaglutide approved for MASH). This {drug: [{disease, approved}]} table, gated on `as_of`, replaces it so a holdout
-# sees only approvals that existed on or before the cutoff.
+# semaglutide approved for MASH). This {drug: [{disease, approved, combination_with?}]} table, gated on `as_of`, replaces
+# it so a holdout sees only approvals that existed on or before the cutoff. An entry with `combination_with` is an
+# approval of a fixed-dose combination product (bupropion with naltrexone for obesity): it never counts as an approval of
+# the drug alone, only as combination_only.
 # --------------------------------------------------------------------------
 
 
@@ -286,7 +298,9 @@ async def get_approved_indications(
     candidate_diseases: list[str],
     as_of: date | None,
 ) -> set[str]:
-    """Return the candidate_diseases the drug was FDA-approved for on or before `as_of`, per the hardcoded table.
+    """Return the candidate_diseases the drug alone was FDA-approved for before `as_of`, per the hardcoded table.
+
+    Combination-product entries (`combination_with`) are excluded; get_combination_only_indications reports those.
 
     Matching uses the same LLM disease matcher as the competitor merge (`merge_duplicate_diseases` REMOVE): a candidate
     is dropped only when it is the SAME clinical condition as a pre-cutoff approved indication. This avoids the
@@ -296,8 +310,34 @@ async def get_approved_indications(
     Returns empty set when:
       - drug is not in the table (logs a warning)
       - as_of is None (callers should use the live FDA path in that case)
-      - no table entry's `approved` date is < as_of
+      - no single-drug table entry's `approved` date is < as_of
     """
+    return await _match_table_entries(
+        drug_name, candidate_diseases, as_of, combination=False
+    )
+
+
+async def get_combination_only_indications(
+    drug_name: str,
+    candidate_diseases: list[str],
+    as_of: date | None,
+) -> set[str]:
+    """Return the candidate_diseases approved before `as_of` only inside a combination product, per the hardcoded table.
+
+    Same matching and empty-set conditions as get_approved_indications, over the `combination_with` entries only.
+    """
+    return await _match_table_entries(
+        drug_name, candidate_diseases, as_of, combination=True
+    )
+
+
+async def _match_table_entries(
+    drug_name: str,
+    candidate_diseases: list[str],
+    as_of: date | None,
+    combination: bool,
+) -> set[str]:
+    """Match candidates against the drug's pre-`as_of` table entries of one kind (single-drug or combination)."""
     if as_of is None:
         return set()
     if not drug_name or not candidate_diseases:
@@ -314,6 +354,8 @@ async def get_approved_indications(
 
     pre_cutoff_diseases: list[str] = []
     for entry in entries:
+        if bool(entry.get("combination_with")) is not combination:
+            continue
         approved_str = entry.get("approved")
         disease = entry.get("disease")
         if not approved_str or not disease:
@@ -351,7 +393,8 @@ def list_approved_indications_at(
     """Return all approved indication strings for `drug_name` on or before `as_of`, from the hardcoded approvals table.
 
     Seeds the supervisor's drug briefing during temporal holdouts (analogue of `list_approved_indications_from_labels`).
-    Returns an empty list when as_of is None or the drug is not in the table.
+    Combination-product entries are not approvals of the drug alone and are left out. Returns an empty list when as_of is
+    None or the drug is not in the table.
     """
     if as_of is None:
         return []
@@ -371,6 +414,8 @@ def list_approved_indications_at(
     out: list[str] = []
     seen: set[str] = set()
     for entry in entries:
+        if entry.get("combination_with"):
+            continue
         approved_str = entry.get("approved")
         disease = entry.get("disease")
         if not approved_str or not disease:
@@ -387,6 +432,39 @@ def list_approved_indications_at(
         seen.add(key)
         out.append(disease)
     return out
+
+
+def _table_as_label_text(drug_name: str, as_of: date) -> str | None:
+    """Render the drug's table entries approved before `as_of` as label-style text for the approval prompt.
+
+    Combination-product entries name their partner drug so the prompt can label them combination_only. Returns None when
+    the drug has no entry before `as_of`.
+    """
+    entries = _load_drug_approvals_table().get(drug_name.lower().strip())
+    if not entries:
+        return None
+    lines: list[str] = []
+    for entry in entries:
+        approved_str = entry.get("approved")
+        disease = entry.get("disease")
+        if not approved_str or not disease:
+            continue
+        try:
+            approved_dt = date.fromisoformat(approved_str)
+        except ValueError:
+            continue
+        if approved_dt >= as_of:
+            continue
+        partner = entry.get("combination_with")
+        if partner:
+            lines.append(
+                f"- {disease} (approved only in a fixed-dose combination product with {partner})"
+            )
+        else:
+            lines.append(f"- {disease}")
+    if not lines:
+        return None
+    return f"INDICATIONS AND USAGE ({drug_name}, from a curated FDA approvals record):\n" + "\n".join(lines)
 
 
 async def list_approved_indications_from_labels(
@@ -541,15 +619,15 @@ async def get_fda_approved_disease_mapping(
 ) -> dict[str, ApprovalLabel]:
     """Classify each candidate's relationship to the drug's approved indications.
 
-    Three-tier lookup:
+    Lookup order:
       1. Curated short-circuit: exact (case-sensitive) match against the drug's curated approved / contaminated /
          rejected lists; skips the LLM.
-      2. Hardcoded approvals table: a candidate the table records as approved before today is "approved". openFDA can
-         drop a current label from its name index (baricitinib's Olumiant label, October 2026), which would otherwise
-         leave every approved indication labelled "none".
-      3. LLM fallback: the drug_name is expanded to all known aliases via ChEMBL, all matching openFDA labels are
+      2. LLM judgment: the drug_name is expanded to all known aliases via ChEMBL, all matching openFDA labels are
          fetched, and the remaining candidates go into one LLM call. Each structured decision includes an
          ApprovalLabel; contaminated decisions must also name an exact item from approved_indications.
+      3. When openFDA returns no label text, the drug's hardcoded approvals-table entries stand in for the label text in
+         the same LLM call (openFDA dropped baricitinib's Olumiant label from its name index, October 2026). These
+         verdicts are not cached.
 
     Args:
         drug_name: A single drug name (trade, generic/INN, or USAN).
@@ -559,9 +637,10 @@ async def get_fda_approved_disease_mapping(
 
     Returns:
         Dict mapping each input candidate (verbatim) to an ApprovalLabel: "approved" (already covered → drop),
-        "combination_only" (demote), "contaminated" (keep, suspect trial counts), or "none" (keep, clean). Every input
-        candidate is a key. Defaults to "none" on any failure (chembl, FDA fetch, LLM parse): a failure must NOT drop a
-        candidate.
+        "combination_only" (demote), "contaminated" (keep, suspect trial counts), "none" (keep, clean) or "unresolved"
+        (keep; the candidate could not be judged). Every input candidate is a key. A failure (no label text, FDA fetch,
+        LLM parse, an answer that omits the candidate) yields "unresolved", never "none": a failure must NOT drop a
+        candidate and must not read as a judged "not approved". Unresolved labels are not cached.
     """
     result: dict[str, ApprovalLabel] = dict.fromkeys(candidate_diseases, "none")
 
@@ -589,16 +668,6 @@ async def get_fda_approved_disease_mapping(
     if not uncurated:
         return result
 
-    table_approved = await get_approved_indications(
-        drug_name, uncurated, as_of=date.today()
-    )
-    for c in table_approved:
-        result[c] = "approved"
-    uncurated = [c for c in uncurated if c not in table_approved]
-
-    if not uncurated:
-        return result
-
     # Per-pair label cache: one file per drug holding {disease_lower: {label, cached_at, ttl}}. Unexpired hits go straight
     # into result; only the rest are sent to ChEMBL/FDA/LLM, and new labels are merged back after the call. Curated
     # entries are applied above and never cached, so curated overrides always win. TTL is per label.
@@ -614,9 +683,14 @@ async def get_fda_approved_disease_mapping(
     if not still_missing:
         return result
 
+    # Nothing below has judged these candidates yet; any early return leaves them unresolved, not "none".
+    for c in still_missing:
+        result[c] = "unresolved"
+
     # Expand the drug name to all known aliases via ChEMBL: different formulations carry distinct openFDA labels
-    # (fluoxetine generic vs Sarafem for PMDD), so all aliases surface approvals a single-name lookup would miss. On any
-    # chembl failure, fall back to the bare drug_name.
+    # (fluoxetine generic vs Sarafem for PMDD), so all aliases surface approvals a single-name lookup would miss. On a
+    # chembl failure the remaining candidates stay unresolved: a bare-name lookup can return an incomplete label set
+    # (sildenafil without Revatio misses PAH) and the model would then cache a conclusive "none" from partial evidence.
     try:
         chembl_id = await resolve_drug_name(drug_name, cache_dir)
         drug_aliases = await get_all_drug_names(chembl_id, cache_dir)
@@ -631,14 +705,24 @@ async def get_fda_approved_disease_mapping(
     except Exception as e:
         logger.warning(
             "get_fda_approved_disease_mapping: chembl alias lookup failed for %r: %s; "
-            "falling back to bare drug_name",
+            "leaving %d candidate(s) unresolved",
             drug_name,
             e,
+            len(still_missing),
         )
-        drug_aliases = [drug_name]
+        return result
 
-    async with FDAClient(cache_dir=cache_dir) as client:
-        label_texts = await client.get_all_label_indications(drug_aliases)
+    try:
+        async with FDAClient(cache_dir=cache_dir) as client:
+            label_texts = await client.get_all_label_indications(drug_aliases)
+    except DataSourceError as e:
+        logger.warning(
+            "get_fda_approved_disease_mapping: FDA label fetch failed for %r: %s; leaving %d candidate(s) unresolved",
+            drug_name,
+            e,
+            len(still_missing),
+        )
+        return result
 
     logger.debug(
         "get_fda_approved_disease_mapping: %r → fetched %d label texts from %d aliases",
@@ -647,15 +731,30 @@ async def get_fda_approved_disease_mapping(
         len(drug_aliases),
     )
 
+    # openFDA can drop a current label from its name index (baricitinib's Olumiant label, October 2026). The hardcoded
+    # approvals table then stands in for the label text, judged by the same prompt. Verdicts from the table are not
+    # cached: once openFDA serves the label again, the next call judges the real label.
+    from_table = False
     if not label_texts:
+        table_text = _table_as_label_text(drug_name, as_of=date.today())
+        if table_text is None:
+            logger.warning(
+                "get_fda_approved_disease_mapping: %r → no label texts found across %d aliases and no table entry; "
+                "leaving %d candidate(s) unresolved",
+                drug_name,
+                len(drug_aliases),
+                len(still_missing),
+            )
+            return result
         logger.warning(
-            "get_fda_approved_disease_mapping: %r → no label texts found across %d aliases; "
-            "returning False for %d candidate(s)",
+            "get_fda_approved_disease_mapping: %r → no label texts found across %d aliases; judging %d candidate(s) "
+            "against the hardcoded approvals table",
             drug_name,
             len(drug_aliases),
             len(still_missing),
         )
-        return result
+        label_texts = [table_text]
+        from_table = True
 
     template = (_PROMPTS_DIR / "extract_fda_approval_single.txt").read_text()
     prompt = template.format(
@@ -683,6 +782,7 @@ async def get_fda_approved_disease_mapping(
 
     # Merge fresh labels into the per-drug cache file. Only candidates with a valid LLM label are cached; parse failures
     # and skipped candidates stay uncached so a later call can retry them.
-    _save_drug_approvals(drug_name, llm_labels, cache_dir, ttl=CACHE_TTL)
+    if not from_table:
+        _save_drug_approvals(drug_name, llm_labels, cache_dir, ttl=CACHE_TTL)
 
     return result

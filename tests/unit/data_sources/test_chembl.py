@@ -1,5 +1,8 @@
 """Unit tests for ChEMBLClient.get_molecule(), get_atc_description(), get_all_drug_names(), and resolve_drug_name()."""
 
+import json
+from datetime import datetime
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -7,6 +10,8 @@ import pytest
 from indication_scout.data_sources.base_client import DataSourceError
 from indication_scout.data_sources.chembl import (
     ChEMBLClient,
+    _chembl_names_path,
+    _lookup_chembl_id_by_name,
     get_all_drug_names,
     get_drug_family_chembl_ids,
     resolve_drug_name,
@@ -531,12 +536,24 @@ async def test_get_all_drug_names_no_synonyms_no_pref_name(tmp_path):
     assert result == ["chembl999"]
 
 
-async def test_get_all_drug_names_hierarchy_failure_still_returns_parent_names(
-    tmp_path,
-):
-    """If hierarchy lookup fails, still returns pref_name and parent synonyms."""
+async def test_get_all_drug_names_hierarchy_failure_leaves_cache_unverified(
+    tmp_path: Path,
+) -> None:
+    """A failed hierarchy lookup cannot consume or write an incomplete aliases entry."""
+    chembl_id = "CHEMBL2108724"
+    cache_path = _chembl_names_path(chembl_id, tmp_path)
+    cache_path.parent.mkdir()
+    legacy_entry = json.dumps(
+        {
+            "chembl_id": chembl_id,
+            "names": ["semaglutide"],
+            "cached_at": datetime.now().isoformat(),
+            "ttl": 3600,
+        }
+    )
+    cache_path.write_text(legacy_entry)
 
-    async def mock_rest_get(url: str, params: dict):
+    async def mock_rest_get(url: str, params: dict) -> dict:
         if "/molecule/CHEMBL2108724.json" in url:
             return BIOLOGIC_PARENT_FIXTURE
         if "/molecule.json" in url:
@@ -544,9 +561,11 @@ async def test_get_all_drug_names_hierarchy_failure_still_returns_parent_names(
         raise AssertionError(f"Unexpected URL: {url}")
 
     with _patch_rest_get(mock_rest_get):
-        result = await get_all_drug_names("CHEMBL2108724", cache_dir=tmp_path)
+        with pytest.raises(DataSourceError, match="HTTP 500"):
+            await get_all_drug_names(chembl_id, cache_dir=tmp_path)
 
-    assert result == ["semaglutide", "ozempic", "rybelsus", "wegovy"]
+    assert cache_path.read_text() == legacy_entry
+    assert _lookup_chembl_id_by_name("semaglutide", tmp_path) is None
 
 
 async def test_get_all_drug_names_deduplicates(tmp_path):

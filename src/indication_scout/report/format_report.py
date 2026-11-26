@@ -192,9 +192,20 @@ def _fmt_clinical_trials(
         if ct.relevance_reasoning.strip():
             lines.append(f"\n_Why: {ct.relevance_reasoning.strip()}_")
 
+    if ct.combination_nct_ids:
+        lines.append(
+            f"\n_{len(ct.combination_nct_ids)} trial(s) give the drug only together with another drug, with no "
+            f"arm isolating it; not counted as evidence for the drug alone: "
+            f"{', '.join(ct.combination_nct_ids)}._"
+        )
+
     if ct.approval:
         a = ct.approval
-        if a.label_found:
+        if a.inconclusive:
+            lines.append(
+                "**FDA approval:** Could not be checked (label text unavailable or unreadable)"
+            )
+        elif a.label_found:
             if a.is_approved:
                 target = a.matched_indication or "this indication"
                 lines.append(f"**FDA approval:** Approved ({target})")
@@ -244,7 +255,14 @@ def _fmt_clinical_trials(
                 lines.append(
                     f"- **Registry query matches:** {ct.search_coverage.registry_query_matches}"
                 )
-            if (
+            if s.resolution_route == "ot_synonym" and not ct.relevant_nct_ids:
+                # The term came from an Open Targets synonym and can be broader than the indication, so an empty result
+                # is not evidence that the exact indication has no trials.
+                lines.append(
+                    f"- _No trials found under the broader term {s.resolution_term}; the exact indication was not "
+                    "searchable._"
+                )
+            elif (
                 ct.search_coverage
                 and ct.search_coverage.coverage_complete
                 and s.total_count == 0
